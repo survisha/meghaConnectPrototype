@@ -52,15 +52,22 @@ public class AppointmentController {
 
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasAnyRole('CMO_OFFICER','APPROVER_JT_SECY','HCM','SAIDUL_OSD','ADMIN')")
-    public ResponseEntity<Appointment> updateStatus(
+    public ResponseEntity<?> updateStatus(
             @PathVariable Long id,
             @RequestBody Map<String, String> body,
             @AuthenticationPrincipal UserDetails user) {
-        Appointment.AppointmentStatus status =
-            Appointment.AppointmentStatus.valueOf(body.get("status"));
-        return ResponseEntity.ok(
-            appointmentService.updateStatus(id, status, body.get("remarks"), user.getUsername())
-        );
+        String statusStr = body.get("status");
+        if (statusStr == null || statusStr.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "'status' field is required"));
+        }
+        try {
+            Appointment.AppointmentStatus status = Appointment.AppointmentStatus.valueOf(statusStr);
+            return ResponseEntity.ok(
+                appointmentService.updateStatus(id, status, body.get("remarks"), user.getUsername())
+            );
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid status value: " + statusStr));
+        }
     }
 
     @PostMapping("/{id}/schedule")
@@ -69,10 +76,26 @@ public class AppointmentController {
             @PathVariable Long id,
             @RequestBody Map<String, Object> body,
             @AuthenticationPrincipal UserDetails user) {
+
+        Object dtObj = body.get("scheduledDateTime");
+        Object durObj = body.get("durationMinutes");
+
+        if (dtObj == null || durObj == null) {
+            return ResponseEntity.badRequest()
+                .body(Map.of("error", "'scheduledDateTime' and 'durationMinutes' are required"));
+        }
+
+        if (!(durObj instanceof Integer)) {
+            return ResponseEntity.badRequest()
+                .body(Map.of("error", "'durationMinutes' must be an integer"));
+        }
+
         try {
-            LocalDateTime dt = LocalDateTime.parse((String) body.get("scheduledDateTime"));
-            int duration = (Integer) body.get("durationMinutes");
+            LocalDateTime dt = LocalDateTime.parse(dtObj.toString());
+            int duration = (Integer) durObj;
             return ResponseEntity.ok(appointmentService.schedule(id, dt, duration, user.getUsername()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid date-time format: " + dtObj));
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(Map.of("error", e.getMessage()));

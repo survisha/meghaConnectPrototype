@@ -1,0 +1,43 @@
+<div>
+  <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem">
+    <button pButton icon="pi pi-arrow-left" class="p-button-text p-button-sm" routerLink="/reports"></button>
+    <h2 class="page-title" style="margin:0">⏳ Pending Follow-ups Dashboard</h2>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem">
+    <div class="kpi-card"><div class="kpi-icon" style="background:#fee2e2"><i class="pi pi-exclamation-circle" style="color:#dc2626;font-size:1.4rem"></i></div><div><div class="kpi-value" style="color:#dc2626">1</div><div class="kpi-label">Overdue</div></div></div>
+    <div class="kpi-card"><div class="kpi-icon" style="background:#fef3c7"><i class="pi pi-clock" style="color:#b45309;font-size:1.4rem"></i></div><div><div class="kpi-value" style="color:#b45309">2</div><div class="kpi-label">In Progress</div></div></div>
+    <div class="kpi-card"><div class="kpi-icon" style="background:#d1fae5"><i class="pi pi-check" style="color:#065f46;font-size:1.4rem"></i></div><div><div class="kpi-value" style="color:#065f46">1</div><div class="kpi-label">Not Started</div></div></div>
+  </div>
+
+  <div class="section-card">
+    <div class="section-card-header"><i class="pi pi-list"></i> All Pending Directions (GREEN = High Priority)</div>
+    <div class="section-card-body" style="padding:0">
+      <p-table [value]="followups" styleClass="p-datatable-sm" [rowHover]="true">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>App ID</th><th>Applicant</th><th>Direction</th>
+            <th>Color</th><th>Department</th><th>Officer</th><th>Deadline</th><th>Days Left</th><th>Status</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-f>
+          <tr [class.overdue-row]="f.daysLeft < 0">
+            <td style="font-weight:600;color:#1a237e">{{ f.applicationId }}</td>
+            <td>{{ f.applicant }}</td>
+            <td style="font-size:0.85rem;max-width:220px">{{ f.direction }}</td>
+            <td><span [class]="getDirClass(f.color)">● {{ f.color }}</span></td>
+            <td style="font-size:0.85rem">{{ f.department }}</td>
+            <td style="font-size:0.85rem">{{ f.officer }}</td>
+            <td style="font-size:0.85rem">{{ f.deadline }}</td>
+            <td>
+              <span [style.color]="f.daysLeft < 0 ? '#dc2626' : f.daysLeft < 7 ? '#b45309' : '#16a34a'" style="font-weight:700">
+                {{ f.daysLeft < 0 ? f.daysLeft + 'd' : '+' + f.daysLeft + 'd' }}
+              </span>
+            </td>
+            <td><p-tag [value]="f.status" [severity]="getSeverity(f.status)" styleClass="text-xs"></p-tag></td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+  </div>
+</div>

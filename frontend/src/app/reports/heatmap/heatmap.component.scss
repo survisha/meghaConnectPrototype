@@ -1,0 +1,17 @@
+.map-container { height: 480px; width: 100%; z-index: 0; }
+.map-legend {
+  padding: 0.5rem 1rem; background: #f9fafb; font-size: 0.8rem;
+  display: flex; align-items: center; gap: 0.25rem; border-top: 1px solid #e5e7eb;
+}
+.legend-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+.district-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0.6rem 1rem; border-bottom: 1px solid #f3f4f6;
+}
+.heat-badge { color: white; font-weight: 700; font-size: 0.85rem; padding: 2px 8px; border-radius: 12px; }
+.dd-sm { min-width: 160px; }
+.info-note {
+  background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;
+  padding: 0.75rem 1rem; font-size: 0.85rem; color: #1e40af;
+  display: flex; align-items: flex-start; gap: 0.5rem;
+}

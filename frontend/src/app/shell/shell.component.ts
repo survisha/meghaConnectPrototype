@@ -1,0 +1,72 @@
+import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { Router, RouterLink, RouterOutlet } from '@angular/router';
+import { AuthService } from '../services/auth.service';
+import { Button } from 'primeng/button';
+import { Badge, BadgeDirective } from 'primeng/badge';
+import { Tag } from 'primeng/tag';
+import { Toast } from 'primeng/toast';
+import { ConfirmDialog } from 'primeng/confirmdialog';
+import { MessageService, ConfirmationService } from 'primeng/api';
+
+interface MenuItem { label: string; icon: string; route?: string; children?: MenuItem[]; expanded?: boolean; }
+
+@Component({
+  selector: 'app-shell',
+  standalone: true,
+  imports: [CommonModule, RouterLink, RouterOutlet, Button, Badge, BadgeDirective, Tag, Toast, ConfirmDialog],
+  providers: [MessageService, ConfirmationService],
+  templateUrl: './shell.component.html',
+  styleUrls: ['./shell.component.scss'],
+})
+export class ShellComponent implements OnInit {
+  sidebarOpen = true;
+  menu: MenuItem[] = [];
+
+  constructor(public auth: AuthService, private router: Router) {}
+
+  ngOnInit() {
+    this.menu = [
+      { label: 'Dashboard', icon: 'pi-home', route: '/dashboard' },
+      { label: 'Calendar / Schedule', icon: 'pi-calendar', route: '/scheduling' },
+      {
+        label: 'Appointments', icon: 'pi-users', expanded: false, children: [
+          { label: 'All Appointments', icon: 'pi-list', route: '/appointments' },
+          { label: 'New Appointment', icon: 'pi-plus-circle', route: '/appointments/new' },
+          { label: 'Walk-in Counter', icon: 'pi-sign-in', route: '/appointments/walkin' },
+        ]
+      },
+      {
+        label: 'CM Schemes', icon: 'pi-briefcase', expanded: false, children: [
+          { label: 'All Applications', icon: 'pi-list', route: '/schemes' },
+          { label: 'New Application', icon: 'pi-file-edit', route: '/schemes/apply' },
+        ]
+      },
+      { label: 'Public Identification', icon: 'pi-id-card', route: '/identify' },
+      {
+        label: 'Reports', icon: 'pi-chart-bar', expanded: false, children: [
+          { label: 'Analytics', icon: 'pi-chart-pie', route: '/reports' },
+          { label: 'Scheme Heatmap', icon: 'pi-map', route: '/reports/heatmap' },
+          { label: 'Pending Follow-ups', icon: 'pi-clock', route: '/reports/followups' },
+          { label: 'Audit Trail', icon: 'pi-history', route: '/reports/audit' },
+        ]
+      },
+    ];
+  }
+
+  toggle(item: MenuItem) { item.expanded = !item.expanded; }
+
+  navigate(route: string) { this.router.navigate([route]); }
+
+  logout() { this.auth.logout(); }
+
+  get roleLabel() {
+    const r = this.auth.user()?.role ?? '';
+    const map: Record<string,string> = {
+      HCM:'HCM', ADMIN:'Admin', SAIDUL_OSD:'Saidul OSD',
+      APPROVER_JT_SECY:'Jt Secretary', CMO_OFFICER:'CMO Officer',
+      DATA_ENTRY_OPERATOR:'DEO', PUBLIC:'Public'
+    };
+    return map[r] ?? r;
+  }
+}

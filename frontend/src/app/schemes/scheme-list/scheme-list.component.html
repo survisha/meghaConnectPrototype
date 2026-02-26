@@ -1,0 +1,99 @@
+<div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.75rem">
+    <h2 class="page-title" style="margin:0">CM Scheme Applications</h2>
+    <button pButton label="New Application" icon="pi pi-plus" class="p-button-sm" routerLink="/schemes/apply"></button>
+  </div>
+
+  <!-- Scheme Statistics Cards -->
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:1rem;margin-bottom:1.5rem">
+    <div *ngFor="let stat of schemeStats" class="scheme-stat-card">
+      <div class="scheme-name">{{ stat.name }}</div>
+      <div class="scheme-total">{{ stat.total }}</div>
+      <div class="scheme-breakdown">
+        <span style="color:#16a34a">✅ {{ stat.approved }}</span>
+        <span style="color:#b45309">⏳ {{ stat.pending }}</span>
+        <span style="color:#dc2626">❌ {{ stat.rejected }}</span>
+      </div>
+      <div class="scheme-budget">{{ stat.budget }}</div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="section-card">
+    <div class="section-card-header">
+      <i class="pi pi-list"></i> All Applications
+      <div style="margin-left:auto">
+        <p-select [options]="schemeOptions" [(ngModel)]="filterScheme" styleClass="filter-sm"></p-select>
+      </div>
+    </div>
+    <div class="section-card-body" style="padding:0">
+      <p-table [value]="filtered" [rowHover]="true" styleClass="p-datatable-sm" [paginator]="true" [rows]="10">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Applicant</th>
+            <th>Scheme</th>
+            <th>Project</th>
+            <th>Category</th>
+            <th>Est. Cost</th>
+            <th>HCM Approved</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-s>
+          <tr>
+            <td>
+              <div style="font-weight:600">{{ s.applicant.fullName }}</div>
+              <div style="font-size:0.75rem;color:#6b7280">{{ s.applicant.constituency }}</div>
+            </td>
+            <td>
+              <span class="scheme-badge" [style.background]="getSchemeBadgeColor(s.schemeType)">{{ s.schemeType.replace('_',' ') }}</span>
+            </td>
+            <td style="font-size:0.85rem">{{ s.projectName }}</td>
+            <td style="font-size:0.85rem">{{ s.projectCategory }}</td>
+            <td style="font-size:0.85rem">₹{{ (s.estimatedCost/100000).toFixed(1) }}L</td>
+            <td style="font-size:0.85rem">
+              <span *ngIf="s.hcmApprovedCost" class="dir-green">₹{{ (s.hcmApprovedCost/100000).toFixed(1) }}L</span>
+              <span *ngIf="!s.hcmApprovedCost" style="color:#9ca3af">–</span>
+            </td>
+            <td>
+              <p-tag [value]="s.status.replace('_',' ')" [severity]="getSeverity(s.status)" styleClass="text-xs"></p-tag>
+            </td>
+            <td>
+              <button pButton icon="pi pi-eye" class="p-button-text p-button-sm" (click)="view(s)"></button>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+  </div>
+</div>
+
+<p-dialog header="Scheme Application Detail" [(visible)]="showDetail" [style]="{width:'560px'}" [modal]="true">
+  <ng-container *ngIf="selected">
+    <div style="display:flex;flex-direction:column;gap:0.75rem">
+      <div style="display:flex;gap:1rem;align-items:flex-start">
+        <span class="scheme-badge" [style.background]="getSchemeBadgeColor(selected.schemeType)" style="font-size:1rem;padding:6px 14px">{{ selected.schemeType.replace('_',' ') }}</span>
+        <div>
+          <div style="font-weight:700;font-size:1rem">{{ selected.projectName }}</div>
+          <div style="font-size:0.82rem;color:#6b7280">{{ selected.applicant.fullName }} | {{ selected.applicant.constituency }}</div>
+        </div>
+        <p-tag [value]="selected.status.replace('_',' ')" [severity]="getSeverity(selected.status)" style="margin-left:auto"></p-tag>
+      </div>
+      <p-divider></p-divider>
+      <div class="detail-grid">
+        <div><span>Category</span><strong>{{ selected.projectCategory }}</strong></div>
+        <div><span>Beneficiary Type</span><strong>{{ selected.beneficiaryType }}</strong></div>
+        <div><span>Beneficiary Count</span><strong>{{ selected.beneficiaryCount }}</strong></div>
+        <div><span>Est. Cost</span><strong>₹{{ selected.estimatedCost.toLocaleString() }}</strong></div>
+        <div><span>Community Contribution</span><strong>₹{{ selected.communityContribution.toLocaleString() }}</strong></div>
+        <div *ngIf="selected.hcmApprovedCost"><span>HCM Approved</span><strong class="dir-green">₹{{ selected.hcmApprovedCost.toLocaleString() }}</strong></div>
+      </div>
+      <p-divider></p-divider>
+      <div style="font-size:0.85rem"><strong>Justification:</strong><br>{{ selected.justification }}</div>
+      <div *ngIf="selected.hcmDecision" style="padding:0.75rem;background:#dcfce7;border-radius:6px;font-size:0.85rem">
+        <strong class="dir-green">HCM Decision: {{ selected.hcmDecision }}</strong>
+      </div>
+    </div>
+  </ng-container>
+</p-dialog>

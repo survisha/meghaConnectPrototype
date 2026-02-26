@@ -1,0 +1,26 @@
+# Root node_modules (Angular CLI global)
+node_modules/
+package.json
+package-lock.json
+
+# Angular build artifacts
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+
+# Java build artifacts
+backend/target/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env files
+*.env
+.env.local

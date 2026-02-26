@@ -1,0 +1,66 @@
+<div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.75rem">
+    <h2 class="page-title" style="margin:0">Analytics &amp; Reports</h2>
+    <div style="display:flex;gap:0.5rem">
+      <button pButton label="Heatmap" icon="pi pi-map" class="p-button-outlined p-button-sm" routerLink="/reports/heatmap"></button>
+      <button pButton label="Pending Follow-ups" icon="pi pi-clock" class="p-button-outlined p-button-sm" routerLink="/reports/followups"></button>
+      <button pButton label="Audit Trail" icon="pi pi-history" class="p-button-outlined p-button-sm" routerLink="/reports/audit"></button>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+    <div class="section-card">
+      <div class="section-card-header"><i class="pi pi-chart-bar"></i> Meetings per Day (This Week)</div>
+      <div class="section-card-body" style="height:280px;display:flex;align-items:center;justify-content:center">
+        <p-chart type="bar" [data]="meetingsPerDay" [options]="chartOpts" style="width:100%"></p-chart>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-card-header"><i class="pi pi-chart-pie"></i> Approval vs Rejection Ratio</div>
+      <div class="section-card-body" style="height:280px;display:flex;align-items:center;justify-content:center">
+        <p-chart type="doughnut" [data]="approvalRatio" [options]="chartOpts" style="width:100%;max-width:320px"></p-chart>
+      </div>
+    </div>
+
+    <div class="section-card" style="grid-column:1/-1">
+      <div class="section-card-header"><i class="pi pi-chart-bar"></i> Scheme-wise Application Status</div>
+      <div class="section-card-body" style="height:280px;display:flex;align-items:center;justify-content:center">
+        <p-chart type="bar" [data]="schemeWise" [options]="barChartOpts" style="width:100%"></p-chart>
+      </div>
+    </div>
+
+    <div class="section-card" style="grid-column:1/-1">
+      <div class="section-card-header"><i class="pi pi-map-marker"></i> Top Constituencies by Applications</div>
+      <div class="section-card-body" style="padding:0">
+        <p-table [value]="topConstituencies" styleClass="p-datatable-sm">
+          <ng-template pTemplate="header">
+            <tr>
+              <th>Constituency</th>
+              <th>Total Applications</th>
+              <th>Approved</th>
+              <th>Rejected</th>
+              <th>Approval Rate</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-c>
+            <tr>
+              <td style="font-weight:600">{{ c.name }}</td>
+              <td>{{ c.total }}</td>
+              <td class="dir-green">{{ c.approved }}</td>
+              <td class="dir-red">{{ c.rejected }}</td>
+              <td>
+                <div style="display:flex;align-items:center;gap:0.5rem">
+                  <div style="flex:1;height:8px;background:#e5e7eb;border-radius:999px;overflow:hidden">
+                    <div [style.width]="(c.approved/c.total*100)+'%'" style="height:100%;background:#16a34a;border-radius:999px"></div>
+                  </div>
+                  <span style="font-size:0.82rem;font-weight:600">{{ (c.approved/c.total*100).toFixed(0) }}%</span>
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+    </div>
+  </div>
+</div>

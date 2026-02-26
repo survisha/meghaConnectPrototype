@@ -1,0 +1,42 @@
+<div>
+  <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;flex-wrap:wrap">
+    <button pButton icon="pi pi-arrow-left" class="p-button-text p-button-sm" routerLink="/reports"></button>
+    <h2 class="page-title" style="margin:0">Scheme Heatmap – Meghalaya</h2>
+    <div style="margin-left:auto;display:flex;gap:0.75rem;align-items:center">
+      <label style="font-size:0.85rem;font-weight:600">Scheme:</label>
+      <p-select [options]="schemeOptions" [(ngModel)]="selectedScheme" styleClass="dd-sm" (ngModelChange)="addMarkers()"></p-select>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 280px;gap:1.5rem">
+    <!-- Map -->
+    <div class="section-card">
+      <div class="section-card-header"><i class="pi pi-map"></i> District-wise Scheme Distribution</div>
+      <div #mapContainer class="map-container"></div>
+      <div class="map-legend">
+        <span class="legend-dot" style="background:#dc2626"></span> High (40+)
+        <span class="legend-dot" style="background:#f59e0b;margin-left:0.75rem"></span> Medium (20-40)
+        <span class="legend-dot" style="background:#16a34a;margin-left:0.75rem"></span> Low (0-20)
+      </div>
+    </div>
+
+    <!-- District Table -->
+    <div class="section-card">
+      <div class="section-card-header"><i class="pi pi-list"></i> District Summary</div>
+      <div style="overflow-y:auto;max-height:500px">
+        <div *ngFor="let d of districtData" class="district-row">
+          <div>
+            <div style="font-weight:600;font-size:0.85rem">{{ d.name }}</div>
+            <div style="font-size:0.75rem;color:#6b7280">{{ d.approved }}/{{ d.applications }} approved</div>
+          </div>
+          <div class="heat-badge" [style.background]="d.color">{{ d.applications }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="info-note" style="margin-top:1rem">
+    <i class="pi pi-info-circle"></i>
+    Map shows bubble chart by district. Full GeoJSON district boundary overlay and assembly constituency-level heatmap integration planned via Leaflet + GeoJSON.
+  </div>
+</div>

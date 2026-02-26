@@ -1,0 +1,7 @@
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.form-group { label { display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem; } }
+.info-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.85rem; color: #1e40af; }
+.doc-row { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem; border-bottom: 1px solid #f3f4f6; flex-wrap: wrap; gap: 0.5rem; }
+.doc-label { font-size: 0.88rem; font-weight: 500; }
+.req { color: #dc2626; }
+.review-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.88rem; }

@@ -1,0 +1,46 @@
+.view-toggle {
+  display: flex; border-radius: 8px; overflow: hidden; border: 1px solid #e5e7eb;
+  button {
+    border: none; padding: 0.4rem 0.9rem; cursor: pointer;
+    background: white; color: #6b7280; font-size: 0.85rem;
+    transition: all 0.15s;
+    &.active { background: #1a237e; color: white; font-weight: 600; }
+  }
+}
+
+.legend-bar {
+  display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem;
+}
+.legend-item {
+  padding: 3px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 600;
+}
+
+.timeline-grid { padding: 0.5rem; }
+.time-row { display: flex; min-height: 60px; border-bottom: 1px solid #f3f4f6; }
+.time-label { width: 60px; flex-shrink: 0; font-size: 0.8rem; color: #9ca3af; font-weight: 600; padding-top: 4px; }
+.time-slots { flex: 1; padding: 2px 4px; display: flex; flex-direction: column; gap: 3px; }
+
+.timeline-event {
+  cursor: pointer; transition: all 0.15s;
+  &:hover { transform: translateX(2px); box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+}
+
+.event-type-badge {
+  color: white; font-size: 0.7rem; font-weight: 700;
+  padding: 1px 6px; border-radius: 3px; margin-right: 6px;
+}
+
+.empty-slot { flex: 1; }
+
+.detail-row {
+  display: flex; gap: 1rem; align-items: center;
+  font-size: 0.9rem; padding: 4px 0; border-bottom: 1px solid #f3f4f6;
+}
+.dl { color: #6b7280; min-width: 90px; font-size: 0.82rem; }
+
+.conflict-warn {
+  background: #fee2e2; border: 1px solid #fca5a5;
+  border-radius: 6px; padding: 0.5rem 0.75rem;
+  color: #dc2626; font-weight: 600; font-size: 0.85rem;
+}
+.form-group { label { display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem; } }

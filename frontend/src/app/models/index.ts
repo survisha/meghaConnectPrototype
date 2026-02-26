@@ -1,0 +1,97 @@
+export type UserRole =
+  | 'HCM' | 'ADMIN' | 'SAIDUL_OSD'
+  | 'APPROVER_JT_SECY' | 'CMO_OFFICER'
+  | 'DATA_ENTRY_OPERATOR' | 'PUBLIC';
+
+export type EventType = 'A1' | 'A2' | 'A3' | 'A4' | 'B1' | 'B2';
+export type Location  = 'SHILLONG' | 'TURA' | 'DELHI' | 'OTHERS';
+export type SchemeType = 'CMSDF' | 'CMSG' | 'CM_CARE' | 'CM_CONNECT' | 'CM_ELEVATE' | 'FOCUS_PLUS' | 'OTHERS';
+export type DirectionColor = 'GREEN' | 'YELLOW' | 'BLUE';
+export type AppointmentStatus =
+  | 'SUBMITTED' | 'DEO_PROCESSED' | 'CMO_REVIEW'
+  | 'APPROVER_REVIEW' | 'HCM_PENDING'
+  | 'HCM_ACCEPTED' | 'HCM_SNOOZED' | 'HCM_REJECTED'
+  | 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
+
+export interface Person {
+  id: number;
+  fullName: string;
+  phoneNumber: string;
+  epicNumber: string;
+  photoUrl?: string;
+  designation: string;
+  district: string;
+  constituency: string;
+  booth: string;
+  village?: string;
+  briefProfile?: string;
+}
+
+export interface Appointment {
+  id: number;
+  applicationId: string;
+  applicant: Person;
+  agendaType: string;
+  agendaBrief: string;
+  status: AppointmentStatus;
+  requestedLocation: Location;
+  scheduledDateTime?: string;
+  scheduledDurationMinutes?: number;
+  eventType: EventType;
+  mlaMdcApproved?: boolean;
+  meetingCountLast6Months?: number;
+  cmoRemarks?: string;
+  hcmRemarks?: string;
+  directions?: Direction[];
+  isWalkIn?: boolean;
+}
+
+export interface ScheduleEvent {
+  id: number;
+  title: string;
+  eventType: EventType;
+  startTime: string;
+  endTime: string;
+  location: Location;
+  travelTimeMinutes?: number;
+  isConflict?: boolean;
+  description?: string;
+}
+
+export interface SchemeApplication {
+  id: number;
+  appointmentId?: number;
+  applicant: Person;
+  schemeType: SchemeType;
+  projectName: string;
+  projectCategory: string;
+  beneficiaryType: string;
+  beneficiaryCount: string;
+  estimatedCost: number;
+  communityContribution: number;
+  justification: string;
+  hcmDecision?: string;
+  hcmApprovedCost?: number;
+  status: string;
+}
+
+export interface Direction {
+  id: number;
+  appointmentId: number;
+  color: DirectionColor;
+  directionText: string;
+  assignedDepartment?: string;
+  deadline?: string;
+  currentStatus?: string;
+  isCompleted: boolean;
+}
+
+export interface AuditEntry {
+  id: number;
+  entityType: string;
+  entityId: number;
+  action: string;
+  details: string;
+  performedBy: string;
+  timestamp: string;
+}

@@ -1,0 +1,74 @@
+<div class="login-page">
+  <div class="login-left">
+    <div class="brand-box">
+      <div class="brand-icon">🏛️</div>
+      <h1>MeghaConnect</h1>
+      <p>Chief Minister's Office<br>Scheduling &amp; Scheme Management</p>
+      <div class="brand-features">
+        <div class="feat"><i class="pi pi-calendar"></i> Smart Scheduling</div>
+        <div class="feat"><i class="pi pi-users"></i> Appointment Management</div>
+        <div class="feat"><i class="pi pi-briefcase"></i> CM Scheme Tracking</div>
+        <div class="feat"><i class="pi pi-map"></i> Geographic Heatmaps</div>
+        <div class="feat"><i class="pi pi-chart-bar"></i> Analytics &amp; Reports</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="login-right">
+    <div class="login-card">
+      <div class="login-header">
+        <h2>Welcome Back</h2>
+        <p>Sign in to continue</p>
+      </div>
+
+      <div class="mode-tabs">
+        <button [class.active]="!isPublicMode" (click)="isPublicMode=false">Staff Login</button>
+        <button [class.active]="isPublicMode" (click)="isPublicMode=true">Public / Citizen</button>
+      </div>
+
+      <ng-container *ngIf="!isPublicMode">
+        <div class="form-group">
+          <label>Quick Demo Access</label>
+          <div class="demo-chips">
+            <button *ngFor="let d of demoCredentials" class="demo-chip" (click)="selectDemo(d.value)">
+              {{ d.label.split('(')[0].trim() }}
+            </button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input pInputText id="username" [(ngModel)]="username" placeholder="Enter username" style="width:100%"/>
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <p-password inputId="password" [(ngModel)]="password" [feedback]="false" [toggleMask]="true" styleClass="w-full" inputStyleClass="w-full"></p-password>
+        </div>
+        <div *ngIf="errorMsg" style="color:#dc2626;font-size:0.85rem;margin-bottom:0.75rem">
+          <i class="pi pi-exclamation-circle"></i> {{ errorMsg }}
+        </div>
+        <p-button label="Sign In" icon="pi pi-sign-in" [loading]="loading" (onClick)="login()" styleClass="w-full"></p-button>
+      </ng-container>
+
+      <ng-container *ngIf="isPublicMode">
+        <div class="public-info">
+          <p><i class="pi pi-info-circle"></i> Citizens can submit appointment requests using their phone number (OTP-based login).</p>
+        </div>
+        <div class="form-group">
+          <label>Phone Number</label>
+          <input pInputText [(ngModel)]="username" placeholder="Enter 10-digit phone number" style="width:100%"/>
+        </div>
+        <div class="form-group">
+          <label>OTP <small style="color:#6b7280">(Demo OTP: 123456)</small></label>
+          <input pInputText [(ngModel)]="otp" placeholder="Enter OTP" style="width:100%"/>
+        </div>
+        <div *ngIf="errorMsg" style="color:#dc2626;font-size:0.85rem;margin-bottom:0.75rem">
+          <i class="pi pi-exclamation-circle"></i> {{ errorMsg }}
+        </div>
+        <p-button label="Verify & Continue" icon="pi pi-check" [loading]="loading" (onClick)="publicLogin()" styleClass="w-full"></p-button>
+        <p style="text-align:center;font-size:0.8rem;color:#6b7280;margin-top:1rem">
+          Use phone: 9876543210 | OTP: 123456 for demo
+        </p>
+      </ng-container>
+    </div>
+  </div>
+</div>

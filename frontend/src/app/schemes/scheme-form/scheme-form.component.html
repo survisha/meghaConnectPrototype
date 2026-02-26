@@ -1,0 +1,133 @@
+<div>
+  <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem">
+    <button pButton icon="pi pi-arrow-left" class="p-button-text p-button-sm" routerLink="/schemes"></button>
+    <h2 class="page-title" style="margin:0">New Scheme Application</h2>
+  </div>
+
+  <div class="section-card" style="margin-bottom:1.5rem">
+    <div class="section-card-body"><p-steps [model]="steps" [activeIndex]="step" [readonly]="true"></p-steps></div>
+  </div>
+
+  <!-- Step 0 -->
+  <div class="section-card" *ngIf="step===0">
+    <div class="section-card-header"><i class="pi pi-briefcase"></i> Scheme Selection</div>
+    <div class="section-card-body">
+      <div class="form-grid">
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Scheme Type *</label>
+          <p-select [options]="schemeTypes" [(ngModel)]="form.schemeType" placeholder="Select CM Scheme" styleClass="w-full"></p-select>
+        </div>
+        <div class="form-group">
+          <label>Application Type</label>
+          <div style="display:flex;gap:1rem;margin-top:0.5rem">
+            <p-radioButton name="appType" [value]="false" [(ngModel)]="form.isReminder" label="New Application"></p-radioButton>
+            <p-radioButton name="appType" [value]="true" [(ngModel)]="form.isReminder" label="Reminder for Existing"></p-radioButton>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 1 -->
+  <div class="section-card" *ngIf="step===1">
+    <div class="section-card-header"><i class="pi pi-file"></i> Project Details</div>
+    <div class="section-card-body">
+      <div class="form-grid">
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Project Name *</label>
+          <input pInputText [(ngModel)]="form.projectName" placeholder="Full name of project/work" style="width:100%"/>
+        </div>
+        <div class="form-group">
+          <label>Category *</label>
+          <p-select [options]="projectCategories" [(ngModel)]="form.projectCategory" placeholder="Select category" styleClass="w-full"></p-select>
+        </div>
+        <div class="form-group">
+          <label>Who Will Benefit *</label>
+          <p-select [options]="beneficiaryTypes" [(ngModel)]="form.beneficiaryType" placeholder="Beneficiary type" styleClass="w-full"></p-select>
+        </div>
+        <div class="form-group">
+          <label>No. of Beneficiaries</label>
+          <p-select [options]="beneficiaryCounts" [(ngModel)]="form.beneficiaryCount" placeholder="Range" styleClass="w-full"></p-select>
+        </div>
+        <div class="form-group">
+          <label>MLA / MDC Approved?</label>
+          <div style="display:flex;gap:1rem;margin-top:0.5rem">
+            <p-radioButton name="mla" [value]="true" [(ngModel)]="form.mlaMdcApproved" label="Yes"></p-radioButton>
+            <p-radioButton name="mla" [value]="false" [(ngModel)]="form.mlaMdcApproved" label="No"></p-radioButton>
+          </div>
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Project Justification *</label>
+          <textarea pTextarea [(ngModel)]="form.justification" rows="4" style="width:100%" placeholder="Why is this project needed? Who will benefit and how?"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="section-card" *ngIf="step===2">
+    <div class="section-card-header"><i class="pi pi-indian-rupee"></i> Financial Details (Item-wise)</div>
+    <div class="section-card-body">
+      <div class="items-table">
+        <div class="item-header">
+          <span style="flex:3">Item Description</span>
+          <span style="flex:1;text-align:center">Qty</span>
+          <span style="flex:1;text-align:right">Unit Cost (₹)</span>
+          <span style="flex:1;text-align:right">Total (₹)</span>
+          <span style="width:36px"></span>
+        </div>
+        <div *ngFor="let item of form.items; let i=index" class="item-row">
+          <input pInputText [(ngModel)]="item.description" placeholder="Description" style="flex:3;min-width:0"/>
+          <input pInputText type="number" [(ngModel)]="item.quantity" style="flex:1;text-align:center"/>
+          <input pInputText type="number" [(ngModel)]="item.unitCost" style="flex:1;text-align:right"/>
+          <span style="flex:1;text-align:right;font-weight:600">₹{{ (item.quantity * item.unitCost).toLocaleString() }}</span>
+          <button pButton icon="pi pi-trash" class="p-button-text p-button-danger p-button-sm" (click)="removeItem(i)"></button>
+        </div>
+        <div class="item-total">
+          <span>Total Estimated Cost:</span>
+          <strong style="color:#1a237e;font-size:1.1rem">₹{{ totalCost.toLocaleString() }}</strong>
+        </div>
+      </div>
+      <button pButton label="+ Add Item" icon="pi pi-plus" class="p-button-outlined p-button-sm" (click)="addItem()" style="margin-top:1rem"></button>
+      <p-divider></p-divider>
+      <div class="form-group">
+        <label>Community Contribution (₹)</label>
+        <p-inputNumber [(ngModel)]="form.communityContribution" mode="currency" currency="INR" locale="en-IN" styleClass="w-full"></p-inputNumber>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="section-card" *ngIf="step===3">
+    <div class="section-card-header"><i class="pi pi-paperclip"></i> Required Documents</div>
+    <div class="section-card-body">
+      <div class="doc-row"><div class="doc-label">Plans &amp; Estimates (3 nos) <span class="req">*</span></div><p-fileUpload mode="basic" chooseLabel="Upload" accept=".pdf" styleClass="p-button-sm p-button-outlined"></p-fileUpload></div>
+      <div class="doc-row"><div class="doc-label">Bank Account Details <span class="req">*</span></div><p-fileUpload mode="basic" chooseLabel="Upload" accept=".pdf,.jpg" styleClass="p-button-sm p-button-outlined"></p-fileUpload></div>
+      <div class="doc-row"><div class="doc-label">MLA / MDC Letter (if applicable)</div><p-fileUpload mode="basic" chooseLabel="Upload" accept=".pdf" styleClass="p-button-sm p-button-outlined"></p-fileUpload></div>
+      <div class="doc-row"><div class="doc-label">Hospital / Medical Docs (CM Care)</div><p-fileUpload mode="basic" chooseLabel="Upload" accept=".pdf" styleClass="p-button-sm p-button-outlined"></p-fileUpload></div>
+      <div class="doc-row"><div class="doc-label">Organisation Registration Certificate</div><p-fileUpload mode="basic" chooseLabel="Upload" accept=".pdf" styleClass="p-button-sm p-button-outlined"></p-fileUpload></div>
+    </div>
+  </div>
+
+  <!-- Step 4 -->
+  <div class="section-card" *ngIf="step===4">
+    <div class="section-card-header"><i class="pi pi-check-circle"></i> Review &amp; Submit</div>
+    <div class="section-card-body">
+      <div class="review-grid">
+        <div><span>Scheme Type</span><strong>{{ form.schemeType || '–' }}</strong></div>
+        <div><span>Project Name</span><strong>{{ form.projectName || '–' }}</strong></div>
+        <div><span>Category</span><strong>{{ form.projectCategory || '–' }}</strong></div>
+        <div><span>Beneficiary Type</span><strong>{{ form.beneficiaryType || '–' }}</strong></div>
+        <div><span>Total Est. Cost</span><strong>₹{{ totalCost.toLocaleString() }}</strong></div>
+        <div><span>Community Contribution</span><strong>₹{{ form.communityContribution.toLocaleString() }}</strong></div>
+        <div><span>MLA/MDC Approved</span><strong>{{ form.mlaMdcApproved ? 'Yes' : 'No' }}</strong></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;justify-content:space-between;margin-top:1.5rem">
+    <button pButton label="← Previous" class="p-button-outlined p-button-sm" (click)="prevStep()" [disabled]="step===0"></button>
+    <button *ngIf="step < steps.length-1" pButton label="Next →" class="p-button-sm" (click)="nextStep()"></button>
+    <button *ngIf="step===steps.length-1" pButton label="Submit Application" icon="pi pi-check" class="p-button-success p-button-sm" (click)="submit()"></button>
+  </div>
+</div>

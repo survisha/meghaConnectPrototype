@@ -1,0 +1,187 @@
+<div>
+  <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem">
+    <button pButton icon="pi pi-arrow-left" class="p-button-text p-button-sm" routerLink="/appointments"></button>
+    <h2 class="page-title" style="margin:0">New Appointment Request</h2>
+  </div>
+
+  <div class="section-card" style="margin-bottom:1.5rem">
+    <div class="section-card-body">
+      <p-steps [model]="steps" [activeIndex]="step" [readonly]="true"></p-steps>
+    </div>
+  </div>
+
+  <!-- Step 0: Personal Info -->
+  <div class="section-card" *ngIf="step===0">
+    <div class="section-card-header"><i class="pi pi-user"></i> Personal Information</div>
+    <div class="section-card-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Full Name *</label>
+          <input pInputText [(ngModel)]="form.fullName" placeholder="Full name" style="width:100%"/>
+        </div>
+        <div class="form-group">
+          <label>Phone Number * <small>(Unique ID)</small></label>
+          <input pInputText [(ngModel)]="form.phoneNumber" placeholder="10-digit mobile number" style="width:100%"/>
+        </div>
+        <div class="form-group">
+          <label>EPIC / Voter ID *</label>
+          <input pInputText [(ngModel)]="form.epicNumber" placeholder="Election ID Card number" style="width:100%"/>
+        </div>
+        <div class="form-group">
+          <label>Designation *</label>
+          <p-select [options]="designations" [(ngModel)]="form.designation" placeholder="Select designation" styleClass="w-full"></p-select>
+        </div>
+        <div class="form-group">
+          <label>District</label>
+          <p-select [options]="districts" [(ngModel)]="form.district" placeholder="Select district" styleClass="w-full"></p-select>
+        </div>
+        <div class="form-group">
+          <label>Constituency</label>
+          <input pInputText [(ngModel)]="form.constituency" placeholder="Constituency name" style="width:100%"/>
+        </div>
+        <div class="form-group">
+          <label>Booth / Village</label>
+          <input pInputText [(ngModel)]="form.booth" placeholder="Booth or village" style="width:100%"/>
+        </div>
+        <div class="form-group">
+          <label>Last Appointment Date with HCM</label>
+          <input pInputText [(ngModel)]="form.lastMeetingDate" placeholder="DD/MM/YYYY (if known)" style="width:100%"/>
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Full Address</label>
+          <textarea pTextarea [(ngModel)]="form.address" rows="2" style="width:100%" placeholder="Complete address"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 1: Agenda -->
+  <div class="section-card" *ngIf="step===1">
+    <div class="section-card-header"><i class="pi pi-file-edit"></i> Appointment Agenda</div>
+    <div class="section-card-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Agenda Type *</label>
+          <p-select [options]="agendaTypes" [(ngModel)]="form.agendaType" placeholder="Select agenda" styleClass="w-full"></p-select>
+        </div>
+        <div class="form-group">
+          <label>Requested Location *</label>
+          <p-select [options]="locations" [(ngModel)]="form.requestedLocation" placeholder="Meeting location" styleClass="w-full"></p-select>
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Brief Description of Agenda *</label>
+          <textarea pTextarea [(ngModel)]="form.agendaBrief" rows="4" style="width:100%" placeholder="Describe your purpose of visit in detail..."></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2: Scheme Details -->
+  <div class="section-card" *ngIf="step===2">
+    <div class="section-card-header"><i class="pi pi-briefcase"></i> Scheme Details
+      <span *ngIf="!isScheme" style="margin-left:0.5rem;font-weight:400;font-size:0.8rem;opacity:.8">(Skip if not scheme application)</span>
+    </div>
+    <div class="section-card-body">
+      <div *ngIf="!isScheme" class="info-box">
+        This section is only required for CM Scheme applications. You selected "<strong>{{ form.agendaType || 'None' }}</strong>". Click Next to continue.
+      </div>
+      <div *ngIf="isScheme" class="form-grid">
+        <div class="form-group">
+          <label>Scheme Type *</label>
+          <p-select [options]="schemeTypes" [(ngModel)]="form.schemeType" placeholder="Select scheme" styleClass="w-full"></p-select>
+        </div>
+        <div class="form-group">
+          <label>Project Category *</label>
+          <p-select [options]="projectCategories" [(ngModel)]="form.projectCategory" placeholder="Category" styleClass="w-full"></p-select>
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Project Name *</label>
+          <input pInputText [(ngModel)]="form.projectName" placeholder="Name of the project" style="width:100%"/>
+        </div>
+        <div class="form-group">
+          <label>Beneficiary Type</label>
+          <p-select [options]="beneficiaryTypes" [(ngModel)]="form.beneficiaryType" placeholder="Who benefits?" styleClass="w-full"></p-select>
+        </div>
+        <div class="form-group">
+          <label>No. of Beneficiaries</label>
+          <p-select [options]="beneficiaryCounts" [(ngModel)]="form.beneficiaryCount" placeholder="Count" styleClass="w-full"></p-select>
+        </div>
+        <div class="form-group">
+          <label>Estimated Cost (₹)</label>
+          <input pInputText [(ngModel)]="form.estimatedCost" placeholder="Total project cost" style="width:100%"/>
+        </div>
+        <div class="form-group">
+          <label>Community Contribution (₹)</label>
+          <input pInputText [(ngModel)]="form.communityContribution" placeholder="Amount from community" style="width:100%"/>
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Justification</label>
+          <textarea pTextarea [(ngModel)]="form.justification" rows="3" style="width:100%" placeholder="Why is this project needed?"></textarea>
+        </div>
+        <div class="form-group">
+          <label>MLA / MDC Approval</label>
+          <div style="display:flex;align-items:center;gap:0.75rem;margin-top:0.35rem">
+            <p-radioButton name="mlaMdc" [value]="true" [(ngModel)]="form.mlaMdcApproved" label="Yes"></p-radioButton>
+            <p-radioButton name="mlaMdc" [value]="false" [(ngModel)]="form.mlaMdcApproved" label="No"></p-radioButton>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 3: Documents -->
+  <div class="section-card" *ngIf="step===3">
+    <div class="section-card-header"><i class="pi pi-paperclip"></i> Document Upload</div>
+    <div class="section-card-body">
+      <div class="doc-row">
+        <div class="doc-label">EPIC / Voter ID Scan <span class="req">*</span></div>
+        <p-fileUpload mode="basic" chooseLabel="Upload EPIC" accept=".pdf,.jpg,.png" maxFileSize="5000000" styleClass="p-button-outlined p-button-sm"></p-fileUpload>
+      </div>
+      <div class="doc-row">
+        <div class="doc-label">Application Letter <span class="req">*</span></div>
+        <p-fileUpload mode="basic" chooseLabel="Upload Application" accept=".pdf" maxFileSize="5000000" styleClass="p-button-outlined p-button-sm"></p-fileUpload>
+      </div>
+      <div class="doc-row">
+        <div class="doc-label">Plans &amp; Estimates (up to 3) <span style="color:#6b7280;font-size:0.8rem">(for schemes)</span></div>
+        <p-fileUpload mode="basic" chooseLabel="Upload Plans" accept=".pdf" maxFileSize="10000000" styleClass="p-button-outlined p-button-sm"></p-fileUpload>
+      </div>
+      <div class="doc-row">
+        <div class="doc-label">Bank Account Details</div>
+        <p-fileUpload mode="basic" chooseLabel="Upload Bank Details" accept=".pdf,.jpg,.png" maxFileSize="5000000" styleClass="p-button-outlined p-button-sm"></p-fileUpload>
+      </div>
+      <div class="doc-row">
+        <div class="doc-label">MLA/MDC Approval Letter <span style="color:#6b7280;font-size:0.8rem">(if applicable)</span></div>
+        <p-fileUpload mode="basic" chooseLabel="Upload Letter" accept=".pdf" maxFileSize="5000000" styleClass="p-button-outlined p-button-sm"></p-fileUpload>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 4: Review -->
+  <div class="section-card" *ngIf="step===4">
+    <div class="section-card-header"><i class="pi pi-check-circle"></i> Review &amp; Submit</div>
+    <div class="section-card-body">
+      <div class="review-grid">
+        <div><strong>Name:</strong> {{ form.fullName || '–' }}</div>
+        <div><strong>Phone:</strong> {{ form.phoneNumber || '–' }}</div>
+        <div><strong>EPIC:</strong> {{ form.epicNumber || '–' }}</div>
+        <div><strong>Designation:</strong> {{ form.designation || '–' }}</div>
+        <div><strong>Constituency:</strong> {{ form.constituency || '–' }}</div>
+        <div><strong>Agenda:</strong> {{ form.agendaType || '–' }}</div>
+        <div><strong>Location:</strong> {{ form.requestedLocation || '–' }}</div>
+        <div *ngIf="isScheme"><strong>Scheme:</strong> {{ form.schemeType || '–' }}</div>
+        <div *ngIf="isScheme"><strong>Project:</strong> {{ form.projectName || '–' }}</div>
+        <div *ngIf="isScheme"><strong>Est. Cost:</strong> ₹{{ form.estimatedCost || '–' }}</div>
+      </div>
+      <div class="info-box" style="margin-top:1rem">
+        By submitting, you confirm all information is correct. An Application ID will be generated and you will be contacted for scheduling.
+      </div>
+    </div>
+  </div>
+
+  <!-- Navigation Buttons -->
+  <div style="display:flex;justify-content:space-between;margin-top:1.5rem">
+    <button pButton label="← Previous" class="p-button-outlined p-button-sm" (click)="prevStep()" [disabled]="step===0"></button>
+    <button *ngIf="step < steps.length-1" pButton label="Next →" class="p-button-sm" (click)="nextStep()"></button>
+    <button *ngIf="step === steps.length-1" pButton label="Submit Application" icon="pi pi-check" class="p-button-success p-button-sm" (click)="submit()"></button>
+  </div>
+</div>

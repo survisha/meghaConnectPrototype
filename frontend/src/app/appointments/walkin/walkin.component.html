@@ -1,0 +1,101 @@
+<div>
+  <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem">
+    <button pButton icon="pi pi-arrow-left" class="p-button-text p-button-sm" routerLink="/appointments"></button>
+    <h2 class="page-title" style="margin:0">🚶 Walk-in Counter (Type B2)</h2>
+  </div>
+
+  <div *ngIf="!checkedIn">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+      <!-- Lookup Form -->
+      <div class="section-card">
+        <div class="section-card-header"><i class="pi pi-search"></i> Citizen Lookup (DEO)</div>
+        <div class="section-card-body">
+          <div style="margin-bottom:1rem">
+            <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:0.35rem">Phone Number</label>
+            <div style="display:flex;gap:0.5rem">
+              <input pInputText [(ngModel)]="phoneNumber" placeholder="10-digit mobile" style="flex:1"/>
+            </div>
+          </div>
+          <div style="text-align:center;color:#9ca3af;margin:0.5rem 0;font-size:0.85rem">— OR —</div>
+          <div style="margin-bottom:1rem">
+            <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:0.35rem">EPIC / Voter ID</label>
+            <input pInputText [(ngModel)]="epicNumber" placeholder="EPIC number" style="width:100%"/>
+          </div>
+          <button pButton label="Search" icon="pi pi-search" (click)="search()" style="width:100%"></button>
+        </div>
+      </div>
+
+      <!-- Result -->
+      <div>
+        <!-- Not Found -->
+        <div *ngIf="notFound" class="section-card">
+          <div class="section-card-header" style="background:linear-gradient(135deg,#b45309,#d97706)"><i class="pi pi-user-plus"></i> New Visitor</div>
+          <div class="section-card-body">
+            <p style="font-size:0.9rem;color:#374151">No existing record found. Please register as a new applicant.</p>
+            <button pButton label="Register New Applicant" icon="pi pi-plus" routerLink="/appointments/new" style="width:100%"></button>
+          </div>
+        </div>
+
+        <!-- Found -->
+        <div *ngIf="foundPerson" class="section-card">
+          <div class="section-card-header" style="background:linear-gradient(135deg,#065f46,#059669)"><i class="pi pi-check-circle"></i> Existing Applicant Found</div>
+          <div class="section-card-body">
+            <div class="person-card">
+              <div class="person-avatar">{{ foundPerson.fullName[0] }}</div>
+              <div style="flex:1">
+                <div style="font-weight:700;font-size:1rem">{{ foundPerson.fullName }}</div>
+                <div style="font-size:0.8rem;color:#6b7280">{{ foundPerson.designation }}</div>
+                <div style="font-size:0.8rem;color:#6b7280">📍 {{ foundPerson.constituency }}, {{ foundPerson.district }}</div>
+              </div>
+            </div>
+            <div class="detail-pairs">
+              <div><span>EPIC</span><strong>{{ foundPerson.epicNumber }}</strong></div>
+              <div><span>Phone</span><strong>{{ foundPerson.phoneNumber }}</strong></div>
+              <div><span>Booth</span><strong>{{ foundPerson.booth }}</strong></div>
+            </div>
+            <div style="margin-top:1rem">
+              <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:0.35rem">Agenda for Today</label>
+              <p-select [options]="agendaTypes" [(ngModel)]="agendaType" placeholder="Select agenda" styleClass="w-full"></p-select>
+            </div>
+            <button pButton label="✅ Check In" icon="pi pi-check" class="p-button-success" style="width:100%;margin-top:1rem" (click)="checkIn()"></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Associates -->
+    <div class="section-card" style="margin-top:1.5rem">
+      <div class="section-card-header">
+        <i class="pi pi-users"></i> Associates / Accompanying Persons
+        <button pButton label="+ Add Associate" icon="pi pi-plus" class="p-button-sm p-button-outlined" style="margin-left:auto;border-color:white;color:white" (click)="addAssociate()"></button>
+      </div>
+      <div class="section-card-body">
+        <p style="font-size:0.85rem;color:#6b7280;margin-bottom:1rem">Record all people accompanying the applicant (name, EPIC, photo, designation, address).</p>
+        <div *ngIf="associates.length===0" style="text-align:center;color:#9ca3af;padding:1rem">No associates added yet.</div>
+        <div *ngFor="let a of associates" class="associate-row">
+          <div class="person-avatar" style="width:36px;height:36px;font-size:1rem">{{ a.fullName[0] }}</div>
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:0.88rem">{{ a.fullName }}</div>
+            <div style="font-size:0.78rem;color:#6b7280">{{ a.designation }} | {{ a.constituency }}</div>
+          </div>
+          <p-tag value="Associate" severity="info" styleClass="text-xs"></p-tag>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Check-in success -->
+  <div *ngIf="checkedIn" class="checkin-success">
+    <i class="pi pi-check-circle" style="font-size:4rem;color:#16a34a;margin-bottom:1rem"></i>
+    <h2 style="color:#065f46;margin:0 0 0.5rem">Walk-in Checked In!</h2>
+    <div class="ticket-box">
+      <div style="font-size:0.85rem;color:#6b7280">Token Number</div>
+      <div style="font-size:2.5rem;font-weight:800;color:#1a237e;letter-spacing:2px">{{ ticketId }}</div>
+      <div style="font-size:0.85rem;color:#374151">Please wait – CMO will call you shortly</div>
+    </div>
+    <div *ngIf="foundPerson" style="font-size:0.9rem;color:#374151;margin-top:1rem">
+      Applicant: <strong>{{ foundPerson.fullName }}</strong>
+    </div>
+    <button pButton label="Register Another" icon="pi pi-plus" class="p-button-outlined" style="margin-top:1.5rem" (click)="checkedIn=false;foundPerson=null;phoneNumber='';epicNumber=''"></button>
+  </div>
+</div>

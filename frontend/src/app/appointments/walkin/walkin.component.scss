@@ -1,0 +1,16 @@
+.person-card { display: flex; gap: 0.75rem; align-items: flex-start; margin-bottom: 1rem; }
+.person-avatar {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: linear-gradient(135deg, #1a237e, #3949ab); color: white;
+  font-size: 1.2rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.detail-pairs { display: flex; flex-direction: column; gap: 4px;
+  div { display: flex; gap: 0.75rem; font-size: 0.82rem; span { color: #6b7280; min-width: 50px; } }
+}
+.associate-row { display: flex; gap: 0.75rem; align-items: center; padding: 0.5rem; border-radius: 6px; background: #f9fafb; margin-bottom: 0.5rem; }
+.checkin-success { text-align: center; padding: 3rem; display: flex; flex-direction: column; align-items: center; }
+.ticket-box {
+  background: #f0f9ff; border: 2px dashed #0ea5e9; border-radius: 12px;
+  padding: 1.5rem 3rem; margin: 1rem 0; text-align: center;
+}

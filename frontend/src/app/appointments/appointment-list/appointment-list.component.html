@@ -1,0 +1,61 @@
+<div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.75rem">
+    <h2 class="page-title" style="margin:0">Appointments</h2>
+    <div style="display:flex;gap:0.5rem">
+      <button pButton label="Walk-in" icon="pi pi-sign-in" class="p-button-sm p-button-success" routerLink="/appointments/walkin"></button>
+      <button pButton label="New Appointment" icon="pi pi-plus" class="p-button-sm" routerLink="/appointments/new"></button>
+    </div>
+  </div>
+
+  <div class="section-card">
+    <div class="section-card-header"><i class="pi pi-list"></i> All Appointments</div>
+    <div class="section-card-body">
+      <!-- Filters -->
+      <div style="display:flex;gap:0.75rem;margin-bottom:1rem;flex-wrap:wrap">
+        <input pInputText [(ngModel)]="search" (ngModelChange)="applyFilter()" placeholder="🔍 Search by name or ID..." style="flex:1;min-width:200px"/>
+        <p-select [options]="statusOptions" [(ngModel)]="filterStatus" (ngModelChange)="applyFilter()" styleClass="filter-dd"></p-select>
+      </div>
+
+      <p-table [value]="filtered" [paginator]="true" [rows]="10" [rowHover]="true" styleClass="p-datatable-sm">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>App ID</th>
+            <th>Applicant</th>
+            <th>Designation</th>
+            <th>Constituency</th>
+            <th>Agenda</th>
+            <th>Type</th>
+            <th>Location</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-appt>
+          <tr>
+            <td><strong style="color:#1a237e">{{ appt.applicationId }}</strong></td>
+            <td>
+              <div style="font-weight:600">{{ appt.applicant.fullName }}</div>
+              <div style="font-size:0.75rem;color:#6b7280">📞 {{ appt.applicant.phoneNumber }}</div>
+            </td>
+            <td style="font-size:0.85rem">{{ appt.applicant.designation }}</td>
+            <td style="font-size:0.85rem">{{ appt.applicant.constituency }}</td>
+            <td style="font-size:0.85rem;max-width:180px">{{ appt.agendaType }}</td>
+            <td>
+              <span class="event-badge" [class]="'type-'+appt.eventType">{{ appt.eventType }}</span>
+            </td>
+            <td style="font-size:0.85rem">{{ appt.requestedLocation }}</td>
+            <td>
+              <p-tag [value]="getStatusLabel(appt.status)" [severity]="getStatusSeverity(appt.status)" styleClass="text-xs"></p-tag>
+            </td>
+            <td>
+              <button pButton icon="pi pi-eye" class="p-button-text p-button-sm" pTooltip="View Details" [routerLink]="['/appointments', appt.id]"></button>
+            </td>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+          <tr><td colspan="9" style="text-align:center;padding:2rem;color:#9ca3af">No appointments found.</td></tr>
+        </ng-template>
+      </p-table>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,60 @@
+.app-wrapper { display: flex; flex-direction: column; min-height: 100vh; }
+.body-wrapper { display: flex; flex: 1; }
+
+.megha-sidebar {
+  background: #1a237e;
+  width: 240px;
+  transition: width 0.25s ease;
+  flex-shrink: 0;
+  &.collapsed { width: 52px; }
+}
+
+.nav-menu { list-style: none; margin: 0.5rem 0; padding: 0; }
+.nav-item, .nav-group { }
+
+.nav-link {
+  display: flex; align-items: center; gap: 0.7rem;
+  padding: 0.6rem 0.85rem;
+  color: rgba(255,255,255,0.8);
+  text-decoration: none;
+  font-size: 0.88rem;
+  border-left: 3px solid transparent;
+  transition: all 0.15s;
+  &:hover, &.active { background: rgba(255,255,255,0.12); color: white; border-left-color: #90caf9; }
+  i { width: 18px; text-align: center; flex-shrink: 0; }
+}
+
+.nav-group-btn {
+  background: none; border: none; width: 100%; cursor: pointer;
+}
+
+.nav-sub { list-style: none; padding: 0; margin: 0; background: rgba(0,0,0,0.15); }
+.nav-sub-link {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.45rem 0.85rem 0.45rem 2.1rem;
+  color: rgba(255,255,255,0.75); text-decoration: none; font-size: 0.82rem;
+  &:hover { color: white; background: rgba(255,255,255,0.08); }
+  i { font-size: 0.8rem; }
+}
+
+.header-right {
+  display: flex; align-items: center; gap: 1rem;
+}
+.icon-btn {
+  background: rgba(255,255,255,0.1); border: none; color: white;
+  width: 36px; height: 36px; border-radius: 8px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+  &:hover { background: rgba(255,255,255,0.2); }
+  i { font-size: 1.1rem; }
+}
+.user-info { text-align: right; }
+.role-badge {
+  display: inline-block; background: rgba(255,255,255,0.2);
+  border-radius: 999px; padding: 1px 8px; font-size: 0.7rem; color: #e3f2fd;
+}
+.notif-dot {
+  position: absolute; top: -3px; right: -3px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #ef4444;
+}

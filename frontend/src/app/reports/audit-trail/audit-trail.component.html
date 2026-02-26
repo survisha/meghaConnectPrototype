@@ -1,0 +1,33 @@
+<div>
+  <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem">
+    <button pButton icon="pi pi-arrow-left" class="p-button-text p-button-sm" routerLink="/reports"></button>
+    <h2 class="page-title" style="margin:0">📋 Audit Trail</h2>
+    <span style="margin-left:auto;color:#6b7280;font-size:0.85rem">Visible to Admin &amp; HCM only</span>
+  </div>
+
+  <div class="section-card">
+    <div class="section-card-header"><i class="pi pi-history"></i> All System Actions</div>
+    <div class="section-card-body">
+      <input pInputText [(ngModel)]="search" placeholder="🔍 Filter by user, action, entity..." style="width:100%;margin-bottom:1rem"/>
+      <p-table [value]="filtered" styleClass="p-datatable-sm" [rowHover]="true" [paginator]="true" [rows]="15">
+        <ng-template pTemplate="header">
+          <tr>
+            <th style="width:60px">#</th><th>Timestamp</th><th>User</th>
+            <th>Entity</th><th>Entity ID</th><th>Action</th><th>Details</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-l>
+          <tr>
+            <td style="color:#9ca3af">{{ l.id }}</td>
+            <td style="font-size:0.82rem;white-space:nowrap">{{ l.timestamp | date:'d MMM y, HH:mm' }}</td>
+            <td style="font-weight:600;font-size:0.85rem">{{ l.performedBy }}</td>
+            <td style="font-size:0.85rem">{{ l.entityType }}</td>
+            <td style="font-size:0.85rem">{{ l.entityId }}</td>
+            <td><p-tag [value]="l.action" [severity]="getSeverity(l.action)" styleClass="text-xs"></p-tag></td>
+            <td style="font-size:0.82rem;color:#374151">{{ l.details }}</td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+  </div>
+</div>

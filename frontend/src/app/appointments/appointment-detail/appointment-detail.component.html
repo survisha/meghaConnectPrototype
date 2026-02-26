@@ -1,0 +1,161 @@
+<div *ngIf="appointment; else notFound">
+  <!-- Back & Header -->
+  <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem">
+    <button pButton icon="pi pi-arrow-left" class="p-button-text p-button-sm" routerLink="/appointments"></button>
+    <h2 class="page-title" style="margin:0">Appointment: {{ appointment.applicationId }}</h2>
+    <p-tag [value]="appointment.status.replace('_',' ')" [severity]="getStatusSeverity(appointment.status)" style="margin-left:auto"></p-tag>
+  </div>
+
+  <!-- Workflow Steps -->
+  <div class="section-card" style="margin-bottom:1.5rem">
+    <div class="section-card-header"><i class="pi pi-sitemap"></i> Approval Workflow</div>
+    <div style="padding:1.25rem">
+      <p-steps [model]="workflowSteps" [activeIndex]="currentStep" [readonly]="true"></p-steps>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+    <!-- Applicant Profile -->
+    <div class="section-card">
+      <div class="section-card-header"><i class="pi pi-user"></i> Applicant Profile</div>
+      <div class="section-card-body">
+        <div class="profile-header">
+          <div class="avatar">{{ appointment.applicant.fullName[0] }}</div>
+          <div>
+            <div style="font-weight:700;font-size:1.05rem">{{ appointment.applicant.fullName }}</div>
+            <div style="font-size:0.82rem;color:#6b7280">{{ appointment.applicant.designation }}</div>
+            <div *ngIf="appointment.meetingCountLast6Months && appointment.meetingCountLast6Months >= 3"
+                 style="color:#dc2626;font-size:0.8rem;font-weight:600">
+              ⚠️ Repetitive Visitor ({{ appointment.meetingCountLast6Months }} meetings in 6 months)
+            </div>
+          </div>
+        </div>
+        <div class="detail-grid">
+          <div class="dl-pair"><span>Phone</span><strong>{{ appointment.applicant.phoneNumber }}</strong></div>
+          <div class="dl-pair"><span>EPIC</span><strong>{{ appointment.applicant.epicNumber }}</strong></div>
+          <div class="dl-pair"><span>District</span><strong>{{ appointment.applicant.district }}</strong></div>
+          <div class="dl-pair"><span>Constituency</span><strong>{{ appointment.applicant.constituency }}</strong></div>
+          <div class="dl-pair"><span>Booth/Village</span><strong>{{ appointment.applicant.booth }}</strong></div>
+          <div class="dl-pair"><span>MLA/MDC Approved</span>
+            <strong [class]="appointment.mlaMdcApproved ? 'dir-green' : 'dir-red'">
+              {{ appointment.mlaMdcApproved ? '✅ Yes' : '❌ No' }}
+            </strong>
+          </div>
+        </div>
+        <div *ngIf="appointment.applicant.briefProfile" style="margin-top:0.75rem;padding:0.75rem;background:#f9fafb;border-radius:6px;font-size:0.85rem;color:#374151">
+          <strong>Profile:</strong> {{ appointment.applicant.briefProfile }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Agenda & Remarks -->
+    <div class="section-card">
+      <div class="section-card-header"><i class="pi pi-file-edit"></i> Agenda &amp; Remarks</div>
+      <div class="section-card-body">
+        <div class="dl-pair"><span>Agenda Type</span><strong>{{ appointment.agendaType }}</strong></div>
+        <div class="dl-pair"><span>Event Type</span>
+          <span class="event-type-pill">{{ appointment.eventType }}</span>
+        </div>
+        <div class="dl-pair"><span>Location</span><strong>{{ appointment.requestedLocation }}</strong></div>
+        <div *ngIf="appointment.scheduledDateTime" class="dl-pair">
+          <span>Scheduled</span>
+          <strong>{{ appointment.scheduledDateTime | date:'d MMM y, h:mm a' }}</strong>
+        </div>
+        <p-divider></p-divider>
+        <div style="font-size:0.85rem;color:#374151;line-height:1.6">
+          <strong>Agenda Brief:</strong><br>{{ appointment.agendaBrief }}
+        </div>
+        <div *ngIf="appointment.cmoRemarks" style="margin-top:0.75rem;padding:0.75rem;background:#eff6ff;border-radius:6px;font-size:0.85rem">
+          <strong style="color:#1e40af">CMO Remarks:</strong> {{ appointment.cmoRemarks }}
+        </div>
+        <div *ngIf="appointment.hcmRemarks" style="margin-top:0.5rem;padding:0.75rem;background:#ecfdf5;border-radius:6px;font-size:0.85rem">
+          <strong style="color:#065f46">HCM Remarks:</strong> {{ appointment.hcmRemarks }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Directions -->
+    <div class="section-card">
+      <div class="section-card-header"><i class="pi pi-directions"></i> HCM Directions
+        <div style="margin-left:auto;display:flex;gap:0.5rem">
+          <button pButton label="Green" class="p-button-success p-button-sm" style="font-size:0.75rem;padding:4px 10px" (click)="issueDirection('GREEN')"></button>
+          <button pButton label="Yellow" class="p-button-warning p-button-sm" style="font-size:0.75rem;padding:4px 10px" (click)="issueDirection('YELLOW')"></button>
+          <button pButton label="Blue" class="p-button-info p-button-sm" style="font-size:0.75rem;padding:4px 10px" (click)="issueDirection('BLUE')"></button>
+        </div>
+      </div>
+      <div class="section-card-body">
+        <div *ngIf="!appointment.directions?.length" style="text-align:center;color:#9ca3af;padding:1rem;font-size:0.85rem">
+          No directions issued yet.
+        </div>
+        <div *ngFor="let dir of appointment.directions" class="direction-item">
+          <div class="dir-dot" [class]="dir.color.toLowerCase()"></div>
+          <div style="flex:1">
+            <div [class]="getDirClass(dir.color)" style="font-size:0.9rem">
+              [{{ dir.color }}] {{ dir.directionText }}
+            </div>
+            <div style="font-size:0.75rem;color:#6b7280;margin-top:2px">
+              Dept: {{ dir.assignedDepartment ?? 'Not assigned' }} |
+              Status: {{ dir.currentStatus ?? 'Pending' }} |
+              <span [style.color]="dir.isCompleted ? '#16a34a' : '#dc2626'">
+                {{ dir.isCompleted ? 'Completed' : 'Open' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Activity Timeline -->
+    <div class="section-card">
+      <div class="section-card-header"><i class="pi pi-history"></i> Activity Timeline</div>
+      <div class="section-card-body">
+        <p-timeline [value]="timeline" styleClass="small-timeline">
+          <ng-template pTemplate="marker" let-t>
+            <span class="timeline-dot" [style.background]="t.color"><i class="pi {{t.icon}}" style="font-size:0.7rem"></i></span>
+          </ng-template>
+          <ng-template pTemplate="content" let-t>
+            <div style="font-size:0.85rem;font-weight:600;color:#111827">{{ t.status.replace('_',' ') }}</div>
+            <div style="font-size:0.8rem;color:#6b7280">{{ t.text }}</div>
+            <div style="font-size:0.75rem;color:#9ca3af">{{ t.date }}</div>
+          </ng-template>
+        </p-timeline>
+      </div>
+    </div>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="section-card" style="margin-top:1.5rem">
+    <div class="section-card-header"><i class="pi pi-bolt"></i> Actions</div>
+    <div class="section-card-body" style="display:flex;gap:0.75rem;flex-wrap:wrap">
+      <button pButton label="Accept (HCM)" icon="pi pi-check" class="p-button-success p-button-sm"></button>
+      <button pButton label="Snooze 7 days" icon="pi pi-clock" class="p-button-warning p-button-sm"></button>
+      <button pButton label="Reject" icon="pi pi-times" class="p-button-danger p-button-sm"></button>
+      <button pButton label="Reschedule" icon="pi pi-calendar" class="p-button-secondary p-button-sm"></button>
+    </div>
+  </div>
+</div>
+
+<ng-template #notFound>
+  <div style="text-align:center;padding:4rem;color:#9ca3af">
+    <i class="pi pi-exclamation-circle" style="font-size:3rem"></i>
+    <p>Appointment not found. <a routerLink="/appointments">Back to list</a></p>
+  </div>
+</ng-template>
+
+<p-dialog header="Issue Direction" [(visible)]="showDirectionDialog" [style]="{width:'400px'}" [modal]="true">
+  <div style="display:flex;flex-direction:column;gap:1rem;padding:0.5rem 0">
+    <div class="dir-legend">
+      <div class="dir-legend-item green">🟢 GREEN – Do it fast with follow-up</div>
+      <div class="dir-legend-item yellow">🟡 YELLOW – Forward to office, look into it</div>
+      <div class="dir-legend-item blue">🔵 BLUE – Forward to office, can ignore</div>
+    </div>
+    <div>
+      <label style="font-weight:600;font-size:0.85rem">Direction Text *</label>
+      <textarea pTextarea [(ngModel)]="directionText" rows="3" style="width:100%;margin-top:6px" placeholder="Enter direction..."></textarea>
+    </div>
+  </div>
+  <ng-template pTemplate="footer">
+    <button pButton label="Cancel" class="p-button-text" (click)="showDirectionDialog=false"></button>
+    <button pButton label="Save Direction" icon="pi pi-check" (click)="saveDirection()"></button>
+  </ng-template>
+</p-dialog>

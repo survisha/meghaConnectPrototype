@@ -1,0 +1,22 @@
+.field-label { display: block; font-weight: 600; font-size: 0.82rem; margin-bottom: 0.35rem; color: #374151; }
+.result-row {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.75rem 1rem; border-bottom: 1px solid #f3f4f6; cursor: pointer; transition: background 0.15s;
+  &:hover { background: #f0f9ff; }
+  &.selected { background: #eff6ff; border-left: 3px solid #1a237e; }
+}
+.mini-avatar {
+  width: 36px; height: 36px; border-radius: 50%; background: #1a237e; color: white;
+  font-weight: 700; font-size: 1rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.profile-top { display: flex; gap: 1rem; align-items: flex-start; }
+.big-avatar {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: linear-gradient(135deg, #1a237e, #3949ab); color: white;
+  font-size: 1.8rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.profile-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem;
+  div { display: flex; gap: 0.5rem; font-size: 0.85rem; span { color: #6b7280; min-width: 90px; } }
+}

@@ -100,7 +100,7 @@
           <div class="section-card-header"><i class="pi pi-history"></i> Scheme &amp; Meeting History</div>
           <div class="section-card-body">
             <p style="font-weight:600;margin-bottom:0.5rem">Scheme History</p>
-            <p-table [value]="schemeHistory" styleClass="p-datatable-sm" style="margin-bottom:1rem">
+            <div style="margin-bottom:1rem"><p-table [value]="schemeHistory" styleClass="p-datatable-sm">
               <ng-template pTemplate="header">
                 <tr><th>Scheme</th><th>Year</th><th>Amount</th><th>Status</th></tr>
               </ng-template>
@@ -109,7 +109,7 @@
                   <td><p-tag [value]="s.status" severity="success" styleClass="text-xs"></p-tag></td>
                 </tr>
               </ng-template>
-            </p-table>
+            </p-table></div>
             <p-divider></p-divider>
             <p style="font-weight:600;margin-bottom:0.5rem">Meeting History</p>
             <p-table [value]="meetingHistory" styleClass="p-datatable-sm">

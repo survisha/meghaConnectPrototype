@@ -3,7 +3,7 @@
   <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem">
     <button pButton icon="pi pi-arrow-left" class="p-button-text p-button-sm" routerLink="/appointments"></button>
     <h2 class="page-title" style="margin:0">Appointment: {{ appointment.applicationId }}</h2>
-    <p-tag [value]="appointment.status.replace('_',' ')" [severity]="getStatusSeverity(appointment.status)" style="margin-left:auto"></p-tag>
+    <div style="margin-left:auto"><p-tag [value]="appointment.status.replace('_',' ')" [severity]="getStatusSeverity(appointment.status)"></p-tag></div>
   </div>
 
   <!-- Workflow Steps -->

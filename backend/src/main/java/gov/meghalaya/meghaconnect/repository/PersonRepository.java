@@ -12,6 +12,7 @@ import java.util.List;
 public interface PersonRepository extends JpaRepository<Person, Long>, JpaSpecificationExecutor<Person> {
     Optional<Person> findByPhoneNumber(String phoneNumber);
     Optional<Person> findByEpicNumber(String epicNumber);
+    Optional<Person> findByAadhaarNumber(String aadhaarNumber);
 
     @Query("SELECT p FROM Person p WHERE LOWER(p.fullName) LIKE LOWER(CONCAT('%', :name, '%'))")
     List<Person> searchByName(String name);

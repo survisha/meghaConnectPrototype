@@ -1,0 +1,405 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../models/user.dart';
+import '../services/auth_service.dart';
+import '../services/navigation_service.dart';
+
+class _Kpi {
+  final String label;
+  final int value;
+  final IconData icon;
+  final Color color;
+  final Color bg;
+  final List<UserRole> roles;
+  const _Kpi(this.label, this.value, this.icon, this.color, this.bg, this.roles);
+}
+
+class _QuickAction {
+  final String label;
+  final IconData icon;
+  final String route;
+  final Color color;
+  final List<UserRole> roles;
+  const _QuickAction(this.label, this.icon, this.route, this.color, this.roles);
+}
+
+class _ScheduleItem {
+  final String time;
+  final String title;
+  final String type;
+  final String location;
+  final Color color;
+  const _ScheduleItem(this.time, this.title, this.type, this.location, this.color);
+}
+
+const _allStaff = [
+  UserRole.HCM,
+  UserRole.ADMIN,
+  UserRole.SAIDUL_OSD,
+  UserRole.APPROVER_JT_SECY,
+  UserRole.CMO_OFFICER,
+  UserRole.DATA_ENTRY_OPERATOR,
+];
+
+const _seniorStaff = [
+  UserRole.HCM,
+  UserRole.ADMIN,
+  UserRole.SAIDUL_OSD,
+  UserRole.APPROVER_JT_SECY,
+  UserRole.CMO_OFFICER,
+];
+
+final _allKpis = <_Kpi>[
+  _Kpi("Today's Appointments", 6, Icons.calendar_today_outlined,
+      const Color(0xFF1A237E), const Color(0xFFE8EAF6), _allStaff),
+  _Kpi('Pending Approvals', 3, Icons.pending_actions_outlined,
+      const Color(0xFFB45309), const Color(0xFFFEF3C7),
+      [UserRole.HCM, UserRole.ADMIN, UserRole.SAIDUL_OSD, UserRole.APPROVER_JT_SECY]),
+  _Kpi('Active Scheme Apps', 12, Icons.workspace_premium_outlined,
+      const Color(0xFF065F46), const Color(0xFFD1FAE5), _seniorStaff),
+  _Kpi('Pending Follow-ups', 5, Icons.warning_amber_outlined,
+      const Color(0xFF991B1B), const Color(0xFFFEE2E2),
+      [UserRole.HCM, UserRole.ADMIN, UserRole.SAIDUL_OSD]),
+  _Kpi('Walk-ins Today', 4, Icons.login_outlined,
+      const Color(0xFF0369A1), const Color(0xFFE0F2FE),
+      [UserRole.DATA_ENTRY_OPERATOR, UserRole.ADMIN, UserRole.SAIDUL_OSD]),
+  _Kpi('CMO Reviews Due', 7, Icons.rate_review_outlined,
+      const Color(0xFF7C3AED), const Color(0xFFEDE9FE), [UserRole.CMO_OFFICER]),
+];
+
+final _allQuickActions = <_QuickAction>[
+  _QuickAction('New Appointment', Icons.add_circle_outline, 'new_appointment',
+      const Color(0xFF1A237E),
+      [UserRole.ADMIN, UserRole.SAIDUL_OSD, UserRole.DATA_ENTRY_OPERATOR]),
+  _QuickAction('Walk-in Counter', Icons.login_outlined, 'walkin',
+      const Color(0xFF2E7D32),
+      [UserRole.ADMIN, UserRole.SAIDUL_OSD, UserRole.DATA_ENTRY_OPERATOR]),
+  _QuickAction('Apply for Scheme', Icons.workspace_premium_outlined, 'schemes',
+      const Color(0xFFB45309),
+      [UserRole.ADMIN, UserRole.SAIDUL_OSD]),
+  _QuickAction('Identify Person', Icons.badge_outlined, 'identify',
+      const Color(0xFF0288D1),
+      [UserRole.HCM, UserRole.ADMIN, UserRole.SAIDUL_OSD, UserRole.DATA_ENTRY_OPERATOR]),
+  _QuickAction('View Reports', Icons.bar_chart_outlined, 'reports',
+      const Color(0xFF6D28D9), _seniorStaff),
+  _QuickAction('Manage Users', Icons.manage_accounts_outlined, 'users',
+      const Color(0xFF0369A1),
+      [UserRole.HCM, UserRole.ADMIN, UserRole.SAIDUL_OSD]),
+  _QuickAction('Audit Trail', Icons.history, 'audit',
+      const Color(0xFF374151), [UserRole.ADMIN]),
+];
+
+const _mockSchedule = <_ScheduleItem>[
+  _ScheduleItem('09:00', 'Cabinet Meeting', 'A1', 'Shillong', Color(0xFF1565C0)),
+  _ScheduleItem('10:00', 'Appointment – Ramsing Marak', 'A4', 'Tura', Color(0xFF0288D1)),
+  _ScheduleItem('11:00', 'Public Durbar – West Garo Hills', 'B1', 'Tura', Color(0xFFD97706)),
+  _ScheduleItem('14:00', 'District Development Programme', 'A2', 'Tura', Color(0xFF16A34A)),
+  _ScheduleItem('16:30', 'File Clearing', 'A3', 'Office', Color(0xFF6B7280)),
+];
+
+class DashboardScreen extends StatelessWidget {
+  const DashboardScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = context.watch<AuthService>();
+    final role = auth.user!.role;
+
+    final kpis = _allKpis.where((k) => k.roles.contains(role)).toList();
+    final actions = _allQuickActions.where((a) => a.roles.contains(role)).toList();
+    final showSchedule = _seniorStaff.contains(role);
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildWelcomeBanner(auth.user!),
+          const SizedBox(height: 20),
+          if (kpis.isNotEmpty) ...[
+            _sectionLabel('Key Metrics'),
+            const SizedBox(height: 10),
+            _buildKpiGrid(kpis),
+            const SizedBox(height: 20),
+          ],
+          if (actions.isNotEmpty) ...[
+            _sectionLabel('Quick Actions'),
+            const SizedBox(height: 10),
+            _buildQuickActions(context, actions),
+            const SizedBox(height: 20),
+          ],
+          if (showSchedule) ...[
+            _sectionLabel("Today's Schedule"),
+            const SizedBox(height: 10),
+            _buildSchedule(),
+            const SizedBox(height: 20),
+          ],
+          _sectionLabel('Recent Activity'),
+          const SizedBox(height: 10),
+          _buildRecentActivity(),
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWelcomeBanner(AuthUser user) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF1A237E), Color(0xFF1565C0)],
+        ),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha(51),
+              shape: BoxShape.circle,
+            ),
+            child: const Text('🏛️', style: TextStyle(fontSize: 24)),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Welcome, ${user.fullName}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  user.role.displayName,
+                  style: TextStyle(
+                    color: Colors.white.withAlpha(204),
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _formattedDate(),
+                  style: TextStyle(
+                    color: Colors.white.withAlpha(153),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formattedDate() {
+    final now = DateTime.now();
+    final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    final months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    final day = days[now.weekday - 1];
+    return '$day, ${now.day} ${months[now.month - 1]} ${now.year}';
+  }
+
+  Widget _sectionLabel(String text) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+        color: Color(0xFF1F2937),
+      ),
+    );
+  }
+
+  Widget _buildKpiGrid(List<_Kpi> kpis) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 1.6,
+      ),
+      itemCount: kpis.length,
+      itemBuilder: (_, i) => _KpiCard(kpi: kpis[i]),
+    );
+  }
+
+  Widget _buildQuickActions(BuildContext context, List<_QuickAction> actions) {
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: actions.map((a) => _QuickActionChip(action: a)).toList(),
+    );
+  }
+
+  Widget _buildSchedule() {
+    return Card(
+      child: Column(
+        children: _mockSchedule.map((item) {
+          return ListTile(
+            dense: true,
+            leading: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: item.color.withAlpha(26),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                item.type,
+                style: TextStyle(
+                  color: item.color,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 11,
+                ),
+              ),
+            ),
+            title: Text(item.title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+            subtitle: Text('${item.time}  ·  ${item.location}',
+                style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+            trailing: Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(color: item.color, shape: BoxShape.circle),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildRecentActivity() {
+    final activities = [
+      (Icons.check_circle_outline, const Color(0xFF16A34A),
+          'CM Care approved for Bijoy Momin (₹3,00,000)', '10:45 AM'),
+      (Icons.swap_horiz, const Color(0xFF1A237E),
+          'Appointment MC-2024-00002 moved to HCM Pending', '11:30 AM'),
+      (Icons.person_add_outlined, const Color(0xFF0369A1),
+          'New walk-in: Deibok Lyngdoh registered by DEO', '02:15 PM'),
+      (Icons.notifications_outlined, const Color(0xFFB45309),
+          'Direction pending follow-up: Community Hall CMSDF', '03:00 PM'),
+    ];
+
+    return Card(
+      child: Column(
+        children: activities.map((a) {
+          return ListTile(
+            dense: true,
+            leading: Icon(a.$1, color: a.$2, size: 20),
+            title: Text(a.$3, style: const TextStyle(fontSize: 13)),
+            trailing: Text(a.$4, style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+class _KpiCard extends StatelessWidget {
+  final _Kpi kpi;
+  const _KpiCard({required this.kpi});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: kpi.bg,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(kpi.icon, color: kpi.color, size: 20),
+                ),
+                Text(
+                  '${kpi.value}',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: kpi.color,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              kpi.label,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickActionChip extends StatelessWidget {
+  final _QuickAction action;
+  const _QuickActionChip({required this.action});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: action.color.withAlpha(20),
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () {
+          context.read<NavigationService>().navigateTo(action.route);
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: action.color.withAlpha(51)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(action.icon, color: action.color, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                action.label,
+                style: TextStyle(
+                  color: action.color,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

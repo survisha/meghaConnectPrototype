@@ -23,6 +23,10 @@ public class PersonService {
         return personRepository.findByEpicNumber(epic);
     }
 
+    public Optional<Person> findByAadhaar(String aadhaar) {
+        return personRepository.findByAadhaarNumber(aadhaar);
+    }
+
     public List<Person> searchByName(String name) {
         return personRepository.searchByName(name);
     }

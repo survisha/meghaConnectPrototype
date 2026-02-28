@@ -100,3 +100,30 @@
 -- ┌────────────────────────────┐
 -- │  face_recognition_sources  │  Sources for facial recognition DB
 -- └────────────────────────────┘
+--
+-- V4 – PUBLIC REGISTRATION & KYC
+-- ┌────────────────────────────────────────────────────────────────┐
+-- │  persons (extended)        │  + aadhaar_number, kyc_type,       │
+-- │                            │    kyc_verified, photo_storage_path│
+-- └────────────────────────────────────────────────────────────────┘
+-- ┌────────────────────────────┐
+-- │  public_registrations      │  Citizen self-registration flow;
+-- │                            │  KYC: EPIC first → Aadhaar fallback
+-- │                            │  photo_storage_path / epic_scan_path /
+-- │                            │  aadhaar_scan_path hold file-store keys
+-- └────────────────────────────┘
+-- ┌────────────────────────────┐
+-- │  kyc_verification_log      │  Plug-and-play API call log for
+-- │                            │  Election Commission API (EPIC) and
+-- │                            │  UIDAI API (Aadhaar)
+-- └────────────────────────────┘
+--
+-- FILE STORAGE CONVENTION
+-- Photos and scanned documents are NOT stored as BLOBs.
+-- They are written to an external file store (local NFS, MinIO/S3,
+-- or any compatible object store).  DB columns ending in _path /
+-- _storage_path hold the relative path / object-key, e.g.:
+--   persons.photo_storage_path → "persons/{id}/photo.jpg"
+--   document_uploads.file_path → "documents/{type}/{uuid}.pdf"
+-- Base URL is configured in application.yml:
+--   meghaconnect.storage.base-url

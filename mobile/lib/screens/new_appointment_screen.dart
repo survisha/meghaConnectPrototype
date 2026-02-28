@@ -25,6 +25,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
   final _fullNameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _epicCtrl = TextEditingController();
+  final _aadhaarCtrl = TextEditingController();
   final _designationCtrl = TextEditingController();
 
   // Appointment Details
@@ -35,6 +36,12 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
 
   String _district = 'East Khasi Hills';
   String _constituency = '';
+
+  // KYC / file-upload state
+  bool _photoUploaded = false;
+  bool _epicScanUploaded = false;
+  bool _aadhaarScanUploaded = false;
+  String? _photoStoragePath;
 
   bool _submitted = false;
   bool _loading = false;
@@ -70,6 +77,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
     _fullNameCtrl.dispose();
     _phoneCtrl.dispose();
     _epicCtrl.dispose();
+    _aadhaarCtrl.dispose();
     _designationCtrl.dispose();
     _agendaBriefCtrl.dispose();
     _profileCtrl.dispose();
@@ -92,6 +100,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
     _fullNameCtrl.clear();
     _phoneCtrl.clear();
     _epicCtrl.clear();
+    _aadhaarCtrl.clear();
     _designationCtrl.clear();
     _agendaBriefCtrl.clear();
     _profileCtrl.clear();
@@ -100,6 +109,10 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
       _location = 'SHILLONG';
       _district = 'East Khasi Hills';
       _constituency = '';
+      _photoUploaded = false;
+      _epicScanUploaded = false;
+      _aadhaarScanUploaded = false;
+      _photoStoragePath = null;
       _submitted = false;
     });
   }
@@ -119,6 +132,13 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
               _buildInfoBanner(),
             _buildSection('👤 Applicant Information', _buildApplicantFields()),
             const SizedBox(height: 16),
+            // KYC section shown for public & walk-in registrations
+            if (widget.isWalkIn || widget.isPublic) ...[
+              _buildSection('🪪 KYC Verification', _buildKycFields()),
+              const SizedBox(height: 16),
+              _buildSection('📷 Photo & Documents', _buildPhotoDocFields()),
+              const SizedBox(height: 16),
+            ],
             _buildSection('📋 Appointment Details', _buildAppointmentFields()),
             const SizedBox(height: 24),
             SizedBox(
@@ -285,6 +305,167 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
     );
   }
 
+  /// KYC section: EPIC (primary) with AADHAR as fallback.
+  /// AADHAR field is revealed automatically when EPIC is left empty.
+  Widget _buildKycFields() {
+    final epicEmpty = _epicCtrl.text.trim().isEmpty;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Priority note
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: const Color(0xFFE8EAF6),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Row(
+            children: [
+              Icon(Icons.info_outline, size: 16, color: Color(0xFF1A237E)),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'KYC Priority: EPIC (Voter ID) is primary. '
+                  'Provide Aadhaar only if EPIC is unavailable.',
+                  style: TextStyle(
+                      fontSize: 12, color: Color(0xFF1A237E)),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        // EPIC – primary KYC
+        TextFormField(
+          controller: _epicCtrl,
+          decoration: InputDecoration(
+            labelText: 'EPIC / Voter ID Number (Primary KYC)',
+            prefixIcon: const Icon(Icons.credit_card_outlined),
+            hintText: 'e.g. MH/01/001/234567',
+            suffixIcon: _epicCtrl.text.isNotEmpty
+                ? const Icon(Icons.verified_outlined,
+                    color: Color(0xFF16A34A))
+                : null,
+          ),
+          textCapitalization: TextCapitalization.characters,
+          onChanged: (_) => setState(() {}),  // trigger AADHAR field toggle
+          textInputAction: TextInputAction.next,
+        ),
+        const SizedBox(height: 12),
+        // AADHAR – fallback, shown when EPIC is blank
+        AnimatedCrossFade(
+          duration: const Duration(milliseconds: 250),
+          firstChild: const SizedBox.shrink(),
+          secondChild: Column(
+            children: [
+              TextFormField(
+                controller: _aadhaarCtrl,
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(12),
+                ],
+                decoration: const InputDecoration(
+                  labelText: 'Aadhaar Number (Fallback KYC)',
+                  prefixIcon: Icon(Icons.fingerprint),
+                  hintText: '12-digit Aadhaar number',
+                  helperText:
+                      'Only required when EPIC is not available',
+                ),
+                validator: (v) {
+                  if (!epicEmpty) return null;
+                  if (v != null && v.isNotEmpty && v.length != 12) {
+                    return 'Aadhaar must be 12 digits';
+                  }
+                  return null;
+                },
+                textInputAction: TextInputAction.next,
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+          crossFadeState: epicEmpty
+              ? CrossFadeState.showSecond
+              : CrossFadeState.showFirst,
+        ),
+      ],
+    );
+  }
+
+  /// Photo capture + document upload section.
+  /// Files are stored in the file store; only the path is saved in DB.
+  Widget _buildPhotoDocFields() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Storage note
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF0FDF4),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFF86EFAC)),
+          ),
+          child: const Row(
+            children: [
+              Icon(Icons.cloud_upload_outlined,
+                  size: 16, color: Color(0xFF16A34A)),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Photos & documents are stored in secure file storage. '
+                  'Only the file reference path is saved in the database.',
+                  style: TextStyle(
+                      fontSize: 12, color: Color(0xFF065F46)),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        // Live Photo
+        _UploadTile(
+          icon: Icons.camera_alt_outlined,
+          label: 'Live Photo *',
+          sublabel: 'Tap to capture / upload',
+          isUploaded: _photoUploaded,
+          onTap: () {
+            // TODO: open camera via image_picker
+            setState(() {
+              _photoUploaded = true;
+              _photoStoragePath = 'registrations/temp/photo.jpg';
+            });
+          },
+        ),
+        const SizedBox(height: 10),
+        // EPIC scan
+        _UploadTile(
+          icon: Icons.credit_card_outlined,
+          label: 'EPIC / Voter ID Scan',
+          sublabel: 'Upload front & back of Voter ID',
+          isUploaded: _epicScanUploaded,
+          onTap: () {
+            // TODO: open file picker
+            setState(() => _epicScanUploaded = true);
+          },
+        ),
+        const SizedBox(height: 10),
+        // Aadhaar scan – only relevant when no EPIC
+        if (_epicCtrl.text.trim().isEmpty)
+          _UploadTile(
+            icon: Icons.fingerprint,
+            label: 'Aadhaar Card Scan',
+            sublabel: 'Upload Aadhaar (fallback KYC)',
+            isUploaded: _aadhaarScanUploaded,
+            onTap: () {
+              // TODO: open file picker
+              setState(() => _aadhaarScanUploaded = true);
+            },
+          ),
+      ],
+    );
+  }
+
   Widget _buildAppointmentFields() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -423,6 +604,86 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                   ),
                 ],
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Reusable upload tile used in the Photo & Documents section.
+class _UploadTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String sublabel;
+  final bool isUploaded;
+  final VoidCallback onTap;
+
+  const _UploadTile({
+    required this.icon,
+    required this.label,
+    required this.sublabel,
+    required this.isUploaded,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: isUploaded
+              ? const Color(0xFFF0FDF4)
+              : Colors.grey[50],
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isUploaded
+                ? const Color(0xFF86EFAC)
+                : Colors.grey.withAlpha(77),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(icon,
+                color: isUploaded
+                    ? const Color(0xFF16A34A)
+                    : const Color(0xFF1A237E),
+                size: 22),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label,
+                      style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                          color: isUploaded
+                              ? const Color(0xFF16A34A)
+                              : const Color(0xFF1F2937))),
+                  Text(
+                    isUploaded ? 'Uploaded ✓' : sublabel,
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: isUploaded
+                            ? const Color(0xFF16A34A)
+                            : Colors.grey[500]),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              isUploaded
+                  ? Icons.check_circle
+                  : Icons.upload_file_outlined,
+              color: isUploaded
+                  ? const Color(0xFF16A34A)
+                  : Colors.grey[400],
+              size: 20,
             ),
           ],
         ),

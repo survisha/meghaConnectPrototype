@@ -14,26 +14,37 @@ import { ReportsComponent } from './reports/reports.component';
 import { HeatmapComponent } from './reports/heatmap/heatmap.component';
 import { PendingFollowupsComponent } from './reports/pending-followups/pending-followups.component';
 import { AuditTrailComponent } from './reports/audit-trail/audit-trail.component';
+import { UserManagementComponent } from './admin/user-management.component';
+import { authGuard } from './guards/auth.guard';
+import { roleGuard } from './guards/role.guard';
+
+import { UserRole } from './models';
+
+const FULL_CONTROL: UserRole[] = ['HCM', 'ADMIN', 'SAIDUL_OSD'];
+const STAFF_ROLES: UserRole[] = ['HCM', 'ADMIN', 'SAIDUL_OSD', 'APPROVER_JT_SECY', 'CMO_OFFICER', 'DATA_ENTRY_OPERATOR'];
+const REPORTS_ROLES: UserRole[] = ['HCM', 'ADMIN', 'SAIDUL_OSD', 'APPROVER_JT_SECY', 'CMO_OFFICER'];
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
   {
     path: '', component: ShellComponent,
+    canActivate: [authGuard],
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'dashboard', component: DashboardComponent },
-      { path: 'scheduling', component: SchedulingComponent },
-      { path: 'appointments', component: AppointmentListComponent },
+      { path: 'scheduling', component: SchedulingComponent, canActivate: [roleGuard(...REPORTS_ROLES)] },
+      { path: 'appointments', component: AppointmentListComponent, canActivate: [roleGuard(...STAFF_ROLES)] },
       { path: 'appointments/new', component: AppointmentFormComponent },
-      { path: 'appointments/walkin', component: WalkinComponent },
-      { path: 'appointments/:id', component: AppointmentDetailComponent },
-      { path: 'schemes', component: SchemeListComponent },
+      { path: 'appointments/walkin', component: WalkinComponent, canActivate: [roleGuard('ADMIN', 'SAIDUL_OSD', 'DATA_ENTRY_OPERATOR')] },
+      { path: 'appointments/:id', component: AppointmentDetailComponent, canActivate: [roleGuard(...STAFF_ROLES)] },
+      { path: 'schemes', component: SchemeListComponent, canActivate: [roleGuard(...REPORTS_ROLES)] },
       { path: 'schemes/apply', component: SchemeFormComponent },
-      { path: 'identify', component: PublicIdentificationComponent },
-      { path: 'reports', component: ReportsComponent },
-      { path: 'reports/heatmap', component: HeatmapComponent },
-      { path: 'reports/followups', component: PendingFollowupsComponent },
-      { path: 'reports/audit', component: AuditTrailComponent },
+      { path: 'identify', component: PublicIdentificationComponent, canActivate: [roleGuard('HCM', 'ADMIN', 'SAIDUL_OSD', 'DATA_ENTRY_OPERATOR')] },
+      { path: 'reports', component: ReportsComponent, canActivate: [roleGuard(...REPORTS_ROLES)] },
+      { path: 'reports/heatmap', component: HeatmapComponent, canActivate: [roleGuard(...REPORTS_ROLES)] },
+      { path: 'reports/followups', component: PendingFollowupsComponent, canActivate: [roleGuard(...REPORTS_ROLES)] },
+      { path: 'reports/audit', component: AuditTrailComponent, canActivate: [roleGuard('ADMIN')] },
+      { path: 'admin/users', component: UserManagementComponent, canActivate: [roleGuard(...FULL_CONTROL)] },
     ]
   },
   { path: '**', redirectTo: '' }

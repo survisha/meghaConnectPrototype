@@ -5,7 +5,7 @@
   </div>
 
   <!-- KPI Cards -->
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-bottom:1.5rem">
     <div class="kpi-card" *ngFor="let k of kpis">
       <div class="kpi-icon" [style.background]="k.bg">
         <i class="pi {{k.icon}}" [style.color]="k.color" style="font-size:1.4rem"></i>
@@ -18,8 +18,8 @@
   </div>
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
-    <!-- Today's Schedule -->
-    <div class="section-card">
+    <!-- Today's Schedule (staff only) -->
+    <div class="section-card" *ngIf="showSchedule">
       <div class="section-card-header">
         <i class="pi pi-calendar"></i> Today's Schedule
         <a routerLink="/scheduling" style="margin-left:auto;color:#90caf9;font-size:0.8rem">View Full Calendar →</a>
@@ -54,16 +54,16 @@
       </div>
     </div>
 
-    <!-- Appointment Type Chart -->
-    <div class="section-card">
+    <!-- Appointment Type Chart (staff only) -->
+    <div class="section-card" *ngIf="showCharts">
       <div class="section-card-header"><i class="pi pi-chart-pie"></i> Appointments by Type (This Month)</div>
       <div class="section-card-body" style="height:260px;display:flex;align-items:center;justify-content:center">
         <p-chart type="pie" [data]="appointmentTypeData" [options]="chartOptions" style="width:100%;max-width:340px"></p-chart>
       </div>
     </div>
 
-    <!-- Scheme Stats Chart -->
-    <div class="section-card">
+    <!-- Scheme Stats Chart (staff only) -->
+    <div class="section-card" *ngIf="showCharts">
       <div class="section-card-header"><i class="pi pi-chart-bar"></i> Scheme Applications (This Month)</div>
       <div class="section-card-body" style="height:260px;display:flex;align-items:center;justify-content:center">
         <p-chart type="bar" [data]="schemeData" [options]="chartOptions" style="width:100%"></p-chart>
@@ -71,15 +71,17 @@
     </div>
   </div>
 
-  <!-- Quick Actions -->
-  <div class="section-card" style="margin-top:1.5rem">
+  <!-- Quick Actions (role-filtered) -->
+  <div class="section-card" style="margin-top:1.5rem" *ngIf="quickActions.length">
     <div class="section-card-header"><i class="pi pi-bolt"></i> Quick Actions</div>
     <div class="section-card-body" style="display:flex;gap:0.75rem;flex-wrap:wrap">
-      <button pButton label="New Appointment" icon="pi pi-plus" routerLink="/appointments/new" class="p-button-sm"></button>
-      <button pButton label="Walk-in Counter" icon="pi pi-sign-in" routerLink="/appointments/walkin" class="p-button-sm p-button-success"></button>
-      <button pButton label="Apply for Scheme" icon="pi pi-briefcase" routerLink="/schemes/apply" class="p-button-sm p-button-warning"></button>
-      <button pButton label="Identify Person" icon="pi pi-id-card" routerLink="/identify" class="p-button-sm p-button-info"></button>
-      <button pButton label="Scheme Heatmap" icon="pi pi-map" routerLink="/reports/heatmap" class="p-button-sm p-button-secondary"></button>
+      <button *ngFor="let a of quickActions" pButton [label]="a.label" [icon]="a.icon"
+        [routerLink]="a.route" class="p-button-sm"
+        [class.p-button-success]="a.severity==='success'"
+        [class.p-button-warning]="a.severity==='warning'"
+        [class.p-button-info]="a.severity==='info'"
+        [class.p-button-secondary]="a.severity==='secondary'">
+      </button>
     </div>
   </div>
 </div>

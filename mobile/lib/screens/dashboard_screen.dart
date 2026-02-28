@@ -131,7 +131,8 @@ class DashboardScreen extends StatelessWidget {
           if (showSchedule) ...[
             _sectionLabel("Today's Schedule"),
             const SizedBox(height: 10),
-            _buildSchedule(),            const SizedBox(height: 20),
+            _buildSchedule(),
+            const SizedBox(height: 20),
           ],
           _sectionLabel('Recent Activity'),
           const SizedBox(height: 10),

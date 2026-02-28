@@ -7,6 +7,12 @@ import 'dashboard_screen.dart';
 import 'appointments_screen.dart';
 import 'new_appointment_screen.dart';
 import 'user_management_screen.dart';
+import 'calendar_screen.dart';
+import 'schemes_screen.dart';
+import 'public_identification_screen.dart';
+import 'reports_screen.dart';
+import 'pending_followups_screen.dart';
+import 'audit_trail_screen.dart';
 
 class _NavItem {
   final String label;
@@ -177,6 +183,18 @@ class _MainShellState extends State<MainShell> {
       case 'new_appointment':
       case 'walkin':
         return NewAppointmentScreen(isWalkIn: route == 'walkin');
+      case 'calendar':
+        return const CalendarScreen();
+      case 'schemes':
+        return const SchemesScreen();
+      case 'identify':
+        return const PublicIdentificationScreen();
+      case 'reports':
+        return const ReportsScreen();
+      case 'followups':
+        return const PendingFollowupsScreen();
+      case 'audit':
+        return const AuditTrailScreen();
       case 'users':
         return const UserManagementScreen();
       default:

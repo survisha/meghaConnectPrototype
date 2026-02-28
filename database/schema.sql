@@ -8,4 +8,95 @@
 -- GRANT ALL PRIVILEGES ON DATABASE meghaconnect TO megha_user;
 -- Then run the app - Flyway will apply migrations automatically.
 
--- Reference: See V1__initial_schema.sql for full DDL
+-- ============================================================
+-- MIGRATION FILES
+-- ============================================================
+-- V1__initial_schema.sql   – Core tables (users, persons, schedule_events,
+--                            appointments, directions, associate_mappings,
+--                            scheme_applications, scheme_application_items,
+--                            audit_logs)
+-- V2__seed_data.sql        – Demo users and sample persons
+-- V3__extended_schema.sql  – Extended tables for full feature coverage
+--                            (document_uploads, bank_account_details,
+--                             appointment_day_limits, prior_scheme_history,
+--                             notification_log, meeting_timer_log,
+--                             face_recognition_sources, external_scheme_records,
+--                             approval_delegation_log,
+--                             constituency_heatmap_cache,
+--                             npp_interaction_log,
+--                             appointment_rejection_history)
+
+-- ============================================================
+-- TABLE SUMMARY & ENTITY-RELATIONSHIP OVERVIEW
+-- ============================================================
+--
+-- CORE IDENTITY
+-- ┌─────────────────────┐
+-- │       users         │  Staff accounts (HCM, ADMIN, SAIDUL_OSD,
+-- │                     │  APPROVER_JT_SECY, CMO_OFFICER, DEO)
+-- └────────┬────────────┘
+--          │ delegated_to_user_id (self-ref)
+--          ▼
+-- ┌─────────────────────┐
+-- │       persons       │  Citizens / applicants; identified by
+-- │                     │  phone, EPIC, name, photo, face_embedding_ref
+-- └────────┬────────────┘
+--          │ 1:N
+--          ▼
+-- ┌────────────────────────────┐
+-- │   document_uploads         │  EPIC scan, photo, org cert, etc.
+-- └────────────────────────────┘
+-- ┌────────────────────────────┐
+-- │   bank_account_details     │  Mandatory for scheme disbursements
+-- └────────────────────────────┘
+-- ┌────────────────────────────┐
+-- │   prior_scheme_history     │  Schemes taken in last 2 years
+-- └────────────────────────────┘
+-- ┌────────────────────────────┐
+-- │   external_scheme_records  │  Imported from Excel (CMSDF, CMSG, Focus+…)
+-- │                            │  matched_person_id → persons
+-- └────────────────────────────┘
+--
+-- SCHEDULING
+-- ┌─────────────────────┐
+-- │   schedule_events   │  A1/A2/A3/A4/B1/B2 events on HCM calendar
+-- └────────┬────────────┘
+--          │ 1:N
+--          ▼
+-- ┌────────────────────────────┐
+-- │   npp_interaction_log      │  OSD popup decisions for NPP interactions
+-- └────────────────────────────┘
+-- ┌────────────────────────────┐
+-- │   appointment_day_limits   │  Max appointments per day/location/type
+-- └────────────────────────────┘
+--
+-- APPOINTMENTS (persons → schedule_events)
+-- ┌─────────────────────┐
+-- │    appointments     │  applicant_id → persons
+-- │                     │  schedule_event_id → schedule_events
+-- └────────┬────────────┘
+--          │ 1:N
+--          ├──► associate_mappings    (person_id → persons)
+--          ├──► directions            (GREEN/YELLOW/BLUE HCM directives)
+--          ├──► scheme_applications   (applicant_id → persons)
+--          │         └──► scheme_application_items (itemwise cost)
+--          ├──► document_uploads      (plans, bank details, hospital docs)
+--          ├──► meeting_timer_log     (actual vs scheduled meeting times)
+--          └──► appointment_rejection_history
+--
+-- ANALYTICS & NOTIFICATIONS
+-- ┌────────────────────────────┐
+-- │  constituency_heatmap_cache│  Pre-computed district/constituency scores
+-- └────────────────────────────┘
+-- ┌────────────────────────────┐
+-- │  notification_log          │  WhatsApp/SMS/push messages sent
+-- └────────────────────────────┘
+-- ┌────────────────────────────┐
+-- │  audit_logs                │  Full audit trail for all entities
+-- └────────────────────────────┘
+-- ┌────────────────────────────┐
+-- │  approval_delegation_log   │  Jt Secy → CMO authority delegation
+-- └────────────────────────────┘
+-- ┌────────────────────────────┐
+-- │  face_recognition_sources  │  Sources for facial recognition DB
+-- └────────────────────────────┘

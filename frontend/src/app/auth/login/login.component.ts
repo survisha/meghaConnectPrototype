@@ -43,25 +43,25 @@ export class LoginComponent {
 
   login() {
     this.loading = true; this.errorMsg = '';
-    setTimeout(() => {
-      if (this.auth.login(this.username, this.password)) {
+    this.auth.login(this.username, this.password).subscribe(success => {
+      if (success) {
         this.router.navigate(['/dashboard']);
       } else {
         this.errorMsg = 'Invalid username or password.';
       }
       this.loading = false;
-    }, 400);
+    });
   }
 
   publicLogin() {
     this.loading = true;
-    setTimeout(() => {
-      if (this.auth.login('9876543210', '123456')) {
-        this.router.navigate(['/appointments/new']);
+    this.auth.login('public1', 'public123').subscribe(success => {
+      if (success) {
+        this.router.navigate(['/visitor']);
       } else {
-        this.errorMsg = 'OTP verification failed. Use 123456 for demo.';
+        this.errorMsg = 'OTP verification failed.';
       }
       this.loading = false;
-    }, 400);
+    });
   }
 }

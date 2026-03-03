@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { MockDataService } from '../../services/mock-data.service';
+import { AppointmentService } from '../../services/appointment.service';
 import { Appointment } from '../../models';
 import { Tag } from 'primeng/tag';
 
@@ -24,6 +24,7 @@ export class AppointmentDetailComponent implements OnInit {
   showDirectionDialog = false;
   directionColor = 'GREEN';
   directionText = '';
+  loading = false;
 
   workflowSteps = [
     { label: 'Submitted' }, { label: 'CMO Review' }, { label: 'Approver Review' },
@@ -38,11 +39,15 @@ export class AppointmentDetailComponent implements OnInit {
     { status: 'HCM_PENDING', date: '14 Mar 15:00', icon: 'pi pi-star', color: '#dc2626', text: 'Approver approved – awaiting HCM decision' },
   ];
 
-  constructor(private route: ActivatedRoute, public mock: MockDataService) {}
+  constructor(private route: ActivatedRoute, private appointmentService: AppointmentService) {}
 
   ngOnInit() {
     const id = Number(this.route.snapshot.paramMap.get('id'));
-    this.appointment = this.mock.appointments.find(a => a.id === id);
+    this.loading = true;
+    this.appointmentService.getAppointmentById(id).subscribe({
+      next: appt => { this.appointment = appt; this.loading = false; },
+      error: () => { this.loading = false; }
+    });
   }
 
   getStatusSeverity(s: string): 'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' | null | undefined {

@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { MockDataService } from '../../services/mock-data.service';
+import { AuditLogService } from '../../services/audit-log.service';
 import { AuditEntry } from '../../models';
 import { TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
@@ -18,9 +18,17 @@ import { FormsModule } from '@angular/forms';
 export class AuditTrailComponent implements OnInit {
   logs: AuditEntry[] = [];
   search = '';
+  loading = false;
 
-  constructor(public mock: MockDataService) {}
-  ngOnInit() { this.logs = this.mock.auditLogs; }
+  constructor(private auditLogService: AuditLogService) {}
+
+  ngOnInit() {
+    this.loading = true;
+    this.auditLogService.getAll(0, 100).subscribe({
+      next: page => { this.logs = page.content; this.loading = false; },
+      error: () => { this.loading = false; }
+    });
+  }
 
   get filtered() {
     return this.logs.filter(l =>

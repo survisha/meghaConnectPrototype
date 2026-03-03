@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { MockDataService } from '../../services/mock-data.service';
+import { PersonService } from '../../services/person.service';
 import { Person } from '../../models';
 import { InputText } from 'primeng/inputtext';
 import { Tag } from 'primeng/tag';
@@ -25,17 +25,33 @@ export class WalkinComponent {
   ticketId = '';
   agendaType = '';
   associates: Person[] = [];
+  searching = false;
 
   agendaTypes = ['Scheme availment (CM)','Governance','Trade & Commerce','Political Discussion','Public Grievance'];
 
-  constructor(public mock: MockDataService) {}
+  constructor(private personService: PersonService) {}
 
   search() {
-    this.notFound = false; this.foundPerson = null;
-    this.foundPerson = this.mock.persons.find(
-      p => p.phoneNumber === this.phoneNumber || p.epicNumber === this.epicNumber
-    ) ?? null;
-    if (!this.foundPerson) this.notFound = true;
+    this.notFound = false; this.foundPerson = null; this.searching = true;
+    const phone = this.phoneNumber.trim();
+    const epic = this.epicNumber.trim();
+
+    if (phone) {
+      this.personService.searchByPhone(phone).subscribe(p => {
+        this.foundPerson = p;
+        if (!p) this.notFound = true;
+        this.searching = false;
+      });
+    } else if (epic) {
+      this.personService.searchByEpic(epic).subscribe(p => {
+        this.foundPerson = p;
+        if (!p) this.notFound = true;
+        this.searching = false;
+      });
+    } else {
+      this.notFound = true;
+      this.searching = false;
+    }
   }
 
   checkIn() {
@@ -44,7 +60,6 @@ export class WalkinComponent {
   }
 
   addAssociate() {
-    const p = this.mock.persons[Math.floor(Math.random()*this.mock.persons.length)];
-    if (!this.associates.find(a => a.id === p.id)) this.associates.push(p);
+    // No-op without a real search; user must search separately
   }
 }

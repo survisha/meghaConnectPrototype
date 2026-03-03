@@ -44,6 +44,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/v1/auth/**", "/actuator/health").permitAll()
                 .requestMatchers("/api/v1/appointments").permitAll()   // Public can submit
+                .requestMatchers("/api/v1/public/**").permitAll()       // Public registration
                 .anyRequest().authenticated()
             )
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

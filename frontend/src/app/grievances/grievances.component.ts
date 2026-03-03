@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { MockDataService } from '../services/mock-data.service';
+import { GrievanceService } from '../services/grievance.service';
 import { AuthService } from '../services/auth.service';
 import { Grievance, GrievanceCategory, GrievanceStatus } from '../models';
 import { TableModule } from 'primeng/table';
@@ -29,6 +29,7 @@ export class GrievancesComponent implements OnInit {
   search = '';
   filterStatus = '';
   filterCategory = '';
+  loading = false;
 
   showForm = false;
   showDetail = false;
@@ -69,11 +70,18 @@ export class GrievancesComponent implements OnInit {
     'East Jaintia Hills', 'West Jaintia Hills', 'East Garo Hills', 'West Garo Hills',
     'South Garo Hills', 'North Garo Hills', 'Eastern West Khasi Hills'];
 
-  constructor(public mock: MockDataService, public auth: AuthService, private messageService: MessageService) {}
+  constructor(
+    private grievanceService: GrievanceService,
+    public auth: AuthService,
+    private messageService: MessageService
+  ) {}
 
   ngOnInit() {
-    this.grievances = this.mock.grievances;
-    this.applyFilter();
+    this.loading = true;
+    this.grievanceService.getAll(0, 100).subscribe({
+      next: page => { this.grievances = page.content; this.applyFilter(); this.loading = false; },
+      error: () => { this.loading = false; }
+    });
   }
 
   applyFilter() {
@@ -99,10 +107,7 @@ export class GrievancesComponent implements OnInit {
   prevStep() { if (this.step > 0) this.step--; }
 
   submitGrievance() {
-    const newId = this.mock.grievances.length + 1;
-    const newGrievance: Grievance = {
-      id: newId,
-      ticketId: `GRV-2024-${String(newId).padStart(3, '0')}`,
+    this.grievanceService.create({
       applicantName: this.form.applicantName,
       phoneNumber: this.form.phoneNumber,
       district: this.form.district,
@@ -110,22 +115,29 @@ export class GrievancesComponent implements OnInit {
       category: this.form.category as GrievanceCategory,
       subject: this.form.subject,
       description: this.form.description,
-      status: 'SUBMITTED',
-      submittedAt: new Date().toISOString(),
-    };
-    this.mock.grievances.push(newGrievance);
-    this.grievances = this.mock.grievances;
-    this.applyFilter();
-    this.showForm = false;
-    this.step = 0;
-    this.form = { applicantName: '', phoneNumber: '', district: '', constituency: '', category: '', subject: '', description: '' };
-    this.messageService.add({ severity: 'success', summary: 'Grievance Submitted', detail: `Ticket ID: ${newGrievance.ticketId}`, life: 5000 });
+    }).subscribe({
+      next: newGrievance => {
+        this.grievances = [newGrievance, ...this.grievances];
+        this.applyFilter();
+        this.showForm = false;
+        this.step = 0;
+        this.form = { applicantName: '', phoneNumber: '', district: '', constituency: '', category: '', subject: '', description: '' };
+        this.messageService.add({ severity: 'success', summary: 'Grievance Submitted', detail: `Ticket ID: ${newGrievance.ticketId}`, life: 5000 });
+      },
+      error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to submit grievance.' })
+    });
   }
 
   updateStatus(g: Grievance, status: GrievanceStatus) {
-    g.status = status;
-    if (status === 'RESOLVED') g.resolvedAt = new Date().toISOString();
-    this.showDetail = false;
+    this.grievanceService.updateStatus(g.id, status).subscribe({
+      next: updated => {
+        const idx = this.grievances.findIndex(x => x.id === updated.id);
+        if (idx >= 0) this.grievances[idx] = updated;
+        this.applyFilter();
+        this.showDetail = false;
+      },
+      error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update status.' })
+    });
   }
 
   getStatusSeverity(s: GrievanceStatus): 'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' | null | undefined {

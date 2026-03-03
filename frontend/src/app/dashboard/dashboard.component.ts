@@ -1,8 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { MockDataService } from '../services/mock-data.service';
 import { AuthService } from '../services/auth.service';
+import { ScheduleEventService } from '../services/schedule-event.service';
+import { AuditLogService } from '../services/audit-log.service';
+import { ScheduleEvent } from '../models';
 import { Button } from 'primeng/button';
 import { UIChart } from 'primeng/chart';
 
@@ -26,7 +28,11 @@ export class DashboardComponent implements OnInit {
   todaySchedule: any[] = [];
   recentActivity: any[] = [];
 
-  constructor(public mock: MockDataService, public auth: AuthService) {}
+  constructor(
+    public auth: AuthService,
+    private scheduleEventService: ScheduleEventService,
+    private auditLogService: AuditLogService,
+  ) {}
 
   ngOnInit() {
     this.buildKpis();
@@ -48,36 +54,63 @@ export class DashboardComponent implements OnInit {
 
     this.chartOptions = { plugins: { legend: { position: 'bottom' } }, responsive: true };
 
-    this.todaySchedule = [
-      { time: '09:00', title: 'Cabinet Meeting', type: 'A1', location: 'Shillong', badge: 'danger' },
-      { time: '10:00', title: 'Appointment – Ramsing Marak', type: 'A4', location: 'Tura', badge: 'info' },
-      { time: '11:00', title: 'Public Durbar – West Garo Hills', type: 'B1', location: 'Tura', badge: 'warn' },
-      { time: '14:00', title: 'District Development Programme', type: 'A2', location: 'Tura', badge: 'success' },
-      { time: '16:30', title: 'File Clearing', type: 'A3', location: 'Office', badge: 'secondary' },
-    ];
+    // Load today's schedule from real API
+    this.scheduleEventService.getAll().subscribe(events => {
+      const today = new Date().toDateString();
+      const todayEvents = events.filter(e => new Date(e.startTime).toDateString() === today);
+      this.todaySchedule = todayEvents.map(e => ({
+        time: new Date(e.startTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false }),
+        title: e.title,
+        type: e.eventType,
+        location: e.location,
+        badge: this.getEventBadge(e.eventType),
+      }));
+    });
 
-    this.recentActivity = [
-      { icon: 'pi-check-circle', color: '#16a34a', text: 'CM Care approved for Bijoy Momin (₹3,00,000)', time: '10:45 AM' },
-      { icon: 'pi-arrow-right-arrow-left', color: '#1a237e', text: 'Appointment MC-2024-00002 moved to HCM Pending', time: '11:30 AM' },
-      { icon: 'pi-user-plus', color: '#0369a1', text: 'New walk-in: Deibok Lyngdoh registered by DEO', time: '02:15 PM' },
-      { icon: 'pi-bell', color: '#b45309', text: 'Direction pending follow-up: Community Hall CMSDF', time: '03:00 PM' },
-    ];
+    // Load recent activity from real audit log API
+    this.auditLogService.getAll(0, 5).subscribe(page => {
+      this.recentActivity = page.content.map(log => ({
+        icon: this.getAuditIcon(log.action),
+        color: this.getAuditColor(log.action),
+        text: `${log.action}: ${log.details ?? log.entityType + ' #' + log.entityId}`,
+        time: new Date(log.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }),
+      }));
+    });
+  }
+
+  private getEventBadge(type: string): string {
+    const m: Record<string,string> = { A1:'danger', A2:'success', A3:'secondary', A4:'info', B1:'warn', B2:'info' };
+    return m[type] ?? 'info';
+  }
+
+  private getAuditIcon(action: string): string {
+    if (action.includes('APPROVED') || action.includes('CREATED')) return 'pi-check-circle';
+    if (action.includes('CHANGE') || action.includes('UPDATE')) return 'pi-arrow-right-arrow-left';
+    if (action.includes('LOGIN')) return 'pi-user-plus';
+    return 'pi-bell';
+  }
+
+  private getAuditColor(action: string): string {
+    if (action.includes('APPROVED') || action.includes('CREATED')) return '#16a34a';
+    if (action.includes('REJECT')) return '#dc2626';
+    if (action.includes('CHANGE') || action.includes('UPDATE')) return '#1a237e';
+    return '#b45309';
   }
 
   private buildKpis() {
     const role = this.auth.user()?.role;
     const all = [
-      { label: "Today's Appointments", value: 6, icon: 'pi-calendar-plus', color: '#1a237e', bg: '#e8eaf6',
+      { label: "Today's Appointments", value: '–', icon: 'pi-calendar-plus', color: '#1a237e', bg: '#e8eaf6',
         roles: ['HCM','ADMIN','SAIDUL_OSD','APPROVER_JT_SECY','CMO_OFFICER','DATA_ENTRY_OPERATOR'] },
-      { label: 'Pending Approvals', value: 3, icon: 'pi-clock', color: '#b45309', bg: '#fef3c7',
+      { label: 'Pending Approvals', value: '–', icon: 'pi-clock', color: '#b45309', bg: '#fef3c7',
         roles: ['HCM','ADMIN','SAIDUL_OSD','APPROVER_JT_SECY'] },
-      { label: 'Active Scheme Apps', value: 12, icon: 'pi-briefcase', color: '#065f46', bg: '#d1fae5',
+      { label: 'Active Scheme Apps', value: '–', icon: 'pi-briefcase', color: '#065f46', bg: '#d1fae5',
         roles: ['HCM','ADMIN','SAIDUL_OSD','APPROVER_JT_SECY','CMO_OFFICER'] },
-      { label: 'Pending Follow-ups', value: 5, icon: 'pi-exclamation-triangle', color: '#991b1b', bg: '#fee2e2',
+      { label: 'Pending Follow-ups', value: '–', icon: 'pi-exclamation-triangle', color: '#991b1b', bg: '#fee2e2',
         roles: ['HCM','ADMIN','SAIDUL_OSD'] },
-      { label: 'Walk-ins Today', value: 4, icon: 'pi-sign-in', color: '#0369a1', bg: '#e0f2fe',
+      { label: 'Walk-ins Today', value: '–', icon: 'pi-sign-in', color: '#0369a1', bg: '#e0f2fe',
         roles: ['DATA_ENTRY_OPERATOR','ADMIN','SAIDUL_OSD'] },
-      { label: 'CMO Reviews Due', value: 7, icon: 'pi-file-edit', color: '#7c3aed', bg: '#ede9fe',
+      { label: 'CMO Reviews Due', value: '–', icon: 'pi-file-edit', color: '#7c3aed', bg: '#ede9fe',
         roles: ['CMO_OFFICER'] },
     ];
     this.kpis = all.filter(k => !role || k.roles.includes(role as any));

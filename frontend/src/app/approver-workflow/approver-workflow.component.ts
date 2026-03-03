@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { MockDataService } from '../services/mock-data.service';
+import { AppointmentService } from '../services/appointment.service';
 import { Appointment } from '../models';
 
 // PrimeNG
@@ -32,6 +32,7 @@ export class ApproverWorkflowComponent implements OnInit {
 
   appointments: Appointment[] = [];
   selected: Appointment | null = null;
+  loading = false;
 
   showRemarksDialog = false;
   showRescheduleDialog = false;
@@ -39,13 +40,19 @@ export class ApproverWorkflowComponent implements OnInit {
   rescheduleDate = '';
   pendingAction: 'APPROVE' | 'REJECT' | null = null;
 
-  constructor(private mock: MockDataService, private msg: MessageService) {}
+  constructor(private appointmentService: AppointmentService, private msg: MessageService) {}
 
   ngOnInit() {
-    // Show all appointments eligible for approver review (APPROVER_REVIEW) plus a few others for demo
-    this.appointments = this.mock.appointments.filter(a =>
-      ['CMO_REVIEW', 'APPROVER_REVIEW', 'HCM_PENDING'].includes(a.status)
-    );
+    this.loading = true;
+    this.appointmentService.getAllAppointments(0, 100).subscribe({
+      next: page => {
+        this.appointments = page.content.filter(a =>
+          ['CMO_REVIEW', 'APPROVER_REVIEW', 'HCM_PENDING'].includes(a.status)
+        );
+        this.loading = false;
+      },
+      error: () => { this.loading = false; }
+    });
   }
 
   getSeverity(status: string): TagSeverity {
@@ -82,30 +89,34 @@ export class ApproverWorkflowComponent implements OnInit {
 
   confirmAction() {
     if (!this.selected || !this.pendingAction) return;
-    const appt = this.mock.appointments.find(a => a.id === this.selected!.id);
-    if (appt) {
-      appt.approverRemarks = this.remarksText;
-      if (this.pendingAction === 'APPROVE') {
-        appt.status = 'HCM_PENDING';
-        this.msg.add({ severity: 'success', summary: 'Forwarded to HCM', detail: `${appt.applicationId} approved and pushed to HCM queue.` });
-      } else {
-        appt.status = 'HCM_REJECTED';
-        this.msg.add({ severity: 'error', summary: 'Appointment Rejected', detail: `${appt.applicationId} has been rejected.` });
-      }
-    }
-    this.ngOnInit();
-    this.showRemarksDialog = false;
-    this.selected = null;
-    this.pendingAction = null;
+    const newStatus = this.pendingAction === 'APPROVE' ? 'HCM_PENDING' : 'HCM_REJECTED';
+    this.appointmentService.updateStatus(this.selected.id, newStatus, this.remarksText).subscribe({
+      next: updated => {
+        if (this.pendingAction === 'APPROVE') {
+          this.msg.add({ severity: 'success', summary: 'Forwarded to HCM', detail: `${updated.applicationId} approved and pushed to HCM queue.` });
+        } else {
+          this.msg.add({ severity: 'error', summary: 'Appointment Rejected', detail: `${updated.applicationId} has been rejected.` });
+        }
+        this.showRemarksDialog = false;
+        this.selected = null;
+        this.pendingAction = null;
+        this.ngOnInit();
+      },
+      error: () => this.msg.add({ severity: 'error', summary: 'Error', detail: 'Failed to update appointment.' })
+    });
   }
 
   confirmReschedule() {
-    if (!this.selected) return;
-    const appt = this.mock.appointments.find(a => a.id === this.selected!.id);
-    if (appt && this.rescheduleDate) {
-      appt.scheduledDateTime = new Date(this.rescheduleDate).toISOString();
-      this.msg.add({ severity: 'info', summary: 'Rescheduled', detail: `${appt.applicationId} rescheduled to ${this.rescheduleDate}.` });
-    }
+    if (!this.selected || !this.rescheduleDate) return;
+    this.appointmentService.rescheduleAppointment(this.selected.id, {
+      scheduledDateTime: new Date(this.rescheduleDate).toISOString().slice(0, 19),
+      durationMinutes: 30
+    }).subscribe({
+      next: updated => {
+        this.msg.add({ severity: 'info', summary: 'Rescheduled', detail: `${updated.applicationId} rescheduled to ${this.rescheduleDate}.` });
+      },
+      error: () => this.msg.add({ severity: 'error', summary: 'Error', detail: 'Failed to reschedule.' })
+    });
     this.showRescheduleDialog = false;
     this.selected = null;
   }

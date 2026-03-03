@@ -35,6 +35,10 @@ public class PersonService {
         return personRepository.findByConstituency(constituency);
     }
 
+    public List<Person> findByDistrict(String district) {
+        return personRepository.findByDistrict(district);
+    }
+
     @Transactional
     public Person save(Person person) {
         return personRepository.save(person);

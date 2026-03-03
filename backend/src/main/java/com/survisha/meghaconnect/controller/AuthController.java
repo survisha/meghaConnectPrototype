@@ -2,6 +2,7 @@ package com.survisha.meghaconnect.controller;
 
 import com.survisha.meghaconnect.dto.AuthRequest;
 import com.survisha.meghaconnect.dto.AuthResponse;
+import com.survisha.meghaconnect.repository.UserRepository;
 import com.survisha.meghaconnect.security.JwtService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,7 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final UserDetailsService userDetailsService;
     private final JwtService jwtService;
+    private final UserRepository userRepository;
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody AuthRequest request) {
@@ -29,9 +31,13 @@ public class AuthController {
         );
         UserDetails user = userDetailsService.loadUserByUsername(request.getUsername());
         String token = jwtService.generateToken(user);
+        String fullName = userRepository.findByUsername(request.getUsername())
+                .map(u -> u.getFullName())
+                .orElse(request.getUsername());
         return ResponseEntity.ok(AuthResponse.builder()
             .token(token)
             .username(user.getUsername())
+            .fullName(fullName)
             .role(user.getAuthorities().iterator().next().getAuthority())
             .expiresIn(86400L)
             .build());

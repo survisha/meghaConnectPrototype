@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { MockDataService } from '../../services/mock-data.service';
+import { SchemeService } from '../../services/scheme.service';
 import { SchemeApplication } from '../../models';
 import { TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
@@ -22,6 +22,7 @@ export class SchemeListComponent implements OnInit {
   selected: SchemeApplication | null = null;
   showDetail = false;
   filterScheme = '';
+  loading = false;
 
   schemeOptions = [
     { label: 'All Schemes', value: '' },
@@ -34,15 +35,25 @@ export class SchemeListComponent implements OnInit {
   ];
 
   schemeStats = [
-    { name: 'CMSDF', total: 45, approved: 28, pending: 12, rejected: 5, budget: 'Rs. 45.2L' },
-    { name: 'CMSG', total: 32, approved: 18, pending: 10, rejected: 4, budget: 'Rs. 12.8L' },
-    { name: 'CM Care', total: 28, approved: 22, pending: 4, rejected: 2, budget: 'Rs. 28.0L' },
-    { name: 'CM Connect', total: 19, approved: 10, pending: 7, rejected: 2, budget: 'Rs. 5.6L' },
-    { name: 'CM Elevate', total: 15, approved: 8, pending: 5, rejected: 2, budget: 'Rs. 9.2L' },
+    { name: 'CMSDF', total: 0, approved: 0, pending: 0, rejected: 0, budget: '–' },
+    { name: 'CMSG', total: 0, approved: 0, pending: 0, rejected: 0, budget: '–' },
+    { name: 'CM Care', total: 0, approved: 0, pending: 0, rejected: 0, budget: '–' },
+    { name: 'CM Connect', total: 0, approved: 0, pending: 0, rejected: 0, budget: '–' },
+    { name: 'CM Elevate', total: 0, approved: 0, pending: 0, rejected: 0, budget: '–' },
   ];
 
-  constructor(public mock: MockDataService) {}
-  ngOnInit() { this.schemes = this.mock.schemeApplications; }
+  constructor(private schemeService: SchemeService) {}
+
+  ngOnInit() {
+    this.loading = true;
+    this.schemeService.getAllApplications({ page: 0, size: 100 }).subscribe({
+      next: (res: any) => {
+        this.schemes = res.content ?? res ?? [];
+        this.loading = false;
+      },
+      error: () => { this.loading = false; }
+    });
+  }
 
   get filtered() {
     return this.schemes.filter(s => !this.filterScheme || s.schemeType === this.filterScheme);

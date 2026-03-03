@@ -19,4 +19,7 @@ public interface PersonRepository extends JpaRepository<Person, Long>, JpaSpecif
 
     @Query("SELECT p FROM Person p WHERE p.constituency = :constituency ORDER BY p.fullName")
     List<Person> findByConstituency(String constituency);
+
+    @Query("SELECT p FROM Person p WHERE p.district = :district ORDER BY p.fullName")
+    List<Person> findByDistrict(String district);
 }

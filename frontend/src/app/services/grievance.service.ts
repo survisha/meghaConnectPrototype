@@ -1,0 +1,54 @@
+import { Injectable } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Observable, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
+import { Grievance, GrievanceCategory, GrievanceStatus } from '../models';
+
+export interface CreateGrievanceRequest {
+  applicantName: string;
+  phoneNumber: string;
+  district: string;
+  constituency?: string;
+  category: GrievanceCategory;
+  subject: string;
+  description: string;
+}
+
+export interface GrievancePage {
+  content: Grievance[];
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
+}
+
+@Injectable({ providedIn: 'root' })
+export class GrievanceService {
+
+  private readonly baseUrl = '/api/v1/grievances';
+
+  constructor(private http: HttpClient) {}
+
+  getAll(page = 0, size = 50): Observable<GrievancePage> {
+    const params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString());
+    return this.http.get<GrievancePage>(this.baseUrl, { params }).pipe(
+      catchError(() => of({ content: [], totalElements: 0, totalPages: 0, size, number: page }))
+    );
+  }
+
+  getById(id: number): Observable<Grievance | null> {
+    return this.http.get<Grievance>(`${this.baseUrl}/${id}`).pipe(
+      catchError(() => of(null))
+    );
+  }
+
+  create(request: CreateGrievanceRequest): Observable<Grievance> {
+    return this.http.post<Grievance>(this.baseUrl, request);
+  }
+
+  updateStatus(id: number, status: GrievanceStatus, remarks?: string): Observable<Grievance> {
+    return this.http.patch<Grievance>(`${this.baseUrl}/${id}/status`, { status, remarks });
+  }
+}

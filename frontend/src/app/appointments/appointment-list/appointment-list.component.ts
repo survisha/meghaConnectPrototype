@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { MockDataService } from '../../services/mock-data.service';
+import { AppointmentService } from '../../services/appointment.service';
 import { Appointment, AppointmentStatus } from '../../models';
 import { TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
@@ -22,6 +22,7 @@ export class AppointmentListComponent implements OnInit {
   filtered: Appointment[] = [];
   search = '';
   filterStatus = '';
+  loading = false;
 
   statusOptions = [
     { label: 'All Statuses', value: '' },
@@ -33,12 +34,19 @@ export class AppointmentListComponent implements OnInit {
     { label: 'Completed', value: 'COMPLETED' },
   ];
 
-  constructor(public mock: MockDataService) {}
-  ngOnInit() { this.appointments = this.mock.appointments; this.applyFilter(); }
+  constructor(private appointmentService: AppointmentService) {}
+
+  ngOnInit() {
+    this.loading = true;
+    this.appointmentService.getAllAppointments(0, 100).subscribe({
+      next: page => { this.appointments = page.content; this.applyFilter(); this.loading = false; },
+      error: () => { this.loading = false; }
+    });
+  }
 
   applyFilter() {
     this.filtered = this.appointments.filter(a =>
-      (!this.search || a.applicant.fullName.toLowerCase().includes(this.search.toLowerCase()) || a.applicationId.includes(this.search)) &&
+      (!this.search || a.applicant?.fullName?.toLowerCase().includes(this.search.toLowerCase()) || a.applicationId?.includes(this.search)) &&
       (!this.filterStatus || a.status === this.filterStatus)
     );
   }

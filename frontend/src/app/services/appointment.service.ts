@@ -48,7 +48,7 @@ export class AppointmentService {
       .set('status', 'HCM_PENDING,APPROVER_REVIEW,CMO_REVIEW')
       .set('page', page.toString())
       .set('size', size.toString());
-    return this.http.get<AppointmentPage>(`${this.baseUrl}/pending`, { params });
+    return this.http.get<AppointmentPage>(this.v1BaseUrl, { params });
   }
 
   getAllAppointments(page = 0, size = 20): Observable<AppointmentPage> {
@@ -71,7 +71,10 @@ export class AppointmentService {
   }
 
   rescheduleAppointment(id: number, request: RescheduleRequest): Observable<Appointment> {
-    return this.http.put<Appointment>(`${this.baseUrl}/${id}/reschedule`, request);
+    return this.http.post<Appointment>(`${this.v1BaseUrl}/${id}/schedule`, {
+      scheduledDateTime: request.scheduledDateTime,
+      durationMinutes: request.durationMinutes,
+    });
   }
 
   updateStatus(id: number, status: string, remarks?: string): Observable<Appointment> {

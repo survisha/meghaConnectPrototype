@@ -34,6 +34,11 @@ public class PersonController {
         return ResponseEntity.ok(personService.searchByName(q));
     }
 
+    @GetMapping("/search/district/{district}")
+    public ResponseEntity<List<Person>> findByDistrict(@PathVariable String district) {
+        return ResponseEntity.ok(personService.findByDistrict(district));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<Person> getById(@PathVariable Long id) {
         return personService.findById(id)

@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { MockDataService } from '../services/mock-data.service';
+import { AppointmentService } from '../services/appointment.service';
 import { Appointment, EventType, Location } from '../models';
 
 // PrimeNG
@@ -34,6 +34,7 @@ export class CmoModerationComponent implements OnInit {
   appointments: Appointment[] = [];
   selected: Appointment | null = null;
   showModifyDialog = false;
+  loading = false;
 
   modifyEventType: EventType = 'A4';
   modifyLocation: Location = 'SHILLONG';
@@ -55,12 +56,19 @@ export class CmoModerationComponent implements OnInit {
     { label: 'Others',   value: 'OTHERS' },
   ];
 
-  constructor(private mock: MockDataService, private msg: MessageService) {}
+  constructor(private appointmentService: AppointmentService, private msg: MessageService) {}
 
   ngOnInit() {
-    this.appointments = this.mock.appointments.filter(a =>
-      ['SUBMITTED', 'DEO_PROCESSED', 'CMO_REVIEW'].includes(a.status)
-    );
+    this.loading = true;
+    this.appointmentService.getAllAppointments(0, 100).subscribe({
+      next: page => {
+        this.appointments = page.content.filter(a =>
+          ['SUBMITTED', 'DEO_PROCESSED', 'CMO_REVIEW'].includes(a.status)
+        );
+        this.loading = false;
+      },
+      error: () => { this.loading = false; }
+    });
   }
 
   getSeverity(status: string): TagSeverity {
@@ -82,25 +90,24 @@ export class CmoModerationComponent implements OnInit {
 
   saveModify() {
     if (!this.selected) return;
-    const appt = this.mock.appointments.find(a => a.id === this.selected!.id);
-    if (appt) {
-      appt.eventType = this.modifyEventType;
-      appt.requestedLocation = this.modifyLocation;
-      appt.cmoRemarks = this.modifyRemarks;
-      appt.status = 'APPROVER_REVIEW';
-      this.msg.add({ severity: 'success', summary: 'Updated & Forwarded', detail: `${appt.applicationId} modified and forwarded to Approver.` });
-    }
-    this.ngOnInit();
-    this.showModifyDialog = false;
-    this.selected = null;
+    this.appointmentService.updateStatus(this.selected.id, 'APPROVER_REVIEW', this.modifyRemarks).subscribe({
+      next: updated => {
+        this.msg.add({ severity: 'success', summary: 'Updated & Forwarded', detail: `${updated.applicationId} modified and forwarded to Approver.` });
+        this.showModifyDialog = false;
+        this.selected = null;
+        this.ngOnInit();
+      },
+      error: () => this.msg.add({ severity: 'error', summary: 'Error', detail: 'Failed to update appointment.' })
+    });
   }
 
   forwardToApprover(appt: Appointment) {
-    const a = this.mock.appointments.find(x => x.id === appt.id);
-    if (a) {
-      a.status = 'APPROVER_REVIEW';
-      this.msg.add({ severity: 'info', summary: 'Forwarded', detail: `${a.applicationId} forwarded to Jt. Secretary.` });
-      this.ngOnInit();
-    }
+    this.appointmentService.updateStatus(appt.id, 'APPROVER_REVIEW').subscribe({
+      next: updated => {
+        this.msg.add({ severity: 'info', summary: 'Forwarded', detail: `${updated.applicationId} forwarded to Jt. Secretary.` });
+        this.ngOnInit();
+      },
+      error: () => this.msg.add({ severity: 'error', summary: 'Error', detail: 'Failed to forward appointment.' })
+    });
   }
 }

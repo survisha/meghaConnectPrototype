@@ -61,7 +61,10 @@ class AuthService extends ChangeNotifier {
     return true;
   }
 
-  /// Public login: verify OTP then authenticate as public1.
+  /// Authenticates as the shared public user after OTP has been verified.
+  /// The phone parameter is not passed to the backend because the OTP
+  /// verification step already authenticated the phone; we then log in
+  /// with the shared public-user credentials to obtain a JWT token.
   Future<bool> publicLogin(String phone) async {
     return login('public1', 'public123');
   }

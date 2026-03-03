@@ -235,9 +235,11 @@ class _GrievanceScreenState extends State<GrievanceScreen> {
           grievance: g,
           scrollController: controller,
           onStatusUpdate: (newStatus) async {
-            await ApiService.updateGrievanceStatus(g.backendId, newStatus);
+            final result = await ApiService.updateGrievanceStatus(g.backendId, newStatus);
             if (!context.mounted) return;
-            setState(() => g.status = newStatus);
+            if (result != null) {
+              setState(() => g.status = newStatus);
+            }
             Navigator.pop(context);
           },
         ),

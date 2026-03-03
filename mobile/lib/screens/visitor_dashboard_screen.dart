@@ -84,7 +84,7 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
   List<_MyScheme> _schemes = [];
   List<_MyGrievance> _grievances = [];
 
-  static final _timeline = const [
+  static const _timeline = [
     ('Application Submitted', '–', _primaryBlue),
     ('CMO Verification', '–', _amber),
     ('Approver Review', '–', _primaryBlue),

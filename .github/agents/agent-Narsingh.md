@@ -1,4 +1,4 @@
-# MeghaConnect – Coding Agent Context
+# agent-Narsingh – MeghaConnect Coding Agent
 
 ## Project Overview
 **MeghaConnect** is the Chief Minister's Office (CMO) of Meghalaya scheduling, scheme management, and grievance portal. It consists of three tightly-coupled sub-projects:

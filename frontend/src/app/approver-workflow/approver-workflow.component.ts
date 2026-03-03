@@ -8,12 +8,11 @@ import { Appointment } from '../models';
 // PrimeNG
 import { TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
-import { Button } from 'primeng/button';
+import { ButtonDirective } from 'primeng/button';
 import { Dialog } from 'primeng/dialog';
 import { Textarea } from 'primeng/textarea';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
-import { Divider } from 'primeng/divider';
 
 type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' | undefined;
 
@@ -22,8 +21,8 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
   standalone: true,
   imports: [
     CommonModule, FormsModule, RouterLink,
-    TableModule, Tag, Button, Dialog,
-    Textarea, Toast, Divider,
+    TableModule, Tag, ButtonDirective, Dialog,
+    Textarea, Toast,
   ],
   providers: [MessageService],
   templateUrl: './approver-workflow.component.html',

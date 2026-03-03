@@ -8,12 +8,11 @@ import { Appointment, EventType, Location } from '../models';
 // PrimeNG
 import { TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
-import { Button } from 'primeng/button';
+import { ButtonDirective } from 'primeng/button';
 import { Dialog } from 'primeng/dialog';
 import { Select } from 'primeng/select';
 import { Textarea } from 'primeng/textarea';
 import { Toast } from 'primeng/toast';
-import { Divider } from 'primeng/divider';
 import { MessageService } from 'primeng/api';
 
 type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' | undefined;
@@ -23,8 +22,8 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contr
   standalone: true,
   imports: [
     CommonModule, FormsModule, RouterLink,
-    TableModule, Tag, Button, Dialog,
-    Select, Textarea, Toast, Divider,
+    TableModule, Tag, ButtonDirective, Dialog,
+    Select, Textarea, Toast,
   ],
   providers: [MessageService],
   templateUrl: './cmo-moderation.component.html',

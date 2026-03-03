@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -40,10 +41,7 @@ public class FileStorageService {
         Files.createDirectories(targetDir);
 
         Path targetFile = targetDir.resolve(filename);
-        if (Files.exists(targetFile)) {
-            throw new IllegalStateException("File already exists at path: " + relativePath);
-        }
-        Files.copy(file.getInputStream(), targetFile);
+        Files.copy(file.getInputStream(), targetFile, StandardCopyOption.REPLACE_EXISTING);
 
         return relativePath;
     }

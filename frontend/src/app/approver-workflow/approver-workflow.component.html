@@ -1,0 +1,124 @@
+<p-toast></p-toast>
+
+<div class="page-title-row">
+  <h2 class="page-title"><i class="pi pi-check-square" style="margin-right:0.5rem"></i>Approver Workflow – Jt. Secretary Review</h2>
+  <span class="badge-count">{{ appointments.length }} pending</span>
+</div>
+
+<div class="section-card">
+  <div class="section-card-header">
+    <i class="pi pi-list"></i> Appointment Requests
+  </div>
+
+  <p-table [value]="appointments" [paginator]="true" [rows]="10"
+           styleClass="p-datatable-sm p-datatable-striped"
+           responsiveLayout="scroll">
+    <ng-template pTemplate="header">
+      <tr>
+        <th>App ID</th>
+        <th>Applicant</th>
+        <th>District</th>
+        <th>Agenda</th>
+        <th>Event</th>
+        <th>Location</th>
+        <th>Status</th>
+        <th>AI Notes</th>
+        <th>Actions</th>
+      </tr>
+    </ng-template>
+    <ng-template pTemplate="body" let-appt>
+      <tr>
+        <td><a [routerLink]="['/appointments', appt.id]" class="app-id-link">{{ appt.applicationId }}</a></td>
+        <td>
+          <div style="font-weight:600">{{ appt.applicant.fullName }}</div>
+          <div style="font-size:0.78rem;color:#6b7280">{{ appt.applicant.designation }}</div>
+        </td>
+        <td>{{ appt.applicant.district }}</td>
+        <td>{{ appt.agendaType }}</td>
+        <td><span class="event-type-pill">{{ appt.eventType }}</span></td>
+        <td>{{ appt.requestedLocation }}</td>
+        <td><p-tag [value]="appt.status.replace('_',' ')" [severity]="getSeverity(appt.status)"></p-tag></td>
+        <td>
+          <span *ngIf="appt.shortNotes" class="ai-notes-chip">
+            <i class="pi pi-sparkles"></i> {{ appt.shortNotes | slice:0:60 }}{{ appt.shortNotes.length > 60 ? '…' : '' }}
+          </span>
+          <span *ngIf="!appt.shortNotes" style="color:#9ca3af;font-size:0.8rem">—</span>
+        </td>
+        <td>
+          <div class="action-btns">
+            <button pButton icon="pi pi-check" label="Approve"
+                    class="p-button-success p-button-sm"
+                    [disabled]="appt.status === 'HCM_PENDING'"
+                    (click)="openApprove(appt)"></button>
+            <button pButton icon="pi pi-times" label="Reject"
+                    class="p-button-danger p-button-sm"
+                    [disabled]="appt.status === 'HCM_PENDING'"
+                    (click)="openReject(appt)"></button>
+            <button pButton icon="pi pi-calendar" label="Reschedule"
+                    class="p-button-secondary p-button-sm"
+                    (click)="openReschedule(appt)"></button>
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+    <ng-template pTemplate="emptymessage">
+      <tr>
+        <td colspan="9" style="text-align:center;padding:2rem;color:#9ca3af">
+          <i class="pi pi-inbox" style="font-size:2rem"></i>
+          <p>No appointments pending review.</p>
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</div>
+
+<!-- Approve / Reject Remarks Dialog -->
+<p-dialog
+  [header]="pendingAction === 'APPROVE' ? 'Approve & Forward to HCM' : 'Reject Appointment'"
+  [(visible)]="showRemarksDialog"
+  [style]="{width:'480px'}"
+  [modal]="true">
+  <div style="padding:0.5rem 0">
+    <div *ngIf="selected" class="dialog-appt-summary">
+      <strong>{{ selected.applicationId }}</strong> – {{ selected.applicant.fullName }}
+      <span class="event-type-pill" style="margin-left:0.5rem">{{ selected.eventType }}</span>
+    </div>
+    <div style="margin-top:1rem">
+      <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:6px">
+        Remarks / Notes *
+      </label>
+      <textarea pTextarea [(ngModel)]="remarksText" rows="4"
+                style="width:100%"
+                placeholder="Add remarks before {{ pendingAction === 'APPROVE' ? 'forwarding to HCM' : 'rejecting' }}..."></textarea>
+    </div>
+  </div>
+  <ng-template pTemplate="footer">
+    <button pButton label="Cancel" class="p-button-text" (click)="showRemarksDialog=false"></button>
+    <button pButton
+            [label]="pendingAction === 'APPROVE' ? 'Approve & Push to HCM' : 'Confirm Reject'"
+            [icon]="pendingAction === 'APPROVE' ? 'pi pi-check' : 'pi pi-times'"
+            [class]="pendingAction === 'APPROVE' ? 'p-button-success' : 'p-button-danger'"
+            (click)="confirmAction()"></button>
+  </ng-template>
+</p-dialog>
+
+<!-- Reschedule Dialog -->
+<p-dialog header="Reschedule Appointment"
+          [(visible)]="showRescheduleDialog"
+          [style]="{width:'420px'}"
+          [modal]="true">
+  <div style="padding:0.5rem 0">
+    <div *ngIf="selected" class="dialog-appt-summary">
+      <strong>{{ selected.applicationId }}</strong> – {{ selected.applicant.fullName }}
+    </div>
+    <div style="margin-top:1rem">
+      <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:6px">New Date &amp; Time *</label>
+      <input type="datetime-local" [(ngModel)]="rescheduleDate"
+             style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:0.9rem" />
+    </div>
+  </div>
+  <ng-template pTemplate="footer">
+    <button pButton label="Cancel" class="p-button-text" (click)="showRescheduleDialog=false"></button>
+    <button pButton label="Confirm Reschedule" icon="pi pi-calendar" class="p-button-info" (click)="confirmReschedule()"></button>
+  </ng-template>
+</p-dialog>

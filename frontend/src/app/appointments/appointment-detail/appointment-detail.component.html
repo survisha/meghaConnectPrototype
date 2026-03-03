@@ -68,8 +68,14 @@
         <div *ngIf="appointment.cmoRemarks" style="margin-top:0.75rem;padding:0.75rem;background:#eff6ff;border-radius:6px;font-size:0.85rem">
           <strong style="color:#1e40af">CMO Remarks:</strong> {{ appointment.cmoRemarks }}
         </div>
+        <div *ngIf="appointment.approverRemarks" style="margin-top:0.5rem;padding:0.75rem;background:#f0fdf4;border-radius:6px;font-size:0.85rem">
+          <strong style="color:#065f46">Approver Remarks:</strong> {{ appointment.approverRemarks }}
+        </div>
         <div *ngIf="appointment.hcmRemarks" style="margin-top:0.5rem;padding:0.75rem;background:#ecfdf5;border-radius:6px;font-size:0.85rem">
           <strong style="color:#065f46">HCM Remarks:</strong> {{ appointment.hcmRemarks }}
+        </div>
+        <div *ngIf="appointment.shortNotes" style="margin-top:0.5rem;padding:0.75rem;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;font-size:0.85rem">
+          <strong style="color:#1e40af"><i class="pi pi-sparkles" style="margin-right:4px"></i>AI Summary:</strong> {{ appointment.shortNotes }}
         </div>
       </div>
     </div>

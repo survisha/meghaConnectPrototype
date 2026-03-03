@@ -17,6 +17,8 @@ import { AuditTrailComponent } from './reports/audit-trail/audit-trail.component
 import { UserManagementComponent } from './admin/user-management.component';
 import { GrievancesComponent } from './grievances/grievances.component';
 import { VisitorDashboardComponent } from './visitor-dashboard/visitor-dashboard.component';
+import { ApproverWorkflowComponent } from './approver-workflow/approver-workflow.component';
+import { CmoModerationComponent } from './cmo-moderation/cmo-moderation.component';
 import { authGuard } from './guards/auth.guard';
 import { roleGuard } from './guards/role.guard';
 
@@ -40,6 +42,8 @@ export const routes: Routes = [
       { path: 'appointments/new', component: AppointmentFormComponent },
       { path: 'appointments/walkin', component: WalkinComponent, canActivate: [roleGuard('ADMIN', 'SAIDUL_OSD', 'DATA_ENTRY_OPERATOR')] },
       { path: 'appointments/:id', component: AppointmentDetailComponent, canActivate: [roleGuard(...STAFF_ROLES)] },
+      { path: 'approver', component: ApproverWorkflowComponent, canActivate: [roleGuard('HCM', 'ADMIN', 'SAIDUL_OSD', 'APPROVER_JT_SECY')] },
+      { path: 'cmo-moderation', component: CmoModerationComponent, canActivate: [roleGuard('HCM', 'ADMIN', 'SAIDUL_OSD', 'CMO_OFFICER')] },
       { path: 'schemes', component: SchemeListComponent, canActivate: [roleGuard(...REPORTS_ROLES)] },
       { path: 'schemes/apply', component: SchemeFormComponent },
       { path: 'grievances', component: GrievancesComponent },

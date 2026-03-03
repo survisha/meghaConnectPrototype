@@ -87,6 +87,9 @@
         <div *ngIf="selectedEvent.isConflict" class="conflict-warn" style="display:flex;align-items:center;gap:0.5rem">
           <i class="pi pi-exclamation-triangle"></i> This event has a scheduling conflict!
         </div>
+        <div *ngIf="selectedEvent.shortNotes" style="padding:0.75rem;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;font-size:0.85rem;color:#1e40af">
+          <strong><i class="pi pi-sparkles" style="margin-right:4px"></i>AI Summary:</strong> {{ selectedEvent.shortNotes }}
+        </div>
       </div>
     </ng-container>
     <ng-template pTemplate="footer">

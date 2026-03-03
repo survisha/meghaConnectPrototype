@@ -20,7 +20,9 @@ public class AppointmentDto {
     private Integer scheduledDurationMinutes;
     private Boolean mlaMdcApproved;
     private String cmoRemarks;
+    private String approverRemarks;
     private String hcmRemarks;
+    private String shortNotes;
     private Boolean isWalkIn;
     private Integer meetingCountLast6Months;
 }

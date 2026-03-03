@@ -15,6 +15,7 @@ import 'pending_followups_screen.dart';
 import 'audit_trail_screen.dart';
 import 'grievance_screen.dart';
 import 'visitor_dashboard_screen.dart';
+import 'approver_screen.dart';
 
 class _NavItem {
   final String label;
@@ -66,6 +67,17 @@ final _navTree = <_NavItem>[
       UserRole.SAIDUL_OSD,
       UserRole.APPROVER_JT_SECY,
       UserRole.CMO_OFFICER,
+    ],
+  ),
+  _NavItem(
+    label: 'Approver Review',
+    icon: Icons.how_to_reg_outlined,
+    route: 'approver',
+    roles: [
+      UserRole.HCM,
+      UserRole.ADMIN,
+      UserRole.SAIDUL_OSD,
+      UserRole.APPROVER_JT_SECY,
     ],
   ),
   _NavItem(
@@ -202,6 +214,8 @@ class _MainShellState extends State<MainShell> {
         return NewAppointmentScreen(isWalkIn: route == 'walkin');
       case 'calendar':
         return const CalendarScreen();
+      case 'approver':
+        return const ApproverWorkflowScreen();
       case 'schemes':
         return const SchemesScreen();
       case 'grievances':
@@ -235,6 +249,8 @@ class _MainShellState extends State<MainShell> {
         return 'Walk-in Counter';
       case 'calendar':
         return 'Calendar / Schedule';
+      case 'approver':
+        return 'Approver Workflow';
       case 'schemes':
         return 'CM Schemes';
       case 'grievances':

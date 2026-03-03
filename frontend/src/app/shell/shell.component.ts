@@ -38,6 +38,10 @@ export class ShellComponent implements OnInit {
           roles: ['ADMIN','SAIDUL_OSD','DATA_ENTRY_OPERATOR','PUBLIC'] },
         { label: 'Walk-in Counter', icon: 'pi-sign-in', route: '/appointments/walkin',
           roles: ['ADMIN','SAIDUL_OSD','DATA_ENTRY_OPERATOR'] },
+        { label: 'Approver Review', icon: 'pi-check-square', route: '/approver',
+          roles: ['HCM','ADMIN','SAIDUL_OSD','APPROVER_JT_SECY'] },
+        { label: 'CMO Moderation', icon: 'pi-filter', route: '/cmo-moderation',
+          roles: ['HCM','ADMIN','SAIDUL_OSD','CMO_OFFICER'] },
       ]
     },
     {

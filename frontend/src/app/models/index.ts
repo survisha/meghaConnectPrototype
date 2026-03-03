@@ -41,7 +41,9 @@ export interface Appointment {
   mlaMdcApproved?: boolean;
   meetingCountLast6Months?: number;
   cmoRemarks?: string;
+  approverRemarks?: string;
   hcmRemarks?: string;
+  shortNotes?: string;
   directions?: Direction[];
   isWalkIn?: boolean;
 }
@@ -56,6 +58,7 @@ export interface ScheduleEvent {
   travelTimeMinutes?: number;
   isConflict?: boolean;
   description?: string;
+  shortNotes?: string;
 }
 
 export interface SchemeApplication {

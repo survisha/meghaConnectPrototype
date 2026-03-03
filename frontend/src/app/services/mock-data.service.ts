@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Appointment, Person, ScheduleEvent, SchemeApplication, Direction, AuditEntry } from '../models';
+import { Appointment, Person, ScheduleEvent, SchemeApplication, Direction, AuditEntry, Grievance } from '../models';
 
 @Injectable({ providedIn: 'root' })
 export class MockDataService {
@@ -81,5 +81,12 @@ export class MockDataService {
     { id: 3, entityType: 'Appointment', entityId: 1, action: 'STATUS_CHANGE', details: 'Approver approved – forwarded to HCM', performedBy: 'jt.secy1', timestamp: '2024-03-14T15:00:00' },
     { id: 4, entityType: 'SchemeApplication', entityId: 2, action: 'HCM_APPROVED', details: 'HCM approved CM Care application. Amount: ₹3,00,000', performedBy: 'hcm', timestamp: '2024-03-15T10:45:00' },
     { id: 5, entityType: 'User', entityId: 99, action: 'LOGIN', details: 'User logged in from 192.168.1.10', performedBy: 'cmo.officer1', timestamp: '2024-03-15T08:00:00' },
+  ];
+
+  grievances: Grievance[] = [
+    { id: 1, ticketId: 'GRV-2024-001', applicantName: 'Ramsing Marak', phoneNumber: '9876543210', district: 'West Garo Hills', constituency: 'Ampati', category: 'INFRASTRUCTURE', subject: 'Road repair request – Dalu village', description: 'The main road connecting Dalu village to the district headquarters has been damaged since the last monsoon. Immediate repair is requested.', status: 'UNDER_REVIEW', submittedAt: '2024-03-10T09:00:00', assignedDepartment: 'PWD', remarks: 'Forwarded to PWD for inspection.' },
+    { id: 2, ticketId: 'GRV-2024-002', applicantName: 'Sunita Sangma', phoneNumber: '9876500001', district: 'East Khasi Hills', constituency: 'Shillong East', category: 'EDUCATION', subject: 'School infrastructure improvement', description: 'Classroom walls are crumbling and there is no proper drinking water facility. Students are suffering.', status: 'FORWARDED', submittedAt: '2024-03-11T11:30:00', assignedDepartment: 'Education Dept' },
+    { id: 3, ticketId: 'GRV-2024-003', applicantName: 'Bijoy Momin', phoneNumber: '9812345678', district: 'South Garo Hills', constituency: 'Baghmara', category: 'HEALTH', subject: 'PHC non-functional for 2 months', description: 'The Primary Health Centre at Baghmara Block has been without a doctor for 2 months. Villagers have no medical access.', status: 'RESOLVED', submittedAt: '2024-02-20T08:00:00', resolvedAt: '2024-03-05T16:00:00', assignedDepartment: 'Health Dept', remarks: 'Doctor posted. PHC operational.' },
+    { id: 4, ticketId: 'GRV-2024-004', applicantName: 'Deibok Lyngdoh', phoneNumber: '9887654321', district: 'Ri Bhoi', constituency: 'Umsning', category: 'WELFARE_SCHEME', subject: 'Delay in CM Care disbursement', description: 'My CM Care application was approved 3 months ago but the amount has not been credited yet.', status: 'SUBMITTED', submittedAt: '2024-03-14T14:00:00' },
   ];
 }

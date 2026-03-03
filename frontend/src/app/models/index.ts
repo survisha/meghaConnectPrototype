@@ -95,3 +95,28 @@ export interface AuditEntry {
   performedBy: string;
   timestamp: string;
 }
+
+export type GrievanceCategory =
+  | 'PUBLIC_SERVICES' | 'INFRASTRUCTURE' | 'HEALTH' | 'EDUCATION'
+  | 'EMPLOYMENT' | 'WELFARE_SCHEME' | 'LAW_ORDER' | 'OTHERS';
+
+export type GrievanceStatus =
+  | 'SUBMITTED' | 'ACKNOWLEDGED' | 'UNDER_REVIEW'
+  | 'FORWARDED' | 'RESOLVED' | 'CLOSED';
+
+export interface Grievance {
+  id: number;
+  ticketId: string;
+  applicantName: string;
+  phoneNumber: string;
+  district: string;
+  constituency: string;
+  category: GrievanceCategory;
+  subject: string;
+  description: string;
+  status: GrievanceStatus;
+  submittedAt: string;
+  resolvedAt?: string;
+  assignedDepartment?: string;
+  remarks?: string;
+}

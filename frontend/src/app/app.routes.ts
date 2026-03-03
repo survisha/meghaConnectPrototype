@@ -15,6 +15,8 @@ import { HeatmapComponent } from './reports/heatmap/heatmap.component';
 import { PendingFollowupsComponent } from './reports/pending-followups/pending-followups.component';
 import { AuditTrailComponent } from './reports/audit-trail/audit-trail.component';
 import { UserManagementComponent } from './admin/user-management.component';
+import { GrievancesComponent } from './grievances/grievances.component';
+import { VisitorDashboardComponent } from './visitor-dashboard/visitor-dashboard.component';
 import { authGuard } from './guards/auth.guard';
 import { roleGuard } from './guards/role.guard';
 
@@ -32,6 +34,7 @@ export const routes: Routes = [
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'dashboard', component: DashboardComponent },
+      { path: 'visitor', component: VisitorDashboardComponent, canActivate: [roleGuard('PUBLIC')] },
       { path: 'scheduling', component: SchedulingComponent, canActivate: [roleGuard(...REPORTS_ROLES)] },
       { path: 'appointments', component: AppointmentListComponent, canActivate: [roleGuard(...STAFF_ROLES)] },
       { path: 'appointments/new', component: AppointmentFormComponent },
@@ -39,6 +42,7 @@ export const routes: Routes = [
       { path: 'appointments/:id', component: AppointmentDetailComponent, canActivate: [roleGuard(...STAFF_ROLES)] },
       { path: 'schemes', component: SchemeListComponent, canActivate: [roleGuard(...REPORTS_ROLES)] },
       { path: 'schemes/apply', component: SchemeFormComponent },
+      { path: 'grievances', component: GrievancesComponent },
       { path: 'identify', component: PublicIdentificationComponent, canActivate: [roleGuard('HCM', 'ADMIN', 'SAIDUL_OSD', 'DATA_ENTRY_OPERATOR')] },
       { path: 'reports', component: ReportsComponent, canActivate: [roleGuard(...REPORTS_ROLES)] },
       { path: 'reports/heatmap', component: HeatmapComponent, canActivate: [roleGuard(...REPORTS_ROLES)] },

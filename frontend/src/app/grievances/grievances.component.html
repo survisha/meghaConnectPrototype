@@ -1,0 +1,192 @@
+<div class="page-container">
+  <p-toast></p-toast>
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">
+        <i class="pi pi-comments"></i>
+        Grievance Management
+      </h1>
+      <p class="page-subtitle">Submit and track public grievances</p>
+    </div>
+    <button pButton icon="pi pi-plus" label="Raise Grievance" (click)="showForm = true"></button>
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-bar">
+    <span class="p-input-icon-left filter-search">
+      <i class="pi pi-search"></i>
+      <input pInputText placeholder="Search by name, ticket ID, subject…" [(ngModel)]="search" (ngModelChange)="applyFilter()" />
+    </span>
+    <p-select [options]="statusOptions" optionLabel="label" optionValue="value"
+      [(ngModel)]="filterStatus" (ngModelChange)="applyFilter()" placeholder="Filter by Status" styleClass="filter-select"></p-select>
+    <p-select [options]="categoryOptions" optionLabel="label" optionValue="value"
+      [(ngModel)]="filterCategory" (ngModelChange)="applyFilter()" placeholder="Filter by Category" styleClass="filter-select"></p-select>
+    <span class="result-count">{{ filtered.length }} record(s)</span>
+  </div>
+
+  <!-- Grievance Table -->
+  <div class="section-card">
+    <p-table [value]="filtered" styleClass="p-datatable-sm" [paginator]="true" [rows]="10"
+      [rowsPerPageOptions]="[5,10,25]" [globalFilterFields]="['applicantName','ticketId','subject']">
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Ticket ID</th>
+          <th>Applicant</th>
+          <th>District</th>
+          <th>Category</th>
+          <th>Subject</th>
+          <th>Submitted</th>
+          <th>Status</th>
+          <th style="width:80px">Action</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-g>
+        <tr>
+          <td><span class="ticket-id">{{ g.ticketId }}</span></td>
+          <td>
+            <div style="font-weight:600">{{ g.applicantName }}</div>
+            <div style="font-size:0.75rem;color:#6b7280">{{ g.phoneNumber }}</div>
+          </td>
+          <td>{{ g.district }}</td>
+          <td><span class="category-badge">{{ getCategoryLabel(g.category) }}</span></td>
+          <td style="max-width:200px">
+            <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ g.subject }}</div>
+          </td>
+          <td style="font-size:0.82rem">{{ g.submittedAt | date:'dd MMM yyyy' }}</td>
+          <td><p-tag [value]="g.status | titlecase" [severity]="getStatusSeverity(g.status)"></p-tag></td>
+          <td>
+            <button pButton icon="pi pi-eye" class="p-button-text p-button-sm" (click)="openDetail(g)" pTooltip="View Details"></button>
+          </td>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="emptymessage">
+        <tr><td colspan="8" style="text-align:center;padding:2rem;color:#6b7280">No grievances found.</td></tr>
+      </ng-template>
+    </p-table>
+  </div>
+</div>
+
+<!-- Submit Grievance Dialog -->
+<p-dialog header="Raise a Grievance" [(visible)]="showForm" [modal]="true" [style]="{width:'680px'}" [closable]="true">
+  <p-steps [model]="formSteps" [activeIndex]="step" [readonly]="true" styleClass="form-steps"></p-steps>
+  <p-divider></p-divider>
+
+  <!-- Step 0: Personal Info -->
+  <div *ngIf="step === 0" class="form-step">
+    <div class="form-row">
+      <div class="form-field">
+        <label>Full Name *</label>
+        <input pInputText [(ngModel)]="form.applicantName" placeholder="Enter full name" class="full-width" />
+      </div>
+      <div class="form-field">
+        <label>Mobile Number *</label>
+        <input pInputText [(ngModel)]="form.phoneNumber" placeholder="10-digit mobile number" class="full-width" />
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field">
+        <label>District *</label>
+        <p-select [options]="districts" [(ngModel)]="form.district" placeholder="Select district" class="full-width"></p-select>
+      </div>
+      <div class="form-field">
+        <label>Constituency</label>
+        <input pInputText [(ngModel)]="form.constituency" placeholder="Enter constituency" class="full-width" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 1: Grievance Details -->
+  <div *ngIf="step === 1" class="form-step">
+    <div class="form-field" style="margin-bottom:1rem">
+      <label>Grievance Category *</label>
+      <p-select [options]="categoryOptions.slice(1)" optionLabel="label" optionValue="value"
+        [(ngModel)]="form.category" placeholder="Select category" class="full-width"></p-select>
+    </div>
+    <div class="form-field" style="margin-bottom:1rem">
+      <label>Subject *</label>
+      <input pInputText [(ngModel)]="form.subject" placeholder="Brief subject of grievance" class="full-width" />
+    </div>
+    <div class="form-field">
+      <label>Description *</label>
+      <textarea pTextarea [(ngModel)]="form.description" rows="5" placeholder="Provide detailed description of your grievance…" class="full-width" autoResize="true"></textarea>
+    </div>
+  </div>
+
+  <!-- Step 2: Review -->
+  <div *ngIf="step === 2" class="form-step review-step">
+    <div class="review-section">
+      <h4>Personal Information</h4>
+      <div class="review-grid">
+        <div><span class="review-label">Name</span><span class="review-value">{{ form.applicantName }}</span></div>
+        <div><span class="review-label">Mobile</span><span class="review-value">{{ form.phoneNumber }}</span></div>
+        <div><span class="review-label">District</span><span class="review-value">{{ form.district }}</span></div>
+        <div><span class="review-label">Constituency</span><span class="review-value">{{ form.constituency || '–' }}</span></div>
+      </div>
+    </div>
+    <div class="review-section">
+      <h4>Grievance Details</h4>
+      <div class="review-grid">
+        <div><span class="review-label">Category</span><span class="review-value">{{ getCategoryLabel(form.category || 'OTHERS') }}</span></div>
+        <div><span class="review-label">Subject</span><span class="review-value">{{ form.subject }}</span></div>
+      </div>
+      <div style="margin-top:0.75rem">
+        <span class="review-label">Description</span>
+        <p style="margin:0.25rem 0 0;background:#f8fafc;padding:0.75rem;border-radius:6px;font-size:0.9rem">{{ form.description }}</p>
+      </div>
+    </div>
+  </div>
+
+  <p-divider></p-divider>
+  <div class="dialog-actions">
+    <button pButton label="Back" icon="pi pi-chevron-left" class="p-button-outlined" (click)="prevStep()" *ngIf="step > 0"></button>
+    <button pButton label="Next" icon="pi pi-chevron-right" iconPos="right" (click)="nextStep()" *ngIf="step < 2"></button>
+    <button pButton label="Submit Grievance" icon="pi pi-send" (click)="submitGrievance()" *ngIf="step === 2" class="p-button-success"></button>
+  </div>
+</p-dialog>
+
+<!-- Grievance Detail Dialog -->
+<p-dialog [header]="selectedGrievance?.ticketId || 'Grievance Detail'" [(visible)]="showDetail" [modal]="true" [style]="{width:'640px'}">
+  <div *ngIf="selectedGrievance" class="detail-container">
+    <div class="detail-header">
+      <p-tag [value]="selectedGrievance.status | titlecase" [severity]="getStatusSeverity(selectedGrievance.status)" styleClass="detail-status-tag"></p-tag>
+      <span class="category-badge detail-cat">{{ getCategoryLabel(selectedGrievance.category) }}</span>
+    </div>
+
+    <h3 class="detail-subject">{{ selectedGrievance.subject }}</h3>
+
+    <div class="detail-grid">
+      <div><span class="review-label">Applicant</span><span class="review-value">{{ selectedGrievance.applicantName }}</span></div>
+      <div><span class="review-label">Mobile</span><span class="review-value">{{ selectedGrievance.phoneNumber }}</span></div>
+      <div><span class="review-label">District</span><span class="review-value">{{ selectedGrievance.district }}</span></div>
+      <div><span class="review-label">Constituency</span><span class="review-value">{{ selectedGrievance.constituency || '–' }}</span></div>
+      <div><span class="review-label">Submitted</span><span class="review-value">{{ selectedGrievance.submittedAt | date:'dd MMM yyyy, hh:mm a' }}</span></div>
+      <div *ngIf="selectedGrievance.resolvedAt"><span class="review-label">Resolved</span><span class="review-value">{{ selectedGrievance.resolvedAt | date:'dd MMM yyyy' }}</span></div>
+      <div *ngIf="selectedGrievance.assignedDepartment"><span class="review-label">Assigned To</span><span class="review-value">{{ selectedGrievance.assignedDepartment }}</span></div>
+    </div>
+
+    <p-divider></p-divider>
+    <div>
+      <span class="review-label">Description</span>
+      <p style="margin:0.5rem 0 0;background:#f8fafc;padding:0.75rem;border-radius:6px;font-size:0.9rem;line-height:1.6">{{ selectedGrievance.description }}</p>
+    </div>
+
+    <div *ngIf="selectedGrievance.remarks" style="margin-top:1rem">
+      <span class="review-label">Remarks</span>
+      <p style="margin:0.5rem 0 0;background:#f0fdf4;padding:0.75rem;border-radius:6px;font-size:0.9rem">{{ selectedGrievance.remarks }}</p>
+    </div>
+
+    <div *ngIf="isStaff && selectedGrievance.status !== 'RESOLVED' && selectedGrievance.status !== 'CLOSED'" style="margin-top:1.5rem">
+      <p-divider></p-divider>
+      <div class="action-btns">
+        <button pButton label="Acknowledge" icon="pi pi-check" class="p-button-info p-button-outlined p-button-sm"
+          (click)="updateStatus(selectedGrievance, 'ACKNOWLEDGED')" *ngIf="selectedGrievance.status === 'SUBMITTED'"></button>
+        <button pButton label="Mark Under Review" icon="pi pi-search" class="p-button-warning p-button-outlined p-button-sm"
+          (click)="updateStatus(selectedGrievance, 'UNDER_REVIEW')" *ngIf="selectedGrievance.status === 'ACKNOWLEDGED'"></button>
+        <button pButton label="Forward to Dept" icon="pi pi-arrow-right" class="p-button-secondary p-button-outlined p-button-sm"
+          (click)="updateStatus(selectedGrievance, 'FORWARDED')"></button>
+        <button pButton label="Mark Resolved" icon="pi pi-check-circle" class="p-button-success p-button-sm"
+          (click)="updateStatus(selectedGrievance, 'RESOLVED')"></button>
+      </div>
+    </div>
+  </div>
+</p-dialog>

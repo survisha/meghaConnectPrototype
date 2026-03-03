@@ -27,30 +27,34 @@ export class ShellComponent implements OnInit {
   private ALL_MENU: MenuItem[] = [
     { label: 'Dashboard', icon: 'pi-home', route: '/dashboard',
       roles: ['HCM','ADMIN','SAIDUL_OSD','APPROVER_JT_SECY','CMO_OFFICER','DATA_ENTRY_OPERATOR'] },
+    { label: 'My Portal', icon: 'pi-user', route: '/visitor',
+      roles: ['PUBLIC'] },
     { label: 'Calendar / Schedule', icon: 'pi-calendar', route: '/scheduling',
       roles: ['HCM','ADMIN','SAIDUL_OSD','APPROVER_JT_SECY','CMO_OFFICER'] },
     {
       label: 'Appointments', icon: 'pi-users', expanded: false,
-      roles: ['HCM','ADMIN','SAIDUL_OSD','APPROVER_JT_SECY','CMO_OFFICER','DATA_ENTRY_OPERATOR'],
+      roles: ['HCM','ADMIN','SAIDUL_OSD','APPROVER_JT_SECY','CMO_OFFICER','DATA_ENTRY_OPERATOR','PUBLIC'],
       children: [
         { label: 'All Appointments', icon: 'pi-list', route: '/appointments',
           roles: ['HCM','ADMIN','SAIDUL_OSD','APPROVER_JT_SECY','CMO_OFFICER','DATA_ENTRY_OPERATOR'] },
         { label: 'New Appointment', icon: 'pi-plus-circle', route: '/appointments/new',
-          roles: ['ADMIN','SAIDUL_OSD','DATA_ENTRY_OPERATOR'] },
+          roles: ['ADMIN','SAIDUL_OSD','DATA_ENTRY_OPERATOR','PUBLIC'] },
         { label: 'Walk-in Counter', icon: 'pi-sign-in', route: '/appointments/walkin',
           roles: ['ADMIN','SAIDUL_OSD','DATA_ENTRY_OPERATOR'] },
       ]
     },
     {
       label: 'CM Schemes', icon: 'pi-briefcase', expanded: false,
-      roles: ['HCM','ADMIN','SAIDUL_OSD','APPROVER_JT_SECY','CMO_OFFICER'],
+      roles: ['HCM','ADMIN','SAIDUL_OSD','APPROVER_JT_SECY','CMO_OFFICER','PUBLIC'],
       children: [
         { label: 'All Applications', icon: 'pi-list', route: '/schemes',
           roles: ['HCM','ADMIN','SAIDUL_OSD','APPROVER_JT_SECY','CMO_OFFICER'] },
         { label: 'New Application', icon: 'pi-file-edit', route: '/schemes/apply',
-          roles: ['ADMIN','SAIDUL_OSD'] },
+          roles: ['ADMIN','SAIDUL_OSD','PUBLIC'] },
       ]
     },
+    { label: 'Grievances', icon: 'pi-comments', route: '/grievances',
+      roles: ['HCM','ADMIN','SAIDUL_OSD','APPROVER_JT_SECY','CMO_OFFICER','DATA_ENTRY_OPERATOR','PUBLIC'] },
     { label: 'Public Identification', icon: 'pi-id-card', route: '/identify',
       roles: ['HCM','ADMIN','SAIDUL_OSD','DATA_ENTRY_OPERATOR'] },
     {
@@ -76,7 +80,7 @@ export class ShellComponent implements OnInit {
   ngOnInit() {
     this.buildMenu();
     if (this.auth.hasRole('PUBLIC')) {
-      this.router.navigate(['/appointments/new']);
+      this.router.navigate(['/visitor']);
     }
   }
 

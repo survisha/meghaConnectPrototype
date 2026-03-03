@@ -13,6 +13,8 @@ import 'public_identification_screen.dart';
 import 'reports_screen.dart';
 import 'pending_followups_screen.dart';
 import 'audit_trail_screen.dart';
+import 'grievance_screen.dart';
+import 'visitor_dashboard_screen.dart';
 
 class _NavItem {
   final String label;
@@ -49,6 +51,12 @@ final _navTree = <_NavItem>[
     roles: _allRoles,
   ),
   _NavItem(
+    label: 'My Portal',
+    icon: Icons.person_outline,
+    route: 'visitor',
+    roles: [UserRole.PUBLIC],
+  ),
+  _NavItem(
     label: 'Calendar / Schedule',
     icon: Icons.calendar_month_outlined,
     route: 'calendar',
@@ -64,7 +72,7 @@ final _navTree = <_NavItem>[
     label: 'Appointments',
     icon: Icons.people_outline,
     route: 'appointments',
-    roles: _allRoles,
+    roles: [..._allRoles, UserRole.PUBLIC],
     children: [
       _NavItem(
         label: 'All Appointments',
@@ -76,7 +84,7 @@ final _navTree = <_NavItem>[
         label: 'New Appointment',
         icon: Icons.add_circle_outline,
         route: 'new_appointment',
-        roles: [UserRole.ADMIN, UserRole.SAIDUL_OSD, UserRole.DATA_ENTRY_OPERATOR],
+        roles: [UserRole.ADMIN, UserRole.SAIDUL_OSD, UserRole.DATA_ENTRY_OPERATOR, UserRole.PUBLIC],
       ),
       _NavItem(
         label: 'Walk-in Counter',
@@ -96,7 +104,14 @@ final _navTree = <_NavItem>[
       UserRole.SAIDUL_OSD,
       UserRole.APPROVER_JT_SECY,
       UserRole.CMO_OFFICER,
+      UserRole.PUBLIC,
     ],
+  ),
+  _NavItem(
+    label: 'Grievances',
+    icon: Icons.comment_outlined,
+    route: 'grievances',
+    roles: [..._allRoles, UserRole.PUBLIC],
   ),
   _NavItem(
     label: 'Public Identification',
@@ -178,6 +193,8 @@ class _MainShellState extends State<MainShell> {
     switch (route) {
       case 'dashboard':
         return const DashboardScreen();
+      case 'visitor':
+        return const VisitorDashboardScreen();
       case 'appointments':
         return const AppointmentsScreen();
       case 'new_appointment':
@@ -187,6 +204,8 @@ class _MainShellState extends State<MainShell> {
         return const CalendarScreen();
       case 'schemes':
         return const SchemesScreen();
+      case 'grievances':
+        return const GrievanceScreen();
       case 'identify':
         return const PublicIdentificationScreen();
       case 'reports':
@@ -206,6 +225,8 @@ class _MainShellState extends State<MainShell> {
     switch (route) {
       case 'dashboard':
         return 'Dashboard';
+      case 'visitor':
+        return 'My Portal';
       case 'appointments':
         return 'Appointments';
       case 'new_appointment':
@@ -216,6 +237,8 @@ class _MainShellState extends State<MainShell> {
         return 'Calendar / Schedule';
       case 'schemes':
         return 'CM Schemes';
+      case 'grievances':
+        return 'Grievances';
       case 'identify':
         return 'Public Identification';
       case 'reports':
@@ -238,20 +261,9 @@ class _MainShellState extends State<MainShell> {
     final user = auth.user!;
     _currentRoute = nav.currentRoute;
 
-    // Public users go directly to new appointment
+    // Public users go to visitor dashboard
     if (user.role == UserRole.PUBLIC) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('🏛️ MeghaConnect'),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.logout),
-              onPressed: () => _confirmLogout(context, auth),
-            ),
-          ],
-        ),
-        body: NewAppointmentScreen(isWalkIn: false, isPublic: true),
-      );
+      return const VisitorDashboardScreen();
     }
 
     return Scaffold(

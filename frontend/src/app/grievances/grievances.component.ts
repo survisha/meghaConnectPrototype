@@ -13,11 +13,14 @@ import { Textarea } from 'primeng/textarea';
 import { Dialog } from 'primeng/dialog';
 import { Divider } from 'primeng/divider';
 import { Steps } from 'primeng/steps';
+import { Toast } from 'primeng/toast';
+import { MessageService } from 'primeng/api';
 
 @Component({
   selector: 'app-grievances',
   standalone: true,
-  imports: [CommonModule, FormsModule, Button, TableModule, Tag, Select, InputText, Textarea, Dialog, Divider, Steps],
+  imports: [CommonModule, FormsModule, Button, TableModule, Tag, Select, InputText, Textarea, Dialog, Divider, Steps, Toast],
+  providers: [MessageService],
   templateUrl: './grievances.component.html',
   styleUrls: ['./grievances.component.scss'],
 })
@@ -67,7 +70,7 @@ export class GrievancesComponent implements OnInit {
     'East Jaintia Hills', 'West Jaintia Hills', 'East Garo Hills', 'West Garo Hills',
     'South Garo Hills', 'North Garo Hills', 'Eastern West Khasi Hills'];
 
-  constructor(public mock: MockDataService, public auth: AuthService) {}
+  constructor(public mock: MockDataService, public auth: AuthService, private messageService: MessageService) {}
 
   ngOnInit() {
     this.grievances = this.mock.grievances;
@@ -85,7 +88,15 @@ export class GrievancesComponent implements OnInit {
 
   openDetail(g: Grievance) { this.selectedGrievance = g; this.showDetail = true; }
 
-  nextStep() { if (this.step < this.formSteps.length - 1) this.step++; }
+  nextStep() {
+    if (this.step === 0 && (!this.form.applicantName.trim() || !this.form.phoneNumber.trim() || !this.form.district)) {
+      return;
+    }
+    if (this.step === 1 && (!this.form.category || !this.form.subject.trim() || !this.form.description.trim())) {
+      return;
+    }
+    if (this.step < this.formSteps.length - 1) this.step++;
+  }
   prevStep() { if (this.step > 0) this.step--; }
 
   submitGrievance() {
@@ -109,7 +120,7 @@ export class GrievancesComponent implements OnInit {
     this.showForm = false;
     this.step = 0;
     this.form = { applicantName: '', phoneNumber: '', district: '', constituency: '', category: '', subject: '', description: '' };
-    alert(`✅ Grievance submitted!\nTicket ID: ${newGrievance.ticketId}`);
+    this.messageService.add({ severity: 'success', summary: 'Grievance Submitted', detail: `Ticket ID: ${newGrievance.ticketId}`, life: 5000 });
   }
 
   updateStatus(g: Grievance, status: GrievanceStatus) {

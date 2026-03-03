@@ -252,6 +252,7 @@ class _GrievanceScreenState extends State<GrievanceScreen> {
           bottom: MediaQuery.of(context).viewInsets.bottom,
         ),
         child: _NewGrievanceForm(
+          currentCount: _grievances.length,
           onSubmit: (g) {
             setState(() => _grievances.insert(0, g));
             Navigator.pop(context);
@@ -529,7 +530,8 @@ class _ActionChip extends StatelessWidget {
 
 class _NewGrievanceForm extends StatefulWidget {
   final void Function(_Grievance) onSubmit;
-  const _NewGrievanceForm({required this.onSubmit});
+  final int currentCount;
+  const _NewGrievanceForm({required this.onSubmit, required this.currentCount});
 
   @override
   State<_NewGrievanceForm> createState() => _NewGrievanceFormState();
@@ -694,9 +696,9 @@ class _NewGrievanceFormState extends State<_NewGrievanceForm> {
   }
 
   void _submit() {
-    final count = _mockGrievances.length + 1;
+    final newId = widget.currentCount + 1;
     final g = _Grievance(
-      ticketId: 'GRV-2024-${count.toString().padLeft(3, '0')}',
+      ticketId: 'GRV-2024-${newId.toString().padLeft(3, '0')}',
       applicantName: _nameCtrl.text,
       district: _district ?? '',
       category: _category ?? 'Others',

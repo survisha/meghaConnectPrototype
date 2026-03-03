@@ -110,7 +110,7 @@ export interface Grievance {
   applicantName: string;
   phoneNumber: string;
   district: string;
-  constituency: string;
+  constituency?: string;
   category: GrievanceCategory;
   subject: string;
   description: string;

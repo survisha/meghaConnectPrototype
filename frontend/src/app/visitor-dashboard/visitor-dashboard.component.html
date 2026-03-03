@@ -44,10 +44,10 @@
         <div *ngFor="let a of myAppointments" class="list-item">
           <div class="item-main">
             <div class="item-id">{{ a.id }}</div>
-            <div class="item-text">{{ a.agenda }}</div>
+            <div class="item-text">{{ a.title }}</div>
           </div>
           <div class="item-meta">
-            <p-tag [value]="a.status | titlecase" [severity]="getAppointmentSeverity(a.status)"></p-tag>
+            <p-tag [value]="a.status | titlecase" [severity]="getStatusSeverity(a.status)"></p-tag>
             <span class="item-date"><i class="pi pi-calendar"></i> {{ a.date }}</span>
           </div>
         </div>
@@ -65,12 +65,12 @@
         <div *ngFor="let s of mySchemes" class="list-item">
           <div class="item-main">
             <div class="item-id">{{ s.id }}</div>
-            <div class="item-text">{{ s.project }}</div>
+            <div class="item-text">{{ s.title }}</div>
           </div>
           <div class="item-meta">
-            <span class="scheme-badge">{{ s.scheme }}</span>
-            <p-tag [value]="s.status | titlecase" [severity]="getSchemeSeverity(s.status)"></p-tag>
-            <span class="item-amount">{{ s.amount }}</span>
+            <span class="scheme-badge">{{ s.date }}</span>
+            <p-tag [value]="s.status | titlecase" [severity]="getStatusSeverity(s.status)"></p-tag>
+            <span *ngIf="s.extra" class="item-amount">{{ s.extra }}</span>
           </div>
         </div>
         <div *ngIf="mySchemes.length === 0" class="empty-state">No scheme applications yet.</div>
@@ -87,10 +87,10 @@
         <div *ngFor="let g of myGrievances" class="list-item">
           <div class="item-main">
             <div class="item-id">{{ g.id }}</div>
-            <div class="item-text">{{ g.subject }}</div>
+            <div class="item-text">{{ g.title }}</div>
           </div>
           <div class="item-meta">
-            <p-tag [value]="g.status | titlecase" [severity]="getGrievanceSeverity(g.status)"></p-tag>
+            <p-tag [value]="g.status | titlecase" [severity]="getStatusSeverity(g.status)"></p-tag>
             <span class="item-date"><i class="pi pi-calendar"></i> {{ g.date }}</span>
           </div>
         </div>
@@ -105,7 +105,7 @@
         <i class="pi pi-clock"></i> Latest Application Status
       </div>
       <div class="card-body">
-        <p style="font-size:0.82rem;color:#6b7280;margin:0 0 0.75rem">MC-2024-00042 – CMSDF Application</p>
+        <p style="font-size:0.82rem;color:#6b7280;margin:0 0 0.75rem">{{ myAppointments[0]?.id || 'MC-2024-00001' }} – Latest Application</p>
         <p-timeline [value]="statusTimeline" styleClass="visitor-timeline">
           <ng-template pTemplate="marker" let-event>
             <span class="timeline-marker" [style.background]="event.color">

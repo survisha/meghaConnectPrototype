@@ -28,7 +28,6 @@ class _SchemeApp {
   });
 }
 
-const _mockSchemes = <_SchemeApp>[];
 
 const _schemeStats = [
   ('CMSDF', 45, 28, 12, 5),

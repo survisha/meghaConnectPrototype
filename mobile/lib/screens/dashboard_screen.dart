@@ -90,8 +90,6 @@ final _allQuickActions = <_QuickAction>[
       const Color(0xFF374151), [UserRole.ADMIN]),
 ];
 
-const _mockSchedule = <_ScheduleItem>[];
-
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 

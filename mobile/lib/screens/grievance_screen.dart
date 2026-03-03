@@ -259,7 +259,6 @@ class _GrievanceScreenState extends State<GrievanceScreen> {
           bottom: MediaQuery.of(context).viewInsets.bottom,
         ),
         child: _NewGrievanceForm(
-          currentCount: _grievances.length,
           onSubmit: (body, localGrievance) async {
             final result = await ApiService.createGrievance(body);
             if (!context.mounted) return;
@@ -552,8 +551,7 @@ class _ActionChip extends StatelessWidget {
 
 class _NewGrievanceForm extends StatefulWidget {
   final void Function(Map<String, dynamic> body, _Grievance local) onSubmit;
-  final int currentCount;
-  const _NewGrievanceForm({required this.onSubmit, required this.currentCount});
+  const _NewGrievanceForm({required this.onSubmit});
 
   @override
   State<_NewGrievanceForm> createState() => _NewGrievanceFormState();
@@ -718,8 +716,6 @@ class _NewGrievanceFormState extends State<_NewGrievanceForm> {
   }
 
   void _submit() {
-    final newId = widget.currentCount + 1;
-    final localTicketId = 'GRV-${DateTime.now().year}-${newId.toString().padLeft(3, '0')}';
     final body = {
       'applicantName': _nameCtrl.text,
       'district': _district ?? '',
@@ -730,7 +726,7 @@ class _NewGrievanceFormState extends State<_NewGrievanceForm> {
     };
     final local = _Grievance(
       backendId: 0,
-      ticketId: localTicketId,
+      ticketId: 'PENDING',
       applicantName: _nameCtrl.text,
       district: _district ?? '',
       category: _category ?? 'Others',

@@ -3,7 +3,7 @@ import '../services/api_service.dart';
 
 class _Followup {
   final int id;
-  final String applicationId;
+  final String appointmentId;
   final String applicant;
   final String direction;
   final String color;
@@ -15,7 +15,7 @@ class _Followup {
 
   const _Followup({
     required this.id,
-    required this.applicationId,
+    required this.appointmentId,
     required this.applicant,
     required this.direction,
     required this.color,
@@ -68,7 +68,7 @@ class _PendingFollowupsScreenState extends State<PendingFollowupsScreen> {
         String status = isCompleted ? 'Completed' : (daysLeft < 0 ? 'Overdue' : 'In Progress');
         return _Followup(
           id: (m['id'] as num?)?.toInt() ?? 0,
-          applicationId: m['appointmentId']?.toString() ?? '',
+          appointmentId: m['appointmentId']?.toString() ?? '',
           applicant: m['assignedDepartment'] as String? ?? '',
           direction: m['directionText'] as String? ?? '',
           color: color,
@@ -321,7 +321,7 @@ class _FollowupCard extends StatelessWidget {
                   const SizedBox(width: 10),
                   Icon(Icons.tag, size: 13, color: Colors.grey[500]),
                   const SizedBox(width: 4),
-                  Text(followup.applicationId,
+                  Text(followup.appointmentId,
                       style: TextStyle(
                           fontSize: 12, color: Colors.grey[600])),
                 ],

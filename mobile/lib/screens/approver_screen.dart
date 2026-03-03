@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
+import '../services/api_service.dart';
 
 class _ApproverAppointment {
+  final int backendId;
   final String id;
   final String applicantName;
   final String district;
@@ -16,6 +18,7 @@ class _ApproverAppointment {
   final String? shortNotes;
 
   _ApproverAppointment({
+    required this.backendId,
     required this.id,
     required this.applicantName,
     required this.district,
@@ -29,46 +32,6 @@ class _ApproverAppointment {
   });
 }
 
-final _mockApproverAppointments = <_ApproverAppointment>[
-  _ApproverAppointment(
-    id: 'MC-2024-00004',
-    applicantName: 'Deibok Lyngdoh',
-    district: 'Ri Bhoi',
-    agendaType: 'Trade & Commerce',
-    agendaBrief: 'Request for transport permit for new pickup van under CM Elevate scheme.',
-    eventType: 'A4',
-    location: 'Shillong',
-    status: 'APPROVER_REVIEW',
-    shortNotes:
-        'Young entrepreneur requesting transport permit under CM Elevate. No prior receipts. Walk-in. Docs submitted.',
-  ),
-  _ApproverAppointment(
-    id: 'MC-2024-00002',
-    applicantName: 'Sunita Sangma',
-    district: 'East Khasi Hills',
-    agendaType: 'Public Grievance',
-    agendaBrief: 'Request for school infrastructure improvement – repair of classrooms and addition of computer lab.',
-    eventType: 'A4',
-    location: 'Shillong',
-    status: 'APPROVER_REVIEW',
-    shortNotes:
-        'Teacher seeking infra support for Govt school. No prior scheme receipts. MLA endorsement pending.',
-  ),
-  _ApproverAppointment(
-    id: 'MC-2024-00001',
-    applicantName: 'Ramsing Marak',
-    district: 'West Garo Hills',
-    agendaType: 'Scheme availment (CM)',
-    agendaBrief: 'CMSDF application for community hall construction at Dalu village.',
-    eventType: 'A4',
-    location: 'Tura',
-    status: 'HCM_PENDING',
-    approverRemarks: 'Verified. Forwarded to HCM.',
-    shortNotes:
-        'Ramsing Marak (West Garo Hills) – CMSDF community hall. MLA approved. 2 prior meetings.',
-  ),
-];
-
 class ApproverWorkflowScreen extends StatefulWidget {
   const ApproverWorkflowScreen({super.key});
 
@@ -79,8 +42,42 @@ class ApproverWorkflowScreen extends StatefulWidget {
 class _ApproverWorkflowScreenState extends State<ApproverWorkflowScreen> {
   static const _primaryBlue = Color(0xFF1A237E);
 
-  final List<_ApproverAppointment> _appointments =
-      List.from(_mockApproverAppointments);
+  List<_ApproverAppointment> _appointments = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAppointments();
+  }
+
+  Future<void> _loadAppointments() async {
+    setState(() => _loading = true);
+    final data = await ApiService.getAppointments(size: 100);
+    if (!mounted) return;
+    final content = (data['content'] as List<dynamic>?) ?? [];
+    const reviewStatuses = {'APPROVER_REVIEW', 'HCM_PENDING', 'CMO_REVIEW'};
+    setState(() {
+      _appointments = content
+          .map((e) => e as Map<String, dynamic>)
+          .where((m) => reviewStatuses.contains(m['status'] as String? ?? ''))
+          .map((m) {
+        final applicant = m['applicant'] as Map<String, dynamic>? ?? {};
+        return _ApproverAppointment(
+          backendId: (m['id'] as num?)?.toInt() ?? 0,
+          id: m['applicationId'] as String? ?? m['id']?.toString() ?? '',
+          applicantName: applicant['fullName'] as String? ?? '—',
+          district: applicant['district'] as String? ?? '',
+          agendaType: m['agendaType'] as String? ?? '',
+          agendaBrief: m['agendaBrief'] as String? ?? '',
+          eventType: m['agendaType'] as String? ?? '',
+          location: m['requestedLocation'] as String? ?? '',
+          status: m['status'] as String? ?? '',
+        );
+      }).toList();
+      _loading = false;
+    });
+  }
 
   Color _statusColor(String status) {
     switch (status) {
@@ -113,12 +110,19 @@ class _ApproverWorkflowScreenState extends State<ApproverWorkflowScreen> {
     );
   }
 
-  void _handleAction(
-      _ApproverAppointment appt, String action, String remarks) {
-    setState(() {
-      appt.approverRemarks = remarks;
-      appt.status = action == 'APPROVE' ? 'HCM_PENDING' : 'HCM_REJECTED';
-    });
+  Future<void> _handleAction(
+      _ApproverAppointment appt, String action, String remarks) async {
+    final newStatus = action == 'APPROVE' ? 'HCM_PENDING' : 'HCM_REJECTED';
+    final result = await ApiService.updateAppointmentStatus(
+        appt.backendId, newStatus,
+        remarks: remarks.isNotEmpty ? remarks : null);
+    if (!mounted) return;
+    if (result != null) {
+      setState(() {
+        appt.approverRemarks = remarks;
+        appt.status = newStatus;
+      });
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -152,14 +156,19 @@ class _ApproverWorkflowScreenState extends State<ApproverWorkflowScreen> {
       children: [
         _buildHeader(role, pendingCount),
         Expanded(
-          child: _appointments.isEmpty
-              ? _buildEmpty()
-              : ListView.builder(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: _appointments.length,
-                  itemBuilder: (_, i) =>
-                      _buildAppointmentCard(_appointments[i]),
-                ),
+          child: _loading
+              ? const Center(child: CircularProgressIndicator())
+              : _appointments.isEmpty
+                  ? _buildEmpty()
+                  : RefreshIndicator(
+                      onRefresh: _loadAppointments,
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(12),
+                        itemCount: _appointments.length,
+                        itemBuilder: (_, i) =>
+                            _buildAppointmentCard(_appointments[i]),
+                      ),
+                    ),
         ),
       ],
     );

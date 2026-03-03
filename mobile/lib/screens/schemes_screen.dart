@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
+import '../services/api_service.dart';
 
 class _SchemeApp {
   final String id;
@@ -27,59 +28,7 @@ class _SchemeApp {
   });
 }
 
-const _mockSchemes = <_SchemeApp>[
-  _SchemeApp(
-    id: 'MC-SCH-001',
-    applicantName: 'Ramsing Marak',
-    schemeType: 'CMSDF',
-    projectName: 'Community Hall Construction – Dalu',
-    projectCategory: 'Community hall',
-    status: 'HCM_PENDING',
-    constituency: 'Ampati',
-    estimatedCost: 250000,
-  ),
-  _SchemeApp(
-    id: 'MC-SCH-002',
-    applicantName: 'Sunita Sangma',
-    schemeType: 'CM_CARE',
-    projectName: 'Medical Treatment – Cardiac Surgery',
-    projectCategory: 'Medical',
-    status: 'APPROVED',
-    constituency: 'Shillong East',
-    estimatedCost: 50000,
-    hcmApprovedCost: 50000,
-  ),
-  _SchemeApp(
-    id: 'MC-SCH-003',
-    applicantName: 'Bijoy Momin',
-    schemeType: 'CMSG',
-    projectName: 'Road Repair – Baghmara Block',
-    projectCategory: 'Road',
-    status: 'SCHEDULED',
-    constituency: 'Baghmara',
-    estimatedCost: 180000,
-  ),
-  _SchemeApp(
-    id: 'MC-SCH-004',
-    applicantName: 'Deibok Lyngdoh',
-    schemeType: 'CM_ELEVATE',
-    projectName: 'Educational Scholarship – Nongpoh',
-    projectCategory: 'School',
-    status: 'SUBMITTED',
-    constituency: 'Umsning',
-    estimatedCost: 30000,
-  ),
-  _SchemeApp(
-    id: 'MC-SCH-005',
-    applicantName: 'Merina Sangma',
-    schemeType: 'CM_CONNECT',
-    projectName: 'Internet connectivity for Rongram village',
-    projectCategory: 'Electricity',
-    status: 'SUBMITTED',
-    constituency: 'Rongram',
-    estimatedCost: 75000,
-  ),
-];
+const _mockSchemes = <_SchemeApp>[];
 
 const _schemeStats = [
   ('CMSDF', 45, 28, 12, 5),
@@ -121,11 +70,39 @@ class _SchemesScreenState extends State<SchemesScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabCtrl;
   String _filterScheme = '';
+  List<_SchemeApp> _schemes = [];
+  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
     _tabCtrl = TabController(length: 2, vsync: this);
+    _loadSchemes();
+  }
+
+  Future<void> _loadSchemes() async {
+    setState(() => _loading = true);
+    final data = await ApiService.getSchemeApplications();
+    if (!mounted) return;
+    final content = (data['content'] as List<dynamic>?) ?? [];
+    setState(() {
+      _schemes = content.map((e) {
+        final m = e as Map<String, dynamic>;
+        final applicant = m['applicant'] as Map<String, dynamic>? ?? {};
+        return _SchemeApp(
+          id: m['id']?.toString() ?? '',
+          applicantName: applicant['fullName'] as String? ?? '—',
+          schemeType: m['schemeType'] as String? ?? '',
+          projectName: m['projectName'] as String? ?? '',
+          projectCategory: m['projectCategory'] as String? ?? '',
+          status: m['status'] as String? ?? '',
+          constituency: applicant['constituency'] as String? ?? '',
+          estimatedCost: (m['estimatedCost'] as num?)?.toDouble() ?? 0,
+          hcmApprovedCost: (m['hcmApprovedCost'] as num?)?.toDouble(),
+        );
+      }).toList();
+      _loading = false;
+    });
   }
 
   @override
@@ -134,7 +111,7 @@ class _SchemesScreenState extends State<SchemesScreen>
     super.dispose();
   }
 
-  List<_SchemeApp> get _filtered => _mockSchemes
+  List<_SchemeApp> get _filtered => _schemes
       .where((s) => _filterScheme.isEmpty || s.schemeType == _filterScheme)
       .toList();
 
@@ -224,6 +201,7 @@ class _SchemesScreenState extends State<SchemesScreen>
   }
 
   Widget _buildApplicationsList() {
+    if (_loading) return const Center(child: CircularProgressIndicator());
     if (_filtered.isEmpty) {
       return Center(
         child: Column(

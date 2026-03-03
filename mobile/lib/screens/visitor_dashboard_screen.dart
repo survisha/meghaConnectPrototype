@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
+import '../services/api_service.dart';
 import '../services/navigation_service.dart';
 
 class _SummaryCard {
@@ -78,33 +79,84 @@ class VisitorDashboardScreen extends StatefulWidget {
 }
 
 class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
-  bool _refreshing = false;
+  bool _loading = true;
+  List<_MyAppointment> _appointments = [];
+  List<_MyScheme> _schemes = [];
+  List<_MyGrievance> _grievances = [];
 
-  final _appointments = const [
-    _MyAppointment('MC-2024-00042', 'CMSDF Application – Community Road', 'HCM_PENDING', '15 Mar 2024'),
-    _MyAppointment('MC-2024-00031', 'Public Grievance – Water Supply', 'COMPLETED', '20 Feb 2024'),
-  ];
-
-  final _schemes = const [
-    _MyScheme('SC-2024-0012', 'CMSDF', 'Community Hall – Dalu', 'UNDER_REVIEW', '₹2.5L'),
-    _MyScheme('SC-2024-0003', 'CM Care', 'Medical Assistance', 'APPROVED', '₹50K'),
-  ];
-
-  final _grievances = const [
-    _MyGrievance('GRV-2024-005', 'Road repair request', 'FORWARDED', '10 Mar 2024'),
-  ];
-
-  final _timeline = const [
-    ('Application Submitted', '10 Mar 2024', _primaryBlue),
-    ('CMO Verification', '11 Mar 2024', _amber),
-    ('Approver Review', '12 Mar 2024', _primaryBlue),
+  static final _timeline = const [
+    ('Application Submitted', '–', _primaryBlue),
+    ('CMO Verification', '–', _amber),
+    ('Approver Review', '–', _primaryBlue),
     ('HCM Decision Pending', '–', _red),
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  static String _fmtDate(String? iso) {
+    if (iso == null) return '—';
+    final dt = DateTime.tryParse(iso);
+    if (dt == null) return iso;
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${dt.day} ${months[dt.month - 1]} ${dt.year}';
+  }
+
+  Future<void> _loadData() async {
+    setState(() => _loading = true);
+    final results = await Future.wait([
+      ApiService.getAppointments(size: 5),
+      ApiService.getSchemeApplications(size: 5),
+      ApiService.getGrievances(size: 5),
+    ]);
+    if (!mounted) return;
+    final apptPage = results[0] as Map<String, dynamic>;
+    final schemePage = results[1] as Map<String, dynamic>;
+    final grievancePage = results[2] as Map<String, dynamic>;
+    setState(() {
+      _appointments = ((apptPage['content'] as List<dynamic>?) ?? []).map((e) {
+        final m = e as Map<String, dynamic>;
+        final applicant = m['applicant'] as Map<String, dynamic>? ?? {};
+        return _MyAppointment(
+          m['applicationId'] as String? ?? m['id']?.toString() ?? '',
+          m['agendaBrief'] as String? ?? '',
+          m['status'] as String? ?? '',
+          _fmtDate(m['scheduledDateTime'] as String?),
+        );
+      }).toList();
+      _schemes = ((schemePage['content'] as List<dynamic>?) ?? []).map((e) {
+        final m = e as Map<String, dynamic>;
+        final cost = (m['estimatedCost'] as num?)?.toDouble() ?? 0;
+        final costLabel = cost >= 100000
+            ? '₹${(cost / 100000).toStringAsFixed(1)}L'
+            : '₹${(cost / 1000).toStringAsFixed(0)}K';
+        return _MyScheme(
+          m['id']?.toString() ?? '',
+          m['schemeType'] as String? ?? '',
+          m['projectName'] as String? ?? '',
+          m['status'] as String? ?? '',
+          costLabel,
+        );
+      }).toList();
+      _grievances = ((grievancePage['content'] as List<dynamic>?) ?? []).map((e) {
+        final m = e as Map<String, dynamic>;
+        return _MyGrievance(
+          m['ticketId'] as String? ?? m['id']?.toString() ?? '',
+          m['subject'] as String? ?? '',
+          m['status'] as String? ?? '',
+          _fmtDate(m['submittedAt'] as String?),
+        );
+      }).toList();
+      _loading = false;
+    });
+  }
+
   Future<void> _onRefresh() async {
-    setState(() => _refreshing = true);
-    await Future.delayed(const Duration(milliseconds: 800));
-    setState(() => _refreshing = false);
+    await _loadData();
   }
 
   @override
@@ -134,7 +186,9 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
           ),
         ],
       ),
-      body: RefreshIndicator(
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
         onRefresh: _onRefresh,
         child: ListView(
           padding: const EdgeInsets.all(16),

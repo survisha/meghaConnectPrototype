@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
+import '../services/api_service.dart';
 import '../services/navigation_service.dart';
 
 class _Kpi {
@@ -89,16 +90,39 @@ final _allQuickActions = <_QuickAction>[
       const Color(0xFF374151), [UserRole.ADMIN]),
 ];
 
-const _mockSchedule = <_ScheduleItem>[
-  _ScheduleItem('09:00', 'Cabinet Meeting', 'A1', 'Shillong', Color(0xFF1565C0)),
-  _ScheduleItem('10:00', 'Appointment – Ramsing Marak', 'A4', 'Tura', Color(0xFF0288D1)),
-  _ScheduleItem('11:00', 'Public Durbar – West Garo Hills', 'B1', 'Tura', Color(0xFFD97706)),
-  _ScheduleItem('14:00', 'District Development Programme', 'A2', 'Tura', Color(0xFF16A34A)),
-  _ScheduleItem('16:30', 'File Clearing', 'A3', 'Office', Color(0xFF6B7280)),
-];
+const _mockSchedule = <_ScheduleItem>[];
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  List<Map<String, dynamic>> _scheduleItems = [];
+  List<Map<String, dynamic>> _auditItems = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final schedFuture = ApiService.getScheduleEvents();
+    final auditFuture = ApiService.getAuditLogs(size: 5);
+    final results = await Future.wait([schedFuture, auditFuture]);
+    if (!mounted) return;
+    final schedList = results[0] as List<dynamic>;
+    final auditPage = results[1] as Map<String, dynamic>;
+    final auditList = (auditPage['content'] as List<dynamic>?) ?? [];
+    setState(() {
+      _scheduleItems =
+          schedList.map((e) => e as Map<String, dynamic>).toList();
+      _auditItems = auditList.map((e) => e as Map<String, dynamic>).toList();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -246,34 +270,54 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
+  String _fmtTime(String? iso) {
+    if (iso == null) return '';
+    final dt = DateTime.tryParse(iso);
+    if (dt == null) return iso;
+    return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+  }
+
   Widget _buildSchedule() {
+    if (_scheduleItems.isEmpty) {
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Center(child: Text('No schedule events', style: TextStyle(color: Colors.grey))),
+        ),
+      );
+    }
     return Card(
       child: Column(
-        children: _mockSchedule.map((item) {
+        children: _scheduleItems.map((item) {
+          final title = item['title'] as String? ?? '—';
+          final type = item['eventType'] as String? ?? '';
+          final location = item['location'] as String? ?? '';
+          final time = _fmtTime(item['startTime'] as String?);
+          const color = Color(0xFF1565C0);
           return ListTile(
             dense: true,
             leading: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: item.color.withAlpha(26),
+                color: color.withAlpha(26),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
-                item.type,
-                style: TextStyle(
-                  color: item.color,
+                type,
+                style: const TextStyle(
+                  color: color,
                   fontWeight: FontWeight.bold,
                   fontSize: 11,
                 ),
               ),
             ),
-            title: Text(item.title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-            subtitle: Text('${item.time}  ·  ${item.location}',
+            title: Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+            subtitle: Text('$time  ·  $location',
                 style: TextStyle(fontSize: 12, color: Colors.grey[500])),
             trailing: Container(
               width: 6,
               height: 6,
-              decoration: BoxDecoration(color: item.color, shape: BoxShape.circle),
+              decoration: const BoxDecoration(color: color, shape: BoxShape.circle),
             ),
           );
         }).toList(),
@@ -282,25 +326,32 @@ class DashboardScreen extends StatelessWidget {
   }
 
   Widget _buildRecentActivity() {
-    final activities = [
-      (Icons.check_circle_outline, const Color(0xFF16A34A),
-          'CM Care approved for Bijoy Momin (₹3,00,000)', '10:45 AM'),
-      (Icons.swap_horiz, const Color(0xFF1A237E),
-          'Appointment MC-2024-00002 moved to HCM Pending', '11:30 AM'),
-      (Icons.person_add_outlined, const Color(0xFF0369A1),
-          'New walk-in: Deibok Lyngdoh registered by DEO', '02:15 PM'),
-      (Icons.notifications_outlined, const Color(0xFFB45309),
-          'Direction pending follow-up: Community Hall CMSDF', '03:00 PM'),
-    ];
-
+    if (_auditItems.isEmpty) {
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Center(child: Text('No recent activity', style: TextStyle(color: Colors.grey))),
+        ),
+      );
+    }
     return Card(
       child: Column(
-        children: activities.map((a) {
+        children: _auditItems.map((a) {
+          final action = a['action'] as String? ?? '';
+          final details = a['details'] as String? ?? action;
+          final ts = a['timestamp'] as String? ?? '';
+          String timeLabel = ts;
+          final dt = DateTime.tryParse(ts);
+          if (dt != null) {
+            timeLabel =
+                '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+          }
           return ListTile(
             dense: true,
-            leading: Icon(a.$1, color: a.$2, size: 20),
-            title: Text(a.$3, style: const TextStyle(fontSize: 13)),
-            trailing: Text(a.$4, style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+            leading: const Icon(Icons.swap_horiz, color: Color(0xFF1A237E), size: 20),
+            title: Text(details, style: const TextStyle(fontSize: 13)),
+            trailing: Text(timeLabel,
+                style: TextStyle(fontSize: 11, color: Colors.grey[500])),
           );
         }).toList(),
       ),

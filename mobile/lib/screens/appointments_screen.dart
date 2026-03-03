@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
+import '../services/api_service.dart';
 import '../services/navigation_service.dart';
 
 class _Appointment {
@@ -28,69 +29,6 @@ class _Appointment {
   });
 }
 
-const _mockAppointments = <_Appointment>[
-  _Appointment(
-    id: 'MC-2024-00001',
-    applicantName: 'Bijoy Momin',
-    phone: '9876500001',
-    agendaType: 'A4',
-    agendaBrief: 'Request for medical assistance under CM Care scheme',
-    status: 'HCM_ACCEPTED',
-    location: 'Tura',
-    scheduledAt: '2024-07-15 10:00',
-  ),
-  _Appointment(
-    id: 'MC-2024-00002',
-    applicantName: 'Ramsing Marak',
-    phone: '9876500002',
-    agendaType: 'A4',
-    agendaBrief: 'Agricultural development grant request',
-    status: 'HCM_PENDING',
-    location: 'Tura',
-    scheduledAt: '2024-07-15 11:00',
-  ),
-  _Appointment(
-    id: 'MC-2024-00003',
-    applicantName: 'Deibok Lyngdoh',
-    phone: '9876500003',
-    agendaType: 'B2',
-    agendaBrief: 'Walk-in: Employment assistance',
-    status: 'DEO_PROCESSED',
-    location: 'Shillong',
-    scheduledAt: '2024-07-15 14:00',
-    isWalkIn: true,
-  ),
-  _Appointment(
-    id: 'MC-2024-00004',
-    applicantName: 'Merina Sangma',
-    phone: '9876500004',
-    agendaType: 'A4',
-    agendaBrief: 'Infrastructure request for Rongram constituency',
-    status: 'CMO_REVIEW',
-    location: 'Tura',
-    scheduledAt: '2024-07-16 09:00',
-  ),
-  _Appointment(
-    id: 'MC-2024-00005',
-    applicantName: 'Phillip Shullai',
-    phone: '9876500005',
-    agendaType: 'A4',
-    agendaBrief: 'Education scholarship under CM Elevate scheme',
-    status: 'APPROVER_REVIEW',
-    location: 'Shillong',
-    scheduledAt: '2024-07-16 11:30',
-  ),
-  _Appointment(
-    id: 'MC-2024-00006',
-    applicantName: 'Sengrik D. Shira',
-    phone: '9876500006',
-    agendaType: 'A4',
-    agendaBrief: 'Community hall construction under CMSDF',
-    status: 'SCHEDULED',
-    location: 'Jowai',
-    scheduledAt: '2024-07-17 14:00',
-  ),
-];
 
 class AppointmentsScreen extends StatefulWidget {
   const AppointmentsScreen({super.key});
@@ -102,6 +40,8 @@ class AppointmentsScreen extends StatefulWidget {
 class _AppointmentsScreenState extends State<AppointmentsScreen> {
   String _searchQuery = '';
   String _filterStatus = 'All';
+  List<_Appointment> _appointments = [];
+  bool _loading = true;
 
   static const _statusFilters = [
     'All',
@@ -110,8 +50,47 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     'Completed',
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    _loadAppointments();
+  }
+
+  Future<void> _loadAppointments() async {
+    setState(() => _loading = true);
+    final data = await ApiService.getAppointments();
+    if (!mounted) return;
+    final content = (data['content'] as List<dynamic>?) ?? [];
+    setState(() {
+      _appointments = content.map((e) {
+        final m = e as Map<String, dynamic>;
+        final applicant = m['applicant'] as Map<String, dynamic>? ?? {};
+        return _Appointment(
+          id: m['applicationId'] as String? ?? m['id']?.toString() ?? '',
+          applicantName: applicant['fullName'] as String? ?? '—',
+          phone: applicant['phoneNumber'] as String? ?? '',
+          agendaType: m['agendaType'] as String? ?? '',
+          agendaBrief: m['agendaBrief'] as String? ?? '',
+          status: m['status'] as String? ?? '',
+          location: m['requestedLocation'] as String? ?? '',
+          scheduledAt: _fmtDateTime(m['scheduledDateTime'] as String?),
+          isWalkIn: m['isWalkIn'] as bool? ?? false,
+        );
+      }).toList();
+      _loading = false;
+    });
+  }
+
+  static String _fmtDateTime(String? iso) {
+    if (iso == null) return '—';
+    final dt = DateTime.tryParse(iso);
+    if (dt == null) return iso;
+    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')} '
+        '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+  }
+
   List<_Appointment> get _filtered {
-    return _mockAppointments.where((a) {
+    return _appointments.where((a) {
       final matchSearch = _searchQuery.isEmpty ||
           a.applicantName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           a.id.toLowerCase().contains(_searchQuery.toLowerCase());
@@ -141,14 +120,20 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         _buildSearchBar(),
         _buildFilterChips(),
         Expanded(
-          child: _filtered.isEmpty
-              ? _buildEmpty()
-              : ListView.separated(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: _filtered.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (_, i) => _AppointmentCard(appointment: _filtered[i]),
-                ),
+          child: _loading
+              ? const Center(child: CircularProgressIndicator())
+              : _filtered.isEmpty
+                  ? _buildEmpty()
+                  : RefreshIndicator(
+                      onRefresh: _loadAppointments,
+                      child: ListView.separated(
+                        padding: const EdgeInsets.all(12),
+                        itemCount: _filtered.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        itemBuilder: (_, i) =>
+                            _AppointmentCard(appointment: _filtered[i]),
+                      ),
+                    ),
         ),
         if (canAddNew)
           _buildBottomActions(context),

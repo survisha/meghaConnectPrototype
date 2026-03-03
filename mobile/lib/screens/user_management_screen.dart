@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/user.dart';
+import '../services/api_service.dart';
 
 class _UserEntry {
   final int id;
@@ -19,16 +20,6 @@ class _UserEntry {
   });
 }
 
-final _mockUsers = <_UserEntry>[
-  const _UserEntry(id: 1, username: 'hcm', fullName: 'Hon. Chief Minister', role: UserRole.HCM, active: true, lastLogin: '2024-07-15 08:30'),
-  const _UserEntry(id: 2, username: 'admin', fullName: 'System Admin', role: UserRole.ADMIN, active: true, lastLogin: '2024-07-15 09:00'),
-  const _UserEntry(id: 3, username: 'saidul', fullName: 'Saidul Islam (OSD)', role: UserRole.SAIDUL_OSD, active: true, lastLogin: '2024-07-15 09:15'),
-  const _UserEntry(id: 4, username: 'jtsecy', fullName: 'Dr. P.S. Nongbri (Jt. Secy)', role: UserRole.APPROVER_JT_SECY, active: true, lastLogin: '2024-07-14 17:45'),
-  const _UserEntry(id: 5, username: 'cmo', fullName: 'Mrs. R. Kharkongor (CMO)', role: UserRole.CMO_OFFICER, active: true, lastLogin: '2024-07-15 10:00'),
-  const _UserEntry(id: 6, username: 'deo1', fullName: 'Data Entry Operator 1', role: UserRole.DATA_ENTRY_OPERATOR, active: true, lastLogin: '2024-07-15 08:00'),
-  const _UserEntry(id: 7, username: 'deo2', fullName: 'Data Entry Operator 2', role: UserRole.DATA_ENTRY_OPERATOR, active: false, lastLogin: '2024-07-10 16:30'),
-];
-
 class UserManagementScreen extends StatefulWidget {
   const UserManagementScreen({super.key});
 
@@ -38,8 +29,53 @@ class UserManagementScreen extends StatefulWidget {
 
 class _UserManagementScreenState extends State<UserManagementScreen> {
   String _searchQuery = '';
+  List<_UserEntry> _users = [];
+  bool _loading = true;
 
-  List<_UserEntry> get _filtered => _mockUsers.where((u) {
+  @override
+  void initState() {
+    super.initState();
+    _loadUsers();
+  }
+
+  Future<void> _loadUsers() async {
+    setState(() => _loading = true);
+    final list = await ApiService.getUsers();
+    if (!mounted) return;
+    setState(() {
+      _users = list.map((e) {
+        final m = e as Map<String, dynamic>;
+        final roleRaw = m['role'] as String? ?? 'PUBLIC';
+        final normalized =
+            roleRaw.startsWith('ROLE_') ? roleRaw.substring(5) : roleRaw;
+        UserRole role;
+        try {
+          role = UserRole.values.byName(normalized);
+        } catch (_) {
+          role = UserRole.PUBLIC;
+        }
+        final ts = m['lastLogin'] as String? ?? '';
+        String lastLoginLabel = ts;
+        final dt = DateTime.tryParse(ts);
+        if (dt != null) {
+          lastLoginLabel =
+              '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')} '
+              '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+        }
+        return _UserEntry(
+          id: (m['id'] as num?)?.toInt() ?? 0,
+          username: m['username'] as String? ?? '',
+          fullName: m['fullName'] as String? ?? '—',
+          role: role,
+          active: m['active'] as bool? ?? true,
+          lastLogin: lastLoginLabel,
+        );
+      }).toList();
+      _loading = false;
+    });
+  }
+
+  List<_UserEntry> get _filtered => _users.where((u) {
         return _searchQuery.isEmpty ||
             u.fullName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
             u.username.toLowerCase().contains(_searchQuery.toLowerCase()) ||
@@ -52,15 +88,20 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       children: [
         _buildHeader(context),
         Expanded(
-          child: ListView.separated(
-            padding: const EdgeInsets.all(12),
-            itemCount: _filtered.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
-            itemBuilder: (_, i) => _UserCard(
-              user: _filtered[i],
-              onEdit: () => _showEditDialog(context, _filtered[i]),
-            ),
-          ),
+          child: _loading
+              ? const Center(child: CircularProgressIndicator())
+              : RefreshIndicator(
+                  onRefresh: _loadUsers,
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: _filtered.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (_, i) => _UserCard(
+                      user: _filtered[i],
+                      onEdit: () => _showEditDialog(context, _filtered[i]),
+                    ),
+                  ),
+                ),
         ),
       ],
     );
@@ -103,11 +144,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           const SizedBox(height: 8),
           Row(
             children: [
-              _statChip('Total', '${_mockUsers.length}', const Color(0xFF1A237E)),
+              _statChip('Total', '${_users.length}', const Color(0xFF1A237E)),
               const SizedBox(width: 8),
-              _statChip('Active', '${_mockUsers.where((u) => u.active).length}', const Color(0xFF16A34A)),
+              _statChip('Active', '${_users.where((u) => u.active).length}', const Color(0xFF16A34A)),
               const SizedBox(width: 8),
-              _statChip('Inactive', '${_mockUsers.where((u) => !u.active).length}', const Color(0xFF6B7280)),
+              _statChip('Inactive', '${_users.where((u) => !u.active).length}', const Color(0xFF6B7280)),
             ],
           ),
         ],

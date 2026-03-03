@@ -21,6 +21,7 @@ public class PublicRegistrationDto {
     // ── Basic identity ───────────────────────────────────────────
     private String fullName;        // required
     private String phoneNumber;     // required; also used as login OTP target
+    private String email;           // optional
 
     // ── KYC: EPIC (primary) ─ Aadhaar (fallback) ────────────────
     /** Voter ID / Election Photo Identity Card number.  Verified via

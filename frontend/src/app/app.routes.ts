@@ -1,5 +1,7 @@
 import { Routes } from '@angular/router';
 import { LoginComponent } from './auth/login/login.component';
+import { PublicLoginComponent } from './public-login/public-login.component';
+import { VisitorRegisterComponent } from './visitor-register/visitor-register.component';
 import { ShellComponent } from './shell/shell.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { SchedulingComponent } from './scheduling/scheduling.component';
@@ -30,6 +32,8 @@ const REPORTS_ROLES: UserRole[] = ['HCM', 'ADMIN', 'SAIDUL_OSD', 'APPROVER_JT_SE
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
+  { path: 'public-login', component: PublicLoginComponent },
+  { path: 'register-visitor', component: VisitorRegisterComponent },
   {
     path: '', component: ShellComponent,
     canActivate: [authGuard],

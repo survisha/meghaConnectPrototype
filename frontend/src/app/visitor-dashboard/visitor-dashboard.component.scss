@@ -26,6 +26,22 @@
 
 .welcome-banner h2 { margin: 0 0 4px; font-size: 1.3rem; }
 .welcome-banner p { margin: 0; opacity: 0.85; font-size: 0.82rem; }
+.banner-actions { margin-left: auto; }
+
+.btn-logout {
+  background: rgba(255,255,255,0.15);
+  color: white;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 8px;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: background 0.2s;
+}
+.btn-logout:hover { background: rgba(255,255,255,0.25); }
 
 .kpi-grid {
   display: grid;
@@ -66,6 +82,25 @@
 
 .quick-actions-row a { text-decoration: none; }
 
+.btn-action {
+  padding: 0.6rem 1.25rem;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.2s;
+}
+
+.btn-primary-action  { background: #1a237e; color: white; border: none; }
+.btn-primary-action:hover  { background: #283593; }
+.btn-outline-action  { background: white; color: #1a237e; border: 1.5px solid #1a237e; }
+.btn-outline-action:hover  { background: #e8eaf6; }
+.btn-warn-action     { background: white; color: #b45309; border: 1.5px solid #b45309; }
+.btn-warn-action:hover     { background: #fef3c7; }
+
 .content-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -78,6 +113,19 @@
 }
 
 .card-body { padding: 1rem; }
+
+.profile-card .section-card-header { color: #1a237e; }
+
+.profile-row {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #f3f4f6;
+  gap: 0.5rem;
+}
+.profile-row:last-child { border-bottom: none; }
+.profile-label { font-size: 0.8rem; color: #6b7280; width: 100px; flex-shrink: 0; }
+.profile-value { font-size: 0.9rem; font-weight: 500; color: #111827; }
 
 .list-item {
   display: flex;
@@ -114,15 +162,20 @@
 
 .view-link:hover { text-decoration: underline; }
 
-.timeline-marker {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.analytics-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
-.timeline-content { padding-bottom: 0.75rem; }
-.timeline-label { font-size: 0.85rem; font-weight: 600; }
-.timeline-date { font-size: 0.75rem; color: #6b7280; margin-top: 2px; }
+.analytics-stat {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 0.75rem;
+  text-align: center;
+}
+
+.analytics-value { font-size: 1.5rem; font-weight: 700; color: #1a237e; }
+.analytics-label { font-size: 0.72rem; color: #6b7280; margin-top: 2px; }
+

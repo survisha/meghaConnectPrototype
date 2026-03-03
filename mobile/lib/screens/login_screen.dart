@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
+import '../services/api_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -68,18 +69,20 @@ class _LoginScreenState extends State<LoginScreen>
       _publicLoading = true;
       _publicError = null;
     });
-    await Future.delayed(const Duration(milliseconds: 600));
+    final sent = await ApiService.sendOtp(_phoneCtrl.text.trim());
     if (!mounted) return;
-    setState(() {
-      _publicLoading = false;
-      _otpSent = true;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Demo OTP sent: 123456'),
-        backgroundColor: Color(0xFF065F46),
-      ),
-    );
+    setState(() => _publicLoading = false);
+    if (sent) {
+      setState(() => _otpSent = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('OTP sent successfully'),
+          backgroundColor: Color(0xFF065F46),
+        ),
+      );
+    } else {
+      setState(() => _publicError = 'Failed to send OTP. Please try again.');
+    }
   }
 
   Future<void> _publicLogin() async {
@@ -88,11 +91,21 @@ class _LoginScreenState extends State<LoginScreen>
       _publicLoading = true;
       _publicError = null;
     });
+    final verified =
+        await ApiService.verifyOtp(_phoneCtrl.text.trim(), _otpCtrl.text.trim());
+    if (!mounted) return;
+    if (!verified) {
+      setState(() {
+        _publicLoading = false;
+        _publicError = 'Invalid OTP. Please try again.';
+      });
+      return;
+    }
     final auth = context.read<AuthService>();
-    final ok = await auth.login(_phoneCtrl.text, _otpCtrl.text);
+    final ok = await auth.publicLogin(_phoneCtrl.text.trim());
     if (!mounted) return;
     setState(() => _publicLoading = false);
-    if (!ok) setState(() => _publicError = 'Invalid phone number or OTP.');
+    if (!ok) setState(() => _publicError = 'Login failed. Please try again.');
   }
 
   void _fillDemo(String user, String pass) {

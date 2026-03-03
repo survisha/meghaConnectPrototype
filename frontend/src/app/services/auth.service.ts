@@ -1,5 +1,8 @@
 import { Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
+import { Observable, of } from 'rxjs';
+import { tap, map, catchError } from 'rxjs/operators';
 import { UserRole } from '../models';
 
 export interface AuthUser {
@@ -8,40 +11,43 @@ export interface AuthUser {
   role: UserRole;
 }
 
+interface LoginResponse {
+  token: string;
+  username: string;
+  fullName: string;
+  role: string;
+  expiresIn: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private _user = signal<AuthUser | null>(null);
   readonly user = this._user.asReadonly();
 
-  readonly DEMO_USERS: { username: string; password: string; fullName: string; role: UserRole }[] = [
-    { username: 'hcm',       password: 'hcm123',    fullName: 'Hon. Chief Minister', role: 'HCM' },
-    { username: 'admin',     password: 'admin123',  fullName: 'System Admin',         role: 'ADMIN' },
-    { username: 'saidul',    password: 'osd123',    fullName: 'Saidul OSD',           role: 'SAIDUL_OSD' },
-    { username: 'jtsecy',    password: 'jts123',    fullName: 'Joint Secretary',       role: 'APPROVER_JT_SECY' },
-    { username: 'cmo',       password: 'cmo123',    fullName: 'CMO Officer',           role: 'CMO_OFFICER' },
-    { username: 'deo1',      password: 'deo123',    fullName: 'Data Entry Operator 1', role: 'DATA_ENTRY_OPERATOR' },
-    { username: '9876543210',password: '123456',    fullName: 'Public User',           role: 'PUBLIC' },
-  ];
-
-  constructor(private router: Router) {
+  constructor(private router: Router, private http: HttpClient) {
     const stored = sessionStorage.getItem('megha_user');
     if (stored) this._user.set(JSON.parse(stored));
   }
 
-  login(username: string, password: string): boolean {
-    const u = this.DEMO_USERS.find(d => d.username === username && d.password === password);
-    if (u) {
-      const auth: AuthUser = { username: u.username, fullName: u.fullName, role: u.role };
-      this._user.set(auth);
-      sessionStorage.setItem('megha_user', JSON.stringify(auth));
-      return true;
-    }
-    return false;
+  login(username: string, password: string): Observable<boolean> {
+    return this.http.post<LoginResponse>('/api/v1/auth/login', { username, password }).pipe(
+      tap(res => {
+        // Strip Spring Security "ROLE_" prefix to match frontend UserRole type
+        const role = (res.role ?? '').replace(/^ROLE_/, '') as UserRole;
+        const auth: AuthUser = { username: res.username, fullName: res.fullName ?? username, role };
+        this._user.set(auth);
+        sessionStorage.setItem('megha_user', JSON.stringify(auth));
+        sessionStorage.setItem('megha_token', res.token);
+      }),
+      map(() => true),
+      catchError(() => of(false))
+    );
   }
 
   logout() {
     this._user.set(null);
     sessionStorage.removeItem('megha_user');
+    sessionStorage.removeItem('megha_token');
     this.router.navigate(['/login']);
   }
 

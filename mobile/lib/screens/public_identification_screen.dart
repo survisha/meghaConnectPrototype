@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../services/api_service.dart';
 
 class _Person {
   final int id;
@@ -24,53 +25,6 @@ class _Person {
     this.briefProfile,
   });
 }
-
-const _mockPersons = <_Person>[
-  _Person(
-    id: 1,
-    fullName: 'Ramsing Marak',
-    phone: '9876543210',
-    epic: 'MH/01/001/234567',
-    designation: 'Political Leader',
-    district: 'West Garo Hills',
-    constituency: 'Ampati',
-    booth: 'Booth 12',
-    briefProfile: 'District-level NPP leader. Active in community development.',
-  ),
-  _Person(
-    id: 2,
-    fullName: 'Sunita Sangma',
-    phone: '9876500001',
-    epic: 'MH/01/002/345678',
-    designation: 'Teacher',
-    district: 'East Khasi Hills',
-    constituency: 'Shillong East',
-    booth: 'Booth 5',
-    briefProfile: 'Government school teacher. Applied for CMSDF education grant.',
-  ),
-  _Person(
-    id: 3,
-    fullName: 'Bijoy Momin',
-    phone: '9812345678',
-    epic: 'MH/02/003/456789',
-    designation: 'General Public',
-    district: 'South Garo Hills',
-    constituency: 'Baghmara',
-    booth: 'Booth 3',
-    briefProfile: 'Farmer. Applied for CM Care medical assistance.',
-  ),
-  _Person(
-    id: 4,
-    fullName: 'Deibok Lyngdoh',
-    phone: '9887654321',
-    epic: 'MH/01/004/567890',
-    designation: 'Businessman',
-    district: 'Ri Bhoi',
-    constituency: 'Umsning',
-    booth: 'Booth 7',
-    briefProfile: 'Transport entrepreneur based in Nongpoh.',
-  ),
-];
 
 const _schemeHistory = [
   ('CMSDF', '2022', '₹2.5L', 'Completed'),
@@ -104,6 +58,7 @@ class _PublicIdentificationScreenState
   List<_Person> _results = [];
   _Person? _selected;
   bool _searched = false;
+  bool _searching = false;
 
   static const _districts = [
     'East Khasi Hills',
@@ -135,28 +90,51 @@ class _PublicIdentificationScreenState
     super.dispose();
   }
 
-  void _search() {
+  static _Person _mapPerson(Map<String, dynamic> m) => _Person(
+        id: (m['id'] as num?)?.toInt() ?? 0,
+        fullName: m['fullName'] as String? ?? '—',
+        phone: m['phoneNumber'] as String? ?? '',
+        epic: m['epicNumber'] as String? ?? '',
+        designation: m['designation'] as String? ?? '',
+        district: m['district'] as String? ?? '',
+        constituency: m['constituency'] as String? ?? '',
+        booth: m['booth'] as String? ?? '',
+        briefProfile: m['briefProfile'] as String?,
+      );
+
+  Future<void> _search() async {
     final phone = _phoneCtrl.text.trim();
     final epic = _epicCtrl.text.trim();
     final name = _nameCtrl.text.trim();
     final district = _district;
 
     setState(() {
+      _searching = true;
       _searched = true;
       _selected = null;
-      _results = _mockPersons.where((p) {
-        if (phone.isNotEmpty && p.phone.contains(phone)) return true;
-        if (epic.isNotEmpty &&
-            p.epic.toLowerCase().contains(epic.toLowerCase())) return true;
-        if (name.isNotEmpty &&
-            p.fullName.toLowerCase().contains(name.toLowerCase())) return true;
-        if (district.isNotEmpty && p.district == district) return true;
-        return false;
-      }).toList();
+      _results = [];
+    });
 
-      if (_results.isEmpty && phone.isEmpty && epic.isEmpty && name.isEmpty && district.isEmpty) {
-        _results = _mockPersons;
-      }
+    List<_Person> results = [];
+
+    if (phone.isNotEmpty) {
+      final m = await ApiService.searchPersonByPhone(phone);
+      if (m != null) results.add(_mapPerson(m));
+    } else if (epic.isNotEmpty) {
+      final m = await ApiService.searchPersonByEpic(epic);
+      if (m != null) results.add(_mapPerson(m));
+    } else if (name.isNotEmpty) {
+      final list = await ApiService.searchPersonsByName(name);
+      results = list.map((e) => _mapPerson(e as Map<String, dynamic>)).toList();
+    } else if (district.isNotEmpty) {
+      final list = await ApiService.searchPersonsByDistrict(district);
+      results = list.map((e) => _mapPerson(e as Map<String, dynamic>)).toList();
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _results = results;
+      _searching = false;
     });
   }
 
@@ -169,6 +147,7 @@ class _PublicIdentificationScreenState
       _results = [];
       _selected = null;
       _searched = false;
+      _searching = false;
     });
   }
 
@@ -319,6 +298,9 @@ class _PublicIdentificationScreenState
   }
 
   Widget _buildResults() {
+    if (_searching) {
+      return const Center(child: CircularProgressIndicator());
+    }
     if (!_searched) {
       return Center(
         child: Padding(

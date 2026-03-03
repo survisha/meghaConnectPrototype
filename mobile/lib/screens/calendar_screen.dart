@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
+import '../services/api_service.dart';
 
 class _Event {
   final String title;
@@ -27,63 +28,6 @@ class _Event {
   });
 }
 
-const _mockEvents = <_Event>[
-  _Event(
-    title: 'Cabinet Meeting',
-    type: 'A1',
-    location: 'Shillong',
-    startTime: '09:00',
-    endTime: '10:30',
-    description: 'Weekly cabinet review session.',
-  ),
-  _Event(
-    title: 'Appointment – Ramsing Marak',
-    type: 'A4',
-    location: 'Tura',
-    startTime: '11:00',
-    endTime: '11:30',
-    description: 'CMSDF community hall request from Ampati.',
-    travelMinutes: 15,
-    shortNotes: 'Ramsing Marak (West Garo Hills) – CMSDF community hall. MLA approved. 2 prior meetings.',
-  ),
-  _Event(
-    title: 'Public Durbar – West Garo Hills',
-    type: 'B1',
-    location: 'Tura',
-    startTime: '12:00',
-    endTime: '14:00',
-    description: 'Batch public contact event (20 applicants pre-approved).',
-    travelMinutes: 20,
-    shortNotes: 'Batch public contact session – 20 applicants from West Garo Hills. Mixed agenda: schemes, grievances, infrastructure.',
-  ),
-  _Event(
-    title: 'District Development Programme',
-    type: 'A2',
-    location: 'Tura',
-    startTime: '14:30',
-    endTime: '16:00',
-    description: 'Annual review of development schemes.',
-    travelMinutes: 10,
-  ),
-  _Event(
-    title: 'File Clearing',
-    type: 'A3',
-    location: 'Office',
-    startTime: '16:30',
-    endTime: '18:00',
-    description: 'Backend administrative work and birthday greetings.',
-  ),
-  _Event(
-    title: 'Walk-in Counter',
-    type: 'B2',
-    location: 'Shillong',
-    startTime: '10:00',
-    endTime: '12:00',
-    description: 'Open walk-in session at CM residence Shillong.',
-    isConflict: false,
-  ),
-];
-
 const _typeDescriptions = {
   'A1': 'Cabinet / Union Minister / Media / Flight',
   'A2': 'Event / Public Programme',
@@ -103,12 +47,49 @@ class CalendarScreen extends StatefulWidget {
 class _CalendarScreenState extends State<CalendarScreen> {
   _Event? _selectedEvent;
   final _formKey = GlobalKey<FormState>();
+  List<_Event> _events = [];
+  bool _loading = true;
 
   // Add-event form fields
   String _newType = 'A4';
   String _newLocation = 'SHILLONG';
   final _titleCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadEvents();
+  }
+
+  Future<void> _loadEvents() async {
+    setState(() => _loading = true);
+    final list = await ApiService.getScheduleEvents();
+    if (!mounted) return;
+    setState(() {
+      _events = list.map((e) {
+        final m = e as Map<String, dynamic>;
+        return _Event(
+          title: m['title'] as String? ?? '',
+          type: m['eventType'] as String? ?? '',
+          location: m['location'] as String? ?? '',
+          startTime: _fmtTime(m['startTime'] as String?),
+          endTime: _fmtTime(m['endTime'] as String?),
+          description: m['description'] as String?,
+          travelMinutes: (m['travelTimeMinutes'] as num?)?.toInt(),
+          isConflict: m['isConflict'] as bool? ?? false,
+        );
+      }).toList();
+      _loading = false;
+    });
+  }
+
+  static String _fmtTime(String? iso) {
+    if (iso == null) return '';
+    final dt = DateTime.tryParse(iso);
+    if (dt == null) return iso;
+    return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+  }
 
   @override
   void dispose() {
@@ -143,15 +124,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
       children: [
         _buildDateHeader(),
         Expanded(
-          child: ListView(
-            padding: const EdgeInsets.all(12),
-            children: [
-              _sectionLabel('Today\'s Events'),
-              const SizedBox(height: 8),
-              ..._mockEvents.map((e) => _buildEventCard(context, e)),
-              const SizedBox(height: 72),
-            ],
-          ),
+          child: _loading
+              ? const Center(child: CircularProgressIndicator())
+              : ListView(
+                  padding: const EdgeInsets.all(12),
+                  children: [
+                    _sectionLabel('Today\'s Events'),
+                    const SizedBox(height: 8),
+                    ..._events.map((e) => _buildEventCard(context, e)),
+                    const SizedBox(height: 72),
+                  ],
+                ),
         ),
         if (canAdd)
           _buildAddButton(context),
@@ -194,7 +177,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              '${_mockEvents.length} events',
+              '${_events.length} events',
               style: const TextStyle(color: Colors.white, fontSize: 12),
             ),
           ),

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
+import '../services/api_service.dart';
 import '../models/user.dart';
 
 class _Grievance {
+  final int backendId;
   final String ticketId;
   final String applicantName;
   final String district;
@@ -16,6 +18,7 @@ class _Grievance {
   String? remarks;
 
   _Grievance({
+    required this.backendId,
     required this.ticketId,
     required this.applicantName,
     required this.district,
@@ -28,55 +31,6 @@ class _Grievance {
     this.remarks,
   });
 }
-
-final _mockGrievances = <_Grievance>[
-  _Grievance(
-    ticketId: 'GRV-2024-001',
-    applicantName: 'Ramsing Marak',
-    district: 'West Garo Hills',
-    category: 'Infrastructure',
-    subject: 'Road repair request – Dalu village',
-    description:
-        'The main road connecting Dalu village to the district headquarters has been damaged since the last monsoon.',
-    status: 'UNDER_REVIEW',
-    submittedAt: '10 Mar 2024',
-    assignedDepartment: 'PWD',
-    remarks: 'Forwarded to PWD for inspection.',
-  ),
-  _Grievance(
-    ticketId: 'GRV-2024-002',
-    applicantName: 'Sunita Sangma',
-    district: 'East Khasi Hills',
-    category: 'Education',
-    subject: 'School infrastructure improvement',
-    description: 'Classroom walls are crumbling and there is no proper drinking water facility.',
-    status: 'FORWARDED',
-    submittedAt: '11 Mar 2024',
-    assignedDepartment: 'Education Dept',
-  ),
-  _Grievance(
-    ticketId: 'GRV-2024-003',
-    applicantName: 'Bijoy Momin',
-    district: 'South Garo Hills',
-    category: 'Health',
-    subject: 'PHC non-functional for 2 months',
-    description: 'The Primary Health Centre at Baghmara Block has been without a doctor for 2 months.',
-    status: 'RESOLVED',
-    submittedAt: '20 Feb 2024',
-    assignedDepartment: 'Health Dept',
-    remarks: 'Doctor posted. PHC operational.',
-  ),
-  _Grievance(
-    ticketId: 'GRV-2024-004',
-    applicantName: 'Deibok Lyngdoh',
-    district: 'Ri Bhoi',
-    category: 'Welfare Scheme',
-    subject: 'Delay in CM Care disbursement',
-    description: 'My CM Care application was approved 3 months ago but the amount has not been credited.',
-    status: 'SUBMITTED',
-    submittedAt: '14 Mar 2024',
-  ),
-];
 
 Color _statusColor(String status) {
   switch (status) {
@@ -105,9 +59,57 @@ class GrievanceScreen extends StatefulWidget {
 }
 
 class _GrievanceScreenState extends State<GrievanceScreen> {
-  final List<_Grievance> _grievances = List.from(_mockGrievances);
+  List<_Grievance> _grievances = [];
+  bool _loading = true;
   String _search = '';
   String _filterStatus = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadGrievances();
+  }
+
+  Future<void> _loadGrievances() async {
+    setState(() => _loading = true);
+    final data = await ApiService.getGrievances();
+    if (!mounted) return;
+    final content = (data['content'] as List<dynamic>?) ?? [];
+    setState(() {
+      _grievances = content.map((e) {
+        final m = e as Map<String, dynamic>;
+        final ts = m['submittedAt'] as String? ?? '';
+        String dateLabel = ts;
+        final dt = DateTime.tryParse(ts);
+        if (dt != null) {
+          dateLabel =
+              '${dt.day.toString().padLeft(2, '0')} ${_monthName(dt.month)} ${dt.year}';
+        }
+        return _Grievance(
+          backendId: (m['id'] as num?)?.toInt() ?? 0,
+          ticketId: m['ticketId'] as String? ?? '',
+          applicantName: m['applicantName'] as String? ?? '—',
+          district: m['district'] as String? ?? '',
+          category: m['category'] as String? ?? '',
+          subject: m['subject'] as String? ?? '',
+          description: m['description'] as String? ?? '',
+          status: m['status'] as String? ?? '',
+          submittedAt: dateLabel,
+          assignedDepartment: m['assignedDepartment'] as String?,
+          remarks: m['remarks'] as String?,
+        );
+      }).toList();
+      _loading = false;
+    });
+  }
+
+  static String _monthName(int m) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    return months[m - 1];
+  }
 
   List<_Grievance> get _filtered => _grievances.where((g) {
         final matchSearch = _search.isEmpty ||
@@ -186,24 +188,25 @@ class _GrievanceScreenState extends State<GrievanceScreen> {
           ),
           // List
           Expanded(
-            child: RefreshIndicator(
-              onRefresh: () async {
-                await Future.delayed(const Duration(milliseconds: 600));
-              },
-              child: _filtered.isEmpty
-                  ? const Center(
-                      child: Text('No grievances found.', style: TextStyle(color: Colors.grey)),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(12),
-                      itemCount: _filtered.length,
-                      itemBuilder: (ctx, i) => _GrievanceCard(
-                        grievance: _filtered[i],
-                        isStaff: !isPublic,
-                        onTap: () => _showDetail(context, _filtered[i]),
-                      ),
-                    ),
-            ),
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : RefreshIndicator(
+                    onRefresh: _loadGrievances,
+                    child: _filtered.isEmpty
+                        ? const Center(
+                            child: Text('No grievances found.',
+                                style: TextStyle(color: Colors.grey)),
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.all(12),
+                            itemCount: _filtered.length,
+                            itemBuilder: (ctx, i) => _GrievanceCard(
+                              grievance: _filtered[i],
+                              isStaff: !isPublic,
+                              onTap: () => _showDetail(context, _filtered[i]),
+                            ),
+                          ),
+                  ),
           ),
         ],
       ),
@@ -231,8 +234,12 @@ class _GrievanceScreenState extends State<GrievanceScreen> {
         builder: (_, controller) => _GrievanceDetailSheet(
           grievance: g,
           scrollController: controller,
-          onStatusUpdate: (newStatus) {
-            setState(() => g.status = newStatus);
+          onStatusUpdate: (newStatus) async {
+            final result = await ApiService.updateGrievanceStatus(g.backendId, newStatus);
+            if (!context.mounted) return;
+            if (result != null) {
+              setState(() => g.status = newStatus);
+            }
             Navigator.pop(context);
           },
         ),
@@ -252,13 +259,27 @@ class _GrievanceScreenState extends State<GrievanceScreen> {
           bottom: MediaQuery.of(context).viewInsets.bottom,
         ),
         child: _NewGrievanceForm(
-          currentCount: _grievances.length,
-          onSubmit: (g) {
-            setState(() => _grievances.insert(0, g));
+          onSubmit: (body, localGrievance) async {
+            final result = await ApiService.createGrievance(body);
+            if (!context.mounted) return;
+            final created = result != null
+                ? _Grievance(
+                    backendId: (result['id'] as num?)?.toInt() ?? 0,
+                    ticketId: result['ticketId'] as String? ?? localGrievance.ticketId,
+                    applicantName: localGrievance.applicantName,
+                    district: localGrievance.district,
+                    category: localGrievance.category,
+                    subject: localGrievance.subject,
+                    description: localGrievance.description,
+                    status: result['status'] as String? ?? 'SUBMITTED',
+                    submittedAt: localGrievance.submittedAt,
+                  )
+                : localGrievance;
+            setState(() => _grievances.insert(0, created));
             Navigator.pop(context);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Grievance submitted! Ticket: ${g.ticketId}'),
+                content: Text('Grievance submitted! Ticket: ${created.ticketId}'),
                 backgroundColor: const Color(0xFF065F46),
               ),
             );
@@ -376,7 +397,7 @@ class _StatusBadge extends StatelessWidget {
 class _GrievanceDetailSheet extends StatelessWidget {
   final _Grievance grievance;
   final ScrollController scrollController;
-  final void Function(String) onStatusUpdate;
+  final Future<void> Function(String) onStatusUpdate;
 
   const _GrievanceDetailSheet({
     required this.grievance,
@@ -529,9 +550,8 @@ class _ActionChip extends StatelessWidget {
 }
 
 class _NewGrievanceForm extends StatefulWidget {
-  final void Function(_Grievance) onSubmit;
-  final int currentCount;
-  const _NewGrievanceForm({required this.onSubmit, required this.currentCount});
+  final void Function(Map<String, dynamic> body, _Grievance local) onSubmit;
+  const _NewGrievanceForm({required this.onSubmit});
 
   @override
   State<_NewGrievanceForm> createState() => _NewGrievanceFormState();
@@ -696,9 +716,17 @@ class _NewGrievanceFormState extends State<_NewGrievanceForm> {
   }
 
   void _submit() {
-    final newId = widget.currentCount + 1;
-    final g = _Grievance(
-      ticketId: 'GRV-2024-${newId.toString().padLeft(3, '0')}',
+    final body = {
+      'applicantName': _nameCtrl.text,
+      'district': _district ?? '',
+      'category': _category ?? 'Others',
+      'subject': _subjectCtrl.text,
+      'description': _descCtrl.text,
+      'status': 'SUBMITTED',
+    };
+    final local = _Grievance(
+      backendId: 0,
+      ticketId: 'PENDING',
       applicantName: _nameCtrl.text,
       district: _district ?? '',
       category: _category ?? 'Others',
@@ -707,6 +735,6 @@ class _NewGrievanceFormState extends State<_NewGrievanceForm> {
       status: 'SUBMITTED',
       submittedAt: 'Today',
     );
-    widget.onSubmit(g);
+    widget.onSubmit(body, local);
   }
 }

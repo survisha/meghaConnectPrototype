@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import '../services/api_service.dart';
 
 class _Followup {
   final int id;
-  final String applicationId;
+  final String appointmentId;
   final String applicant;
   final String direction;
   final String color;
@@ -14,7 +15,7 @@ class _Followup {
 
   const _Followup({
     required this.id,
-    required this.applicationId,
+    required this.appointmentId,
     required this.applicant,
     required this.direction,
     required this.color,
@@ -26,57 +27,6 @@ class _Followup {
   });
 }
 
-const _mockFollowups = <_Followup>[
-  _Followup(
-    id: 1,
-    applicationId: 'MC-2024-00001',
-    applicant: 'Ramsing Marak',
-    direction: 'Expedite CMSDF approval for community hall',
-    color: 'GREEN',
-    department: 'Planning Dept',
-    deadline: '01 Apr 2024',
-    daysLeft: 17,
-    status: 'Under Review',
-    officer: 'Dy Secy Planning',
-  ),
-  _Followup(
-    id: 2,
-    applicationId: 'MC-2024-00005',
-    applicant: 'Monika Sangma',
-    direction: 'Forward medical case to CMO Health',
-    color: 'GREEN',
-    department: 'Health Dept',
-    deadline: '20 Mar 2024',
-    daysLeft: -2,
-    status: 'Overdue',
-    officer: 'Dir Health',
-  ),
-  _Followup(
-    id: 3,
-    applicationId: 'MC-2024-00003',
-    applicant: 'Bijoy Momin',
-    direction: 'Forward to Finance for budget clearance',
-    color: 'YELLOW',
-    department: 'Finance Dept',
-    deadline: '25 Mar 2024',
-    daysLeft: 10,
-    status: 'In Progress',
-    officer: 'Dy Secy Finance',
-  ),
-  _Followup(
-    id: 4,
-    applicationId: 'MC-2024-00007',
-    applicant: 'Bilash Marak',
-    direction: 'Expedite road construction file',
-    color: 'GREEN',
-    department: 'PWD',
-    deadline: '15 Apr 2024',
-    daysLeft: 31,
-    status: 'Not Started',
-    officer: 'SE PWD',
-  ),
-];
-
 class PendingFollowupsScreen extends StatefulWidget {
   const PendingFollowupsScreen({super.key});
 
@@ -87,8 +37,53 @@ class PendingFollowupsScreen extends StatefulWidget {
 
 class _PendingFollowupsScreenState extends State<PendingFollowupsScreen> {
   String _filterColor = 'ALL';
+  List<_Followup> _followups = [];
+  bool _loading = true;
 
-  List<_Followup> get _filtered => _mockFollowups
+  @override
+  void initState() {
+    super.initState();
+    _loadFollowups();
+  }
+
+  Future<void> _loadFollowups() async {
+    setState(() => _loading = true);
+    final list = await ApiService.getDirections();
+    if (!mounted) return;
+    setState(() {
+      _followups = list.map((e) {
+        final m = e as Map<String, dynamic>;
+        final deadline = m['deadline'] as String? ?? '';
+        String deadlineLabel = deadline;
+        int daysLeft = 0;
+        final dt = DateTime.tryParse(deadline);
+        if (dt != null) {
+          daysLeft = dt.difference(DateTime.now()).inDays;
+          final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+              'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          deadlineLabel = '${dt.day.toString().padLeft(2, '0')} ${months[dt.month - 1]} ${dt.year}';
+        }
+        final isCompleted = m['isCompleted'] as bool? ?? false;
+        final color = m['color'] as String? ?? 'GREEN';
+        String status = isCompleted ? 'Completed' : (daysLeft < 0 ? 'Overdue' : 'In Progress');
+        return _Followup(
+          id: (m['id'] as num?)?.toInt() ?? 0,
+          appointmentId: m['appointmentId']?.toString() ?? '',
+          applicant: m['assignedDepartment'] as String? ?? '',
+          direction: m['directionText'] as String? ?? '',
+          color: color,
+          department: m['assignedDepartment'] as String? ?? '',
+          deadline: deadlineLabel,
+          daysLeft: daysLeft,
+          status: status,
+          officer: '',
+        );
+      }).toList();
+      _loading = false;
+    });
+  }
+
+  List<_Followup> get _filtered => _followups
       .where((f) => _filterColor == 'ALL' || f.color == _filterColor)
       .toList();
 
@@ -113,27 +108,32 @@ class _PendingFollowupsScreenState extends State<PendingFollowupsScreen> {
         _buildSummaryBar(),
         _buildFilterChips(),
         Expanded(
-          child: _filtered.isEmpty
-              ? _buildEmpty()
-              : ListView.separated(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: _filtered.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (_, i) => _FollowupCard(
-                    followup: _filtered[i],
-                    dirColor: _dirColor(_filtered[i].color),
-                    statusColor: _statusColor(_filtered[i].status),
-                  ),
-                ),
+          child: _loading
+              ? const Center(child: CircularProgressIndicator())
+              : _filtered.isEmpty
+                  ? _buildEmpty()
+                  : RefreshIndicator(
+                      onRefresh: _loadFollowups,
+                      child: ListView.separated(
+                        padding: const EdgeInsets.all(12),
+                        itemCount: _filtered.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        itemBuilder: (_, i) => _FollowupCard(
+                          followup: _filtered[i],
+                          dirColor: _dirColor(_filtered[i].color),
+                          statusColor: _statusColor(_filtered[i].status),
+                        ),
+                      ),
+                    ),
         ),
       ],
     );
   }
 
   Widget _buildSummaryBar() {
-    final overdue = _mockFollowups.where((f) => f.daysLeft < 0).length;
-    final green = _mockFollowups.where((f) => f.color == 'GREEN').length;
-    final yellow = _mockFollowups.where((f) => f.color == 'YELLOW').length;
+    final overdue = _followups.where((f) => f.daysLeft < 0).length;
+    final green = _followups.where((f) => f.color == 'GREEN').length;
+    final yellow = _followups.where((f) => f.color == 'YELLOW').length;
     return Container(
       color: const Color(0xFF1A237E),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -141,7 +141,7 @@ class _PendingFollowupsScreenState extends State<PendingFollowupsScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _SummaryPill(
-              label: 'Total', value: '${_mockFollowups.length}',
+              label: 'Total', value: '${_followups.length}',
               color: Colors.white70),
           _SummaryPill(
               label: 'Green', value: '$green',
@@ -321,7 +321,7 @@ class _FollowupCard extends StatelessWidget {
                   const SizedBox(width: 10),
                   Icon(Icons.tag, size: 13, color: Colors.grey[500]),
                   const SizedBox(width: 4),
-                  Text(followup.applicationId,
+                  Text(followup.appointmentId,
                       style: TextStyle(
                           fontSize: 12, color: Colors.grey[600])),
                 ],

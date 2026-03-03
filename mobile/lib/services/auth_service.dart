@@ -2,14 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
-
-class _DemoUser {
-  final String username;
-  final String password;
-  final String fullName;
-  final UserRole role;
-  const _DemoUser(this.username, this.password, this.fullName, this.role);
-}
+import 'api_service.dart';
 
 class AuthService extends ChangeNotifier {
   static const _storageKey = 'megha_user';
@@ -18,19 +11,15 @@ class AuthService extends ChangeNotifier {
   AuthUser? get user => _user;
   bool get isLoggedIn => _user != null;
 
-  static const _demoUsers = [
-    _DemoUser('hcm', 'hcm123', 'Hon. Chief Minister', UserRole.HCM),
-    _DemoUser('admin', 'admin123', 'System Admin', UserRole.ADMIN),
-    _DemoUser('saidul', 'osd123', 'Saidul OSD', UserRole.SAIDUL_OSD),
-    _DemoUser('jtsecy', 'jts123', 'Joint Secretary', UserRole.APPROVER_JT_SECY),
-    _DemoUser('cmo', 'cmo123', 'CMO Officer', UserRole.CMO_OFFICER),
-    _DemoUser('deo1', 'deo123', 'Data Entry Operator 1', UserRole.DATA_ENTRY_OPERATOR),
-    _DemoUser('9876543210', '123456', 'Public User', UserRole.PUBLIC),
-  ];
-
-  static List<Map<String, String>> get demoCredentials => _demoUsers
-      .map((u) => {'username': u.username, 'password': u.password, 'role': u.role.badgeLabel})
-      .toList();
+  // Demo credentials kept for the UI quick-access chips only.
+  static List<Map<String, String>> get demoCredentials => const [
+        {'username': 'hcm', 'password': 'hcm123', 'role': 'HCM'},
+        {'username': 'admin', 'password': 'admin123', 'role': 'ADMIN'},
+        {'username': 'saidul', 'password': 'osd123', 'role': 'OSD'},
+        {'username': 'jtsecy', 'password': 'jts123', 'role': 'JT. SECY'},
+        {'username': 'cmo', 'password': 'cmo123', 'role': 'CMO'},
+        {'username': 'deo1', 'password': 'deo123', 'role': 'DEO'},
+      ];
 
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
@@ -46,13 +35,24 @@ class AuthService extends ChangeNotifier {
   }
 
   Future<bool> login(String username, String password) async {
-    final match = _demoUsers.where(
-      (u) => u.username == username.trim() && u.password == password.trim(),
-    );
-    if (match.isEmpty) return false;
+    final data = await ApiService.login(username.trim(), password.trim());
+    if (data == null) return false;
 
-    final u = match.first;
-    _user = AuthUser(username: u.username, fullName: u.fullName, role: u.role);
+    final token = data['token'] as String?;
+    final uname = data['username'] as String? ?? username.trim();
+    final fullName = data['fullName'] as String? ?? uname;
+    final roleStr = data['role'] as String? ?? 'PUBLIC';
+
+    UserRole role;
+    try {
+      role = UserRole.values.byName(roleStr);
+    } catch (_) {
+      role = UserRole.PUBLIC;
+    }
+
+    if (token != null) await ApiService.setToken(token);
+
+    _user = AuthUser(username: uname, fullName: fullName, role: role);
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_storageKey, jsonEncode(_user!.toJson()));
@@ -61,10 +61,19 @@ class AuthService extends ChangeNotifier {
     return true;
   }
 
+  /// Authenticates as the shared public user after OTP has been verified.
+  /// The phone parameter is not passed to the backend because the OTP
+  /// verification step already authenticated the phone; we then log in
+  /// with the shared public-user credentials to obtain a JWT token.
+  Future<bool> publicLogin(String phone) async {
+    return login('public1', 'public123');
+  }
+
   Future<void> logout() async {
     _user = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_storageKey);
+    await ApiService.clearToken();
     notifyListeners();
   }
 

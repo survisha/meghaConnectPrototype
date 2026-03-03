@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { MockDataService } from '../services/mock-data.service';
+import { ScheduleEventService } from '../services/schedule-event.service';
 import { ScheduleEvent, EventType } from '../models';
 import { Dialog } from 'primeng/dialog';
 import { Select } from 'primeng/select';
@@ -21,6 +21,7 @@ export class SchedulingComponent implements OnInit {
   selectedEvent: ScheduleEvent | null = null;
   showDialog = false;
   showAddDialog = false;
+  loading = false;
 
   newEvent: Partial<ScheduleEvent> = {};
 
@@ -42,8 +43,15 @@ export class SchedulingComponent implements OnInit {
     { label: 'Others', value: 'OTHERS' },
   ];
 
-  constructor(public mock: MockDataService) {}
-  ngOnInit() { this.events = this.mock.scheduleEvents; }
+  constructor(private scheduleEventService: ScheduleEventService) {}
+
+  ngOnInit() {
+    this.loading = true;
+    this.scheduleEventService.getAll().subscribe({
+      next: events => { this.events = events; this.loading = false; },
+      error: () => { this.loading = false; }
+    });
+  }
 
   getEventClass(type: EventType): string {
     const m: Record<string,string> = { A1:'event-a1', A2:'event-a2', A3:'event-a3', A4:'event-a4', B1:'event-b1', B2:'event-b2' };
@@ -72,10 +80,14 @@ export class SchedulingComponent implements OnInit {
 
   addEvent() {
     if (this.newEvent.title) {
-      const id = this.events.length + 1;
-      this.events.push({ ...this.newEvent, id } as ScheduleEvent);
-      this.newEvent = {};
-      this.showAddDialog = false;
+      this.scheduleEventService.create(this.newEvent).subscribe({
+        next: created => {
+          this.events.push(created);
+          this.newEvent = {};
+          this.showAddDialog = false;
+        },
+        error: () => {}
+      });
     }
   }
 }

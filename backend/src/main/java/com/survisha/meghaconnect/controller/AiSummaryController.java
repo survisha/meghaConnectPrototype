@@ -1,0 +1,56 @@
+package com.survisha.meghaconnect.controller;
+
+import com.survisha.meghaconnect.repository.AppointmentRepository;
+import com.survisha.meghaconnect.service.AISummaryService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
+
+/**
+ * AI Document Summary endpoint.
+ * Delegates to AISummaryService which is pluggable for LLM/OpenAI integration.
+ */
+@RestController
+@RequestMapping("/api/ai")
+@RequiredArgsConstructor
+public class AiSummaryController {
+
+    private final AppointmentRepository appointmentRepository;
+    private final AISummaryService aiSummaryService;
+
+    @PostMapping("/generate-summary")
+    public ResponseEntity<Map<String, Object>> generateSummary(@RequestBody Map<String, Object> request) {
+        Long appointmentId = null;
+        if (request.get("appointmentId") != null) {
+            try {
+                appointmentId = Long.parseLong(request.get("appointmentId").toString());
+            } catch (NumberFormatException e) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "error", "Invalid appointmentId: must be a valid numeric identifier."
+                ));
+            }
+        }
+        String agendaBrief   = String.valueOf(request.getOrDefault("agendaBrief", ""));
+        String agendaType    = String.valueOf(request.getOrDefault("agendaType", ""));
+        String applicantName = String.valueOf(request.getOrDefault("applicantName", ""));
+        String district      = String.valueOf(request.getOrDefault("district", ""));
+
+        String shortNotes = aiSummaryService.generateSummaryFromText(applicantName, district, agendaType, agendaBrief);
+
+        // Persist shortNotes if appointmentId provided
+        final Long apptId = appointmentId;
+        if (apptId != null) {
+            appointmentRepository.findById(apptId).ifPresent(appt -> {
+                appt.setShortNotes(shortNotes);
+                appointmentRepository.save(appt);
+            });
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "appointmentId", appointmentId != null ? appointmentId : 0,
+                "shortNotes", shortNotes
+        ));
+    }
+}

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/api_service.dart';
 
 class _AuditEntry {
   final int id;
@@ -20,72 +21,6 @@ class _AuditEntry {
   });
 }
 
-const _mockLogs = <_AuditEntry>[
-  _AuditEntry(
-    id: 1,
-    entityType: 'Appointment',
-    entityId: 'MC-2024-00001',
-    action: 'APPROVED',
-    details: 'HCM approved CM Care application for Bijoy Momin (₹3,00,000)',
-    performedBy: 'hcm',
-    timestamp: '15 Jul 2024 10:45',
-  ),
-  _AuditEntry(
-    id: 2,
-    entityType: 'Appointment',
-    entityId: 'MC-2024-00002',
-    action: 'STATUS_CHANGE',
-    details: 'Status changed from CMO_REVIEW → HCM_PENDING by Joint Secretary',
-    performedBy: 'jtsecy',
-    timestamp: '15 Jul 2024 11:30',
-  ),
-  _AuditEntry(
-    id: 3,
-    entityType: 'Person',
-    entityId: 'P-004',
-    action: 'LOGIN',
-    details: 'Successful login by DEO – Deibok Lyngdoh walk-in registered',
-    performedBy: 'deo1',
-    timestamp: '15 Jul 2024 14:15',
-  ),
-  _AuditEntry(
-    id: 4,
-    entityType: 'Direction',
-    entityId: 'DIR-009',
-    action: 'UPDATE',
-    details: 'Direction status updated to "Under Review" by CMO',
-    performedBy: 'cmo',
-    timestamp: '15 Jul 2024 15:00',
-  ),
-  _AuditEntry(
-    id: 5,
-    entityType: 'User',
-    entityId: 'U-003',
-    action: 'DELEGATION',
-    details: 'Approver (Jt Secy) delegated authority to CMO Officer for 3 days',
-    performedBy: 'jtsecy',
-    timestamp: '15 Jul 2024 16:20',
-  ),
-  _AuditEntry(
-    id: 6,
-    entityType: 'Appointment',
-    entityId: 'MC-2024-00004',
-    action: 'REJECTED',
-    details: 'CMO rejected application – incomplete documentation',
-    performedBy: 'cmo',
-    timestamp: '15 Jul 2024 09:10',
-  ),
-  _AuditEntry(
-    id: 7,
-    entityType: 'SchemeApplication',
-    entityId: 'MC-SCH-003',
-    action: 'CREATED',
-    details: 'New CMSG application created for road repair – Baghmara block',
-    performedBy: 'deo1',
-    timestamp: '14 Jul 2024 11:00',
-  ),
-];
-
 class AuditTrailScreen extends StatefulWidget {
   const AuditTrailScreen({super.key});
 
@@ -95,8 +30,50 @@ class AuditTrailScreen extends StatefulWidget {
 
 class _AuditTrailScreenState extends State<AuditTrailScreen> {
   String _search = '';
+  List<_AuditEntry> _logs = [];
+  bool _loading = true;
 
-  List<_AuditEntry> get _filtered => _mockLogs.where((l) {
+  @override
+  void initState() {
+    super.initState();
+    _loadLogs();
+  }
+
+  Future<void> _loadLogs() async {
+    setState(() => _loading = true);
+    final data = await ApiService.getAuditLogs();
+    if (!mounted) return;
+    final content = (data['content'] as List<dynamic>?) ?? [];
+    setState(() {
+      _logs = content.map((e) {
+        final m = e as Map<String, dynamic>;
+        final ts = m['timestamp'] as String? ?? '';
+        String timeLabel = ts;
+        final dt = DateTime.tryParse(ts);
+        if (dt != null) {
+          final months = [
+            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+          ];
+          timeLabel =
+              '${dt.day} ${months[dt.month - 1]} ${dt.year} '
+              '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+        }
+        return _AuditEntry(
+          id: (m['id'] as num?)?.toInt() ?? 0,
+          entityType: m['entityType'] as String? ?? '',
+          entityId: m['entityId']?.toString() ?? '',
+          action: m['action'] as String? ?? '',
+          details: m['details'] as String? ?? '',
+          performedBy: m['performedBy'] as String? ?? '',
+          timestamp: timeLabel,
+        );
+      }).toList();
+      _loading = false;
+    });
+  }
+
+  List<_AuditEntry> get _filtered => _logs.where((l) {
         if (_search.isEmpty) return true;
         final q = _search.toLowerCase();
         return l.performedBy.toLowerCase().contains(q) ||
@@ -138,18 +115,23 @@ class _AuditTrailScreenState extends State<AuditTrailScreen> {
         _buildSearchBar(),
         _buildSummaryRow(),
         Expanded(
-          child: _filtered.isEmpty
-              ? _buildEmpty()
-              : ListView.separated(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: _filtered.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (_, i) => _AuditCard(
-                    entry: _filtered[i],
-                    color: _actionColor(_filtered[i].action),
-                    icon: _actionIcon(_filtered[i].action),
-                  ),
-                ),
+          child: _loading
+              ? const Center(child: CircularProgressIndicator())
+              : _filtered.isEmpty
+                  ? _buildEmpty()
+                  : RefreshIndicator(
+                      onRefresh: _loadLogs,
+                      child: ListView.separated(
+                        padding: const EdgeInsets.all(12),
+                        itemCount: _filtered.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        itemBuilder: (_, i) => _AuditCard(
+                          entry: _filtered[i],
+                          color: _actionColor(_filtered[i].action),
+                          icon: _actionIcon(_filtered[i].action),
+                        ),
+                      ),
+                    ),
         ),
       ],
     );

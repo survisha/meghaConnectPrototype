@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { MockDataService } from '../services/mock-data.service';
 import { AuthService } from '../services/auth.service';
 import { Grievance, GrievanceCategory, GrievanceStatus } from '../models';
-import { Button } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
 import { Select } from 'primeng/select';
@@ -19,7 +18,7 @@ import { MessageService } from 'primeng/api';
 @Component({
   selector: 'app-grievances',
   standalone: true,
-  imports: [CommonModule, FormsModule, Button, TableModule, Tag, Select, InputText, Textarea, Dialog, Divider, Steps, Toast],
+  imports: [CommonModule, FormsModule, TableModule, Tag, Select, InputText, Textarea, Dialog, Divider, Steps, Toast],
   providers: [MessageService],
   templateUrl: './grievances.component.html',
   styleUrls: ['./grievances.component.scss'],

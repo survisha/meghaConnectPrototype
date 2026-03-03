@@ -4,18 +4,16 @@ import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MockDataService } from '../../services/mock-data.service';
 import { Appointment, AppointmentStatus } from '../../models';
-import { Button } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
 import { Select } from 'primeng/select';
 import { InputText } from 'primeng/inputtext';
 import { Tooltip } from 'primeng/tooltip';
-import { Badge, BadgeDirective } from 'primeng/badge';
 
 @Component({
   selector: 'app-appointment-list',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, Button, TableModule, Tag, Select, InputText, Tooltip, Badge, BadgeDirective],
+  imports: [CommonModule, RouterLink, FormsModule, TableModule, Tag, Select, InputText, Tooltip],
   templateUrl: './appointment-list.component.html',
   styleUrls: ['./appointment-list.component.scss'],
 })

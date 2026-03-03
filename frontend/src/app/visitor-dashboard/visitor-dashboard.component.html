@@ -105,7 +105,7 @@
         <i class="pi pi-clock"></i> Latest Application Status
       </div>
       <div class="card-body">
-        <p style="font-size:0.82rem;color:#6b7280;margin:0 0 0.75rem">{{ myAppointments[0]?.id || 'MC-2024-00001' }} – Latest Application</p>
+        <p style="font-size:0.82rem;color:#6b7280;margin:0 0 0.75rem">{{ myAppointments[0].id || 'MC-2024-00001' }} – Latest Application</p>
         <p-timeline [value]="statusTimeline" styleClass="visitor-timeline">
           <ng-template pTemplate="marker" let-event>
             <span class="timeline-marker" [style.background]="event.color">

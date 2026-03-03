@@ -1,7 +1,10 @@
 <div>
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
     <h2 class="page-title" style="margin:0">Dashboard</h2>
-    <span style="color:#6b7280;font-size:0.85rem">📅 Thursday, 15 March 2024</span>
+    <span style="color:#6b7280;font-size:0.85rem;display:flex;align-items:center;gap:0.35rem">
+      <i class="pi pi-calendar" style="font-size:0.9rem"></i>
+      Thursday, 15 March 2024
+    </span>
   </div>
 
   <!-- KPI Cards -->
@@ -27,10 +30,12 @@
       <div class="section-card-body" style="padding:0.75rem">
         <div *ngFor="let evt of todaySchedule" class="cal-slot {{getEventClass(evt.type)}}" style="margin-bottom:6px">
           <div style="display:flex;align-items:center;gap:0.5rem">
-            <span style="font-weight:700;font-size:0.8rem;min-width:40px;color:#374151">{{evt.time}}</span>
+            <span style="font-weight:700;font-size:0.8rem;min-width:40px;color:#1f2937">{{evt.time}}</span>
             <div style="flex:1">
-              <div class="event-title">{{evt.title}}</div>
-              <div class="event-time"><i class="pi pi-map-marker"></i> {{evt.location}}</div>
+              <div class="event-title" style="color:#1f2937">{{evt.title}}</div>
+              <div class="event-time" style="color:#374151">
+                <i class="pi pi-map-marker" style="color:#374151"></i> {{evt.location}}
+              </div>
             </div>
             <span class="status-badge" style="background:#e0e7ff;color:#3730a3;font-size:0.7rem">{{evt.type}}</span>
           </div>
@@ -75,13 +80,9 @@
   <div class="section-card" style="margin-top:1.5rem" *ngIf="quickActions.length">
     <div class="section-card-header"><i class="pi pi-bolt"></i> Quick Actions</div>
     <div class="section-card-body" style="display:flex;gap:0.75rem;flex-wrap:wrap">
-      <button *ngFor="let a of quickActions" pButton [label]="a.label" [icon]="a.icon"
-        [routerLink]="a.route" class="p-button-sm"
-        [class.p-button-success]="a.severity==='success'"
-        [class.p-button-warning]="a.severity==='warning'"
-        [class.p-button-info]="a.severity==='info'"
-        [class.p-button-secondary]="a.severity==='secondary'">
-      </button>
+      <p-button *ngFor="let a of quickActions" [label]="a.label" [icon]="a.icon"
+        [routerLink]="a.route" size="small"
+        [severity]="a.severity === 'success' ? 'success' : a.severity === 'warning' ? 'warn' : a.severity === 'info' ? 'info' : 'secondary'"></p-button>
     </div>
   </div>
 </div>

@@ -4,18 +4,16 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { MockDataService } from '../../services/mock-data.service';
 import { SchemeApplication } from '../../models';
-import { Button } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
 import { Select } from 'primeng/select';
 import { Dialog } from 'primeng/dialog';
 import { Divider } from 'primeng/divider';
-import { UIChart } from 'primeng/chart';
 
 @Component({
   selector: 'app-scheme-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, Button, TableModule, Tag, Select, Dialog, Divider, UIChart],
+  imports: [CommonModule, FormsModule, RouterLink, TableModule, Tag, Select, Dialog, Divider],
   templateUrl: './scheme-list.component.html',
   styleUrls: ['./scheme-list.component.scss'],
 })

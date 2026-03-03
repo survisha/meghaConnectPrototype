@@ -6,14 +6,11 @@ import { AuthService } from '../../services/auth.service';
 import { Button } from 'primeng/button';
 import { InputText } from 'primeng/inputtext';
 import { Password } from 'primeng/password';
-import { Select } from 'primeng/select';
-import { Message } from 'primeng/message';
-import { Divider } from 'primeng/divider';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, Button, InputText, Password, Select, Message, Divider],
+  imports: [CommonModule, FormsModule, Button, InputText, Password],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss'],
 })

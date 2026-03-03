@@ -4,18 +4,15 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { MockDataService } from '../../services/mock-data.service';
 import { Person } from '../../models';
-import { Button } from 'primeng/button';
 import { InputText } from 'primeng/inputtext';
 import { Tag } from 'primeng/tag';
-import { Divider } from 'primeng/divider';
 import { TableModule } from 'primeng/table';
 import { Select } from 'primeng/select';
-import { Textarea } from 'primeng/textarea';
 
 @Component({
   selector: 'app-walkin',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, Button, InputText, Tag, Divider, TableModule, Select, Textarea],
+  imports: [CommonModule, FormsModule, RouterLink, InputText, Tag, TableModule, Select],
   templateUrl: './walkin.component.html',
   styleUrls: ['./walkin.component.scss'],
 })

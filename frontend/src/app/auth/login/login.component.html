@@ -1,15 +1,44 @@
 <div class="login-page">
   <div class="login-left">
+    <div class="state-map-bg"></div>
+    
     <div class="brand-box">
-      <div class="brand-icon">🏛️</div>
-      <h1>MeghaConnect</h1>
-      <p>Chief Minister's Office<br>Scheduling &amp; Scheme Management</p>
+      <div class="logo-section">
+        <img src="/asserts/logo.png" alt="Meghalaya Government Logo" class="govt-logo">
+        <div class="logo-text">
+          <h1>MeghaConnect</h1>
+          <div class="govt-badge">
+            <i class="pi pi-shield"></i>
+            <span>Official Government Portal</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="cm-profile-section">
+        <div class="cm-photo-container">
+          <img src="/asserts/CM_Profile_Picture.jpg" alt="Chief Minister" class="cm-photo" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22%3E%3Crect fill=%22%23e0e7ff%22 width=%22100%22 height=%22100%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22Arial%22 font-size=%2224%22 fill=%22%234338ca%22%3ECM%3C/text%3E%3C/svg%3E'">
+          <div class="cm-badge">Hon'ble</div>
+        </div>
+        <div class="cm-info">
+          <p class="cm-name">Conrad Sangma</p>
+          <p class="cm-designation">Government of Meghalaya</p>
+          <div class="cm-office">
+            <i class="pi pi-building"></i>
+            <span>Chief Minister's Office</span>
+          </div>
+        </div>
+      </div>
+
       <div class="brand-features">
-        <div class="feat"><i class="pi pi-calendar"></i> Smart Scheduling</div>
-        <div class="feat"><i class="pi pi-users"></i> Appointment Management</div>
-        <div class="feat"><i class="pi pi-briefcase"></i> CM Scheme Tracking</div>
-        <div class="feat"><i class="pi pi-map"></i> Geographic Heatmaps</div>
-        <div class="feat"><i class="pi pi-chart-bar"></i> Analytics &amp; Reports</div>
+        <div class="feature-header">
+          <i class="pi pi-star-fill"></i>
+          <span>Key Features</span>
+        </div>
+        <div class="feat"><i class="pi pi-calendar"></i> <span>Smart Scheduling</span></div>
+        <div class="feat"><i class="pi pi-users"></i> <span>Appointment Management</span></div>
+        <div class="feat"><i class="pi pi-briefcase"></i> <span>CM Scheme Tracking</span></div>
+        <div class="feat"><i class="pi pi-map"></i> <span>Geographic Heatmaps</span></div>
+        <div class="feat"><i class="pi pi-chart-bar"></i> <span>Analytics & Reports</span></div>
       </div>
     </div>
   </div>
@@ -22,8 +51,14 @@
       </div>
 
       <div class="mode-tabs">
-        <button [class.active]="!isPublicMode" (click)="isPublicMode=false">Staff Login</button>
-        <button [class.active]="isPublicMode" (click)="isPublicMode=true">Public / Citizen</button>
+        <button [class.active]="!isPublicMode" (click)="isPublicMode=false">
+          <i class="pi pi-id-card"></i>
+          <span>Staff Login</span>
+        </button>
+        <button [class.active]="isPublicMode" (click)="isPublicMode=true">
+          <i class="pi pi-users"></i>
+          <span>Public / Citizen</span>
+        </button>
       </div>
 
       <ng-container *ngIf="!isPublicMode">
@@ -36,11 +71,17 @@
           </div>
         </div>
         <div class="form-group">
-          <label for="username">Username</label>
+          <label for="username">
+            <i class="pi pi-user"></i>
+            <span>Username</span>
+          </label>
           <input pInputText id="username" [(ngModel)]="username" placeholder="Enter username" style="width:100%"/>
         </div>
         <div class="form-group">
-          <label for="password">Password</label>
+          <label for="password">
+            <i class="pi pi-lock"></i>
+            <span>Password</span>
+          </label>
           <p-password inputId="password" [(ngModel)]="password" [feedback]="false" [toggleMask]="true" styleClass="w-full" inputStyleClass="w-full"></p-password>
         </div>
         <div *ngIf="errorMsg" style="color:#dc2626;font-size:0.85rem;margin-bottom:0.75rem">
@@ -54,11 +95,18 @@
           <p><i class="pi pi-info-circle"></i> Citizens can submit appointment requests using their phone number (OTP-based login).</p>
         </div>
         <div class="form-group">
-          <label>Phone Number</label>
+          <label>
+            <i class="pi pi-phone"></i>
+            <span>Phone Number</span>
+          </label>
           <input pInputText [(ngModel)]="username" placeholder="Enter 10-digit phone number" style="width:100%"/>
         </div>
         <div class="form-group">
-          <label>OTP <small style="color:#6b7280">(Demo OTP: 123456)</small></label>
+          <label>
+            <i class="pi pi-key"></i>
+            <span>OTP</span>
+            <small style="color:#6b7280">(Demo OTP: 123456)</small>
+          </label>
           <input pInputText [(ngModel)]="otp" placeholder="Enter OTP" style="width:100%"/>
         </div>
         <div *ngIf="errorMsg" style="color:#dc2626;font-size:0.85rem;margin-bottom:0.75rem">

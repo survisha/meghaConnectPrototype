@@ -2,16 +2,14 @@ import { Component, OnInit, AfterViewInit, ElementRef, ViewChild } from '@angula
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { Button } from 'primeng/button';
 import { Select } from 'primeng/select';
-import { Tag } from 'primeng/tag';
 
 declare const L: any;
 
 @Component({
   selector: 'app-heatmap',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, Button, Select, Tag],
+  imports: [CommonModule, FormsModule, RouterLink, Select],
   templateUrl: './heatmap.component.html',
   styleUrls: ['./heatmap.component.scss'],
 })

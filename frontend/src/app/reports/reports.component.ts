@@ -1,15 +1,13 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { Button } from 'primeng/button';
 import { UIChart } from 'primeng/chart';
 import { TableModule } from 'primeng/table';
-import { Tag } from 'primeng/tag';
 
 @Component({
   selector: 'app-reports',
   standalone: true,
-  imports: [CommonModule, RouterLink, Button, UIChart, TableModule, Tag],
+  imports: [CommonModule, RouterLink, UIChart, TableModule],
   templateUrl: './reports.component.html',
   styleUrls: ['./reports.component.scss'],
 })

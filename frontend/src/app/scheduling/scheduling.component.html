@@ -1,6 +1,9 @@
 <div>
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.75rem">
-    <h2 class="page-title" style="margin:0">📅 Calendar &amp; Schedule</h2>
+    <h2 class="page-title" style="margin:0;display:flex;align-items:center;gap:0.5rem">
+      <i class="pi pi-calendar" style="font-size:1.3rem"></i>
+      Calendar &amp; Schedule
+    </h2>
     <div style="display:flex;gap:0.5rem;align-items:center">
       <span style="color:#6b7280;font-size:0.85rem;margin-right:0.5rem">15 March 2024</span>
       <div class="view-toggle">
@@ -32,16 +35,20 @@
           <div *ngFor="let evt of getEventsForHour(hour)"
                class="{{getEventClass(evt.eventType)}} timeline-event"
                (click)="openEvent(evt)">
-            <div class="event-title">
+            <div class="event-title" style="color:#1f2937">
               <span class="event-type-badge" [style.background]="getEventColor(evt.eventType)">{{ evt.eventType }}</span>
               {{ evt.title }}
             </div>
-            <div class="event-time">
+            <div class="event-time" style="color:#374151">
               <i class="pi pi-clock"></i> {{ formatTime(evt.startTime) }} – {{ formatTime(evt.endTime) }}
               &nbsp;|&nbsp;<i class="pi pi-map-marker"></i> {{ evt.location }}
-              <span *ngIf="evt.travelTimeMinutes" style="margin-left:8px">🚗 +{{ evt.travelTimeMinutes }}min travel</span>
+              <span *ngIf="evt.travelTimeMinutes" style="margin-left:8px">
+                <i class="pi pi-car" style="color:#374151"></i> +{{ evt.travelTimeMinutes }}min travel
+              </span>
             </div>
-            <div *ngIf="evt.isConflict" style="color:#dc2626;font-size:0.75rem;margin-top:2px">⚠️ CONFLICT DETECTED</div>
+            <div *ngIf="evt.isConflict" style="color:#dc2626;font-size:0.75rem;margin-top:2px;display:flex;align-items:center;gap:0.3rem">
+              <i class="pi pi-exclamation-triangle"></i> CONFLICT DETECTED
+            </div>
           </div>
           <div *ngIf="getEventsForHour(hour).length === 0" class="empty-slot"></div>
         </div>
@@ -64,15 +71,22 @@
     <ng-container *ngIf="selectedEvent">
       <div style="display:flex;flex-direction:column;gap:0.75rem">
         <div class="{{getEventClass(selectedEvent.eventType)}}" style="padding:12px;border-radius:8px">
-          <div style="font-weight:700;font-size:1rem">{{ selectedEvent.title }}</div>
+          <div style="font-weight:700;font-size:1rem;color:#1f2937">{{ selectedEvent.title }}</div>
           <div style="font-size:0.85rem;color:#374151;margin-top:4px">{{ selectedEvent.description }}</div>
         </div>
-        <div class="detail-row"><span class="dl">Type</span><strong>{{ selectedEvent.eventType }}</strong></div>
-        <div class="detail-row"><span class="dl">Start</span>{{ formatTime(selectedEvent.startTime) }}</div>
-        <div class="detail-row"><span class="dl">End</span>{{ formatTime(selectedEvent.endTime) }}</div>
-        <div class="detail-row"><span class="dl">Location</span>{{ selectedEvent.location }}</div>
-        <div *ngIf="selectedEvent.travelTimeMinutes" class="detail-row"><span class="dl">Travel Time</span>🚗 {{ selectedEvent.travelTimeMinutes }} minutes</div>
-        <div *ngIf="selectedEvent.isConflict" class="conflict-warn">⚠️ This event has a scheduling conflict!</div>
+        <div class="detail-row"><span class="dl">Type</span><strong style="color:#1f2937">{{ selectedEvent.eventType }}</strong></div>
+        <div class="detail-row"><span class="dl">Start</span><span style="color:#1f2937">{{ formatTime(selectedEvent.startTime) }}</span></div>
+        <div class="detail-row"><span class="dl">End</span><span style="color:#1f2937">{{ formatTime(selectedEvent.endTime) }}</span></div>
+        <div class="detail-row"><span class="dl">Location</span><span style="color:#1f2937">{{ selectedEvent.location }}</span></div>
+        <div *ngIf="selectedEvent.travelTimeMinutes" class="detail-row">
+          <span class="dl">Travel Time</span>
+          <span style="color:#1f2937;display:flex;align-items:center;gap:0.3rem">
+            <i class="pi pi-car"></i> {{ selectedEvent.travelTimeMinutes }} minutes
+          </span>
+        </div>
+        <div *ngIf="selectedEvent.isConflict" class="conflict-warn" style="display:flex;align-items:center;gap:0.5rem">
+          <i class="pi pi-exclamation-triangle"></i> This event has a scheduling conflict!
+        </div>
       </div>
     </ng-container>
     <ng-template pTemplate="footer">

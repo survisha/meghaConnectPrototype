@@ -2,7 +2,6 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { Button } from 'primeng/button';
 import { Steps } from 'primeng/steps';
 import { Select } from 'primeng/select';
 import { InputText } from 'primeng/inputtext';
@@ -15,7 +14,7 @@ import { Divider } from 'primeng/divider';
 @Component({
   selector: 'app-scheme-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, Button, Steps, Select, InputText, Textarea, InputNumber, FileUpload, RadioButton, Divider],
+  imports: [CommonModule, FormsModule, RouterLink, Steps, Select, InputText, Textarea, InputNumber, FileUpload, RadioButton, Divider],
   templateUrl: './scheme-form.component.html',
   styleUrls: ['./scheme-form.component.scss'],
 })

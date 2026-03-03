@@ -143,43 +143,138 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Widget _buildHeader() {
-    return Padding(
+    return Container(
       padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-      child: Column(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [_primaryBlue, const Color(0xFF0D47A1), _accentBlue],
+        ),
+      ),
+      child: Stack(
         children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white.withAlpha(26),
-              shape: BoxShape.circle,
-            ),
-            child: const Text('🏛️', style: TextStyle(fontSize: 48)),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'MeghaConnect',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.5,
+          // State map background
+          Positioned.fill(
+            child: Opacity(
+              opacity: 0.08,
+              child: Image.asset(
+                'assets/state_map.png',
+                fit: BoxFit.contain,
+              ),
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            "Chief Minister's Office · Meghalaya",
-            style: TextStyle(
-              color: Colors.white.withAlpha(204),
-              fontSize: 13,
+          // Decorative circle
+          Positioned(
+            top: -80,
+            right: -80,
+            child: Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.15),
+                  width: 2,
+                  style: BorderStyle.solid,
+                ),
+              ),
             ),
           ),
-          const SizedBox(height: 2),
-          Text(
-            'Government of Meghalaya',
-            style: TextStyle(
-              color: Colors.white.withAlpha(153),
-              fontSize: 12,
-            ),
+          // Content
+          Column(
+            children: [
+              // Logo
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                padding: const EdgeInsets.all(12),
+                child: Image.asset(
+                  'assets/logo.png',
+                  fit: BoxFit.contain,
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Title
+              const Text(
+                'MeghaConnect',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                "Chief Minister's Office\nScheduling & Scheme Management",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.white.withOpacity(0.9),
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 20),
+              // CM Profile Section
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.15),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.3),
+                          width: 2,
+                        ),
+                        image: const DecorationImage(
+                          image: AssetImage('assets/CM_Profile_Picture.jpg'),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "Hon'ble Chief Minister",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Government of Meghalaya',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.85),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -225,7 +320,8 @@ class _LoginScreenState extends State<LoginScreen>
                 labelText: 'Username',
                 prefixIcon: Icon(Icons.person_outline),
               ),
-              validator: (v) => (v == null || v.isEmpty) ? 'Enter username' : null,
+              validator: (v) =>
+                  (v == null || v.isEmpty) ? 'Enter username' : null,
               textInputAction: TextInputAction.next,
             ),
             const SizedBox(height: 16),
@@ -236,11 +332,14 @@ class _LoginScreenState extends State<LoginScreen>
                 labelText: 'Password',
                 prefixIcon: const Icon(Icons.lock_outline),
                 suffixIcon: IconButton(
-                  icon: Icon(_staffObscure ? Icons.visibility_off : Icons.visibility),
-                  onPressed: () => setState(() => _staffObscure = !_staffObscure),
+                  icon: Icon(
+                      _staffObscure ? Icons.visibility_off : Icons.visibility),
+                  onPressed: () =>
+                      setState(() => _staffObscure = !_staffObscure),
                 ),
               ),
-              validator: (v) => (v == null || v.isEmpty) ? 'Enter password' : null,
+              validator: (v) =>
+                  (v == null || v.isEmpty) ? 'Enter password' : null,
               textInputAction: TextInputAction.done,
               onFieldSubmitted: (_) => _staffLogin(),
             ),
@@ -307,7 +406,8 @@ class _LoginScreenState extends State<LoginScreen>
             return ActionChip(
               label: Text(d.$3),
               backgroundColor: d.$4.withAlpha(26),
-              labelStyle: TextStyle(color: d.$4, fontWeight: FontWeight.w600, fontSize: 12),
+              labelStyle: TextStyle(
+                  color: d.$4, fontWeight: FontWeight.w600, fontSize: 12),
               side: BorderSide(color: d.$4.withAlpha(77)),
               onPressed: () => _fillDemo(d.$1, d.$2),
             );
@@ -373,7 +473,8 @@ class _LoginScreenState extends State<LoginScreen>
                 foregroundColor: _primaryBlue,
                 side: const BorderSide(color: _primaryBlue),
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
               ),
               child: _publicLoading && !_otpSent
                   ? const SizedBox(
@@ -423,7 +524,8 @@ class _LoginScreenState extends State<LoginScreen>
                             color: Colors.white,
                           ),
                         )
-                      : const Text('Verify & Login', style: TextStyle(fontSize: 16)),
+                      : const Text('Verify & Login',
+                          style: TextStyle(fontSize: 16)),
                 ),
               ),
             ],
@@ -466,7 +568,8 @@ class _LoginScreenState extends State<LoginScreen>
           const Icon(Icons.error_outline, color: Color(0xFF991B1B), size: 18),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(msg, style: const TextStyle(color: Color(0xFF991B1B), fontSize: 13)),
+            child: Text(msg,
+                style: const TextStyle(color: Color(0xFF991B1B), fontSize: 13)),
           ),
         ],
       ),

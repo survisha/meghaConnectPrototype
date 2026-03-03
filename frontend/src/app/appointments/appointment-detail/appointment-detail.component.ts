@@ -4,7 +4,6 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MockDataService } from '../../services/mock-data.service';
 import { Appointment } from '../../models';
-import { Button } from 'primeng/button';
 import { Tag } from 'primeng/tag';
 
 import { Timeline } from 'primeng/timeline';
@@ -16,7 +15,7 @@ import { Divider } from 'primeng/divider';
 @Component({
   selector: 'app-appointment-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, Button, Tag,  Timeline, Steps, Dialog, Textarea, Divider],
+  imports: [CommonModule, RouterLink, FormsModule, Tag,  Timeline, Steps, Dialog, Textarea, Divider],
   templateUrl: './appointment-detail.component.html',
   styleUrls: ['./appointment-detail.component.scss'],
 })

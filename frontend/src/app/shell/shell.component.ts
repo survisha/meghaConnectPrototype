@@ -3,9 +3,6 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterOutlet } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 import { UserRole } from '../models';
-import { Button } from 'primeng/button';
-import { Badge, BadgeDirective } from 'primeng/badge';
-import { Tag } from 'primeng/tag';
 import { Toast } from 'primeng/toast';
 import { ConfirmDialog } from 'primeng/confirmdialog';
 import { MessageService, ConfirmationService } from 'primeng/api';
@@ -15,7 +12,7 @@ interface MenuItem { label: string; icon: string; route?: string; children?: Men
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterOutlet, Button, Badge, BadgeDirective, Tag, Toast, ConfirmDialog],
+  imports: [CommonModule, RouterLink, RouterOutlet, Toast, ConfirmDialog],
   providers: [MessageService, ConfirmationService],
   templateUrl: './shell.component.html',
   styleUrls: ['./shell.component.scss'],

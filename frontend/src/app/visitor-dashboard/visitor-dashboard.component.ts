@@ -3,10 +3,8 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 import { MockDataService } from '../services/mock-data.service';
-import { Button } from 'primeng/button';
 import { Tag } from 'primeng/tag';
 import { Timeline } from 'primeng/timeline';
-import { Divider } from 'primeng/divider';
 
 interface VisitorCard { label: string; value: string | number; icon: string; color: string; bg: string; }
 interface ListEntry { id: string; title: string; status: string; date: string; extra?: string; }
@@ -14,7 +12,7 @@ interface ListEntry { id: string; title: string; status: string; date: string; e
 @Component({
   selector: 'app-visitor-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, Button, Tag, Timeline, Divider],
+  imports: [CommonModule, RouterLink, Tag, Timeline],
   templateUrl: './visitor-dashboard.component.html',
   styleUrls: ['./visitor-dashboard.component.scss'],
 })

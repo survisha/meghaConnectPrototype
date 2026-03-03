@@ -2,21 +2,17 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { Button } from 'primeng/button';
 import { InputText } from 'primeng/inputtext';
 import { Select } from 'primeng/select';
 import { Textarea } from 'primeng/textarea';
 import { Steps } from 'primeng/steps';
 import { FileUpload } from 'primeng/fileupload';
-import { Checkbox } from 'primeng/checkbox';
 import { RadioButton } from 'primeng/radiobutton';
-import { Divider } from 'primeng/divider';
-import { Message } from 'primeng/message';
 
 @Component({
   selector: 'app-appointment-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, Button, InputText, Select, Textarea, Steps, FileUpload, Checkbox, RadioButton, Divider, Message],
+  imports: [CommonModule, FormsModule, RouterLink, InputText, Select, Textarea, Steps, FileUpload, RadioButton],
   templateUrl: './appointment-form.component.html',
   styleUrls: ['./appointment-form.component.scss'],
 })

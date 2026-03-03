@@ -3,20 +3,15 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MockDataService } from '../services/mock-data.service';
 import { ScheduleEvent, EventType } from '../models';
-import { Button } from 'primeng/button';
 import { Dialog } from 'primeng/dialog';
-import { Tag } from 'primeng/tag';
 import { Select } from 'primeng/select';
 import { InputText } from 'primeng/inputtext';
 import { Textarea } from 'primeng/textarea';
-import { DatePicker } from 'primeng/datepicker';
-import { Tooltip } from 'primeng/tooltip';
-import { Divider } from 'primeng/divider';
 
 @Component({
   selector: 'app-scheduling',
   standalone: true,
-  imports: [CommonModule, FormsModule, Button, Dialog, Tag, Select, InputText, Textarea, DatePicker, Tooltip, Divider],
+  imports: [CommonModule, FormsModule, Dialog, Select, InputText, Textarea],
   templateUrl: './scheduling.component.html',
   styleUrls: ['./scheduling.component.scss'],
 })

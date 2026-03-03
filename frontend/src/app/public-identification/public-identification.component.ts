@@ -3,18 +3,16 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MockDataService } from '../services/mock-data.service';
 import { Person } from '../models';
-import { Button } from 'primeng/button';
 import { InputText } from 'primeng/inputtext';
 import { Select } from 'primeng/select';
 import { Tag } from 'primeng/tag';
 import { Divider } from 'primeng/divider';
-import { Tabs, TabList, Tab, TabPanel, TabPanels } from 'primeng/tabs';
 import { TableModule } from 'primeng/table';
 
 @Component({
   selector: 'app-public-identification',
   standalone: true,
-  imports: [CommonModule, FormsModule, Button, InputText, Select, Tag, Divider, Tabs, TabList, Tab, TabPanel, TabPanels, TableModule],
+  imports: [CommonModule, FormsModule, InputText, Select, Tag, Divider, TableModule],
   templateUrl: './public-identification.component.html',
   styleUrls: ['./public-identification.component.scss'],
 })

@@ -1,15 +1,13 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { Button } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
-import { Divider } from 'primeng/divider';
 
 @Component({
   selector: 'app-pending-followups',
   standalone: true,
-  imports: [CommonModule, RouterLink, Button, TableModule, Tag, Divider],
+  imports: [CommonModule, RouterLink, TableModule, Tag],
   templateUrl: './pending-followups.component.html',
   styleUrls: ['./pending-followups.component.scss'],
 })

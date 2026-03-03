@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MockDataService } from '../../services/mock-data.service';
 import { AuditEntry } from '../../models';
-import { Button } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
 import { InputText } from 'primeng/inputtext';
@@ -12,7 +11,7 @@ import { FormsModule } from '@angular/forms';
 @Component({
   selector: 'app-audit-trail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, Button, TableModule, Tag, InputText],
+  imports: [CommonModule, FormsModule, RouterLink, TableModule, Tag, InputText],
   templateUrl: './audit-trail.component.html',
   styleUrls: ['./audit-trail.component.scss'],
 })

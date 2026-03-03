@@ -1,8 +1,8 @@
 import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { AuthService } from '../../services/auth.service';
-import { UserRole } from '../../models';
+import { AuthService } from '../services/auth.service';
+import { UserRole } from '../models';
 import { Button } from 'primeng/button';
 import { InputText } from 'primeng/inputtext';
 import { Password } from 'primeng/password';
@@ -10,7 +10,6 @@ import { Select } from 'primeng/select';
 import { Tag } from 'primeng/tag';
 import { TableModule } from 'primeng/table';
 import { Dialog } from 'primeng/dialog';
-import { Message } from 'primeng/message';
 
 interface ManagedUser {
   username: string;
@@ -22,7 +21,7 @@ interface ManagedUser {
 @Component({
   selector: 'app-user-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, Button, InputText, Password, Select, Tag, TableModule, Dialog, Message],
+  imports: [CommonModule, FormsModule, Button, InputText, Password, Select, Tag, TableModule, Dialog],
   templateUrl: './user-management.component.html',
   styleUrls: ['./user-management.component.scss'],
 })
@@ -47,8 +46,8 @@ export class UserManagementComponent {
 
   constructor(public auth: AuthService) {
     this.users = this.auth.DEMO_USERS
-      .filter(u => u.role !== 'PUBLIC')
-      .map(u => ({ username: u.username, fullName: u.fullName, role: u.role, password: u.password }));
+      .filter((u: any) => u.role !== 'PUBLIC')
+      .map((u: any) => ({ username: u.username, fullName: u.fullName, role: u.role, password: u.password }));
   }
 
   roleBadge(role: UserRole): string {
@@ -93,7 +92,7 @@ export class UserManagementComponent {
     if (this.isEdit) {
       const idx = this.users.findIndex(u => u.username === this.editTarget);
       if (idx !== -1) this.users[idx] = { ...this.form };
-      const demoIdx = this.auth.DEMO_USERS.findIndex(u => u.username === this.editTarget);
+      const demoIdx = this.auth.DEMO_USERS.findIndex((u: any) => u.username === this.editTarget);
       if (demoIdx !== -1) {
         this.auth.DEMO_USERS[demoIdx].password = this.form.password;
         this.auth.DEMO_USERS[demoIdx].fullName = this.form.fullName;
@@ -111,7 +110,7 @@ export class UserManagementComponent {
   deleteUser(u: ManagedUser) {
     if (u.username === this.auth.user()?.username) { this.successMsg = ''; this.errorMsg = 'Cannot delete yourself.'; setTimeout(() => this.errorMsg = '', 3000); return; }
     this.users = this.users.filter(x => x.username !== u.username);
-    const idx = this.auth.DEMO_USERS.findIndex(d => d.username === u.username);
+    const idx = this.auth.DEMO_USERS.findIndex((d: any) => d.username === u.username);
     if (idx !== -1) this.auth.DEMO_USERS.splice(idx, 1);
     this.successMsg = 'User deleted.';
     setTimeout(() => this.successMsg = '', 3000);

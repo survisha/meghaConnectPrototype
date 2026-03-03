@@ -110,5 +110,462 @@ body {
   transition: box-shadow 0.15s;
 }
 .cal-slot:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
-.cal-slot .event-title { font-weight: 600; font-size: 0.85rem; }
-.cal-slot .event-time  { font-size: 0.75rem; color: #6b7280; }
+.cal-slot .event-title { font-weight: 600; font-size: 0.85rem; color: #1f2937; }
+.cal-slot .event-time  { font-size: 0.75rem; color: #374151; }
+
+/* Table Styling - Override PrimeNG defaults */
+::ng-deep .p-datatable {
+  .p-datatable-thead > tr > th {
+    background: linear-gradient(135deg, #1a237e, #3949ab) !important;
+    color: white !important;
+    font-weight: 600;
+    padding: 0.75rem 1rem;
+    border-bottom: 2px solid #1a237e;
+  }
+  
+  .p-datatable-tbody > tr {
+    background: white !important;
+    border-bottom: 1px solid #e5e7eb;
+    
+    &:hover {
+      background: #f8fafc !important;
+    }
+    
+    td {
+      padding: 0.75rem 1rem;
+      color: #1f2937;
+    }
+  }
+  
+  /* Alternating row colors - light stripe instead of dark */
+  .p-datatable-tbody > tr:nth-child(even) {
+    background: #f9fafb !important;
+    
+    &:hover {
+      background: #f1f5f9 !important;
+    }
+  }
+}
+
+/* Input Field Styling - Global overrides for all PrimeNG inputs */
+::ng-deep {
+  .p-inputtext {
+    background: white !important;
+    color: #1f2937 !important;
+    border: 1px solid #d1d5db !important;
+    
+    &::placeholder {
+      color: #9ca3af !important;
+    }
+    
+    &:enabled:hover {
+      border-color: #9ca3af !important;
+    }
+    
+    &:enabled:focus {
+      border-color: #1a237e !important;
+      box-shadow: 0 0 0 0.2rem rgba(26, 35, 126, 0.15) !important;
+      background: white !important;
+    }
+  }
+  
+  .p-password input.p-inputtext {
+    background: white !important;
+    color: #1f2937 !important;
+  }
+  
+  .p-inputnumber input.p-inputtext {
+    background: white !important;
+    color: #1f2937 !important;
+  }
+  
+  .p-dropdown {
+    background: white !important;
+    border: 1px solid #d1d5db !important;
+    
+    .p-dropdown-label {
+      color: #1f2937 !important;
+    }
+    
+    &:not(.p-disabled):hover {
+      border-color: #9ca3af !important;
+    }
+  }
+  
+  .p-multiselect {
+    background: white !important;
+    border: 1px solid #d1d5db !important;
+    
+    .p-multiselect-label {
+      color: #1f2937 !important;
+    }
+  }
+  
+  .p-calendar input.p-inputtext {
+    background: white !important;
+    color: #1f2937 !important;
+  }
+  
+  textarea.p-inputtextarea {
+    background: white !important;
+    color: #1f2937 !important;
+    border: 1px solid #d1d5db !important;
+    
+    &:enabled:hover {
+      border-color: #9ca3af !important;
+    }
+    
+    &:enabled:focus {
+      border-color: #1a237e !important;
+      box-shadow: 0 0 0 0.2rem rgba(26, 35, 126, 0.15) !important;
+    }
+  }
+  
+  // Dialog styling
+  .p-dialog {
+    .p-dialog-header {
+      background: white !important;
+      color: #1f2937 !important;
+      border-bottom: 1px solid #e5e7eb !important;
+    }
+    
+    .p-dialog-content {
+      background: white !important;
+      color: #1f2937 !important;
+    }
+    
+    .p-dialog-footer {
+      background: white !important;
+      border-top: 1px solid #e5e7eb !important;
+    }
+  }
+  
+  // Select/Dropdown panel styling
+  .p-select-panel,
+  .p-dropdown-panel {
+    background: white !important;
+    border: 1px solid #d1d5db !important;
+    
+    .p-select-items,
+    .p-dropdown-items {
+      background: white !important;
+      
+      .p-select-item,
+      .p-dropdown-item {
+        background: white !important;
+        color: #1f2937 !important;
+        
+        &:hover,
+        &.p-focus {
+          background: #f3f4f6 !important;
+          color: #1f2937 !important;
+        }
+        
+        &.p-highlight {
+          background: #e0e7ff !important;
+          color: #1a237e !important;
+        }
+      }
+    }
+  }
+  
+  // Multiselect panel styling
+  .p-multiselect-panel {
+    background: white !important;
+    border: 1px solid #d1d5db !important;
+    
+    .p-multiselect-header {
+      background: #f9fafb !important;
+      border-bottom: 1px solid #e5e7eb !important;
+      
+      .p-multiselect-filter-container input {
+        background: white !important;
+        color: #1f2937 !important;
+      }
+    }
+    
+    .p-multiselect-items {
+      background: white !important;
+      
+      .p-multiselect-item {
+        background: white !important;
+        color: #1f2937 !important;
+        
+        &:hover,
+        &.p-focus {
+          background: #f3f4f6 !important;
+          color: #1f2937 !important;
+        }
+        
+        &.p-highlight {
+          background: #e0e7ff !important;
+          color: #1a237e !important;
+        }
+      }
+    }
+  }
+  
+  // Calendar panel styling
+  .p-datepicker {
+    background: white !important;
+    border: 1px solid #d1d5db !important;
+    
+    .p-datepicker-header {
+      background: #f9fafb !important;
+      color: #1f2937 !important;
+    }
+    
+    table {
+      td {
+        span {
+          color: #1f2937 !important;
+          
+          &:hover {
+            background: #f3f4f6 !important;
+          }
+        }
+        
+        &.p-datepicker-today span {
+          background: #e0e7ff !important;
+          color: #1a237e !important;
+        }
+      }
+    }
+  }
+  
+  // Panel/Accordion styling
+  .p-panel,
+  .p-accordion {
+    .p-panel-header,
+    .p-accordion-header {
+      background: white !important;
+      color: #1f2937 !important;
+      border: 1px solid #e5e7eb !important;
+    }
+    
+    .p-panel-content,
+    .p-accordion-content {
+      background: white !important;
+      color: #1f2937 !important;
+      border: 1px solid #e5e7eb !important;
+    }
+  }
+  
+  // Overlay panel styling
+  .p-overlaypanel {
+    background: white !important;
+    color: #1f2937 !important;
+    border: 1px solid #d1d5db !important;
+    
+    .p-overlaypanel-content {
+      background: white !important;
+      color: #1f2937 !important;
+    }
+  }
+  
+  // Menu styling
+  .p-menu,
+  .p-contextmenu,
+  .p-tieredmenu {
+    background: white !important;
+    border: 1px solid #d1d5db !important;
+    
+    .p-menuitem-link {
+      color: #1f2937 !important;
+      
+      &:hover {
+        background: #f3f4f6 !important;
+      }
+    }
+  }
+  
+  // Toast/Message styling
+  .p-toast {
+    .p-toast-message {
+      background: white !important;
+      color: #1f2937 !important;
+      border: 1px solid #d1d5db !important;
+    }
+  }
+  
+  // Paginator styling
+  .p-paginator {
+    background: white !important;
+    color: #1f2937 !important;
+    border: 1px solid #e5e7eb !important;
+    
+    .p-paginator-pages .p-paginator-page {
+      color: #1f2937 !important;
+      
+      &:hover {
+        background: #f3f4f6 !important;
+      }
+      
+      &.p-highlight {
+        background: #e0e7ff !important;
+        color: #1a237e !important;
+      }
+    }
+    
+    .p-dropdown {
+      background: white !important;
+      border: 1px solid #d1d5db !important;
+      
+      .p-dropdown-label {
+        color: #1f2937 !important;
+      }
+    }
+  }
+  
+  // Checkbox styling
+  .p-checkbox {
+    .p-checkbox-box {
+      background: white !important;
+      border: 1px solid #d1d5db !important;
+      
+      &.p-highlight {
+        background: #1a237e !important;
+        border-color: #1a237e !important;
+      }
+      
+      .p-checkbox-icon {
+        color: white !important;
+      }
+    }
+  }
+  
+  // RadioButton styling
+  .p-radiobutton {
+    .p-radiobutton-box {
+      background: white !important;
+      border: 1px solid #d1d5db !important;
+      
+      &.p-highlight {
+        background: white !important;
+        border-color: #1a237e !important;
+        
+        .p-radiobutton-icon {
+          background: #1a237e !important;
+        }
+      }
+    }
+  }
+  
+  // Autocomplete panel styling
+  .p-autocomplete-panel {
+    background: white !important;
+    border: 1px solid #d1d5db !important;
+    
+    .p-autocomplete-items {
+      background: white !important;
+      
+      .p-autocomplete-item {
+        background: white !important;
+        color: #1f2937 !important;
+        
+        &:hover,
+        &.p-focus {
+          background: #f3f4f6 !important;
+        }
+        
+        &.p-highlight {
+          background: #e0e7ff !important;
+          color: #1a237e !important;
+        }
+      }
+    }
+  }
+  
+  // Chips styling
+  .p-chips {
+    .p-chips-multiple-container {
+      background: white !important;
+      border: 1px solid #d1d5db !important;
+      
+      .p-chips-token {
+        background: #e0e7ff !important;
+        color: #1a237e !important;
+      }
+      
+      input {
+        color: #1f2937 !important;
+      }
+    }
+  }
+  
+  // Card styling
+  .p-card {
+    background: white !important;
+    color: #1f2937 !important;
+    border: 1px solid #e5e7eb !important;
+    
+    .p-card-header {
+      background: white !important;
+      color: #1f2937 !important;
+    }
+    
+    .p-card-body {
+      background: white !important;
+      color: #1f2937 !important;
+    }
+    
+    .p-card-footer {
+      background: white !important;
+      color: #1f2937 !important;
+    }
+  }
+  
+  // Fieldset styling
+  .p-fieldset {
+    background: white !important;
+    border: 1px solid #e5e7eb !important;
+    
+    .p-fieldset-legend {
+      background: white !important;
+      color: #1f2937 !important;
+      border: 1px solid #e5e7eb !important;
+    }
+    
+    .p-fieldset-content {
+      background: white !important;
+      color: #1f2937 !important;
+    }
+  }
+  
+  // Sidebar styling
+  .p-sidebar {
+    background: white !important;
+    color: #1f2937 !important;
+    
+    .p-sidebar-header {
+      background: white !important;
+      color: #1f2937 !important;
+    }
+    
+    .p-sidebar-content {
+      background: white !important;
+      color: #1f2937 !important;
+    }
+  }
+  
+  // Toolbar styling
+  .p-toolbar {
+    background: white !important;
+    border: 1px solid #e5e7eb !important;
+    color: #1f2937 !important;
+  }
+  
+  // Confirm dialog styling
+  .p-confirm-dialog {
+    .p-dialog-header {
+      background: white !important;
+      color: #1f2937 !important;
+    }
+    
+    .p-dialog-content {
+      background: white !important;
+      color: #1f2937 !important;
+    }
+  }
+}
+

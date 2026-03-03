@@ -5,16 +5,13 @@ import { MockDataService } from '../services/mock-data.service';
 import { AuthService } from '../services/auth.service';
 import { Button } from 'primeng/button';
 import { UIChart } from 'primeng/chart';
-import { Tag } from 'primeng/tag';
-import { Badge, BadgeDirective } from 'primeng/badge';
-import { Timeline } from 'primeng/timeline';
 
 interface QuickAction { label: string; icon: string; route: string; severity: string; }
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, Button, UIChart, Tag, Badge, BadgeDirective, Timeline],
+  imports: [CommonModule, RouterLink, Button, UIChart],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss'],
 })

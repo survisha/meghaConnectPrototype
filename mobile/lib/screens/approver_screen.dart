@@ -1,0 +1,703 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../models/user.dart';
+import '../services/auth_service.dart';
+
+class _ApproverAppointment {
+  final String id;
+  final String applicantName;
+  final String district;
+  final String agendaType;
+  final String agendaBrief;
+  final String eventType;
+  final String location;
+  String status;
+  String? approverRemarks;
+  final String? shortNotes;
+
+  _ApproverAppointment({
+    required this.id,
+    required this.applicantName,
+    required this.district,
+    required this.agendaType,
+    required this.agendaBrief,
+    required this.eventType,
+    required this.location,
+    required this.status,
+    this.approverRemarks,
+    this.shortNotes,
+  });
+}
+
+final _mockApproverAppointments = <_ApproverAppointment>[
+  _ApproverAppointment(
+    id: 'MC-2024-00004',
+    applicantName: 'Deibok Lyngdoh',
+    district: 'Ri Bhoi',
+    agendaType: 'Trade & Commerce',
+    agendaBrief: 'Request for transport permit for new pickup van under CM Elevate scheme.',
+    eventType: 'A4',
+    location: 'Shillong',
+    status: 'APPROVER_REVIEW',
+    shortNotes:
+        'Young entrepreneur requesting transport permit under CM Elevate. No prior receipts. Walk-in. Docs submitted.',
+  ),
+  _ApproverAppointment(
+    id: 'MC-2024-00002',
+    applicantName: 'Sunita Sangma',
+    district: 'East Khasi Hills',
+    agendaType: 'Public Grievance',
+    agendaBrief: 'Request for school infrastructure improvement – repair of classrooms and addition of computer lab.',
+    eventType: 'A4',
+    location: 'Shillong',
+    status: 'APPROVER_REVIEW',
+    shortNotes:
+        'Teacher seeking infra support for Govt school. No prior scheme receipts. MLA endorsement pending.',
+  ),
+  _ApproverAppointment(
+    id: 'MC-2024-00001',
+    applicantName: 'Ramsing Marak',
+    district: 'West Garo Hills',
+    agendaType: 'Scheme availment (CM)',
+    agendaBrief: 'CMSDF application for community hall construction at Dalu village.',
+    eventType: 'A4',
+    location: 'Tura',
+    status: 'HCM_PENDING',
+    approverRemarks: 'Verified. Forwarded to HCM.',
+    shortNotes:
+        'Ramsing Marak (West Garo Hills) – CMSDF community hall. MLA approved. 2 prior meetings.',
+  ),
+];
+
+class ApproverWorkflowScreen extends StatefulWidget {
+  const ApproverWorkflowScreen({super.key});
+
+  @override
+  State<ApproverWorkflowScreen> createState() => _ApproverWorkflowScreenState();
+}
+
+class _ApproverWorkflowScreenState extends State<ApproverWorkflowScreen> {
+  static const _primaryBlue = Color(0xFF1A237E);
+
+  final List<_ApproverAppointment> _appointments =
+      List.from(_mockApproverAppointments);
+
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'APPROVER_REVIEW':
+        return const Color(0xFFF57F17);
+      case 'HCM_PENDING':
+        return const Color(0xFF1565C0);
+      case 'HCM_ACCEPTED':
+        return const Color(0xFF2E7D32);
+      case 'HCM_REJECTED':
+        return const Color(0xFFC62828);
+      default:
+        return Colors.grey;
+    }
+  }
+
+  void _openDetailSheet(_ApproverAppointment appt) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => _ApproverDetailSheet(
+        appointment: appt,
+        onApprove: (remarks) => _handleAction(appt, 'APPROVE', remarks),
+        onReject: (remarks) => _handleAction(appt, 'REJECT', remarks),
+        onReschedule: (date) => _handleReschedule(appt, date),
+      ),
+    );
+  }
+
+  void _handleAction(
+      _ApproverAppointment appt, String action, String remarks) {
+    setState(() {
+      appt.approverRemarks = remarks;
+      appt.status = action == 'APPROVE' ? 'HCM_PENDING' : 'HCM_REJECTED';
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          action == 'APPROVE'
+              ? '${appt.id} approved and forwarded to HCM.'
+              : '${appt.id} rejected.',
+        ),
+        backgroundColor: action == 'APPROVE'
+            ? const Color(0xFF2E7D32)
+            : const Color(0xFFC62828),
+      ),
+    );
+  }
+
+  void _handleReschedule(_ApproverAppointment appt, String newDate) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${appt.id} rescheduled to $newDate.'),
+        backgroundColor: const Color(0xFF0288D1),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final role = context.watch<AuthService>().user!.role;
+    final pendingCount =
+        _appointments.where((a) => a.status == 'APPROVER_REVIEW').length;
+
+    return Column(
+      children: [
+        _buildHeader(role, pendingCount),
+        Expanded(
+          child: _appointments.isEmpty
+              ? _buildEmpty()
+              : ListView.builder(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: _appointments.length,
+                  itemBuilder: (_, i) =>
+                      _buildAppointmentCard(_appointments[i]),
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHeader(UserRole role, int pendingCount) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: const BoxDecoration(color: _primaryBlue),
+      child: Row(
+        children: [
+          const Icon(Icons.how_to_reg_outlined,
+              color: Colors.white, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Approver Workflow',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
+                Text(
+                  role == UserRole.APPROVER_JT_SECY
+                      ? 'Jt. Secretary Review'
+                      : 'HCM Final View',
+                  style: TextStyle(
+                    color: Colors.white.withAlpha(204),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha(51),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              '$pendingCount pending',
+              style: const TextStyle(color: Colors.white, fontSize: 12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAppointmentCard(_ApproverAppointment appt) {
+    final statusColor = _statusColor(appt.status);
+    final isPending = appt.status == 'APPROVER_REVIEW';
+    return GestureDetector(
+      onTap: () => _openDetailSheet(appt),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border(
+            left: BorderSide(
+              color: statusColor,
+              width: 4,
+            ),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(13),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  _eventTypeBadge(appt.eventType),
+                  const SizedBox(width: 8),
+                  Text(
+                    appt.id,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: Color(0xFF1E40AF),
+                    ),
+                  ),
+                  const Spacer(),
+                  _statusBadge(appt.status, statusColor),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                appt.applicantName,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                ),
+              ),
+              Text(
+                '${appt.district} · ${appt.agendaType}',
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                appt.agendaBrief,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.grey[700],
+                  fontSize: 13,
+                ),
+              ),
+              if (appt.shortNotes != null) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF6FF),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: const Color(0xFFBFDBFE)),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.auto_awesome,
+                          size: 14, color: Color(0xFF3B82F6)),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          appt.shortNotes!,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF1E40AF),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              if (isPending) ...[
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.check_circle_outline,
+                            size: 16),
+                        label: const Text('Approve'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF2E7D32),
+                          side: const BorderSide(
+                              color: Color(0xFF2E7D32)),
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                        ),
+                        onPressed: () => _openDetailSheet(appt),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.cancel_outlined, size: 16),
+                        label: const Text('Reject'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFFC62828),
+                          side: const BorderSide(
+                              color: Color(0xFFC62828)),
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                        ),
+                        onPressed: () => _openDetailSheet(appt),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _eventTypeBadge(String type) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8EAF6),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        type,
+        style: const TextStyle(
+          color: Color(0xFF3730A3),
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Widget _statusBadge(String status, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withAlpha(26),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withAlpha(77)),
+      ),
+      child: Text(
+        status.replaceAll('_', ' '),
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmpty() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.inbox_outlined,
+              size: 64, color: Color(0xFFBFDBFE)),
+          const SizedBox(height: 16),
+          const Text(
+            'No Pending Appointments',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1A237E),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'All appointments have been reviewed.',
+            style: TextStyle(color: Colors.grey[600]),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Detail / Action Bottom Sheet ─────────────────────────────────────────────
+
+class _ApproverDetailSheet extends StatefulWidget {
+  final _ApproverAppointment appointment;
+  final void Function(String remarks) onApprove;
+  final void Function(String remarks) onReject;
+  final void Function(String date) onReschedule;
+
+  const _ApproverDetailSheet({
+    required this.appointment,
+    required this.onApprove,
+    required this.onReject,
+    required this.onReschedule,
+  });
+
+  @override
+  State<_ApproverDetailSheet> createState() => _ApproverDetailSheetState();
+}
+
+class _ApproverDetailSheetState extends State<_ApproverDetailSheet> {
+  final _remarksCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _remarksCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final appt = widget.appointment;
+    final isPending = appt.status == 'APPROVER_REVIEW';
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.75,
+      minChildSize: 0.4,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (_, controller) => ListView(
+        controller: controller,
+        padding: const EdgeInsets.all(20),
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8EAF6),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  appt.eventType,
+                  style: const TextStyle(
+                    color: Color(0xFF3730A3),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                appt.id,
+                style: const TextStyle(
+                  color: Color(0xFF1E40AF),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            appt.applicantName,
+            style: const TextStyle(
+                fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${appt.district} · ${appt.agendaType} · ${appt.location}',
+            style: TextStyle(color: Colors.grey[600], fontSize: 13),
+          ),
+          const SizedBox(height: 16),
+          const Divider(),
+          const SizedBox(height: 8),
+          Text(
+            appt.agendaBrief,
+            style: TextStyle(color: Colors.grey[700], fontSize: 14),
+          ),
+          if (appt.shortNotes != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF6FF),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFBFDBFE)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.auto_awesome,
+                      size: 16, color: Color(0xFF3B82F6)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'AI Summary',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1E40AF),
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          appt.shortNotes!,
+                          style: const TextStyle(
+                            color: Color(0xFF1E40AF),
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          if (appt.approverRemarks != null && appt.approverRemarks!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0FDF4),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFF86EFAC)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.comment_outlined,
+                      size: 16, color: Color(0xFF16A34A)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Approver Remarks',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF065F46),
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          appt.approverRemarks!,
+                          style: const TextStyle(
+                            color: Color(0xFF065F46),
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          if (isPending) ...[
+            const SizedBox(height: 20),
+            const Divider(),
+            const SizedBox(height: 12),
+            const Text(
+              'Add Remarks',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _remarksCtrl,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                hintText: 'Enter your remarks before approving or rejecting...',
+                border: OutlineInputBorder(),
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.check_circle_outline),
+                    label: const Text('Approve & Push to HCM'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2E7D32),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      widget.onApprove(_remarksCtrl.text);
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.cancel_outlined),
+                    label: const Text('Reject'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFFC62828),
+                      side: const BorderSide(color: Color(0xFFC62828)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      widget.onReject(_remarksCtrl.text);
+                    },
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.calendar_today_outlined),
+                    label: const Text('Reschedule'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF1A237E),
+                      side: const BorderSide(color: Color(0xFF1A237E)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: DateTime.now().add(const Duration(days: 1)),
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                      );
+                      if (picked != null) {
+                        final formatted =
+                            '${picked.day}/${picked.month}/${picked.year}';
+                        Navigator.pop(context);
+                        widget.onReschedule(formatted);
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+}

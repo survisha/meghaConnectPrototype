@@ -51,7 +51,13 @@ public class Appointment extends BaseEntity {
     private String cmoRemarks;
 
     @Column(columnDefinition = "TEXT")
+    private String approverRemarks;
+
+    @Column(columnDefinition = "TEXT")
     private String hcmRemarks;
+
+    @Column(columnDefinition = "TEXT")
+    private String shortNotes;
 
     private Boolean isWalkIn = false;
 

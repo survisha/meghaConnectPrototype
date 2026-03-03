@@ -12,6 +12,7 @@ class _Event {
   final String? description;
   final int? travelMinutes;
   final bool isConflict;
+  final String? shortNotes;
 
   const _Event({
     required this.title,
@@ -22,6 +23,7 @@ class _Event {
     this.description,
     this.travelMinutes,
     this.isConflict = false,
+    this.shortNotes,
   });
 }
 
@@ -42,6 +44,7 @@ const _mockEvents = <_Event>[
     endTime: '11:30',
     description: 'CMSDF community hall request from Ampati.',
     travelMinutes: 15,
+    shortNotes: 'Ramsing Marak (West Garo Hills) – CMSDF community hall. MLA approved. 2 prior meetings.',
   ),
   _Event(
     title: 'Public Durbar – West Garo Hills',
@@ -51,6 +54,7 @@ const _mockEvents = <_Event>[
     endTime: '14:00',
     description: 'Batch public contact event (20 applicants pre-approved).',
     travelMinutes: 20,
+    shortNotes: 'Batch public contact session – 20 applicants from West Garo Hills. Mixed agenda: schemes, grievances, infrastructure.',
   ),
   _Event(
     title: 'District Development Programme',
@@ -431,6 +435,48 @@ class _CalendarScreenState extends State<CalendarScreen> {
               Text(
                 event.description!,
                 style: TextStyle(color: Colors.grey[700], fontSize: 14),
+              ),
+            ],
+            if (event.shortNotes != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFBFDBFE)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.auto_awesome,
+                        size: 16, color: Color(0xFF3B82F6)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'AI Summary',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1E40AF),
+                              fontSize: 13,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            event.shortNotes!,
+                            style: const TextStyle(
+                              color: Color(0xFF1E40AF),
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
             const SizedBox(height: 20),

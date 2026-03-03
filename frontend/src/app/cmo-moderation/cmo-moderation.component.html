@@ -1,0 +1,107 @@
+<p-toast></p-toast>
+
+<div class="page-title-row">
+  <h2 class="page-title"><i class="pi pi-filter" style="margin-right:0.5rem"></i>CMO Moderation – Officer Review</h2>
+  <span class="badge-count">{{ appointments.length }} to review</span>
+</div>
+
+<div class="section-card">
+  <div class="section-card-header">
+    <i class="pi pi-inbox"></i> Incoming Appointments
+    <span style="margin-left:auto;font-size:0.8rem;color:#6b7280">Drag rows to reorder &bull; Modify category &amp; location before forwarding</span>
+  </div>
+
+  <p-table [value]="appointments" [paginator]="true" [rows]="10"
+           styleClass="p-datatable-sm p-datatable-striped"
+           responsiveLayout="scroll">
+    <ng-template pTemplate="header">
+      <tr>
+        <th>App ID</th>
+        <th>Applicant</th>
+        <th>District</th>
+        <th>Agenda</th>
+        <th>Category</th>
+        <th>Location</th>
+        <th>MLA Approved</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </ng-template>
+    <ng-template pTemplate="body" let-appt>
+      <tr>
+        <td><a [routerLink]="['/appointments', appt.id]" class="app-id-link">{{ appt.applicationId }}</a></td>
+        <td>
+          <div style="font-weight:600">{{ appt.applicant.fullName }}</div>
+          <div style="font-size:0.78rem;color:#6b7280">{{ appt.applicant.designation }}</div>
+        </td>
+        <td>{{ appt.applicant.district }}</td>
+        <td>{{ appt.agendaType }}</td>
+        <td><span class="event-type-pill">{{ appt.eventType }}</span></td>
+        <td>{{ appt.requestedLocation }}</td>
+        <td>
+          <span [style.color]="appt.mlaMdcApproved ? '#16a34a' : '#dc2626'" style="font-weight:600">
+            {{ appt.mlaMdcApproved ? '✅ Yes' : '❌ No' }}
+          </span>
+        </td>
+        <td><p-tag [value]="appt.status.replace('_',' ')" [severity]="getSeverity(appt.status)"></p-tag></td>
+        <td>
+          <div class="action-btns">
+            <button pButton icon="pi pi-pencil" label="Modify"
+                    class="p-button-warning p-button-sm"
+                    (click)="openModify(appt)"></button>
+            <button pButton icon="pi pi-send" label="Forward"
+                    class="p-button-info p-button-sm"
+                    (click)="forwardToApprover(appt)"></button>
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+    <ng-template pTemplate="emptymessage">
+      <tr>
+        <td colspan="9" style="text-align:center;padding:2rem;color:#9ca3af">
+          <i class="pi pi-check-circle" style="font-size:2rem;color:#16a34a"></i>
+          <p>All appointments reviewed.</p>
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</div>
+
+<!-- Modify Dialog -->
+<p-dialog header="Modify Category &amp; Location"
+          [(visible)]="showModifyDialog"
+          [style]="{width:'500px'}"
+          [modal]="true">
+  <div style="padding:0.5rem 0">
+    <div *ngIf="selected" class="dialog-appt-summary">
+      <strong>{{ selected.applicationId }}</strong> – {{ selected.applicant.fullName }}
+      <div style="font-size:0.82rem;color:#6b7280;margin-top:4px">{{ selected.agendaBrief | slice:0:100 }}{{ selected.agendaBrief.length > 100 ? '…' : '' }}</div>
+    </div>
+
+    <div style="margin-top:1.25rem;display:grid;gap:1rem">
+      <div>
+        <label class="field-label">Appointment Category *</label>
+        <p-select [options]="eventTypeOptions" [(ngModel)]="modifyEventType"
+                  optionLabel="label" optionValue="value"
+                  [style]="{width:'100%'}"></p-select>
+      </div>
+      <div>
+        <label class="field-label">Location *</label>
+        <p-select [options]="locationOptions" [(ngModel)]="modifyLocation"
+                  optionLabel="label" optionValue="value"
+                  [style]="{width:'100%'}"></p-select>
+      </div>
+      <div>
+        <label class="field-label">CMO Remarks</label>
+        <textarea pTextarea [(ngModel)]="modifyRemarks" rows="3"
+                  style="width:100%"
+                  placeholder="Add verification notes or comments..."></textarea>
+      </div>
+    </div>
+  </div>
+  <ng-template pTemplate="footer">
+    <button pButton label="Cancel" class="p-button-text" (click)="showModifyDialog=false"></button>
+    <button pButton label="Save &amp; Forward to Approver" icon="pi pi-send"
+            class="p-button-success" (click)="saveModify()"></button>
+  </ng-template>
+</p-dialog>

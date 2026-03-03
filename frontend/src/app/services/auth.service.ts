@@ -24,6 +24,17 @@ export class AuthService {
   private _user = signal<AuthUser | null>(null);
   readonly user = this._user.asReadonly();
 
+  // Demo users for user management (matches backend seeded data)
+  DEMO_USERS = [
+    { username: 'hcm', password: 'hcm123', fullName: 'HCM User', role: 'HCM' as UserRole },
+    { username: 'admin', password: 'admin123', fullName: 'Admin User', role: 'ADMIN' as UserRole },
+    { username: 'saidul', password: 'osd123', fullName: 'Saidul OSD', role: 'SAIDUL_OSD' as UserRole },
+    { username: 'jtsecy', password: 'jts123', fullName: 'Joint Secretary', role: 'APPROVER_JT_SECY' as UserRole },
+    { username: 'cmo', password: 'cmo123', fullName: 'CMO Officer', role: 'CMO_OFFICER' as UserRole },
+    { username: 'deo1', password: 'deo123', fullName: 'Data Entry Operator', role: 'DATA_ENTRY_OPERATOR' as UserRole },
+    { username: 'public1', password: 'public123', fullName: 'Public User', role: 'PUBLIC' as UserRole },
+  ];
+
   constructor(private router: Router, private http: HttpClient) {
     const stored = sessionStorage.getItem('megha_user');
     if (stored) this._user.set(JSON.parse(stored));

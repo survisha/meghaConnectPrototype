@@ -17,6 +17,13 @@ backend/target/
 .vscode/
 *.swp
 
+# Eclipse
+.settings/
+.classpath
+.project
+.metadata/
+*.prefs
+
 # OS
 .DS_Store
 Thumbs.db

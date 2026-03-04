@@ -62,6 +62,13 @@ export class AuthService {
     this.router.navigate(['/login']);
   }
 
+  setVisitorSession(username: string, fullName: string, token: string) {
+    const auth: AuthUser = { username, fullName, role: 'PUBLIC' };
+    this._user.set(auth);
+    sessionStorage.setItem('megha_user', JSON.stringify(auth));
+    sessionStorage.setItem('megha_token', token);
+  }
+
   isLoggedIn() { return !!this._user(); }
   hasRole(...roles: UserRole[]) { const u = this._user(); return u ? roles.includes(u.role) : false; }
 }

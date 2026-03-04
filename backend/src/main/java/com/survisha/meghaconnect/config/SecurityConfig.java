@@ -45,6 +45,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/auth/**", "/actuator/health").permitAll()
                 .requestMatchers("/api/v1/appointments").permitAll()   // Public can submit
                 .requestMatchers("/api/v1/public/**").permitAll()       // Public registration
+                .requestMatchers("/api/v1/visitor/auth/**").permitAll() // Visitor OTP auth
                 .anyRequest().authenticated()
             )
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

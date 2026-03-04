@@ -24,6 +24,9 @@ public class Person extends BaseEntity {
     @Column(length = 20)
     private String phoneNumber;
 
+    @Column(length = 150)
+    private String email;
+
     @Column(length = 50)
     private String epicNumber;
 

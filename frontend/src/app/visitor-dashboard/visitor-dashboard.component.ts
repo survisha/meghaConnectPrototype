@@ -1,9 +1,18 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../services/auth.service';
 import { Tag } from 'primeng/tag';
-import { Timeline } from 'primeng/timeline';
+
+interface VisitorProfile {
+  fullName: string;
+  phoneNumber: string;
+  kycType: string;
+  kycVerified: boolean;
+  address: string;
+  district: string;
+}
 
 interface VisitorCard { label: string; value: string | number; icon: string; color: string; bg: string; }
 interface ListEntry { id: string; title: string; status: string; date: string; extra?: string; }
@@ -11,7 +20,7 @@ interface ListEntry { id: string; title: string; status: string; date: string; e
 @Component({
   selector: 'app-visitor-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, Tag, Timeline],
+  imports: [CommonModule, RouterLink, Tag],
   templateUrl: './visitor-dashboard.component.html',
   styleUrls: ['./visitor-dashboard.component.scss'],
 })
@@ -22,22 +31,37 @@ export class VisitorDashboardComponent implements OnInit {
   myGrievances: ListEntry[] = [];
   loading = false;
 
-  statusTimeline = [
-    { label: 'Application Submitted', date: '–', icon: 'pi pi-send', color: '#1a237e' },
-    { label: 'CMO Verification', date: '–', icon: 'pi pi-eye', color: '#b45309' },
-    { label: 'Approver Review', date: '–', icon: 'pi pi-check', color: '#1565c0' },
-    { label: 'HCM Decision Pending', date: '–', icon: 'pi pi-clock', color: '#dc2626' },
-  ];
+  visitorProfile: VisitorProfile | null = null;
 
-  constructor(public auth: AuthService) {}
+  totalVisits = 0;
+
+  constructor(public auth: AuthService, private http: HttpClient) {}
 
   ngOnInit() {
     this.cards = [
-      { label: 'My Appointments', value: 0, icon: 'pi-calendar', color: '#1a237e', bg: '#e8eaf6' },
-      { label: 'Scheme Applications', value: 0, icon: 'pi-briefcase', color: '#065f46', bg: '#d1fae5' },
-      { label: 'Grievances Raised', value: 0, icon: 'pi-comments', color: '#b45309', bg: '#fef3c7' },
-      { label: 'Pending Actions', value: 0, icon: 'pi-exclamation-triangle', color: '#dc2626', bg: '#fee2e2' },
+      { label: 'My Appointments', value: 0, icon: 'pi-calendar',              color: '#1a237e', bg: '#e8eaf6' },
+      { label: 'Total Visits',    value: 0, icon: 'pi-map-marker',             color: '#065f46', bg: '#d1fae5' },
+      { label: 'Active Schemes',  value: 0, icon: 'pi-briefcase',              color: '#b45309', bg: '#fef3c7' },
+      { label: 'Grievances',      value: 0, icon: 'pi-comments',               color: '#dc2626', bg: '#fee2e2' },
     ];
+
+    const visitorId = sessionStorage.getItem('megha_visitor_id');
+    if (visitorId) {
+      this.loadProfile(visitorId);
+    }
+  }
+
+  private loadProfile(visitorId: string) {
+    this.loading = true;
+    this.http.get<VisitorProfile & { success: boolean }>(`/api/v1/visitor/auth/profile/${visitorId}`).subscribe({
+      next: res => {
+        this.loading = false;
+        if (res.success) {
+          this.visitorProfile = res;
+        }
+      },
+      error: () => { this.loading = false; }
+    });
   }
 
   getStatusSeverity(s: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | null | undefined {

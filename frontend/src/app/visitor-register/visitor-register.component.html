@@ -1,0 +1,140 @@
+<div class="register-page">
+  <div class="register-left">
+    <div class="state-map-bg"></div>
+    <div class="brand-box">
+      <div class="logo-section">
+        <img src="/asserts/logo.png" alt="Meghalaya Government Logo" class="govt-logo">
+        <div class="logo-text">
+          <h1>MeghaConnect</h1>
+          <div class="govt-badge">
+            <i class="pi pi-shield"></i>
+            <span>Official Government Portal</span>
+          </div>
+        </div>
+      </div>
+      <div class="brand-desc">
+        <h3>Visitor Registration</h3>
+        <p>Register once to access government appointments, schemes and grievance services from anywhere.</p>
+        <ul class="feature-list">
+          <li><i class="pi pi-check-circle"></i> Book appointments with the CM Office</li>
+          <li><i class="pi pi-check-circle"></i> Track scheme applications</li>
+          <li><i class="pi pi-check-circle"></i> Submit and monitor grievances</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="register-right">
+    <div class="register-card">
+
+      <!-- Success state -->
+      <ng-container *ngIf="submitted">
+        <div class="success-banner">
+          <i class="pi pi-check-circle" style="font-size:3rem;color:#16a34a;margin-bottom:1rem"></i>
+          <h2>Registration Successful!</h2>
+          <p>{{ successMsg }}</p>
+          <p style="font-size:0.85rem;color:#6b7280;margin-top:0.5rem">
+            Your KYC status is <strong>PENDING</strong> and will be verified soon.
+          </p>
+          <button class="btn-primary" style="margin-top:1.5rem;width:auto;padding:0.7rem 2rem" (click)="goToLogin()">
+            <i class="pi pi-sign-in"></i> Go to Login
+          </button>
+        </div>
+      </ng-container>
+
+      <!-- Registration form -->
+      <ng-container *ngIf="!submitted">
+        <div class="card-header">
+          <h2>New Visitor Registration</h2>
+          <p>All fields marked * are required</p>
+        </div>
+
+        <div *ngIf="errorMsg" class="error-msg">
+          <i class="pi pi-exclamation-circle"></i> {{ errorMsg }}
+        </div>
+
+        <!-- Personal Details -->
+        <div class="section-title">Personal Details</div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Full Name *</label>
+            <input type="text" class="input-field" [(ngModel)]="form.fullName" placeholder="Enter your full name" />
+          </div>
+        </div>
+
+        <div class="form-row two-col">
+          <div class="form-group">
+            <label>Mobile Number *</label>
+            <input type="tel" class="input-field" [(ngModel)]="form.phoneNumber" placeholder="10-digit mobile" maxlength="10" />
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" class="input-field" [(ngModel)]="form.email" placeholder="Optional" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Address</label>
+          <textarea class="input-field" [(ngModel)]="form.address" placeholder="Your address" rows="2"></textarea>
+        </div>
+
+        <!-- ID Proof -->
+        <div class="section-title">Identity Proof (KYC)</div>
+
+        <div class="form-group">
+          <label>ID Type *</label>
+          <div class="radio-group">
+            <label class="radio-option" [class.selected]="form.idType === 'EPIC'">
+              <input type="radio" [(ngModel)]="form.idType" value="EPIC" />
+              <span>EPIC (Voter ID)</span>
+            </label>
+            <label class="radio-option" [class.selected]="form.idType === 'AADHAAR'">
+              <input type="radio" [(ngModel)]="form.idType" value="AADHAAR" />
+              <span>Aadhaar Card</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group" *ngIf="form.idType === 'EPIC'">
+          <label>EPIC Number *</label>
+          <input
+            type="text"
+            class="input-field"
+            [(ngModel)]="form.epicNumber"
+            placeholder="e.g. ABC1234567 (3 letters + 7 digits)"
+            maxlength="10"
+          />
+          <small class="field-hint">Format: 3 uppercase letters followed by 7 digits</small>
+        </div>
+
+        <div class="form-group" *ngIf="form.idType === 'AADHAAR'">
+          <label>Aadhaar Number *</label>
+          <input
+            type="text"
+            class="input-field"
+            [(ngModel)]="form.aadhaarNumber"
+            placeholder="12-digit Aadhaar number"
+            maxlength="12"
+          />
+          <small class="field-hint">Enter all 12 digits without spaces</small>
+        </div>
+
+        <div class="kyc-notice">
+          <i class="pi pi-info-circle"></i>
+          KYC verification status will be set to <strong>PENDING</strong>. Verification will be completed by the designated officer.
+        </div>
+
+        <div style="display:flex;gap:1rem;margin-top:1.5rem">
+          <button class="btn-outline" (click)="goToLogin()">
+            <i class="pi pi-arrow-left"></i> Back to Login
+          </button>
+          <button class="btn-primary flex-1" [disabled]="loading" (click)="register()">
+            <span *ngIf="!loading"><i class="pi pi-user-plus"></i> Register</span>
+            <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Registering…</span>
+          </button>
+        </div>
+      </ng-container>
+    </div>
+  </div>
+</div>

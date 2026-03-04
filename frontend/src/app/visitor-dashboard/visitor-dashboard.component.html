@@ -6,6 +6,11 @@
       <h2>Welcome, {{ auth.user()?.fullName }}!</h2>
       <p>Meghalaya Entry &amp; Governance System – Visitor Portal</p>
     </div>
+    <div class="banner-actions">
+      <button class="btn-logout" (click)="auth.logout()">
+        <i class="pi pi-sign-out"></i> Logout
+      </button>
+    </div>
   </div>
 
   <!-- KPI Cards -->
@@ -24,21 +29,70 @@
   <!-- Quick Actions -->
   <div class="quick-actions-row">
     <a routerLink="/appointments/new">
-      <button pButton icon="pi pi-plus" label="Book Appointment" class="p-button-sm"></button>
+      <button class="btn-action btn-primary-action">
+        <i class="pi pi-plus"></i> Book New Appointment
+      </button>
     </a>
     <a routerLink="/schemes/apply">
-      <button pButton icon="pi pi-briefcase" label="Apply for Scheme" class="p-button-outlined p-button-sm"></button>
+      <button class="btn-action btn-outline-action">
+        <i class="pi pi-briefcase"></i> Apply for Scheme
+      </button>
     </a>
     <a routerLink="/grievances">
-      <button pButton icon="pi pi-comments" label="Raise Grievance" class="p-button-outlined p-button-sm p-button-warning"></button>
+      <button class="btn-action btn-warn-action">
+        <i class="pi pi-comments"></i> Raise Grievance
+      </button>
     </a>
   </div>
 
   <div class="content-grid">
+
+    <!-- Visitor Profile -->
+    <div class="section-card profile-card">
+      <div class="section-card-header">
+        <i class="pi pi-id-card"></i> Visitor Profile
+      </div>
+      <div class="card-body">
+        <div *ngIf="loading" class="empty-state">Loading profile…</div>
+        <ng-container *ngIf="!loading && visitorProfile">
+          <div class="profile-row">
+            <span class="profile-label">Full Name</span>
+            <span class="profile-value">{{ visitorProfile.fullName }}</span>
+          </div>
+          <div class="profile-row">
+            <span class="profile-label">Mobile</span>
+            <span class="profile-value">{{ visitorProfile.phoneNumber }}</span>
+          </div>
+          <div class="profile-row">
+            <span class="profile-label">Address</span>
+            <span class="profile-value">{{ visitorProfile.address || '—' }}</span>
+          </div>
+          <div class="profile-row">
+            <span class="profile-label">District</span>
+            <span class="profile-value">{{ visitorProfile.district || '—' }}</span>
+          </div>
+          <div class="profile-row">
+            <span class="profile-label">ID Type</span>
+            <span class="profile-value">{{ visitorProfile.kycType }}</span>
+          </div>
+          <div class="profile-row">
+            <span class="profile-label">KYC Status</span>
+            <p-tag
+              [value]="visitorProfile.kycVerified ? 'VERIFIED' : 'PENDING'"
+              [severity]="visitorProfile.kycVerified ? 'success' : 'warn'">
+            </p-tag>
+          </div>
+        </ng-container>
+        <div *ngIf="!loading && !visitorProfile" class="empty-state">
+          Profile not loaded. <a routerLink="/public-login">Please login again.</a>
+        </div>
+      </div>
+    </div>
+
     <!-- My Appointments -->
     <div class="section-card">
       <div class="section-card-header">
-        <i class="pi pi-calendar"></i> My Appointments
+        <i class="pi pi-calendar"></i> Appointment History
       </div>
       <div class="card-body">
         <div *ngFor="let a of myAppointments" class="list-item">
@@ -56,10 +110,10 @@
       </div>
     </div>
 
-    <!-- My Scheme Applications -->
+    <!-- Active Schemes -->
     <div class="section-card">
       <div class="section-card-header">
-        <i class="pi pi-briefcase"></i> My Scheme Applications
+        <i class="pi pi-briefcase"></i> Active Schemes
       </div>
       <div class="card-body">
         <div *ngFor="let s of mySchemes" class="list-item">
@@ -73,53 +127,40 @@
             <span *ngIf="s.extra" class="item-amount">{{ s.extra }}</span>
           </div>
         </div>
-        <div *ngIf="mySchemes.length === 0" class="empty-state">No scheme applications yet.</div>
+        <div *ngIf="mySchemes.length === 0" class="empty-state">No active scheme applications.</div>
         <a routerLink="/schemes/apply" class="view-link">+ Apply for Scheme</a>
       </div>
     </div>
 
-    <!-- My Grievances -->
+    <!-- Visit Count Analytics -->
     <div class="section-card">
       <div class="section-card-header">
-        <i class="pi pi-comments"></i> My Grievances
+        <i class="pi pi-chart-bar"></i> Visit Count Analytics
       </div>
       <div class="card-body">
-        <div *ngFor="let g of myGrievances" class="list-item">
-          <div class="item-main">
-            <div class="item-id">{{ g.id }}</div>
-            <div class="item-text">{{ g.title }}</div>
+        <div class="analytics-row">
+          <div class="analytics-stat">
+            <div class="analytics-value">{{ totalVisits }}</div>
+            <div class="analytics-label">Total Visits</div>
           </div>
-          <div class="item-meta">
-            <p-tag [value]="g.status | titlecase" [severity]="getStatusSeverity(g.status)"></p-tag>
-            <span class="item-date"><i class="pi pi-calendar"></i> {{ g.date }}</span>
+          <div class="analytics-stat">
+            <div class="analytics-value">{{ myAppointments.length }}</div>
+            <div class="analytics-label">Appointments</div>
+          </div>
+          <div class="analytics-stat">
+            <div class="analytics-value">{{ mySchemes.length }}</div>
+            <div class="analytics-label">Scheme Apps</div>
+          </div>
+          <div class="analytics-stat">
+            <div class="analytics-value">{{ myGrievances.length }}</div>
+            <div class="analytics-label">Grievances</div>
           </div>
         </div>
-        <div *ngIf="myGrievances.length === 0" class="empty-state">No grievances raised yet.</div>
-        <a routerLink="/grievances" class="view-link">+ Raise Grievance</a>
+        <div class="empty-state" style="margin-top:0.75rem">
+          Detailed analytics will be available after your first visit.
+        </div>
       </div>
     </div>
 
-    <!-- Application Status Timeline -->
-    <div class="section-card">
-      <div class="section-card-header">
-        <i class="pi pi-clock"></i> Latest Application Status
-      </div>
-      <div class="card-body">
-        <p style="font-size:0.82rem;color:#6b7280;margin:0 0 0.75rem">{{ myAppointments[0].id || 'MC-2024-00001' }} – Latest Application</p>
-        <p-timeline [value]="statusTimeline" styleClass="visitor-timeline">
-          <ng-template pTemplate="marker" let-event>
-            <span class="timeline-marker" [style.background]="event.color">
-              <i [class]="event.icon" style="color:white;font-size:0.75rem"></i>
-            </span>
-          </ng-template>
-          <ng-template pTemplate="content" let-event>
-            <div class="timeline-content">
-              <div class="timeline-label">{{ event.label }}</div>
-              <div class="timeline-date">{{ event.date }}</div>
-            </div>
-          </ng-template>
-        </p-timeline>
-      </div>
-    </div>
   </div>
 </div>

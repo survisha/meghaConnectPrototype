@@ -92,30 +92,14 @@
 
       <ng-container *ngIf="isPublicMode">
         <div class="public-info">
-          <p><i class="pi pi-info-circle"></i> Citizens can submit appointment requests using their phone number (OTP-based login).</p>
+          <p><i class="pi pi-info-circle"></i> Citizens can log in using their registered mobile number and OTP.</p>
         </div>
-        <div class="form-group">
-          <label>
-            <i class="pi pi-phone"></i>
-            <span>Phone Number</span>
-          </label>
-          <input pInputText [(ngModel)]="username" placeholder="Enter 10-digit phone number" style="width:100%"/>
+        <a routerLink="/public-login">
+          <p-button label="Citizen OTP Login" icon="pi pi-users" styleClass="w-full p-button-success"></p-button>
+        </a>
+        <div style="text-align:center;margin-top:0.75rem;font-size:0.85rem;color:#6b7280">
+          New visitor? <a routerLink="/register-visitor" style="color:#1a237e;font-weight:600">Register here</a>
         </div>
-        <div class="form-group">
-          <label>
-            <i class="pi pi-key"></i>
-            <span>OTP</span>
-            <small style="color:#6b7280">(Demo OTP: 123456)</small>
-          </label>
-          <input pInputText [(ngModel)]="otp" placeholder="Enter OTP" style="width:100%"/>
-        </div>
-        <div *ngIf="errorMsg" style="color:#dc2626;font-size:0.85rem;margin-bottom:0.75rem">
-          <i class="pi pi-exclamation-circle"></i> {{ errorMsg }}
-        </div>
-        <p-button label="Verify & Continue" icon="pi pi-check" [loading]="loading" (onClick)="publicLogin()" styleClass="w-full"></p-button>
-        <p style="text-align:center;font-size:0.8rem;color:#6b7280;margin-top:1rem">
-          Use phone: 9876543210 | OTP: 123456 for demo
-        </p>
       </ng-container>
     </div>
   </div>

@@ -1754,21 +1754,63 @@ This section describes how AI capabilities improve MeghaConnect across five dime
 
 | Layer | Technology |
 |---|---|
-| Backend AI Service | Spring Boot AI service layer |
-| PDF Extraction | Apache PDFBox |
-| Word Documents | Apache POI |
-| Scanned Images | Tesseract OCR |
-| AI API | External LLM API for summarization and extraction |
+| Backend AI Service | Spring Boot – `AiDocumentIntelligenceService` + `OpenAiClientService` |
+| OpenAI Integration | `com.theokanning.openai-gpt3-java:service:0.18.2` (GPT-3.5-turbo default) |
+| PDF Extraction | Apache PDFBox 2.0.30 |
+| Word Documents | Apache POI 5.2.5 (poi-ooxml + poi-scratchpad) |
+| Scanned Images | Tesseract OCR integration point (native lib) |
+| Fallback Engine | Rule-based keyword/regex engine (no external dependency required) |
 | Frontend | Angular components: `ai-chatbot`, `ai-insights-dashboard`, `ai-document.service` |
 
-### 31.6 Database Fields Added
+### 31.6 OpenAI Integration Architecture
+
+The AI layer follows a **two-tier strategy**:
+
+**Tier 1 – Live OpenAI (when `OPENAI_API_KEY` is configured)**
+
+| Feature | OpenAI Prompt Type | Model | Max Tokens |
+|---|---|---|---|
+| Document Field Extraction (R004) | System + User (document text) | gpt-3.5-turbo | 512 |
+| Document Summarization (R005) | System + User (document text) | gpt-3.5-turbo | 512 |
+| Priority Recommendation (R007) | System + User (agenda text) | gpt-3.5-turbo | 5 (compact) |
+| Citizen Chatbot (R008) | System (MeghaBot persona) + User | gpt-3.5-turbo | 512 |
+| Dashboard AI Note (R010) | System (analyst) + User (stats) | gpt-3.5-turbo | 120 (compact) |
+
+**Tier 2 – Rule-based fallback (when no API key is configured)**
+
+Each feature has a deterministic fallback:
+- Field extraction: regex/keyword pattern matching on document text
+- Summarization: 5-line template from extracted fields
+- Priority: keyword classifier (medical→HIGH, infrastructure→MEDIUM, political→LOW)
+- Chatbot: FAQ lookup against 6 predefined topic categories
+- Dashboard note: static template from appointment count and top scheme
+
+**Configuration**
+
+| Property | Environment Variable | Default |
+|---|---|---|
+| `meghaconnect.ai.api-key` | `OPENAI_API_KEY` | _(blank = fallback mode)_ |
+| `meghaconnect.ai.model` | `OPENAI_MODEL` | `gpt-3.5-turbo` |
+| `meghaconnect.ai.timeout-seconds` | `OPENAI_TIMEOUT_SECONDS` | `60` |
+| `meghaconnect.ai.max-tokens` | `OPENAI_MAX_TOKENS` | `512` |
+
+**Classes**
+
+| Class | Responsibility |
+|---|---|
+| `OpenAiClientService` | Initialises `OpenAiService` on startup; exposes `chat()` and `chatCompact()` |
+| `AiDocumentIntelligenceService` | Orchestrates all AI features; calls OpenAI then falls back to rule engine |
+| `DocumentExtractionService` | Extracts plain text from PDF/DOCX/DOC/image files |
+| `AiController` | REST controller exposing `/api/ai/*` endpoints |
+
+### 31.7 Database Fields Added
 
 | Field | Table | Description |
 |---|---|---|
 | `ai_summary` | `appointments` | AI-generated document summary |
 | `ai_extracted_fields` | `appointments` | JSON object of extracted fields |
 | `ai_priority_level` | `appointments` | HIGH / MEDIUM / LOW |
-| `ai_duplicate_flag` | `appointments` | Boolean flag for duplicate detection |
+| `ai_duplicate_flag` | `appointments` | 1 if AI detected duplicate, 0 otherwise |
 
 ---
 
@@ -1780,7 +1822,8 @@ This section describes how AI capabilities improve MeghaConnect across five dime
 | 1.0 | Mar 2026 | CMO Tech Team | Full specification with Mermaid diagrams |
 | 1.1 | Mar 2026 | Agent Narsingh | Added automated task-assignment workflow; all future tasks auto-routed to #agent-Narsingh and SRS auto-updated on each change |
 | 1.2 | Mar 2026 | Agent Narsingh | Implemented Public/Citizen module: Registration (5-step KYC with Designation/Location), Login, Visitor Dashboard, Appointment Booking (6-step with Associates, CM Care, scheme history); added VisitorAppointmentController, V8 DB migration, fixed pre-existing type errors in Angular components |
-| 1.3 | Mar 2026 | Agent Narsingh | Implemented R004–R015: DEO Assisted Registration (R011), UI Fixes (R012), Associate Visitor Toggle (R013), AI Document Understanding/Summarization (R004/R005), AI Duplicate Detection (R006), AI Meeting Priority (R007), AI Chatbot (R008), AI KYC Confidence Indicator (R009), AI Dashboard Insights (R010), AI Slot Suggestions (R015); added ai-document.service.ts, ai-chatbot.component, ai-insights-dashboard.component; updated SRS with sections 21–31 |
+| 1.3 | Mar 2026 | Agent Narsingh | Implemented R004–R015: DEO Assisted Registration (R011), UI Fixes (R012), Associate Visitor Toggle (R013), AI Document Understanding/Summarization (R004/R005), AI Duplicate Detection (R006), AI Meeting Priority (R007), AI Chatbot (R008), AI KYC Confidence Indicator (R009), AI Dashboard Insights (R010), AI Slot Suggestions (R015); added ai-document.service.ts, ai-chatbot.component, ai-insights-dashboard.component; added backend AiController, AiDocumentIntelligenceService, DocumentExtractionService, V9 migration |
+| 1.4 | Mar 2026 | Agent Narsingh | OpenAI integration: added `com.theokanning.openai-gpt3-java:service:0.18.2`; implemented `OpenAiClientService` (two-tier: live OpenAI + rule-based fallback); updated `AiDocumentIntelligenceService` to use GPT-3.5-turbo for R004, R005, R007, R008, R010 when API key is configured; added system prompts for extraction, summarization, priority classification, and MeghaBot persona |
 
 > **Workflow Note:** From version 1.1 onwards, all development tasks are automatically assigned to `#agent-Narsingh` (see `.github/copilot-instructions.md` and `docs/task-assignment-prompt.md`). The agent updates this SRS document after every task.
 

@@ -33,7 +33,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/ai")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "*") // NOTE: restrict to known origins in production via SecurityConfig CORS configuration
 public class AiController {
 
     private static final Logger log = LoggerFactory.getLogger(AiController.class);

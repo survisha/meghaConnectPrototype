@@ -26,11 +26,17 @@ import java.util.*;
  *   - Appointment slot suggestions (R015)
  *   - Dashboard insights (R010)
  *
- * Integration point:
- *   When an OpenAI / Azure OpenAI API key is configured via
- *   {@code meghaconnect.ai.api-key}, real LLM calls will be made.
- *   Otherwise, the service uses a deterministic rule-based engine
- *   that provides useful demo-ready responses without any external dependency.
+ * Integration strategy (two-tier):
+ *   TIER 1 – OpenAI (live):
+ *     When {@code meghaconnect.ai.api-key} is configured, every applicable
+ *     method delegates to {@link OpenAiClientService} (GPT-3.5-turbo by default).
+ *     The extracted text is sent as the user message and a structured system prompt
+ *     guides the model to return the expected format.
+ *   TIER 2 – Rule-based fallback:
+ *     When no API key is present, or when the OpenAI call fails, the service
+ *     falls back to its built-in deterministic keyword/regex engine.
+ *     This guarantees the application is fully functional offline or during
+ *     initial deployment without any API credentials.
  */
 @Service
 @RequiredArgsConstructor
@@ -40,14 +46,70 @@ public class AiDocumentIntelligenceService {
 
     private final DocumentExtractionService extractionService;
     private final AppointmentRepository appointmentRepository;
+    private final OpenAiClientService openAiClient;
 
     @Value("${meghaconnect.ai.api-key:}")
     private String aiApiKey;
+
+    // ── Prompt constants ──────────────────────────────────────────────────────
+
+    // ── Constants ─────────────────────────────────────────────────────────────
+
+    /** Maximum document text length (chars) sent to OpenAI to stay within token limits. */
+    private static final int MAX_AI_TEXT_LENGTH = 3000;
+
+    /** Maximum chars extracted per field label from document text. */
+    private static final int MAX_FIELD_EXTRACT_LENGTH = 120;
+
+    /** Maximum chars extracted for justification field. */
+    private static final int MAX_JUSTIFICATION_LENGTH = 300;
+
+    /** Maximum chars included in a justification snippet. */
+    private static final int MAX_JUSTIFICATION_SNIPPET = 200;
+
+    private static final String SYSTEM_EXTRACT_FIELDS =
+            "You are a government document analysis assistant for Meghalaya, India. "
+            + "Given the text extracted from a project proposal or application letter, "
+            + "extract the following fields and return them in plain text, one field per line "
+            + "in the exact format  'FieldName: value'. "
+            + "Fields: Project Name, Project Category, Estimated Cost, Location, "
+            + "Beneficiaries, Scheme Requested, Applicant Name, Key Justification. "
+            + "If a field is not present, output 'FieldName: N/A'. "
+            + "Do not add any other text.";
+
+    private static final String SYSTEM_SUMMARIZE =
+            "You are a concise government document summarizer. "
+            + "Summarize the provided project proposal or application in exactly 5 lines "
+            + "using the format:\n"
+            + "Project: <name>\nLocation: <place>\nEstimated Cost: <amount>\n"
+            + "Beneficiaries: <count or type>\nPurpose: <one sentence>\n"
+            + "Do not add any other text.";
+
+    private static final String SYSTEM_PRIORITY =
+            "You are a meeting priority classifier for a Chief Minister's Office in India. "
+            + "Classify the following appointment agenda as exactly one of: HIGH, MEDIUM, or LOW. "
+            + "HIGH: medical emergencies, CM Care cases, urgent public safety. "
+            + "MEDIUM: infrastructure, education, public grievances. "
+            + "LOW: general discussions, trade, political matters. "
+            + "Reply with only the single word: HIGH, MEDIUM, or LOW.";
+
+    private static final String SYSTEM_CHATBOT =
+            "You are MeghaBot, a friendly and helpful AI assistant for MeghaConnect, "
+            + "the official citizen portal of the Chief Minister's Office, Meghalaya, India. "
+            + "You help citizens with: visitor registration, booking appointments with the CM, "
+            + "required documents for schemes (CMSDF, CM Care, CMSG, CM Connect, CM Elevate, Focus+), "
+            + "tracking application status, and raising grievances. "
+            + "Be concise, polite, and answer only questions related to MeghaConnect services. "
+            + "If the question is unrelated, gently redirect to MeghaConnect topics.";
 
     // ── R004 / R005: Document Analysis ───────────────────────────────────────
 
     /**
      * Analyse an uploaded document: extract text, infer structured fields, generate summary.
+     *
+     * When OpenAI is available the extracted text is sent to GPT for both
+     * structured field extraction (R004) and summarization (R005).
+     * Falls back to rule-based engine when the API key is not configured.
      *
      * @param file uploaded MultipartFile
      * @return map with keys: success, summary, extractedFields, priorityLevel, priorityReason, duplicateFlag
@@ -56,12 +118,15 @@ public class AiDocumentIntelligenceService {
         String rawText = extractionService.extractText(file);
         log.debug("Extracted {} chars from document '{}'", rawText.length(), file.getOriginalFilename());
 
-        Map<String, Object> extractedFields = inferFields(rawText);
-        String summary = buildSummary(extractedFields, rawText);
-        String priorityLevel = inferPriority(
-                (String) extractedFields.getOrDefault("schemeRequested", ""),
-                rawText
-        );
+        // Truncate text to first MAX_AI_TEXT_LENGTH chars to stay within token limits
+        String textForAi = rawText.length() > MAX_AI_TEXT_LENGTH
+                ? rawText.substring(0, MAX_AI_TEXT_LENGTH) + "…"
+                : rawText;
+
+        Map<String, Object> extractedFields = extractFieldsWithAi(textForAi);
+        String summary                      = summarizeWithAi(textForAi, extractedFields);
+        String priorityLevel                = inferPriorityWithAi(
+                (String) extractedFields.getOrDefault("schemeRequested", ""), textForAi);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("success", true);
@@ -71,6 +136,86 @@ public class AiDocumentIntelligenceService {
         result.put("priorityReason", getPriorityReason(priorityLevel));
         result.put("duplicateFlag", false);
         return result;
+    }
+
+    /**
+     * Extract structured fields from document text.
+     * Uses OpenAI if available; falls back to rule-based parser.
+     */
+    private Map<String, Object> extractFieldsWithAi(String text) {
+        if (openAiClient.isAvailable()) {
+            Optional<String> aiResponse = openAiClient.chat(SYSTEM_EXTRACT_FIELDS, text);
+            if (aiResponse.isPresent()) {
+                return parseExtractedFieldsFromAiResponse(aiResponse.get());
+            }
+        }
+        // Fallback to rule-based inference
+        return inferFields(text);
+    }
+
+    /**
+     * Parse the OpenAI field-extraction response (key: value lines) into a map.
+     */
+    private Map<String, Object> parseExtractedFieldsFromAiResponse(String response) {
+        Map<String, Object> fields = new LinkedHashMap<>();
+        // Normalise OpenAI field names to camelCase keys used by the frontend
+        Map<String, String> keyMap = new LinkedHashMap<>();
+        keyMap.put("Project Name",      "projectName");
+        keyMap.put("Project Category",  "projectCategory");
+        keyMap.put("Estimated Cost",    "estimatedCost");
+        keyMap.put("Location",          "location");
+        keyMap.put("Beneficiaries",     "beneficiaries");
+        keyMap.put("Scheme Requested",  "schemeRequested");
+        keyMap.put("Applicant Name",    "applicantName");
+        keyMap.put("Key Justification", "justification");
+
+        // Parse "FieldName: value" lines
+        for (String line : response.split("\n")) {
+            for (Map.Entry<String, String> entry : keyMap.entrySet()) {
+                if (line.startsWith(entry.getKey() + ":")) {
+                    String value = line.substring(entry.getKey().length() + 1).trim();
+                    fields.put(entry.getValue(), "N/A".equalsIgnoreCase(value) ? null : value);
+                    break;
+                }
+            }
+        }
+        // Fill any missing keys with null
+        for (String key : keyMap.values()) {
+            fields.putIfAbsent(key, null);
+        }
+        return fields;
+    }
+
+    /**
+     * Generate a document summary.
+     * Uses OpenAI if available; falls back to rule-based template.
+     */
+    private String summarizeWithAi(String text, Map<String, Object> extractedFields) {
+        if (openAiClient.isAvailable()) {
+            Optional<String> aiSummary = openAiClient.chat(SYSTEM_SUMMARIZE, text);
+            if (aiSummary.isPresent()) {
+                return aiSummary.get();
+            }
+        }
+        // Fallback to template-based summary
+        return buildSummary(extractedFields, text);
+    }
+
+    /**
+     * Recommend a priority level from document text.
+     * Uses OpenAI if available; falls back to rule-based classifier.
+     */
+    private String inferPriorityWithAi(String schemeHint, String text) {
+        if (openAiClient.isAvailable()) {
+            Optional<String> aiLevel = openAiClient.chatCompact(SYSTEM_PRIORITY, text, 5);
+            if (aiLevel.isPresent()) {
+                String level = aiLevel.get().toUpperCase().replaceAll("[^A-Z]", "");
+                if ("HIGH".equals(level) || "MEDIUM".equals(level) || "LOW".equals(level)) {
+                    return level;
+                }
+            }
+        }
+        return inferPriority(schemeHint, text);
     }
 
     // ── R006: Duplicate Detection ─────────────────────────────────────────────
@@ -134,6 +279,7 @@ public class AiDocumentIntelligenceService {
 
     /**
      * Recommend a meeting priority level based on agenda type and brief.
+     * Uses OpenAI when available; falls back to rule-based classifier.
      *
      * @param agendaType  agenda type string
      * @param agendaBrief free-text description
@@ -141,8 +287,8 @@ public class AiDocumentIntelligenceService {
      */
     public Map<String, String> suggestPriority(String agendaType, String agendaBrief) {
         String combined = ((agendaType != null ? agendaType : "") + " "
-                + (agendaBrief != null ? agendaBrief : "")).toLowerCase();
-        String level = inferPriority(agendaType, combined);
+                + (agendaBrief != null ? agendaBrief : "")).trim();
+        String level = inferPriorityWithAi(agendaType, combined);
         Map<String, String> result = new LinkedHashMap<>();
         result.put("level", level);
         result.put("reason", getPriorityReason(level));
@@ -152,8 +298,8 @@ public class AiDocumentIntelligenceService {
     // ── R008: Citizen Chatbot ─────────────────────────────────────────────────
 
     /**
-     * Answer a citizen question using rule-based FAQ matching.
-     * Pluggable for LLM integration when API key is configured.
+     * Answer a citizen's question.
+     * Uses OpenAI (GPT chat) when available; falls back to rule-based FAQ matching.
      *
      * @param question citizen's question
      * @return answer string
@@ -162,6 +308,21 @@ public class AiDocumentIntelligenceService {
         if (question == null || question.trim().isEmpty()) {
             return "Please type your question and I will try to help.";
         }
+
+        // Attempt OpenAI response first
+        if (openAiClient.isAvailable()) {
+            Optional<String> aiAnswer = openAiClient.chat(SYSTEM_CHATBOT, question.trim());
+            if (aiAnswer.isPresent()) {
+                return aiAnswer.get();
+            }
+        }
+
+        // Rule-based FAQ fallback
+        return faqFallback(question);
+    }
+
+    /** Rule-based FAQ matching – used when OpenAI is unavailable. */
+    private String faqFallback(String question) {
         String q = question.toLowerCase().trim();
 
         if (containsAny(q, "register", "sign up", "kyc", "id", "voter", "epic", "aadhaar")) {
@@ -332,12 +493,20 @@ public class AiDocumentIntelligenceService {
         List<Map<String, Object>> districtList = buildTopList(districtCounts, 6, "district");
         List<Map<String, Object>> categoryList = buildTopCategories();
 
-        // AI note
+        // AI narrative note – use OpenAI when available for richer insight
         String topScheme = topSchemes.isEmpty() ? "CMSDF" : (String) topSchemes.get(0).get("scheme");
-        String aiNote = "AI analysis of " + all.size() + " appointments: "
-                + topScheme + " is the most requested scheme this period. "
-                + "Trend analysis indicates continued demand for infrastructure and "
-                + "medical assistance schemes across all districts.";
+        String aiNote;
+        if (openAiClient.isAvailable()) {
+            String prompt = "In 2 sentences, describe the key trends based on these appointment statistics for "
+                    + "Meghalaya CM Office: total appointments this month=" + thisMonth
+                    + ", top scheme=" + topScheme + ", total appointments=" + all.size() + ".";
+            aiNote = openAiClient.chatCompact(
+                    "You are a government data analyst. Provide a concise 2-sentence insight.",
+                    prompt, 120
+            ).orElse(buildDefaultAiNote(topScheme, all.size()));
+        } else {
+            aiNote = buildDefaultAiNote(topScheme, all.size());
+        }
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("totalApplicationsThisMonth", (int) thisMonth);
@@ -349,6 +518,13 @@ public class AiDocumentIntelligenceService {
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
+
+    private String buildDefaultAiNote(String topScheme, int total) {
+        return "AI analysis of " + total + " appointments: "
+                + topScheme + " is the most requested scheme this period. "
+                + "Trend analysis indicates continued demand for infrastructure and "
+                + "medical assistance schemes across all districts.";
+    }
 
     /**
      * Rule-based field inference from document text.
@@ -416,7 +592,7 @@ public class AiDocumentIntelligenceService {
                     start++;
                 }
                 int end = text.indexOf('\n', start);
-                if (end < 0) end = Math.min(start + 120, text.length());
+                if (end < 0) end = Math.min(start + MAX_FIELD_EXTRACT_LENGTH, text.length());
                 String value = text.substring(start, end).trim();
                 if (!value.isEmpty()) return value;
             }
@@ -505,11 +681,13 @@ public class AiDocumentIntelligenceService {
                 while (start < text.length() && (text.charAt(start) == ':' || text.charAt(start) == ' ')) {
                     start++;
                 }
-                int end = Math.min(start + 300, text.length());
+                int end = Math.min(start + MAX_JUSTIFICATION_LENGTH, text.length());
                 // Cut at next section heading (capital line)
                 String snippet = text.substring(start, end).trim();
                 if (snippet.length() > 20) {
-                    return snippet.length() > 200 ? snippet.substring(0, 200) + "…" : snippet;
+                    return snippet.length() > MAX_JUSTIFICATION_SNIPPET
+                            ? snippet.substring(0, MAX_JUSTIFICATION_SNIPPET) + "…"
+                            : snippet;
                 }
             }
         }

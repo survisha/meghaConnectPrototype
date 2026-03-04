@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../services/auth.service';
 import { Tag } from 'primeng/tag';
+import { AiChatbotComponent } from '../ai-chatbot/ai-chatbot.component';
 
 interface VisitorProfile {
   fullName: string;
@@ -12,6 +13,8 @@ interface VisitorProfile {
   kycVerified: boolean;
   address: string;
   district: string;
+  kycStatus?: string;
+  kycConfidence?: number;
 }
 
 interface VisitorCard { label: string; value: string | number; icon: string; color: string; bg: string; }
@@ -20,7 +23,7 @@ interface ListEntry { id: string; title: string; status: string; date: string; e
 @Component({
   selector: 'app-visitor-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, Tag],
+  imports: [CommonModule, RouterLink, Tag, AiChatbotComponent],
   templateUrl: './visitor-dashboard.component.html',
   styleUrls: ['./visitor-dashboard.component.scss'],
 })
@@ -71,5 +74,20 @@ export class VisitorDashboardComponent implements OnInit {
       APPROVED: 'success', REJECTED: 'danger', FORWARDED: 'warn', RESOLVED: 'success', CLOSED: 'secondary',
     };
     return m[s] ?? 'info';
+  }
+
+  /** R009: Get KYC confidence display */
+  get kycConfidenceDisplay(): { score: number; label: string; color: string } | null {
+    if (!this.visitorProfile?.kycStatus) return null;
+    if (this.visitorProfile.kycStatus === 'PHOTO_MATCHED') {
+      return { score: this.visitorProfile.kycConfidence ?? 92, label: 'Verified', color: '#16a34a' };
+    }
+    if (this.visitorProfile.kycStatus === 'DEMOGRAPHIC_MATCHED') {
+      return { score: this.visitorProfile.kycConfidence ?? 75, label: 'Verified (Demographic)', color: '#ca8a04' };
+    }
+    if (this.visitorProfile.kycStatus === 'MANUAL_VERIFICATION_REQUIRED') {
+      return { score: this.visitorProfile.kycConfidence ?? 45, label: 'Manual Verification Required', color: '#dc2626' };
+    }
+    return null;
   }
 }

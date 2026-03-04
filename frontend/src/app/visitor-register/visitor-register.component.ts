@@ -1,7 +1,7 @@
 import { Component, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { VisitorKycService } from '../services/visitor-kyc.service';
 
@@ -95,12 +95,23 @@ export class VisitorRegisterComponent implements OnDestroy {
   isCameraActive = false;
   capturedPhotoUrl = '';
 
+  // KYC confidence indicator (R009)
+  kycConfidenceScore = 0;
+  kycConfidenceLabel = '';
+
+  // DEO mode (R011) – true when accessed from /deo/register-visitor
+  isDeoMode = false;
+
   constructor(
     private http: HttpClient, 
     private router: Router,
+    private route: ActivatedRoute,
     private kycService: VisitorKycService,
     private cdr: ChangeDetectorRef
-  ) {}
+  ) {
+    // Detect DEO mode from route snapshot URL segments
+    this.isDeoMode = this.route.snapshot.url.some(segment => segment.path === 'register-visitor');
+  }
 
   ngOnDestroy() {
     this.stopCamera();
@@ -328,6 +339,9 @@ export class VisitorRegisterComponent implements OnDestroy {
             this.kycStatus = 'MANUAL_VERIFICATION_REQUIRED';
             this.form.kycStatus = 'MANUAL_VERIFICATION_REQUIRED';
           }
+          // R009: set KYC confidence score and label
+          this.kycConfidenceScore = (res as any).confidenceScore ?? (this.kycStatus === 'PHOTO_MATCHED' ? 92 : this.kycStatus === 'DEMOGRAPHIC_MATCHED' ? 75 : 45);
+          this.kycConfidenceLabel = this.kycStatus === 'PHOTO_MATCHED' ? 'Verified' : this.kycStatus === 'DEMOGRAPHIC_MATCHED' ? 'Verified (Demographic)' : 'Manual Verification Required';
           this.currentStep = 'additional-details';
           this.successMsg = res.kycStatus === 'PHOTO_MATCHED'
             ? 'KYC Verified – Photo Match Successful'
@@ -395,7 +409,11 @@ export class VisitorRegisterComponent implements OnDestroy {
   // ── NAVIGATION ──────────────────────────────────────────────────────────
 
   goToLogin() {
-    this.router.navigate(['/public-login']);
+    if (this.isDeoMode) {
+      this.router.navigate(['/dashboard']);
+    } else {
+      this.router.navigate(['/public-login']);
+    }
   }
 
   // ── INPUT SANITIZATION ──────────────────────────────────────────────────

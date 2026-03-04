@@ -175,68 +175,137 @@
       </div>
     </div>
 
-    <!-- Step 3: Associate Visitors -->
+    <!-- Step 3: Associate Visitors (R013) -->
     <div class="section-card" *ngIf="step===3">
       <div class="section-card-header"><i class="pi pi-users"></i> Associate Visitors</div>
       <div class="section-card-body">
-        <div class="info-box" style="margin-bottom:1rem">
-          If you are visiting with other people, add their details below. Associates will be recorded but will not create separate applications.
+        <!-- R013: Toggle for associate visitors -->
+        <div class="associate-toggle">
+          <input type="checkbox" id="includeAssociates" [(ngModel)]="includeAssociates" style="width:auto;margin:0;cursor:pointer" />
+          <label for="includeAssociates">Add Associate Visitors</label>
+          <span style="margin-left:auto;font-size:0.8rem;color:#6b7280">Check to include colleagues or family members visiting with you</span>
         </div>
 
-        <!-- Add associate form -->
-        <div style="padding:1rem;background:#f9fafb;border-radius:8px;margin-bottom:1rem;border:1px solid #e5e7eb">
-          <div style="font-weight:600;font-size:0.85rem;margin-bottom:0.75rem;color:#374151">Add Associate</div>
-          <div class="form-grid">
-            <div class="form-group">
-              <label>Name *</label>
-              <input pInputText [(ngModel)]="newAssociate.name" placeholder="Full name" style="width:100%"/>
-            </div>
-            <div class="form-group">
-              <label>Phone Number</label>
-              <input pInputText [(ngModel)]="newAssociate.phoneNumber" placeholder="10-digit mobile" style="width:100%"/>
-            </div>
-            <div class="form-group">
-              <label>EPIC Number</label>
-              <input pInputText [(ngModel)]="newAssociate.epicNumber" placeholder="Voter ID" style="width:100%"/>
-            </div>
-            <div class="form-group">
-              <label>Designation</label>
-              <p-select [options]="designations" [(ngModel)]="newAssociate.designation" placeholder="Select" styleClass="w-full"></p-select>
-            </div>
-            <div class="form-group" style="grid-column:1/-1">
-              <label>Address</label>
-              <input pInputText [(ngModel)]="newAssociate.address" placeholder="Address" style="width:100%"/>
-            </div>
+        <ng-container *ngIf="includeAssociates">
+          <div class="info-box" style="margin-bottom:1rem">
+            Associates will be recorded but will not create separate applications.
           </div>
-          <button pButton label="Add Associate" icon="pi pi-plus" class="p-button-outlined p-button-sm" (click)="addAssociate()" [disabled]="!newAssociate.name.trim()"></button>
-        </div>
 
-        <!-- Associates list -->
-        <div *ngIf="associates.length > 0">
-          <div style="font-weight:600;font-size:0.85rem;margin-bottom:0.5rem;color:#374151">Added Associates ({{ associates.length }})</div>
-          <div *ngFor="let a of associates; let i = index" style="display:flex;align-items:center;justify-content:space-between;padding:0.6rem 0.85rem;border:1px solid #e5e7eb;border-radius:6px;margin-bottom:0.5rem;background:white">
-            <div>
-              <div style="font-weight:600;font-size:0.9rem">{{ a.name }}</div>
-              <div style="font-size:0.8rem;color:#6b7280">{{ a.phoneNumber || '–' }} · {{ a.designation || '–' }}</div>
+          <!-- Add associate form -->
+          <div style="padding:1rem;background:#f9fafb;border-radius:8px;margin-bottom:1rem;border:1px solid #e5e7eb">
+            <div style="font-weight:600;font-size:0.85rem;margin-bottom:0.75rem;color:#374151">Add Associate</div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Name *</label>
+                <input pInputText [(ngModel)]="newAssociate.name" placeholder="Full name" style="width:100%"/>
+              </div>
+              <div class="form-group">
+                <label>Phone Number</label>
+                <input pInputText [(ngModel)]="newAssociate.phoneNumber" placeholder="10-digit mobile" style="width:100%"/>
+              </div>
+              <div class="form-group">
+                <label>EPIC Number</label>
+                <input pInputText [(ngModel)]="newAssociate.epicNumber" placeholder="Voter ID" style="width:100%"/>
+              </div>
+              <div class="form-group">
+                <label>Designation</label>
+                <p-select [options]="designations" [(ngModel)]="newAssociate.designation" placeholder="Select" styleClass="w-full"></p-select>
+              </div>
+              <div class="form-group" style="grid-column:1/-1">
+                <label>Address</label>
+                <input pInputText [(ngModel)]="newAssociate.address" placeholder="Address" style="width:100%"/>
+              </div>
             </div>
-            <button pButton icon="pi pi-trash" class="p-button-text p-button-danger p-button-sm" (click)="removeAssociate(i)"></button>
+            <button pButton label="Add Associate" icon="pi pi-plus" class="p-button-outlined p-button-sm" (click)="addAssociate()" [disabled]="!newAssociate.name.trim()"></button>
           </div>
+
+          <!-- Associates list -->
+          <div *ngIf="associates.length > 0">
+            <div style="font-weight:600;font-size:0.85rem;margin-bottom:0.5rem;color:#374151">Added Associates ({{ associates.length }})</div>
+            <div *ngFor="let a of associates; let i = index" style="display:flex;align-items:center;justify-content:space-between;padding:0.6rem 0.85rem;border:1px solid #e5e7eb;border-radius:6px;margin-bottom:0.5rem;background:white">
+              <div>
+                <div style="font-weight:600;font-size:0.9rem;color:#1f2937">{{ a.name }}</div>
+                <div style="font-size:0.8rem;color:#6b7280">{{ a.phoneNumber || '–' }} · {{ a.designation || '–' }}</div>
+              </div>
+              <button pButton icon="pi pi-trash" class="p-button-text p-button-danger p-button-sm" (click)="removeAssociate(i)"></button>
+            </div>
+          </div>
+          <div *ngIf="associates.length === 0" class="info-box">No associates added. Click "Add Associate" above to add one.</div>
+        </ng-container>
+
+        <div *ngIf="!includeAssociates" class="info-box">
+          <i class="pi pi-info-circle"></i> No associate visitors will be included. Check the box above to add associates.
         </div>
-        <div *ngIf="associates.length === 0" class="info-box">No associates added. Click "Add Associate" above to add one.</div>
       </div>
     </div>
 
-    <!-- Step 4: Documents -->
+    <!-- Step 4: Documents (R004/R005) -->
     <div class="section-card" *ngIf="step===4">
       <div class="section-card-header"><i class="pi pi-paperclip"></i> Document Upload</div>
       <div class="section-card-body">
+
+        <!-- R004/R005: AI Document Analysis -->
+        <div *ngIf="aiAnalysisLoading" class="ai-panel" style="text-align:center;padding:1.25rem">
+          <i class="pi pi-spin pi-spinner" style="font-size:1.5rem;color:#1a237e"></i>
+          <div style="margin-top:0.5rem;font-size:0.88rem;color:#374151">
+            <strong>AI is analysing your document…</strong><br>
+            <small>Extracting project details, cost, and key information</small>
+          </div>
+        </div>
+
+        <div *ngIf="aiExtracted && !aiAnalysisLoading" class="ai-panel">
+          <div class="ai-panel-title">
+            <i class="pi pi-sparkles"></i> AI Document Analysis – Extracted Fields
+            <span style="margin-left:auto;font-size:0.75rem;font-weight:400;opacity:.8">(You can edit these values before submitting)</span>
+          </div>
+          <div class="ai-extracted-grid">
+            <div class="ai-field" *ngIf="aiExtracted.projectName">
+              <strong>Project Name</strong>
+              <span>{{ aiExtracted.projectName }}</span>
+            </div>
+            <div class="ai-field" *ngIf="aiExtracted.projectCategory">
+              <strong>Project Category</strong>
+              <span>{{ aiExtracted.projectCategory }}</span>
+            </div>
+            <div class="ai-field" *ngIf="aiExtracted.estimatedCost">
+              <strong>Estimated Cost</strong>
+              <span>₹{{ aiExtracted.estimatedCost }}</span>
+            </div>
+            <div class="ai-field" *ngIf="aiExtracted.location">
+              <strong>Location / District</strong>
+              <span>{{ aiExtracted.location }}</span>
+            </div>
+            <div class="ai-field" *ngIf="aiExtracted.beneficiaries">
+              <strong>Beneficiaries</strong>
+              <span>{{ aiExtracted.beneficiaries }}</span>
+            </div>
+            <div class="ai-field" *ngIf="aiExtracted.schemeRequested">
+              <strong>Scheme Requested</strong>
+              <span>{{ aiExtracted.schemeRequested }}</span>
+            </div>
+          </div>
+          <div *ngIf="aiExtracted.justification" style="margin-top:0.5rem;font-size:0.8rem;color:#4b5563">
+            <strong>Key Justification:</strong> {{ aiExtracted.justification }}
+          </div>
+        </div>
+
         <div class="doc-row">
           <div class="doc-label">EPIC / Voter ID Scan <span class="req">*</span></div>
           <p-fileUpload mode="basic" chooseLabel="Upload EPIC" accept=".pdf,.jpg,.png" maxFileSize="5000000" styleClass="p-button-outlined p-button-sm"></p-fileUpload>
         </div>
         <div class="doc-row">
-          <div class="doc-label">Application Letter <span class="req">*</span></div>
-          <p-fileUpload mode="basic" chooseLabel="Upload Application" accept=".pdf" maxFileSize="5000000" styleClass="p-button-outlined p-button-sm"></p-fileUpload>
+          <div class="doc-label">
+            Application Letter / Project Proposal <span class="req">*</span>
+            <small style="color:#1a237e;font-size:0.75rem;display:block">AI will auto-extract project details from this document</small>
+          </div>
+          <p-fileUpload
+            mode="basic"
+            chooseLabel="Upload &amp; Analyse"
+            accept=".pdf,.doc,.docx,.jpg,.png"
+            maxFileSize="10000000"
+            styleClass="p-button-outlined p-button-sm"
+            (onSelect)="onDocumentUpload($event)">
+          </p-fileUpload>
         </div>
         <div class="doc-row">
           <div class="doc-label">Plans &amp; Estimates (up to 3) <span style="color:#6b7280;font-size:0.8rem">(for schemes)</span></div>
@@ -272,10 +341,62 @@
       </div>
     </div>
 
-    <!-- Step 5: Review -->
+    <!-- Step 5: Review (R005/R006/R007/R015) -->
     <div class="section-card" *ngIf="step===5">
       <div class="section-card-header"><i class="pi pi-check-circle"></i> Review &amp; Submit</div>
       <div class="section-card-body">
+
+        <!-- R006: Duplicate Detection Warning -->
+        <div *ngIf="duplicateWarning" class="duplicate-warning">
+          <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem">
+            <i class="pi pi-exclamation-triangle" style="font-size:1.1rem;color:#b45309"></i>
+            <strong>Possible duplicate application detected.</strong>
+          </div>
+          <div style="font-size:0.83rem">
+            Previous Application ID: <strong>{{ duplicateWarning.previousApplicationId }}</strong> |
+            Scheme: <strong>{{ duplicateWarning.schemeName }}</strong> |
+            Submitted: <strong>{{ duplicateWarning.dateSubmitted }}</strong>
+          </div>
+          <div style="margin-top:0.4rem;font-size:0.8rem;color:#92400e">You may still proceed if this is a different request.</div>
+        </div>
+
+        <!-- R007: AI Priority Recommendation -->
+        <div *ngIf="aiPriorityLevel" style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;flex-wrap:wrap">
+          <span style="font-size:0.85rem;color:#374151;font-weight:600">AI Recommended Priority:</span>
+          <span class="priority-badge" [class.high]="effectivePriority==='HIGH'" [class.medium]="effectivePriority==='MEDIUM'" [class.low]="effectivePriority==='LOW'">
+            <i class="pi" [class.pi-arrow-up]="effectivePriority==='HIGH'" [class.pi-minus]="effectivePriority==='MEDIUM'" [class.pi-arrow-down]="effectivePriority==='LOW'"></i>
+            {{ effectivePriority }}
+          </span>
+          <span *ngIf="aiPriorityReason && !aiPriorityOverridden" style="font-size:0.78rem;color:#6b7280">— {{ aiPriorityReason }}</span>
+          <span *ngIf="aiPriorityOverridden" style="font-size:0.78rem;color:#b45309">(Overridden by you)</span>
+          <div style="display:flex;gap:0.4rem;margin-left:auto">
+            <button *ngFor="let p of priorityOptions"
+              (click)="overridePriority(p)"
+              style="padding:0.2rem 0.6rem;border-radius:6px;border:1px solid #d1d5db;background:white;cursor:pointer;font-size:0.78rem;font-weight:600"
+              [style.background]="overriddenPriority===p ? '#e8eaf6' : 'white'"
+              [style.color]="overriddenPriority===p ? '#1a237e' : '#374151'">
+              {{ p }}
+            </button>
+            <button *ngIf="aiPriorityOverridden" (click)="resetPriorityOverride()"
+              style="padding:0.2rem 0.6rem;border-radius:6px;border:1px solid #d1d5db;background:white;cursor:pointer;font-size:0.75rem;color:#6b7280">
+              Reset
+            </button>
+          </div>
+        </div>
+
+        <!-- R015: AI Slot Suggestions -->
+        <div *ngIf="suggestedSlots.length > 0" style="margin-bottom:1rem;padding:0.85rem 1rem;background:#f0fdf4;border:1px solid #86efac;border-radius:8px">
+          <div style="font-weight:700;font-size:0.85rem;color:#166534;margin-bottom:0.5rem;display:flex;align-items:center;gap:0.4rem">
+            <i class="pi pi-calendar-clock"></i> AI Suggested Available Slots
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:0.5rem">
+            <span *ngFor="let slot of suggestedSlots" style="padding:0.3rem 0.75rem;background:white;border:1px solid #86efac;border-radius:6px;font-size:0.82rem;color:#166534;font-weight:500">
+              <i class="pi pi-clock" style="margin-right:0.3rem"></i>{{ slot }}
+            </span>
+          </div>
+          <div style="font-size:0.75rem;color:#6b7280;margin-top:0.4rem">Final scheduling will be confirmed by the CMO team.</div>
+        </div>
+
         <div class="review-grid">
           <div><strong>Name:</strong> {{ form.fullName || '–' }}</div>
           <div><strong>Phone:</strong> {{ form.phoneNumber || '–' }}</div>
@@ -289,21 +410,35 @@
           <div *ngIf="isScheme"><strong>Project:</strong> {{ form.projectName || '–' }}</div>
           <div *ngIf="isScheme"><strong>Est. Cost:</strong> ₹{{ form.estimatedCost || '–' }}</div>
           <div *ngIf="isScheme"><strong>MLA/MDC Approved:</strong> {{ form.mlaMdcApproved ? 'Yes' : 'No' }}</div>
-          <div><strong>Associates:</strong> {{ associates.length }} added</div>
+          <div><strong>Associates:</strong> {{ includeAssociates ? associates.length + ' added' : 'None' }}</div>
         </div>
+
+        <!-- R005: AI Summary -->
+        <div *ngIf="aiSummary" class="ai-summary-box">
+          <div class="summary-title"><i class="pi pi-sparkles"></i> AI Document Summary</div>
+          <pre style="margin:0;white-space:pre-wrap;font-family:inherit;font-size:0.83rem;color:#0c4a6e">{{ aiSummary }}</pre>
+        </div>
+
         <div class="info-box" style="margin-top:1rem">
           By submitting, you confirm all information is correct. An Application ID will be generated and you will be contacted for scheduling.
         </div>
       </div>
     </div>
 
-    <!-- Navigation Buttons -->
-    <div style="display:flex;justify-content:space-between;margin-top:1.5rem">
-      <button pButton label="← Previous" class="p-button-outlined p-button-sm" (click)="prevStep()" [disabled]="step===0"></button>
-      <button *ngIf="step < steps.length-1" pButton label="Next →" class="p-button-sm" (click)="nextStep()"></button>
-      <button *ngIf="step === steps.length-1" pButton label="Submit Application" icon="pi pi-check" class="p-button-success p-button-sm" [disabled]="loading" (click)="submit()">
-        <span *ngIf="loading"> <i class="pi pi-spin pi-spinner"></i></span>
+    <!-- Navigation Buttons (R012) -->
+    <div class="nav-buttons">
+      <button class="btn-nav-prev" (click)="prevStep()" [disabled]="step===0">
+        <i class="pi pi-arrow-left"></i> Previous
+      </button>
+      <button *ngIf="step < steps.length-1" class="btn-nav-next" (click)="nextStep()">
+        Next <i class="pi pi-arrow-right"></i>
+      </button>
+      <button *ngIf="step === steps.length-1" class="btn-nav-submit" [disabled]="loading" (click)="submit()">
+        <i class="pi pi-check"></i>
+        <span *ngIf="!loading">Submit Application</span>
+        <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Submitting…</span>
       </button>
     </div>
   </ng-container>
 </div>
+

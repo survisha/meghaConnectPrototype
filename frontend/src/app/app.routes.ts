@@ -51,6 +51,7 @@ export const routes: Routes = [
       { path: 'schemes', component: SchemeListComponent, canActivate: [roleGuard(...REPORTS_ROLES)] },
       { path: 'schemes/apply', component: SchemeFormComponent },
       { path: 'grievances', component: GrievancesComponent },
+      { path: 'deo/register-visitor', component: VisitorRegisterComponent, canActivate: [roleGuard('ADMIN', 'SAIDUL_OSD', 'DATA_ENTRY_OPERATOR')] },
       { path: 'identify', component: PublicIdentificationComponent, canActivate: [roleGuard('HCM', 'ADMIN', 'SAIDUL_OSD', 'DATA_ENTRY_OPERATOR')] },
       { path: 'reports', component: ReportsComponent, canActivate: [roleGuard(...REPORTS_ROLES)] },
       { path: 'reports/heatmap', component: HeatmapComponent, canActivate: [roleGuard(...REPORTS_ROLES)] },

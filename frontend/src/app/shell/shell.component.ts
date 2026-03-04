@@ -56,6 +56,8 @@ export class ShellComponent implements OnInit {
     },
     { label: 'Grievances', icon: 'pi-comments', route: '/grievances',
       roles: ['HCM','ADMIN','SAIDUL_OSD','APPROVER_JT_SECY','CMO_OFFICER','DATA_ENTRY_OPERATOR','PUBLIC'] },
+    { label: 'Register Visitor', icon: 'pi-user-plus', route: '/deo/register-visitor',
+      roles: ['DATA_ENTRY_OPERATOR','ADMIN','SAIDUL_OSD'] },
     { label: 'Public Identification', icon: 'pi-id-card', route: '/identify',
       roles: ['HCM','ADMIN','SAIDUL_OSD','DATA_ENTRY_OPERATOR'] },
     {

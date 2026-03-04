@@ -59,6 +59,24 @@ public class Appointment extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String shortNotes;
 
+    // ── AI-generated fields (R004–R007) ─────────────────────────────────────
+
+    /** AI-generated document summary (R005) */
+    @Column(name = "ai_summary", columnDefinition = "TEXT")
+    private String aiSummary;
+
+    /** JSON object of AI-extracted fields from uploaded document (R004) */
+    @Column(name = "ai_extracted_fields", columnDefinition = "TEXT")
+    private String aiExtractedFields;
+
+    /** AI-recommended meeting priority: HIGH, MEDIUM, or LOW (R007) */
+    @Column(name = "ai_priority_level", length = 10)
+    private String aiPriorityLevel;
+
+    /** True if AI detected a possible duplicate application (R006) */
+    @Column(name = "ai_duplicate_flag")
+    private Boolean aiDuplicateFlag = false;
+
     private Boolean isWalkIn = false;
 
     // Snooze

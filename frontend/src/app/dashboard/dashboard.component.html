@@ -85,4 +85,7 @@
         [severity]="a.severity === 'success' ? 'success' : a.severity === 'warning' ? 'warn' : a.severity === 'info' ? 'info' : 'secondary'"></p-button>
     </div>
   </div>
+
+  <!-- R010: AI Dashboard Insights (staff only) -->
+  <app-ai-insights-dashboard *ngIf="showCharts"></app-ai-insights-dashboard>
 </div>

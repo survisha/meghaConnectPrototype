@@ -2,19 +2,94 @@
 -- MeghaConnect V4: Public Registration + KYC – MySQL 8
 -- ============================================================
 
--- 1. ADD AADHAAR & KYC FIELDS TO PERSONS
-ALTER TABLE persons
-    ADD COLUMN aadhaar_number      VARCHAR(20)  COMMENT 'Aadhaar (12-digit). KYC fallback when EPIC unavailable.',
-    ADD COLUMN kyc_type            VARCHAR(10)  COMMENT 'EPIC | AADHAR | NONE',
-    ADD COLUMN kyc_verified        TINYINT(1)   DEFAULT 0,
-    ADD COLUMN kyc_verified_at     DATETIME,
-    ADD COLUMN photo_storage_path  VARCHAR(500) COMMENT 'Path/key in file store, e.g. persons/42/photo.jpg';
+-- 1. ADD AADHAAR & KYC FIELDS TO PERSONS (idempotent approach for MySQL < 8.0.29)
+SET @dbname = DATABASE();
+SET @tablename = 'persons';
+SET @columnname = 'aadhaar_number';
+SET @preparedStatement = (SELECT IF(
+  (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE
+      (table_name = @tablename)
+      AND (table_schema = @dbname)
+      AND (column_name = @columnname)
+  ) > 0,
+  'SELECT 1',
+  CONCAT('ALTER TABLE ', @tablename, ' ADD COLUMN ', @columnname, ' VARCHAR(20) COMMENT ''Aadhaar (12-digit). KYC fallback when EPIC unavailable.''')
+));
+PREPARE alterIfNotExists FROM @preparedStatement;
+EXECUTE alterIfNotExists;
+DEALLOCATE PREPARE alterIfNotExists;
 
-CREATE INDEX idx_person_aadhaar ON persons(aadhaar_number);
-CREATE INDEX idx_person_kyc     ON persons(kyc_type, kyc_verified);
+SET @columnname = 'kyc_type';
+SET @preparedStatement = (SELECT IF(
+  (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE
+      (table_name = @tablename)
+      AND (table_schema = @dbname)
+      AND (column_name = @columnname)
+  ) > 0,
+  'SELECT 1',
+  CONCAT('ALTER TABLE ', @tablename, ' ADD COLUMN ', @columnname, ' VARCHAR(10) COMMENT ''EPIC | AADHAR | NONE''')
+));
+PREPARE alterIfNotExists FROM @preparedStatement;
+EXECUTE alterIfNotExists;
+DEALLOCATE PREPARE alterIfNotExists;
+
+SET @columnname = 'kyc_verified';
+SET @preparedStatement = (SELECT IF(
+  (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE
+      (table_name = @tablename)
+      AND (table_schema = @dbname)
+      AND (column_name = @columnname)
+  ) > 0,
+  'SELECT 1',
+  CONCAT('ALTER TABLE ', @tablename, ' ADD COLUMN ', @columnname, ' TINYINT(1) DEFAULT 0')
+));
+PREPARE alterIfNotExists FROM @preparedStatement;
+EXECUTE alterIfNotExists;
+DEALLOCATE PREPARE alterIfNotExists;
+
+SET @columnname = 'kyc_verified_at';
+SET @preparedStatement = (SELECT IF(
+  (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE
+      (table_name = @tablename)
+      AND (table_schema = @dbname)
+      AND (column_name = @columnname)
+  ) > 0,
+  'SELECT 1',
+  CONCAT('ALTER TABLE ', @tablename, ' ADD COLUMN ', @columnname, ' DATETIME')
+));
+PREPARE alterIfNotExists FROM @preparedStatement;
+EXECUTE alterIfNotExists;
+DEALLOCATE PREPARE alterIfNotExists;
+
+SET @columnname = 'photo_storage_path';
+SET @preparedStatement = (SELECT IF(
+  (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE
+      (table_name = @tablename)
+      AND (table_schema = @dbname)
+      AND (column_name = @columnname)
+  ) > 0,
+  'SELECT 1',
+  CONCAT('ALTER TABLE ', @tablename, ' ADD COLUMN ', @columnname, ' VARCHAR(500) COMMENT ''Path/key in file store, e.g. persons/42/photo.jpg''')
+));
+PREPARE alterIfNotExists FROM @preparedStatement;
+EXECUTE alterIfNotExists;
+DEALLOCATE PREPARE alterIfNotExists;
+
+-- CREATE INDEX idx_person_aadhaar ON persons(aadhaar_number);
+-- CREATE INDEX idx_person_kyc     ON persons(kyc_type, kyc_verified);
 
 -- 2. PUBLIC REGISTRATIONS
-CREATE TABLE public_registrations (
+CREATE TABLE IF NOT EXISTS public_registrations (
     id                      BIGINT       NOT NULL AUTO_INCREMENT,
     registration_token      VARCHAR(64)  NOT NULL UNIQUE,
     full_name               VARCHAR(200) NOT NULL,
@@ -48,14 +123,14 @@ CREATE TABLE public_registrations (
     CONSTRAINT fk_pubreg_person FOREIGN KEY (matched_person_id) REFERENCES persons(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE INDEX idx_pub_reg_phone   ON public_registrations(phone_number);
-CREATE INDEX idx_pub_reg_status  ON public_registrations(status);
-CREATE INDEX idx_pub_reg_epic    ON public_registrations(epic_number);
-CREATE INDEX idx_pub_reg_aadhaar ON public_registrations(aadhaar_number);
-CREATE INDEX idx_pub_reg_person  ON public_registrations(matched_person_id);
+-- CREATE INDEX idx_pub_reg_phone   ON public_registrations(phone_number);
+-- CREATE INDEX idx_pub_reg_status  ON public_registrations(status);
+-- CREATE INDEX idx_pub_reg_epic    ON public_registrations(epic_number);
+-- CREATE INDEX idx_pub_reg_aadhaar ON public_registrations(aadhaar_number);
+-- CREATE INDEX idx_pub_reg_person  ON public_registrations(matched_person_id);
 
 -- 3. KYC VERIFICATION LOG
-CREATE TABLE kyc_verification_log (
+CREATE TABLE IF NOT EXISTS kyc_verification_log (
     id                    BIGINT         NOT NULL AUTO_INCREMENT,
     entity_type           VARCHAR(30)    NOT NULL COMMENT 'PUBLIC_REGISTRATION | PERSON',
     entity_id             BIGINT         NOT NULL,
@@ -76,6 +151,6 @@ CREATE TABLE kyc_verification_log (
     PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE INDEX idx_kyc_entity   ON kyc_verification_log(entity_type, entity_id);
-CREATE INDEX idx_kyc_type_val ON kyc_verification_log(kyc_type, id_value);
-CREATE INDEX idx_kyc_provider ON kyc_verification_log(provider);
+-- CREATE INDEX idx_kyc_entity   ON kyc_verification_log(entity_type, entity_id);
+-- CREATE INDEX idx_kyc_type_val ON kyc_verification_log(kyc_type, id_value);
+-- CREATE INDEX idx_kyc_provider ON kyc_verification_log(provider);

@@ -14,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -47,17 +48,23 @@ public class FileUploadController {
             if (generateSummary) {
                 summary = aiSummaryService.generateShortSummary(file);
             }
-            return ResponseEntity.ok(Map.of(
-                "success", true,
-                "filePath", storedPath,
-                "visitorId", visitorId,
-                "applicationId", applicationId,
-                "summary", summary != null ? summary : ""
-            ));
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("filePath", storedPath);
+            response.put("visitorId", visitorId);
+            response.put("applicationId", applicationId);
+            response.put("summary", summary != null ? summary : "");
+            return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("success", false, "error", e.getMessage()));
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
         } catch (IOException e) {
-            return ResponseEntity.internalServerError().body(Map.of("success", false, "error", "File storage error: " + e.getMessage()));
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "File storage error: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(error);
         }
     }
 

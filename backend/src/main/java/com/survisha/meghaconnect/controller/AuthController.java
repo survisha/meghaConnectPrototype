@@ -4,7 +4,7 @@ import com.survisha.meghaconnect.dto.AuthRequest;
 import com.survisha.meghaconnect.dto.AuthResponse;
 import com.survisha.meghaconnect.repository.UserRepository;
 import com.survisha.meghaconnect.security.JwtService;
-import jakarta.validation.Valid;
+import javax.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;

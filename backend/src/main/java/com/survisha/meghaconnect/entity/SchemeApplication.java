@@ -1,6 +1,6 @@
 package com.survisha.meghaconnect.entity;
 
-import jakarta.persistence.*;
+import javax.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
 import java.util.List;

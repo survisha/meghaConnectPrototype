@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -47,8 +48,10 @@ public class GrievanceController {
             @RequestBody Map<String, String> body,
             @AuthenticationPrincipal UserDetails user) {
         String statusStr = body.get("status");
-        if (statusStr == null || statusStr.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "'status' field is required"));
+        if (statusStr == null || statusStr.trim().isEmpty()) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "'status' field is required");
+            return ResponseEntity.badRequest().body(error);
         }
         try {
             GrievanceStatus status = GrievanceStatus.valueOf(statusStr);
@@ -57,7 +60,9 @@ public class GrievanceController {
                     grievanceService.updateStatus(id, status, body.get("remarks"), actor)
             );
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Invalid status: " + statusStr));
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Invalid status: " + statusStr);
+            return ResponseEntity.badRequest().body(error);
         }
     }
 }

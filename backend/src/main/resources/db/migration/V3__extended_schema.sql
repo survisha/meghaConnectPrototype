@@ -3,7 +3,7 @@
 -- ============================================================
 
 -- DOCUMENT UPLOADS
-CREATE TABLE document_uploads (
+CREATE TABLE IF NOT EXISTS document_uploads (
     id                     BIGINT       NOT NULL AUTO_INCREMENT,
     entity_type            VARCHAR(50)  NOT NULL COMMENT 'APPOINTMENT, SCHEME_APPLICATION, PERSON',
     entity_id              BIGINT       NOT NULL,
@@ -19,11 +19,11 @@ CREATE TABLE document_uploads (
     PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE INDEX idx_doc_entity ON document_uploads(entity_type, entity_id);
-CREATE INDEX idx_doc_type   ON document_uploads(document_type);
+-- CREATE INDEX IF NOT EXISTS idx_doc_entity ON document_uploads(entity_type, entity_id);
+-- CREATE INDEX IF NOT EXISTS idx_doc_type   ON document_uploads(document_type);
 
 -- BANK ACCOUNT DETAILS
-CREATE TABLE bank_account_details (
+CREATE TABLE IF NOT EXISTS bank_account_details (
     id                       BIGINT       NOT NULL AUTO_INCREMENT,
     person_id                BIGINT       NOT NULL,
     scheme_application_id    BIGINT,
@@ -42,10 +42,10 @@ CREATE TABLE bank_account_details (
     CONSTRAINT fk_bank_scheme FOREIGN KEY (scheme_application_id) REFERENCES scheme_applications(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE INDEX idx_bank_person ON bank_account_details(person_id);
+-- CREATE INDEX IF NOT EXISTS idx_bank_person ON bank_account_details(person_id);
 
 -- APPOINTMENT DAY LIMITS
-CREATE TABLE appointment_day_limits (
+CREATE TABLE IF NOT EXISTS appointment_day_limits (
     id                  BIGINT       NOT NULL AUTO_INCREMENT,
     location            VARCHAR(20)  COMMENT 'SHILLONG, TURA, DELHI, OTHERS',
     designation_filter  VARCHAR(100),
@@ -61,7 +61,7 @@ CREATE TABLE appointment_day_limits (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- PRIOR SCHEME HISTORY
-CREATE TABLE prior_scheme_history (
+CREATE TABLE IF NOT EXISTS prior_scheme_history (
     id                BIGINT         NOT NULL AUTO_INCREMENT,
     person_id         BIGINT         NOT NULL,
     scheme_type       VARCHAR(30)    NOT NULL,
@@ -78,11 +78,11 @@ CREATE TABLE prior_scheme_history (
     CONSTRAINT fk_prior_person FOREIGN KEY (person_id) REFERENCES persons(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE INDEX idx_prior_person ON prior_scheme_history(person_id);
-CREATE INDEX idx_prior_scheme ON prior_scheme_history(scheme_type);
+-- CREATE INDEX IF NOT EXISTS idx_prior_person ON prior_scheme_history(person_id);
+-- CREATE INDEX IF NOT EXISTS idx_prior_scheme ON prior_scheme_history(scheme_type);
 
 -- NOTIFICATION LOG
-CREATE TABLE notification_log (
+CREATE TABLE IF NOT EXISTS notification_log (
     id               BIGINT       NOT NULL AUTO_INCREMENT,
     recipient_phone  VARCHAR(20)  NOT NULL,
     channel          VARCHAR(20)  NOT NULL COMMENT 'WHATSAPP, SMS, PUSH',
@@ -97,12 +97,12 @@ CREATE TABLE notification_log (
     PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE INDEX idx_notif_phone  ON notification_log(recipient_phone);
-CREATE INDEX idx_notif_entity ON notification_log(entity_type, entity_id);
-CREATE INDEX idx_notif_status ON notification_log(status);
+-- CREATE INDEX IF NOT EXISTS idx_notif_phone  ON notification_log(recipient_phone);
+-- CREATE INDEX IF NOT EXISTS idx_notif_entity ON notification_log(entity_type, entity_id);
+-- CREATE INDEX IF NOT EXISTS idx_notif_status ON notification_log(status);
 
 -- MEETING TIMER LOG
-CREATE TABLE meeting_timer_log (
+CREATE TABLE IF NOT EXISTS meeting_timer_log (
     id                  BIGINT    NOT NULL AUTO_INCREMENT,
     appointment_id      BIGINT    NOT NULL,
     scheduled_start     DATETIME  NOT NULL,
@@ -117,10 +117,10 @@ CREATE TABLE meeting_timer_log (
     CONSTRAINT fk_timer_appt FOREIGN KEY (appointment_id) REFERENCES appointments(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE INDEX idx_timer_appt ON meeting_timer_log(appointment_id);
+-- CREATE INDEX IF NOT EXISTS idx_timer_appt ON meeting_timer_log(appointment_id);
 
 -- FACE RECOGNITION SOURCES
-CREATE TABLE face_recognition_sources (
+CREATE TABLE IF NOT EXISTS face_recognition_sources (
     id              BIGINT       NOT NULL AUTO_INCREMENT,
     source_name     VARCHAR(200) NOT NULL,
     source_type     VARCHAR(50)  NOT NULL COMMENT 'APP_PHOTO, EXCEL_IMPORT, EXTERNAL_DB, OTHER',
@@ -136,7 +136,7 @@ CREATE TABLE face_recognition_sources (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- EXTERNAL SCHEME RECORDS
-CREATE TABLE external_scheme_records (
+CREATE TABLE IF NOT EXISTS external_scheme_records (
     id                   BIGINT         NOT NULL AUTO_INCREMENT,
     scheme_type          VARCHAR(30)    NOT NULL,
     beneficiary_name     VARCHAR(200)   NOT NULL,
@@ -162,15 +162,15 @@ CREATE TABLE external_scheme_records (
     CONSTRAINT fk_ext_person FOREIGN KEY (matched_person_id) REFERENCES persons(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE INDEX idx_ext_scheme       ON external_scheme_records(scheme_type);
-CREATE INDEX idx_ext_phone        ON external_scheme_records(phone_number);
-CREATE INDEX idx_ext_epic         ON external_scheme_records(epic_number);
-CREATE INDEX idx_ext_name         ON external_scheme_records(beneficiary_name);
-CREATE INDEX idx_ext_constituency ON external_scheme_records(constituency);
-CREATE INDEX idx_ext_matched      ON external_scheme_records(matched_person_id);
+-- CREATE INDEX IF NOT EXISTS idx_ext_scheme       ON external_scheme_records(scheme_type);
+-- CREATE INDEX IF NOT EXISTS idx_ext_phone        ON external_scheme_records(phone_number);
+-- CREATE INDEX IF NOT EXISTS idx_ext_epic         ON external_scheme_records(epic_number);
+-- CREATE INDEX IF NOT EXISTS idx_ext_name         ON external_scheme_records(beneficiary_name);
+-- CREATE INDEX IF NOT EXISTS idx_ext_constituency ON external_scheme_records(constituency);
+-- CREATE INDEX IF NOT EXISTS idx_ext_matched      ON external_scheme_records(matched_person_id);
 
 -- APPROVAL DELEGATION LOG
-CREATE TABLE approval_delegation_log (
+CREATE TABLE IF NOT EXISTS approval_delegation_log (
     id                   BIGINT    NOT NULL AUTO_INCREMENT,
     delegating_user_id   BIGINT    NOT NULL,
     delegated_to_user_id BIGINT    NOT NULL,
@@ -188,11 +188,11 @@ CREATE TABLE approval_delegation_log (
     CONSTRAINT fk_deleg_to   FOREIGN KEY (delegated_to_user_id) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE INDEX idx_deleg_from ON approval_delegation_log(delegating_user_id);
-CREATE INDEX idx_deleg_to   ON approval_delegation_log(delegated_to_user_id);
+-- CREATE INDEX IF NOT EXISTS idx_deleg_from ON approval_delegation_log(delegating_user_id);
+-- CREATE INDEX IF NOT EXISTS idx_deleg_to   ON approval_delegation_log(delegated_to_user_id);
 
 -- CONSTITUENCY HEATMAP CACHE
-CREATE TABLE constituency_heatmap_cache (
+CREATE TABLE IF NOT EXISTS constituency_heatmap_cache (
     id                   BIGINT         NOT NULL AUTO_INCREMENT,
     district             VARCHAR(100)   NOT NULL,
     constituency         VARCHAR(100)   NOT NULL,
@@ -209,12 +209,12 @@ CREATE TABLE constituency_heatmap_cache (
     PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE INDEX idx_heat_constituency ON constituency_heatmap_cache(constituency);
-CREATE INDEX idx_heat_district     ON constituency_heatmap_cache(district);
-CREATE INDEX idx_heat_scheme       ON constituency_heatmap_cache(scheme_type);
+-- CREATE INDEX IF NOT EXISTS idx_heat_constituency ON constituency_heatmap_cache(constituency);
+-- CREATE INDEX IF NOT EXISTS idx_heat_district     ON constituency_heatmap_cache(district);
+-- CREATE INDEX IF NOT EXISTS idx_heat_scheme       ON constituency_heatmap_cache(scheme_type);
 
 -- NPP BLOCK/DISTRICT INTERACTION LOG
-CREATE TABLE npp_interaction_log (
+CREATE TABLE IF NOT EXISTS npp_interaction_log (
     id                    BIGINT       NOT NULL AUTO_INCREMENT,
     schedule_event_id     BIGINT       NOT NULL,
     level                 VARCHAR(20)  NOT NULL COMMENT 'BLOCK, DISTRICT',
@@ -232,7 +232,7 @@ CREATE TABLE npp_interaction_log (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- APPOINTMENT REJECTION HISTORY
-CREATE TABLE appointment_rejection_history (
+CREATE TABLE IF NOT EXISTS appointment_rejection_history (
     id               BIGINT       NOT NULL AUTO_INCREMENT,
     appointment_id   BIGINT       NOT NULL,
     rejected_by_role VARCHAR(50)  NOT NULL,
@@ -245,4 +245,4 @@ CREATE TABLE appointment_rejection_history (
     CONSTRAINT fk_rej_appt FOREIGN KEY (appointment_id) REFERENCES appointments(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE INDEX idx_rej_appt ON appointment_rejection_history(appointment_id);
+-- CREATE INDEX IF NOT EXISTS idx_rej_appt ON appointment_rejection_history(appointment_id);

@@ -15,7 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.Collections;
 import java.util.Optional;
 
 /**
@@ -101,7 +101,7 @@ public class VisitorOtpService {
                 otpTempRepository.findTopByPhoneNumberAndConsumedFalseAndExpiresAtAfterOrderByCreatedAtDesc(
                         phone, LocalDateTime.now());
 
-        if (optRecord.isEmpty()) {
+        if (!optRecord.isPresent()) {
             throw new IllegalStateException("OTP_EXPIRED_OR_NOT_FOUND");
         }
 
@@ -129,7 +129,7 @@ public class VisitorOtpService {
         UserDetails userDetails = User.builder()
                 .username("visitor_" + visitor.getId())
                 .password("")
-                .authorities(List.of(new SimpleGrantedAuthority("ROLE_PUBLIC")))
+                .authorities(Collections.singletonList(new SimpleGrantedAuthority("ROLE_PUBLIC")))
                 .build();
 
         return jwtService.generateToken(userDetails);
@@ -140,5 +140,80 @@ public class VisitorOtpService {
     private String generateSixDigitOtp() {
         int code = 100000 + SECURE_RANDOM.nextInt(900000);
         return String.valueOf(code);
+    }
+
+    // ── KYC-specific OTP methods (MOCK) ──────────────────────────────────────
+
+    /**
+     * Generates a mock OTP for KYC validation flow.
+     * 
+     * MOCK BEHAVIOR: Always returns "123456" for demo purposes.
+     * In production, this should generate a real OTP and send via SMS gateway.
+     * 
+     * Unlike generateOtp(), this does NOT require the phone number to be registered yet,
+     * as the visitor is still in the registration KYC flow.
+     *
+     * @throws IllegalStateException if rate limit exceeded
+     */
+    @Transactional
+    public String generateKycOtp(String phone) {
+        // Rate-limit check (same logic as regular OTP)
+        LocalDateTime windowStart = LocalDateTime.now().minusMinutes(RATE_WINDOW_MINUTES);
+        int recentRequests = otpTempRepository.sumAttemptCountSince(phone, windowStart);
+        if (recentRequests >= MAX_OTP_REQUESTS) {
+            throw new IllegalStateException("OTP_RATE_LIMIT_EXCEEDED");
+        }
+
+        // MOCK: Always return "123456" for demo
+        String otpCode = "123456";
+        
+        OtpTemp record = OtpTemp.builder()
+                .phoneNumber(phone)
+                .otpCode(otpCode)
+                .expiresAt(LocalDateTime.now().plusMinutes(OTP_VALIDITY_MINUTES))
+                .consumed(false)
+                .attemptCount(0)
+                .build();
+        otpTempRepository.save(record);
+
+        log.info("KYC OTP generated for {} (MOCK): {}", phone, otpCode);
+        return otpCode;
+    }
+
+    /**
+     * Validates the OTP for KYC flow (does not issue JWT).
+     * 
+     * MOCK BEHAVIOR: Accepts "123456" as valid OTP.
+     * 
+     * @return true if OTP is valid, false otherwise
+     * @throws IllegalStateException if OTP expired or max attempts exceeded
+     */
+    @Transactional
+    public boolean validateKycOtp(String phone, String submittedOtp) {
+        Optional<OtpTemp> optRecord =
+                otpTempRepository.findTopByPhoneNumberAndConsumedFalseAndExpiresAtAfterOrderByCreatedAtDesc(
+                        phone, LocalDateTime.now());
+
+        if (!optRecord.isPresent()) {
+            throw new IllegalStateException("OTP_EXPIRED_OR_NOT_FOUND");
+        }
+
+        OtpTemp record = optRecord.get();
+
+        if (record.getAttemptCount() >= MAX_OTP_ATTEMPTS) {
+            throw new IllegalStateException("OTP_MAX_ATTEMPTS_EXCEEDED");
+        }
+
+        if (!record.getOtpCode().equals(submittedOtp)) {
+            record.setAttemptCount(record.getAttemptCount() + 1);
+            otpTempRepository.save(record);
+            return false;
+        }
+
+        // Mark OTP consumed to prevent replay
+        record.setConsumed(true);
+        otpTempRepository.save(record);
+
+        return true;
     }
 }

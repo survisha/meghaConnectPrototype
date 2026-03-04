@@ -22,6 +22,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import java.util.Collections;
 import java.util.List;
 
 @Configuration
@@ -30,11 +32,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JwtAuthenticationFilter jwtAuthFilter;
     private final UserRepository userRepository;
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthFilter) throws Exception {
         return http
             // CSRF is disabled because this is a stateless REST API that uses
             // JWT Bearer tokens in the Authorization header (not session cookies).
@@ -42,10 +43,11 @@ public class SecurityConfig {
             // The frontend SPA sends JWT in Authorization header, not via cookies.
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/v1/auth/**", "/actuator/health").permitAll()
-                .requestMatchers("/api/v1/appointments").permitAll()   // Public can submit
-                .requestMatchers("/api/v1/public/**").permitAll()       // Public registration
-                .requestMatchers("/api/v1/visitor/auth/**").permitAll() // Visitor OTP auth
+                .antMatchers("/api/v1/auth/**", "/actuator/health").permitAll()
+                .antMatchers("/api/v1/appointments").permitAll()   // Public can submit
+                .antMatchers("/api/v1/public/**").permitAll()       // Public registration
+                .antMatchers("/api/v1/visitor/auth/**").permitAll() // Visitor OTP auth
+                .antMatchers("/api/v1/visitor/**").permitAll()      // Visitor KYC endpoints
                 .anyRequest().authenticated()
             )
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -62,7 +64,7 @@ public class SecurityConfig {
             return org.springframework.security.core.userdetails.User.builder()
                 .username(u.getUsername())
                 .password(u.getPasswordHash())
-                .authorities(List.of(new SimpleGrantedAuthority("ROLE_" + u.getRole().name())))
+                .authorities(Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + u.getRole().name())))
                 .build();
         };
     }

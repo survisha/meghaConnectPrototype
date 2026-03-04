@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -42,18 +43,18 @@ public class VisitorAuthController {
     @PostMapping("/check-mobile")
     public ResponseEntity<Map<String, Object>> checkMobile(@RequestBody Map<String, String> body) {
         String phone = body.get("phoneNumber");
-        if (phone == null || phone.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "success", false,
-                    "message", "phoneNumber is required"
-            ));
+        if (phone == null || phone.trim().isEmpty()) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", "phoneNumber is required");
+            return ResponseEntity.badRequest().body(error);
         }
         boolean found = visitorOtpService.isMobileRegistered(phone.trim());
-        return ResponseEntity.ok(Map.of(
-                "success",    true,
-                "registered", found,
-                "message",    found ? "Account found" : "Account not found"
-        ));
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("registered", found);
+        response.put("message", found ? "Account found" : "Account not found");
+        return ResponseEntity.ok(response);
     }
 
     // ── 2. Generate OTP ───────────────────────────────────────────────────────
@@ -65,32 +66,32 @@ public class VisitorAuthController {
     @PostMapping("/generate-otp")
     public ResponseEntity<Map<String, Object>> generateOtp(@RequestBody Map<String, String> body) {
         String phone = body.get("phoneNumber");
-        if (phone == null || phone.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "success", false,
-                    "message", "phoneNumber is required"
-            ));
+        if (phone == null || phone.trim().isEmpty()) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", "phoneNumber is required");
+            return ResponseEntity.badRequest().body(error);
         }
         try {
             String otp = visitorOtpService.generateOtp(phone.trim());
             // TODO: remove otp from response once SMS gateway is integrated
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "otp",     otp,          // simulated; remove when SMS is live
-                    "message", "OTP sent to " + phone + " (mock)"
-            ));
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("otp", otp);  // simulated; remove when SMS is live
+            response.put("message", "OTP sent to " + phone + " (mock)");
+            return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(404).body(Map.of(
-                    "success",    false,
-                    "errorCode",  e.getMessage(),
-                    "message",    "Mobile number not registered. Please register first."
-            ));
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("errorCode", e.getMessage());
+            error.put("message", "Mobile number not registered. Please register first.");
+            return ResponseEntity.status(404).body(error);
         } catch (IllegalStateException e) {
-            return ResponseEntity.status(429).body(Map.of(
-                    "success",   false,
-                    "errorCode", e.getMessage(),
-                    "message",   "Too many OTP requests. Please try again later."
-            ));
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("errorCode", e.getMessage());
+            error.put("message", "Too many OTP requests. Please try again later.");
+            return ResponseEntity.status(429).body(error);
         }
     }
 
@@ -104,41 +105,41 @@ public class VisitorAuthController {
     public ResponseEntity<Map<String, Object>> validateOtp(@RequestBody Map<String, String> body) {
         String phone = body.get("phoneNumber");
         String otp   = body.get("otp");
-        if (phone == null || otp == null || phone.isBlank() || otp.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "success", false,
-                    "message", "phoneNumber and otp are required"
-            ));
+        if (phone == null || otp == null || phone.trim().isEmpty() || otp.trim().isEmpty()) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", "phoneNumber and otp are required");
+            return ResponseEntity.badRequest().body(error);
         }
         try {
             String jwt = visitorOtpService.validateOtpAndLogin(phone.trim(), otp.trim());
             Optional<Person> visitor = personRepository.findByPhoneNumber(phone.trim());
-            return ResponseEntity.ok(Map.of(
-                    "success",  true,
-                    "token",    jwt,
-                    "fullName", visitor.map(Person::getFullName).orElse("Visitor"),
-                    "visitorId", visitor.map(Person::getId).orElse(0L),
-                    "role",     "PUBLIC",
-                    "message",  "Login successful"
-            ));
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("token", jwt);
+            response.put("fullName", visitor.map(Person::getFullName).orElse("Visitor"));
+            response.put("visitorId", visitor.map(Person::getId).orElse(0L));
+            response.put("role", "PUBLIC");
+            response.put("message", "Login successful");
+            return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             String msg = e.getMessage() != null && e.getMessage().startsWith("OTP_INVALID:")
                     ? "Incorrect OTP. " + e.getMessage().split(":")[1] + " attempts remaining."
                     : "Mobile number not found.";
-            return ResponseEntity.status(401).body(Map.of(
-                    "success",   false,
-                    "errorCode", e.getMessage(),
-                    "message",   msg
-            ));
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("errorCode", e.getMessage());
+            error.put("message", msg);
+            return ResponseEntity.status(401).body(error);
         } catch (IllegalStateException e) {
             String msg = "OTP_EXPIRED_OR_NOT_FOUND".equals(e.getMessage())
                     ? "OTP has expired or was not found. Please generate a new OTP."
                     : "Maximum OTP attempts exceeded. Please generate a new OTP.";
-            return ResponseEntity.status(401).body(Map.of(
-                    "success",   false,
-                    "errorCode", e.getMessage(),
-                    "message",   msg
-            ));
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("errorCode", e.getMessage());
+            error.put("message", msg);
+            return ResponseEntity.status(401).body(error);
         }
     }
 
@@ -157,52 +158,61 @@ public class VisitorAuthController {
      */
     @PostMapping("/register")
     public ResponseEntity<Map<String, Object>> register(@RequestBody PublicRegistrationDto dto) {
-        if (dto.getFullName() == null || dto.getFullName().isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Full name is required"));
+        if (dto.getFullName() == null || dto.getFullName().trim().isEmpty()) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", "Full name is required");
+            return ResponseEntity.badRequest().body(error);
         }
-        if (dto.getPhoneNumber() == null || dto.getPhoneNumber().isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Phone number is required"));
+        if (dto.getPhoneNumber() == null || dto.getPhoneNumber().trim().isEmpty()) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", "Phone number is required");
+            return ResponseEntity.badRequest().body(error);
         }
         if (dto.getPhoneNumber().length() != 10) {
-            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Phone number must be 10 digits"));
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", "Phone number must be 10 digits");
+            return ResponseEntity.badRequest().body(error);
         }
 
         // Duplicate mobile check
         if (personRepository.findByPhoneNumber(dto.getPhoneNumber()).isPresent()) {
-            return ResponseEntity.status(409).body(Map.of(
-                    "success",   false,
-                    "errorCode", "MOBILE_ALREADY_REGISTERED",
-                    "message",   "This mobile number is already registered. Please login instead."
-            ));
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("errorCode", "MOBILE_ALREADY_REGISTERED");
+            error.put("message", "This mobile number is already registered. Please login instead.");
+            return ResponseEntity.status(409).body(error);
         }
 
         // Validate EPIC format if provided (alphanumeric, typically 3 letters + 7 digits)
-        if (dto.getEpicNumber() != null && !dto.getEpicNumber().isBlank()) {
+        if (dto.getEpicNumber() != null && !dto.getEpicNumber().trim().isEmpty()) {
             if (!dto.getEpicNumber().matches("^[A-Z]{3}[0-9]{7}$")) {
-                return ResponseEntity.badRequest().body(Map.of(
-                        "success",   false,
-                        "errorCode", "INVALID_EPIC_FORMAT",
-                        "message",   "EPIC number must be 3 uppercase letters followed by 7 digits (e.g. ABC1234567)"
-                ));
+                Map<String, Object> error = new HashMap<>();
+                error.put("success", false);
+                error.put("errorCode", "INVALID_EPIC_FORMAT");
+                error.put("message", "EPIC number must be 3 uppercase letters followed by 7 digits (e.g. ABC1234567)");
+                return ResponseEntity.badRequest().body(error);
             }
         }
 
         // Validate Aadhaar format if provided (exactly 12 digits)
-        if (dto.getAadhaarNumber() != null && !dto.getAadhaarNumber().isBlank()) {
+        if (dto.getAadhaarNumber() != null && !dto.getAadhaarNumber().trim().isEmpty()) {
             if (!dto.getAadhaarNumber().matches("^[0-9]{12}$")) {
-                return ResponseEntity.badRequest().body(Map.of(
-                        "success",   false,
-                        "errorCode", "INVALID_AADHAAR_FORMAT",
-                        "message",   "Aadhaar number must be exactly 12 digits"
-                ));
+                Map<String, Object> error = new HashMap<>();
+                error.put("success", false);
+                error.put("errorCode", "INVALID_AADHAAR_FORMAT");
+                error.put("message", "Aadhaar number must be exactly 12 digits");
+                return ResponseEntity.badRequest().body(error);
             }
         }
 
         // Determine KYC type
         String kycType = "NONE";
-        if (dto.getEpicNumber() != null && !dto.getEpicNumber().isBlank()) {
+        if (dto.getEpicNumber() != null && !dto.getEpicNumber().trim().isEmpty()) {
             kycType = "EPIC";
-        } else if (dto.getAadhaarNumber() != null && !dto.getAadhaarNumber().isBlank()) {
+        } else if (dto.getAadhaarNumber() != null && !dto.getAadhaarNumber().trim().isEmpty()) {
             kycType = "AADHAAR";
         }
 
@@ -225,13 +235,13 @@ public class VisitorAuthController {
                 .build();
         Person saved = personRepository.save(visitor);
 
-        return ResponseEntity.ok(Map.of(
-                "success",    true,
-                "visitorId",  saved.getId(),
-                "kycStatus",  "PENDING",
-                "kycType",    kycType,
-                "message",    "Registration successful. Please login with your mobile number."
-        ));
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("visitorId", saved.getId());
+        response.put("kycStatus", "PENDING");
+        response.put("kycType", kycType);
+        response.put("message", "Registration successful. Please login with your mobile number.");
+        return ResponseEntity.ok(response);
     }
 
     // ── 5. Get profile ────────────────────────────────────────────────────────
@@ -242,22 +252,26 @@ public class VisitorAuthController {
      */
     @GetMapping("/profile/{visitorId}")
     public ResponseEntity<Map<String, Object>> getProfile(@PathVariable Long visitorId) {
-        return personRepository.findById(visitorId)
-                .map(p -> ResponseEntity.ok(Map.<String, Object>of(
-                        "success",     true,
-                        "id",          p.getId(),
-                        "fullName",    p.getFullName(),
-                        "phoneNumber", p.getPhoneNumber() != null ? p.getPhoneNumber() : "",
-                        "epicNumber",  p.getEpicNumber()  != null ? p.getEpicNumber()  : "",
-                        "aadhaarNumber", p.getAadhaarNumber() != null ? p.getAadhaarNumber() : "",
-                        "kycType",     p.getKycType()     != null ? p.getKycType()     : "NONE",
-                        "kycVerified", Boolean.TRUE.equals(p.getKycVerified()),
-                        "address",     p.getAddress()     != null ? p.getAddress()     : "",
-                        "district",    p.getDistrict()    != null ? p.getDistrict()    : ""
-                )))
-                .orElse(ResponseEntity.status(404).body(Map.of(
-                        "success", false,
-                        "message", "Visitor not found"
-                )));
+        Optional<Person> personOpt = personRepository.findById(visitorId);
+        if (personOpt.isPresent()) {
+            Person p = personOpt.get();
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("id", p.getId());
+            response.put("fullName", p.getFullName());
+            response.put("phoneNumber", p.getPhoneNumber() != null ? p.getPhoneNumber() : "");
+            response.put("epicNumber", p.getEpicNumber() != null ? p.getEpicNumber() : "");
+            response.put("aadhaarNumber", p.getAadhaarNumber() != null ? p.getAadhaarNumber() : "");
+            response.put("kycType", p.getKycType() != null ? p.getKycType() : "NONE");
+            response.put("kycVerified", Boolean.TRUE.equals(p.getKycVerified()));
+            response.put("address", p.getAddress() != null ? p.getAddress() : "");
+            response.put("district", p.getDistrict() != null ? p.getDistrict() : "");
+            return ResponseEntity.ok(response);
+        } else {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", "Visitor not found");
+            return ResponseEntity.status(404).body(error);
+        }
     }
 }

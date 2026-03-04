@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -42,16 +43,16 @@ public class PublicRegistrationController {
     public ResponseEntity<Map<String, Object>> sendOtp(@RequestBody Map<String, String> body) {
         String phone = body.get("phoneNumber");
         if (phone == null || phone.length() != 10) {
-            return ResponseEntity.badRequest().body(Map.of(
-                "success", false,
-                "message", "Invalid phone number"
-            ));
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", "Invalid phone number");
+            return ResponseEntity.badRequest().body(error);
         }
         // TODO: call OTP service
-        return ResponseEntity.ok(Map.of(
-            "success", true,
-            "message", "OTP sent to " + phone + " (mock – integrate SMS provider)"
-        ));
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "OTP sent to " + phone + " (mock – integrate SMS provider)");
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -62,11 +63,11 @@ public class PublicRegistrationController {
     public ResponseEntity<Map<String, Object>> verifyOtp(@RequestBody Map<String, String> body) {
         // TODO: validate OTP from cache / Redis
         String token = UUID.randomUUID().toString().replace("-", "");
-        return ResponseEntity.ok(Map.of(
-            "success",           true,
-            "registrationToken", token,
-            "message",           "OTP verified (mock)"
-        ));
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("registrationToken", token);
+        response.put("message", "OTP verified (mock)");
+        return ResponseEntity.ok(response);
     }
 
     // ── REGISTRATION ─────────────────────────────────────────────
@@ -89,9 +90,9 @@ public class PublicRegistrationController {
 
         // Determine KYC type
         String kycType = "NONE";
-        if (dto.getEpicNumber() != null && !dto.getEpicNumber().isBlank()) {
+        if (dto.getEpicNumber() != null && !dto.getEpicNumber().trim().isEmpty()) {
             kycType = "EPIC";
-        } else if (dto.getAadhaarNumber() != null && !dto.getAadhaarNumber().isBlank()) {
+        } else if (dto.getAadhaarNumber() != null && !dto.getAadhaarNumber().trim().isEmpty()) {
             kycType = "AADHAAR";
         }
 
@@ -100,13 +101,13 @@ public class PublicRegistrationController {
         // TODO: attempt match against existing persons via phone/EPIC/Aadhaar
 
         String appId = "PR-" + System.currentTimeMillis() % 100000;
-        return ResponseEntity.ok(Map.of(
-            "success",            true,
-            "registrationId",     appId,
-            "kycType",            kycType,
-            "kycVerificationPending", true,
-            "message",            "Registration received. KYC verification in progress."
-        ));
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("registrationId", appId);
+        response.put("kycType", kycType);
+        response.put("kycVerificationPending", true);
+        response.put("message", "Registration received. KYC verification in progress.");
+        return ResponseEntity.ok(response);
     }
 
     // ── FILE UPLOAD ───────────────────────────────────────────────
@@ -129,10 +130,10 @@ public class PublicRegistrationController {
             @RequestParam("file") MultipartFile file) {
 
         if (file.isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of(
-                "success", false,
-                "message", "File is empty"
-            ));
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", "File is empty");
+            return ResponseEntity.badRequest().body(error);
         }
 
         // TODO: validate file type / size
@@ -142,12 +143,12 @@ public class PublicRegistrationController {
         String ext        = getExtension(file.getOriginalFilename());
         String storagePath = "registrations/" + token + "/" + documentType.toLowerCase() + ext;
 
-        return ResponseEntity.ok(Map.of(
-            "success",      true,
-            "storagePath",  storagePath,
-            "documentType", documentType,
-            "message",      "File accepted. Persist storagePath in your registration request."
-        ));
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("storagePath", storagePath);
+        response.put("documentType", documentType);
+        response.put("message", "File accepted. Persist storagePath in your registration request.");
+        return ResponseEntity.ok(response);
     }
 
     private String getExtension(String filename) {

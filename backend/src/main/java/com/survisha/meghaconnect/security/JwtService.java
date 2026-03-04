@@ -24,17 +24,17 @@ public class JwtService {
         Map<String, Object> claims = new HashMap<>();
         claims.put("roles", userDetails.getAuthorities());
         return Jwts.builder()
-            .claims(claims)
-            .subject(userDetails.getUsername())
-            .issuedAt(new Date())
-            .expiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
-            .signWith(getSigningKey())
+            .setClaims(claims)
+            .setSubject(userDetails.getUsername())
+            .setIssuedAt(new Date())
+            .setExpiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
+            .signWith(getSigningKey(), SignatureAlgorithm.HS256)
             .compact();
     }
 
     public String extractUsername(String token) {
-        return Jwts.parser().verifyWith(getSigningKey()).build()
-            .parseSignedClaims(token).getPayload().getSubject();
+        return Jwts.parserBuilder().setSigningKey(getSigningKey()).build()
+            .parseClaimsJws(token).getBody().getSubject();
     }
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
@@ -42,8 +42,8 @@ public class JwtService {
     }
 
     private boolean isTokenExpired(String token) {
-        return Jwts.parser().verifyWith(getSigningKey()).build()
-            .parseSignedClaims(token).getPayload().getExpiration().before(new Date());
+        return Jwts.parserBuilder().setSigningKey(getSigningKey()).build()
+            .parseClaimsJws(token).getBody().getExpiration().before(new Date());
     }
 
     private SecretKey getSigningKey() {

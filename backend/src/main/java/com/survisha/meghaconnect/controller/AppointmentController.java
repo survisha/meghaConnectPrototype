@@ -3,7 +3,7 @@ package com.survisha.meghaconnect.controller;
 import com.survisha.meghaconnect.dto.AppointmentDto;
 import com.survisha.meghaconnect.entity.Appointment;
 import com.survisha.meghaconnect.service.AppointmentService;
-import jakarta.validation.Valid;
+import javax.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,6 +14,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -57,8 +58,10 @@ public class AppointmentController {
             @RequestBody Map<String, String> body,
             @AuthenticationPrincipal UserDetails user) {
         String statusStr = body.get("status");
-        if (statusStr == null || statusStr.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "'status' field is required"));
+        if (statusStr == null || statusStr.trim().isEmpty()) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "'status' field is required");
+            return ResponseEntity.badRequest().body(error);
         }
         try {
             Appointment.AppointmentStatus status = Appointment.AppointmentStatus.valueOf(statusStr);
@@ -66,7 +69,9 @@ public class AppointmentController {
                 appointmentService.updateStatus(id, status, body.get("remarks"), user.getUsername())
             );
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Invalid status value: " + statusStr));
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Invalid status value: " + statusStr);
+            return ResponseEntity.badRequest().body(error);
         }
     }
 
@@ -81,13 +86,15 @@ public class AppointmentController {
         Object durObj = body.get("durationMinutes");
 
         if (dtObj == null || durObj == null) {
-            return ResponseEntity.badRequest()
-                .body(Map.of("error", "'scheduledDateTime' and 'durationMinutes' are required"));
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "'scheduledDateTime' and 'durationMinutes' are required");
+            return ResponseEntity.badRequest().body(error);
         }
 
         if (!(durObj instanceof Integer)) {
-            return ResponseEntity.badRequest()
-                .body(Map.of("error", "'durationMinutes' must be an integer"));
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "'durationMinutes' must be an integer");
+            return ResponseEntity.badRequest().body(error);
         }
 
         try {
@@ -95,10 +102,13 @@ public class AppointmentController {
             int duration = (Integer) durObj;
             return ResponseEntity.ok(appointmentService.schedule(id, dt, duration, user.getUsername()));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Invalid date-time format: " + dtObj));
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Invalid date-time format: " + dtObj);
+            return ResponseEntity.badRequest().body(error);
         } catch (IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(Map.of("error", e.getMessage()));
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
         }
     }
 }

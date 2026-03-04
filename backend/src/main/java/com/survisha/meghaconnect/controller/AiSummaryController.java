@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -27,9 +28,9 @@ public class AiSummaryController {
             try {
                 appointmentId = Long.parseLong(request.get("appointmentId").toString());
             } catch (NumberFormatException e) {
-                return ResponseEntity.badRequest().body(Map.of(
-                        "error", "Invalid appointmentId: must be a valid numeric identifier."
-                ));
+                Map<String, Object> error = new HashMap<>();
+                error.put("error", "Invalid appointmentId: must be a valid numeric identifier.");
+                return ResponseEntity.badRequest().body(error);
             }
         }
         String agendaBrief   = String.valueOf(request.getOrDefault("agendaBrief", ""));
@@ -48,9 +49,9 @@ public class AiSummaryController {
             });
         }
 
-        return ResponseEntity.ok(Map.of(
-                "appointmentId", appointmentId != null ? appointmentId : 0,
-                "shortNotes", shortNotes
-        ));
+        Map<String, Object> response = new HashMap<>();
+        response.put("appointmentId", appointmentId != null ? appointmentId : 0);
+        response.put("shortNotes", shortNotes);
+        return ResponseEntity.ok(response);
     }
 }

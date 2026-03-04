@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -49,15 +50,15 @@ public class KycController {
         // KycProvider provider = kycProviderFactory.getProvider("ELECTION_COMMISSION_API");
         // KycResult result = provider.verify(epic, name);
 
-        return ResponseEntity.ok(Map.of(
-            "kycType",        "EPIC",
-            "idValue",        epic,
-            "provider",       "ELECTION_COMMISSION_API",
-            "verified",       true,
-            "verifiedName",   "Verification pending API integration",
-            "nameMatchScore", 0,
-            "message",        "Mock response – live API integration pending credentials"
-        ));
+        Map<String, Object> response = new HashMap<>();
+        response.put("kycType", "EPIC");
+        response.put("idValue", epic);
+        response.put("provider", "ELECTION_COMMISSION_API");
+        response.put("verified", true);
+        response.put("verifiedName", "Verification pending API integration");
+        response.put("nameMatchScore", 0);
+        response.put("message", "Mock response – live API integration pending credentials");
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -77,10 +78,10 @@ public class KycController {
             @RequestParam(required = false) String name) {
 
         if (aadhaar == null || aadhaar.replaceAll("\\D", "").length() != 12) {
-            return ResponseEntity.badRequest().body(Map.of(
-                "verified", false,
-                "message",  "Invalid Aadhaar number – must be 12 digits"
-            ));
+            Map<String, Object> error = new HashMap<>();
+            error.put("verified", false);
+            error.put("message", "Invalid Aadhaar number – must be 12 digits");
+            return ResponseEntity.badRequest().body(error);
         }
 
         // TODO: Replace with call to UIDAI API adapter
@@ -88,14 +89,14 @@ public class KycController {
         // KycResult result = provider.verify(aadhaar, name);
 
         String maskedAadhaar = "XXXX-XXXX-" + aadhaar.substring(aadhaar.length() - 4);
-        return ResponseEntity.ok(Map.of(
-            "kycType",        "AADHAAR",
-            "idValue",        maskedAadhaar,          // full number is never echoed
-            "provider",       "UIDAI_API",
-            "verified",       true,
-            "verifiedName",   "Verification pending API integration",
-            "nameMatchScore", 0,
-            "message",        "Mock response – live API integration pending credentials"
-        ));
+        Map<String, Object> response = new HashMap<>();
+        response.put("kycType", "AADHAAR");
+        response.put("idValue", maskedAadhaar);  // full number is never echoed
+        response.put("provider", "UIDAI_API");
+        response.put("verified", true);
+        response.put("verifiedName", "Verification pending API integration");
+        response.put("nameMatchScore", 0);
+        response.put("message", "Mock response – live API integration pending credentials");
+        return ResponseEntity.ok(response);
     }
 }

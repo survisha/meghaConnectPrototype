@@ -13,8 +13,8 @@
         </div>
       </div>
       <div class="brand-desc">
-        <h3>Visitor Registration</h3>
-        <p>Register once to access government appointments, schemes and grievance services from anywhere.</p>
+        <h3>Visitor Registration with KYC</h3>
+        <p>Secure registration with ID verification, OTP validation and photo capture.</p>
         <ul class="feature-list">
           <li><i class="pi pi-check-circle"></i> Book appointments with the CM Office</li>
           <li><i class="pi pi-check-circle"></i> Track scheme applications</li>
@@ -33,107 +33,305 @@
           <i class="pi pi-check-circle" style="font-size:3rem;color:#16a34a;margin-bottom:1rem"></i>
           <h2>Registration Successful!</h2>
           <p>{{ successMsg }}</p>
-          <p style="font-size:0.85rem;color:#6b7280;margin-top:0.5rem">
-            Your KYC status is <strong>PENDING</strong> and will be verified soon.
-          </p>
+          <div style="margin-top:1rem;padding:0.75rem;background:#f0fdf4;border:1px solid #86efac;border-radius:8px">
+            <div style="display:flex;align-items:center;gap:0.5rem">
+              <i class="pi pi-shield" style="color:#16a34a"></i>
+              <strong style="color:#166534">KYC Status: {{ form.kycStatus || 'PENDING' }}</strong>
+            </div>
+            <p style="font-size:0.85rem;color:#6b7280;margin-top:0.5rem">
+              {{ kycStatusMessage }}
+            </p>
+          </div>
           <button class="btn-primary" style="margin-top:1.5rem;width:auto;padding:0.7rem 2rem" (click)="goToLogin()">
             <i class="pi pi-sign-in"></i> Go to Login
           </button>
         </div>
       </ng-container>
 
-      <!-- Registration form -->
+      <!-- Multi-step KYC Registration -->
       <ng-container *ngIf="!submitted">
         <div class="card-header">
           <h2>New Visitor Registration</h2>
-          <p>All fields marked * are required</p>
+          <p>Complete KYC verification in 4 simple steps</p>
         </div>
 
+        <!-- Progress Stepper -->
+        <div class="kyc-stepper">
+          <div class="step" [class.active]="currentStep === 'id-entry'" [class.completed]="currentStep !== 'id-entry'">
+            <div class="step-circle">
+              <i class="pi" [ngClass]="currentStep === 'id-entry' ? 'pi-id-card' : 'pi-check'"></i>
+            </div>
+            <span class="step-label">ID Verification</span>
+          </div>
+          <div class="step-line" [class.completed]="currentStep !== 'id-entry'"></div>
+          
+          <div class="step" [class.active]="currentStep === 'otp-verification'" [class.completed]="currentStep === 'photo-capture' || currentStep === 'kyc-complete'">
+            <div class="step-circle">
+              <i class="pi" [ngClass]="currentStep === 'otp-verification' ? 'pi-mobile' : (currentStep === 'photo-capture' || currentStep === 'kyc-complete' ? 'pi-check' : 'pi-mobile')"></i>
+            </div>
+            <span class="step-label">OTP Verification</span>
+          </div>
+          <div class="step-line" [class.completed]="currentStep === 'photo-capture' || currentStep === 'kyc-complete'"></div>
+          
+          <div class="step" [class.active]="currentStep === 'photo-capture'" [class.completed]="currentStep === 'kyc-complete'">
+            <div class="step-circle">
+              <i class="pi" [ngClass]="currentStep === 'photo-capture' ? 'pi-camera' : (currentStep === 'kyc-complete' ? 'pi-check' : 'pi-camera')"></i>
+            </div>
+            <span class="step-label">Photo Capture</span>
+          </div>
+          <div class="step-line" [class.completed]="currentStep === 'kyc-complete'"></div>
+          
+          <div class="step" [class.active]="currentStep === 'kyc-complete'">
+            <div class="step-circle">
+              <i class="pi pi-verified"></i>
+            </div>
+            <span class="step-label">Complete</span>
+          </div>
+        </div>
+
+        <!-- Error message -->
         <div *ngIf="errorMsg" class="error-msg">
           <i class="pi pi-exclamation-circle"></i> {{ errorMsg }}
         </div>
 
-        <!-- Personal Details -->
-        <div class="section-title">Personal Details</div>
+        <!-- STEP 1: ID Entry -->
+        <ng-container *ngIf="currentStep === 'id-entry'">
+          <div class="section-title">Step 1: Enter Your ID Details</div>
 
-        <div class="form-row">
           <div class="form-group">
-            <label>Full Name *</label>
-            <input type="text" class="input-field" [(ngModel)]="form.fullName" placeholder="Enter your full name" />
+            <label>ID Type *</label>
+            <div class="radio-group">
+              <label class="radio-option" [class.selected]="form.idType === 'EPIC'">
+                <input type="radio" [(ngModel)]="form.idType" value="EPIC" />
+                <span><i class="pi pi-id-card"></i> EPIC (Voter ID)</span>
+              </label>
+              <label class="radio-option" [class.selected]="form.idType === 'AADHAAR'">
+                <input type="radio" [(ngModel)]="form.idType" value="AADHAAR" />
+                <span><i class="pi pi-id-card"></i> Aadhaar Card</span>
+              </label>
+            </div>
           </div>
-        </div>
 
-        <div class="form-row two-col">
+          <div class="form-group" *ngIf="form.idType === 'EPIC'">
+            <label>EPIC Number *</label>
+            <input
+              type="text"
+              class="input-field"
+              [(ngModel)]="form.epicNumber"
+              placeholder="e.g. ABC1234567"
+              maxlength="10"
+              (input)="sanitizeEpicInput()"
+            />
+            <small class="field-hint"><i class="pi pi-info-circle"></i> Format: 3 uppercase letters + 7 digits (e.g., ABC1234567)</small>
+          </div>
+
+          <div class="form-group" *ngIf="form.idType === 'AADHAAR'">
+            <label>Aadhaar Number *</label>
+            <input
+              type="text"
+              class="input-field"
+              [(ngModel)]="form.aadhaarNumber"
+              placeholder="Enter 12-digit Aadhaar"
+              maxlength="12"
+              (input)="sanitizeNumericInput('aadhaarNumber')"
+            />
+            <small class="field-hint"><i class="pi pi-info-circle"></i> Enter all 12 digits without spaces</small>
+          </div>
+
           <div class="form-group">
             <label>Mobile Number *</label>
-            <input type="tel" class="input-field" [(ngModel)]="form.phoneNumber" placeholder="10-digit mobile" maxlength="10" />
+            <input
+              type="tel"
+              class="input-field"
+              [(ngModel)]="form.phoneNumber"
+              placeholder="10-digit mobile number"
+              maxlength="10"
+              (input)="sanitizeNumericInput('phoneNumber')"
+            />
+            <small class="field-hint"><i class="pi pi-mobile"></i> OTP will be sent to this number</small>
           </div>
+
+          <div class="kyc-notice">
+            <i class="pi pi-info-circle"></i>
+            We will validate your ID and send an OTP to your mobile number.
+          </div>
+
+          <div style="display:flex;gap:1rem;margin-top:1.5rem">
+            <button class="btn-outline" (click)="goToLogin()">
+              <i class="pi pi-arrow-left"></i> Back to Login
+            </button>
+            <button class="btn-primary flex-1" [disabled]="loading" (click)="validateId()">
+              <span *ngIf="!loading"><i class="pi pi-arrow-right"></i> Validate & Send OTP</span>
+              <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Validating...</span>
+            </button>
+          </div>
+        </ng-container>
+
+        <!-- STEP 2: OTP Verification -->
+        <ng-container *ngIf="currentStep === 'otp-verification'">
+          <div class="section-title">Step 2: Verify OTP</div>
+
+          <div class="otp-info-box">
+            <i class="pi pi-mobile" style="font-size:2rem;color:#1565C0"></i>
+            <p>OTP sent to <strong>{{ maskedPhone }}</strong></p>
+            <small>Please enter the 6-digit code to continue</small>
+          </div>
+
           <div class="form-group">
-            <label>Email</label>
-            <input type="email" class="input-field" [(ngModel)]="form.email" placeholder="Optional" />
+            <label>Enter OTP *</label>
+            <input
+              type="text"
+              class="input-field otp-input"
+              [(ngModel)]="otpCode"
+              placeholder="Enter 6-digit OTP"
+              maxlength="6"
+              (input)="sanitizeOtpInput()"
+              style="text-align:center;font-size:1.5rem;letter-spacing:0.5rem;font-weight:600"
+            />
           </div>
-        </div>
 
-        <div class="form-group">
-          <label>Address</label>
-          <textarea class="input-field" [(ngModel)]="form.address" placeholder="Your address" rows="2"></textarea>
-        </div>
-
-        <!-- ID Proof -->
-        <div class="section-title">Identity Proof (KYC)</div>
-
-        <div class="form-group">
-          <label>ID Type *</label>
-          <div class="radio-group">
-            <label class="radio-option" [class.selected]="form.idType === 'EPIC'">
-              <input type="radio" [(ngModel)]="form.idType" value="EPIC" />
-              <span>EPIC (Voter ID)</span>
-            </label>
-            <label class="radio-option" [class.selected]="form.idType === 'AADHAAR'">
-              <input type="radio" [(ngModel)]="form.idType" value="AADHAAR" />
-              <span>Aadhaar Card</span>
-            </label>
+          <div style="text-align:center;margin-top:1rem">
+            <button class="btn-link" (click)="validateId()">
+              <i class="pi pi-refresh"></i> Resend OTP
+            </button>
           </div>
-        </div>
 
-        <div class="form-group" *ngIf="form.idType === 'EPIC'">
-          <label>EPIC Number *</label>
-          <input
-            type="text"
-            class="input-field"
-            [(ngModel)]="form.epicNumber"
-            placeholder="e.g. ABC1234567 (3 letters + 7 digits)"
-            maxlength="10"
-          />
-          <small class="field-hint">Format: 3 uppercase letters followed by 7 digits</small>
-        </div>
+          <div style="display:flex;gap:1rem;margin-top:1.5rem">
+            <button class="btn-outline" (click)="currentStep = 'id-entry'">
+              <i class="pi pi-arrow-left"></i> Back
+            </button>
+            <button class="btn-primary flex-1" [disabled]="loading || otpCode.length !== 6" (click)="verifyOtp()">
+              <span *ngIf="!loading"><i class="pi pi-check"></i> Verify OTP</span>
+              <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Verifying...</span>
+            </button>
+          </div>
+        </ng-container>
 
-        <div class="form-group" *ngIf="form.idType === 'AADHAAR'">
-          <label>Aadhaar Number *</label>
-          <input
-            type="text"
-            class="input-field"
-            [(ngModel)]="form.aadhaarNumber"
-            placeholder="12-digit Aadhaar number"
-            maxlength="12"
-          />
-          <small class="field-hint">Enter all 12 digits without spaces</small>
-        </div>
+        <!-- STEP 3: Photo Capture -->
+        <ng-container *ngIf="currentStep === 'photo-capture'">
+          <div class="section-title">Step 3: Capture Live Photo</div>
 
-        <div class="kyc-notice">
-          <i class="pi pi-info-circle"></i>
-          KYC verification status will be set to <strong>PENDING</strong>. Verification will be completed by the designated officer.
-        </div>
+          <div class="kyc-notice" style="background:#f0fdf4;border-color:#86efac">
+            <i class="pi pi-check-circle" style="color:#16a34a"></i>
+            Demographics verified! Now capture your live photo for face matching.
+          </div>
 
-        <div style="display:flex;gap:1rem;margin-top:1.5rem">
-          <button class="btn-outline" (click)="goToLogin()">
-            <i class="pi pi-arrow-left"></i> Back to Login
-          </button>
-          <button class="btn-primary flex-1" [disabled]="loading" (click)="register()">
-            <span *ngIf="!loading"><i class="pi pi-user-plus"></i> Register</span>
-            <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Registering…</span>
-          </button>
-        </div>
+          <!-- Auto-populated demographics (read-only) -->
+          <div style="padding:1rem;background:#F9FAFB;border-radius:8px;margin-bottom:1.5rem">
+            <div style="font-size:0.9rem;color:#6b7280;margin-bottom:0.5rem">
+              <i class="pi pi-info-circle"></i> Auto-populated from verified ID
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
+              <div>
+                <strong style="font-size:0.85rem;color:#374151">Name:</strong>
+                <div>{{ form.fullName }}</div>
+              </div>
+              <div>
+                <strong style="font-size:0.85rem;color:#374151">District:</strong>
+                <div>{{ form.district || 'N/A' }}</div>
+              </div>
+              <div style="grid-column:span 2">
+                <strong style="font-size:0.85rem;color:#374151">Address:</strong>
+                <div>{{ form.address || 'N/A' }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Camera controls -->
+          <div class="camera-section">
+            <div *ngIf="!isCameraActive && !capturedPhotoUrl" class="camera-placeholder">
+              <i class="pi pi-camera" style="font-size:3rem;color:#9ca3af"></i>
+              <p>Click below to start camera</p>
+            </div>
+
+            <video *ngIf="isCameraActive" id="camera-preview" autoplay playsinline></video>
+
+            <div *ngIf="capturedPhotoUrl && !isCameraActive" class="photo-preview">
+              <img [src]="capturedPhotoUrl" alt="Captured photo" />
+            </div>
+          </div>
+
+          <div style="display:flex;gap:1rem;margin-top:1rem">
+            <button *ngIf="!isCameraActive && !capturedPhotoUrl" class="btn-primary flex-1" (click)="openCamera()">
+              <i class="pi pi-camera"></i> Open Camera
+            </button>
+
+            <button *ngIf="isCameraActive" class="btn-primary flex-1" (click)="capturePhoto()">
+              <i class="pi pi-image"></i> Capture Photo
+            </button>
+
+            <button *ngIf="capturedPhotoUrl && !isCameraActive" class="btn-outline" (click)="retakePhoto()">
+              <i class="pi pi-refresh"></i> Retake Photo
+            </button>
+
+            <button *ngIf="capturedPhotoUrl && !isCameraActive" class="btn-primary flex-1" [disabled]="loading" (click)="validateFace()">
+              <span *ngIf="!loading"><i class="pi pi-arrow-right"></i> Validate & Continue</span>
+              <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Validating...</span>
+            </button>
+          </div>
+
+          <small class="field-hint" style="display:block;text-align:center;margin-top:1rem">
+            <i class="pi pi-info-circle"></i> Ensure good lighting and look directly at the camera
+          </small>
+        </ng-container>
+
+        <!-- STEP 4: KYC Complete -->
+        <ng-container *ngIf="currentStep === 'kyc-complete'">
+          <div class="section-title">Step 4: Complete Registration</div>
+
+          <!-- KYC Status Badge -->
+          <div class="kyc-status-badge" [ngClass]="form.kycStatus === 'PHOTO_MATCHED' ? 'verified' : 'demographic'">
+            <i class="pi" [ngClass]="form.kycStatus === 'PHOTO_MATCHED' ? 'pi-verified' : 'pi-user'"></i>
+            <div>
+              <strong>{{ form.kycStatus === 'PHOTO_MATCHED' ? '✓ KYC Verified - Photo Matched' : '~ KYC Verified - Demographic Matched' }}</strong>
+              <p>{{ kycStatusMessage }}</p>
+            </div>
+          </div>
+
+          <!-- Final form with editable email -->
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" class="input-field" [(ngModel)]="form.fullName" readonly style="background:#f9fafb" />
+          </div>
+
+          <div class="form-row two-col">
+            <div class="form-group">
+              <label>Mobile Number</label>
+              <input type="tel" class="input-field" [value]="form.phoneNumber" readonly style="background:#f9fafb" />
+            </div>
+            <div class="form-group">
+              <label>Email (Optional)</label>
+              <input type="email" class="input-field" [(ngModel)]="form.email" placeholder="Enter your email" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Address</label>
+            <textarea class="input-field" [(ngModel)]="form.address" readonly rows="2" style="background:#f9fafb"></textarea>
+          </div>
+
+          <div class="form-row two-col">
+            <div class="form-group">
+              <label>District</label>
+              <input type="text" class="input-field" [(ngModel)]="form.district" readonly style="background:#f9fafb" />
+            </div>
+            <div class="form-group">
+              <label>Constituency</label>
+              <input type="text" class="input-field" [(ngModel)]="form.constituency" readonly style="background:#f9fafb" />
+            </div>
+          </div>
+
+          <div style="display:flex;gap:1rem;margin-top:1.5rem">
+            <button class="btn-outline" (click)="goToLogin()">
+              <i class="pi pi-times"></i> Cancel
+            </button>
+            <button class="btn-primary flex-1" [disabled]="loading" (click)="submitRegistration()">
+              <span *ngIf="!loading"><i class="pi pi-check"></i> Complete Registration</span>
+              <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Submitting...</span>
+            </button>
+          </div>
+        </ng-container>
+
       </ng-container>
     </div>
   </div>

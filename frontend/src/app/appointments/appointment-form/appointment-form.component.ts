@@ -148,21 +148,25 @@ export class AppointmentFormComponent {
       if (res.success) {
         this.aiExtracted = res.extractedFields;
         this.aiSummary = res.summary;
-        // Auto-fill form fields from extracted data
-        if (res.extractedFields.projectName && !this.form.projectName) {
-          this.form.projectName = res.extractedFields.projectName;
-        }
-        if (res.extractedFields.projectCategory && !this.form.projectCategory) {
-          this.form.projectCategory = res.extractedFields.projectCategory;
-        }
-        if (res.extractedFields.estimatedCost && !this.form.estimatedCost) {
-          this.form.estimatedCost = res.extractedFields.estimatedCost;
-        }
-        if (res.extractedFields.justification && !this.form.justification) {
-          this.form.justification = res.extractedFields.justification;
-        }
+        this.autoFillFromExtracted(res.extractedFields);
       }
     });
+  }
+
+  /** Auto-fills form fields from AI-extracted document data (only if field is currently empty) */
+  private autoFillFromExtracted(fields: AiExtractedFields) {
+    if (fields.projectName && !this.form.projectName) {
+      this.form.projectName = fields.projectName;
+    }
+    if (fields.projectCategory && !this.form.projectCategory) {
+      this.form.projectCategory = fields.projectCategory;
+    }
+    if (fields.estimatedCost && !this.form.estimatedCost) {
+      this.form.estimatedCost = fields.estimatedCost;
+    }
+    if (fields.justification && !this.form.justification) {
+      this.form.justification = fields.justification;
+    }
   }
 
   /** R007: AI priority recommendation + R006 duplicate check + R015 slot suggestions */

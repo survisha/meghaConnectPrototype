@@ -91,7 +91,7 @@ export class AiChatbotComponent {
   }
 
   private now(): string {
-    return new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+    return new Date().toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: true });
   }
 
   onKeyDown(event: KeyboardEvent) {

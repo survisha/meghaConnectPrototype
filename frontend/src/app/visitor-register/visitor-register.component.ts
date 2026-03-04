@@ -109,8 +109,8 @@ export class VisitorRegisterComponent implements OnDestroy {
     private kycService: VisitorKycService,
     private cdr: ChangeDetectorRef
   ) {
-    // Detect DEO mode from URL
-    this.isDeoMode = this.router.url.includes('deo/register-visitor');
+    // Detect DEO mode from route snapshot URL segments
+    this.isDeoMode = this.route.snapshot.url.some(segment => segment.path === 'register-visitor');
   }
 
   ngOnDestroy() {

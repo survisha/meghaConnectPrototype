@@ -140,7 +140,7 @@ export class GrievancesComponent implements OnInit {
     });
   }
 
-  getStatusSeverity(s: GrievanceStatus): 'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' | null | undefined {
+  getStatusSeverity(s: GrievanceStatus): 'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' | undefined {
     const m: Record<GrievanceStatus, 'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast'> = {
       SUBMITTED: 'info', ACKNOWLEDGED: 'info', UNDER_REVIEW: 'warn',
       FORWARDED: 'warn', RESOLVED: 'success', CLOSED: 'secondary',

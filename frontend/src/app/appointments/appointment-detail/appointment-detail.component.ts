@@ -50,8 +50,8 @@ export class AppointmentDetailComponent implements OnInit {
     });
   }
 
-  getStatusSeverity(s: string): 'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' | null | undefined {
-    const m: Record<string,'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' | null | undefined> = { HCM_PENDING:'danger', SCHEDULED:'success', CMO_REVIEW:'warn', SUBMITTED:'info', COMPLETED:'success' };
+  getStatusSeverity(s: string): 'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' | undefined {
+    const m: Record<string,'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' | undefined> = { HCM_PENDING:'danger', SCHEDULED:'success', CMO_REVIEW:'warn', SUBMITTED:'info', COMPLETED:'success' };
     return m[s] ?? 'info';
   }
 

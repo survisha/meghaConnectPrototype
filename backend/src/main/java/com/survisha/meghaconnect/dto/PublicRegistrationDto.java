@@ -54,4 +54,23 @@ public class PublicRegistrationDto {
     private String booth;
     private String village;
     private String address;
+
+    // ── KYC result ───────────────────────────────────────────────
+    /**
+     * Granular KYC status from the registration flow:
+     * PENDING | PHOTO_MATCHED | DEMOGRAPHIC_MATCHED | FAILED | MANUAL_VERIFICATION_REQUIRED
+     */
+    private String kycStatus;
+
+    /**
+     * Base64-encoded live photo captured during KYC.
+     * Stored in the database for demo; production should use object storage.
+     */
+    private String livePhotoBase64;
+
+    /**
+     * Flag indicating the user provided a manual phone number (not retrieved from ID API).
+     * When true, kycStatus is set to MANUAL_VERIFICATION_REQUIRED.
+     */
+    private Boolean manualVerification;
 }

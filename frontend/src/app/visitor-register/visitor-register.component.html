@@ -27,32 +27,11 @@
   <div class="register-right">
     <div class="register-card">
 
-      <!-- Success state -->
-      <ng-container *ngIf="submitted">
-        <div class="success-banner">
-          <i class="pi pi-check-circle" style="font-size:3rem;color:#16a34a;margin-bottom:1rem"></i>
-          <h2>Registration Successful!</h2>
-          <p>{{ successMsg }}</p>
-          <div style="margin-top:1rem;padding:0.75rem;background:#f0fdf4;border:1px solid #86efac;border-radius:8px">
-            <div style="display:flex;align-items:center;gap:0.5rem">
-              <i class="pi pi-shield" style="color:#16a34a"></i>
-              <strong style="color:#166534">KYC Status: {{ form.kycStatus || 'PENDING' }}</strong>
-            </div>
-            <p style="font-size:0.85rem;color:#6b7280;margin-top:0.5rem">
-              {{ kycStatusMessage }}
-            </p>
-          </div>
-          <button class="btn-primary" style="margin-top:1.5rem;width:auto;padding:0.7rem 2rem" (click)="goToLogin()">
-            <i class="pi pi-sign-in"></i> Go to Login
-          </button>
-        </div>
-      </ng-container>
-
       <!-- Multi-step KYC Registration -->
-      <ng-container *ngIf="!submitted">
-        <div class="card-header">
+      <ng-container>
+        <div class="card-header" *ngIf="!submitted">
           <h2>New Visitor Registration</h2>
-          <p>Complete KYC verification in 4 simple steps</p>
+          <p>Complete KYC verification in 5 simple steps</p>
         </div>
 
         <!-- Progress Stepper -->
@@ -65,19 +44,27 @@
           </div>
           <div class="step-line" [class.completed]="currentStep !== 'id-entry'"></div>
           
-          <div class="step" [class.active]="currentStep === 'otp-verification'" [class.completed]="currentStep === 'photo-capture' || currentStep === 'kyc-complete'">
+          <div class="step" [class.active]="currentStep === 'otp-verification'" [class.completed]="currentStep === 'photo-capture' || currentStep === 'additional-details' || currentStep === 'kyc-complete'">
             <div class="step-circle">
-              <i class="pi" [ngClass]="currentStep === 'otp-verification' ? 'pi-mobile' : (currentStep === 'photo-capture' || currentStep === 'kyc-complete' ? 'pi-check' : 'pi-mobile')"></i>
+              <i class="pi" [ngClass]="(currentStep === 'photo-capture' || currentStep === 'additional-details' || currentStep === 'kyc-complete') ? 'pi-check' : 'pi-mobile'"></i>
             </div>
             <span class="step-label">OTP Verification</span>
           </div>
-          <div class="step-line" [class.completed]="currentStep === 'photo-capture' || currentStep === 'kyc-complete'"></div>
+          <div class="step-line" [class.completed]="currentStep === 'photo-capture' || currentStep === 'additional-details' || currentStep === 'kyc-complete'"></div>
           
-          <div class="step" [class.active]="currentStep === 'photo-capture'" [class.completed]="currentStep === 'kyc-complete'">
+          <div class="step" [class.active]="currentStep === 'photo-capture'" [class.completed]="currentStep === 'additional-details' || currentStep === 'kyc-complete'">
             <div class="step-circle">
-              <i class="pi" [ngClass]="currentStep === 'photo-capture' ? 'pi-camera' : (currentStep === 'kyc-complete' ? 'pi-check' : 'pi-camera')"></i>
+              <i class="pi" [ngClass]="(currentStep === 'additional-details' || currentStep === 'kyc-complete') ? 'pi-check' : 'pi-camera'"></i>
             </div>
             <span class="step-label">Photo Capture</span>
+          </div>
+          <div class="step-line" [class.completed]="currentStep === 'additional-details' || currentStep === 'kyc-complete'"></div>
+
+          <div class="step" [class.active]="currentStep === 'additional-details'" [class.completed]="currentStep === 'kyc-complete'">
+            <div class="step-circle">
+              <i class="pi" [ngClass]="currentStep === 'kyc-complete' ? 'pi-check' : 'pi-user-edit'"></i>
+            </div>
+            <span class="step-label">Details</span>
           </div>
           <div class="step-line" [class.completed]="currentStep === 'kyc-complete'"></div>
           
@@ -320,59 +307,108 @@
           </small>
         </ng-container>
 
-        <!-- STEP 4: KYC Complete -->
-        <ng-container *ngIf="currentStep === 'kyc-complete'">
-          <div class="section-title">Step 4: Complete Registration</div>
+        <!-- STEP 4: Additional Applicant Details -->
+        <ng-container *ngIf="currentStep === 'additional-details'">
+          <div class="section-title">Step 4: Additional Applicant Details</div>
 
-          <!-- KYC Status Badge -->
-          <div class="kyc-status-badge" [ngClass]="form.kycStatus === 'PHOTO_MATCHED' ? 'verified' : 'demographic'">
-            <i class="pi" [ngClass]="form.kycStatus === 'PHOTO_MATCHED' ? 'pi-verified' : 'pi-user'"></i>
-            <div>
-              <strong>{{ form.kycStatus === 'PHOTO_MATCHED' ? '✓ KYC Verified - Photo Matched' : '~ KYC Verified - Demographic Matched' }}</strong>
-              <p>{{ kycStatusMessage }}</p>
-            </div>
-          </div>
-
-          <!-- Final form with editable email -->
-          <div class="form-group">
-            <label>Full Name</label>
-            <input type="text" class="input-field" [(ngModel)]="form.fullName" readonly style="background:#f9fafb" />
-          </div>
-
-          <div class="form-row two-col">
-            <div class="form-group">
-              <label>Mobile Number</label>
-              <input type="tel" class="input-field" [value]="form.phoneNumber" readonly style="background:#f9fafb" />
-            </div>
-            <div class="form-group">
-              <label>Email (Optional)</label>
-              <input type="email" class="input-field" [(ngModel)]="form.email" placeholder="Enter your email" />
-            </div>
+          <div class="kyc-notice" style="background:#f0fdf4;border-color:#86efac;margin-bottom:1rem">
+            <i class="pi pi-check-circle" style="color:#16a34a"></i>
+            <span *ngIf="form.kycStatus === 'PHOTO_MATCHED'"><strong>KYC Verified – Photo Match Successful.</strong> Please complete the remaining details.</span>
+            <span *ngIf="form.kycStatus === 'DEMOGRAPHIC_MATCHED'"><strong>KYC Verified – Demographic Match.</strong> Please complete the remaining details.</span>
+            <span *ngIf="form.kycStatus === 'MANUAL_VERIFICATION_REQUIRED'"><strong>Manual Verification Required.</strong> Your KYC will be verified by a DEO officer.</span>
           </div>
 
           <div class="form-group">
-            <label>Address</label>
-            <textarea class="input-field" [(ngModel)]="form.address" readonly rows="2" style="background:#f9fafb"></textarea>
+            <label>Designation *</label>
+            <select class="input-field" [(ngModel)]="form.designation">
+              <option value="">-- Select Designation --</option>
+              <option *ngFor="let d of designations" [value]="d">{{ d }}</option>
+            </select>
           </div>
 
-          <div class="form-row two-col">
-            <div class="form-group">
-              <label>District</label>
-              <input type="text" class="input-field" [(ngModel)]="form.district" readonly style="background:#f9fafb" />
+          <div class="form-group">
+            <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer">
+              <input type="checkbox" [(ngModel)]="form.outsideState" style="width:auto;margin:0" />
+              <span>Applicant is outside Meghalaya (Location = NA)</span>
+            </label>
+          </div>
+
+          <ng-container *ngIf="!form.outsideState">
+            <div class="form-row two-col">
+              <div class="form-group">
+                <label>District</label>
+                <select class="input-field" [(ngModel)]="form.district">
+                  <option value="">-- Select District --</option>
+                  <option *ngFor="let d of districts" [value]="d">{{ d }}</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Constituency</label>
+                <input type="text" class="input-field" [(ngModel)]="form.constituency" placeholder="Constituency name" />
+              </div>
             </div>
-            <div class="form-group">
-              <label>Constituency</label>
-              <input type="text" class="input-field" [(ngModel)]="form.constituency" readonly style="background:#f9fafb" />
+            <div class="form-row two-col">
+              <div class="form-group">
+                <label>Booth / Village</label>
+                <input type="text" class="input-field" [(ngModel)]="form.booth" placeholder="Booth or Village" />
+              </div>
+              <div class="form-group">
+                <label>Village (if different)</label>
+                <input type="text" class="input-field" [(ngModel)]="form.village" placeholder="Village name" />
+              </div>
             </div>
+          </ng-container>
+
+          <ng-container *ngIf="form.outsideState">
+            <div class="kyc-notice">
+              <i class="pi pi-info-circle"></i>
+              Location fields will be set to <strong>NA</strong> as applicant is outside Meghalaya.
+            </div>
+          </ng-container>
+
+          <div class="form-group" style="margin-top:1rem">
+            <label>Email (Optional)</label>
+            <input type="email" class="input-field" [(ngModel)]="form.email" placeholder="Enter your email" />
           </div>
 
           <div style="display:flex;gap:1rem;margin-top:1.5rem">
-            <button class="btn-outline" (click)="goToLogin()">
-              <i class="pi pi-times"></i> Cancel
+            <button class="btn-outline" (click)="currentStep = 'photo-capture'">
+              <i class="pi pi-arrow-left"></i> Back
             </button>
-            <button class="btn-primary flex-1" [disabled]="loading" (click)="submitRegistration()">
+            <button class="btn-primary flex-1" [disabled]="loading || !form.designation" (click)="submitRegistration()">
               <span *ngIf="!loading"><i class="pi pi-check"></i> Complete Registration</span>
-              <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Submitting...</span>
+              <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Registering...</span>
+            </button>
+          </div>
+        </ng-container>
+
+        <!-- STEP 5: KYC Complete / Registration Success -->
+        <ng-container *ngIf="currentStep === 'kyc-complete' && submitted">
+          <div class="success-banner" style="padding:1.5rem 0">
+            <i class="pi pi-check-circle" style="font-size:3rem;color:#16a34a;margin-bottom:1rem"></i>
+            <h2 style="color:#166534;font-size:1.4rem;margin:0.5rem 0">Visitor registration completed successfully.</h2>
+            <p style="color:#374151">You can now login with your registered mobile number.</p>
+            <div style="margin-top:1rem;padding:0.75rem;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;text-align:left">
+              <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem">
+                <i class="pi pi-shield" style="color:#16a34a"></i>
+                <strong style="color:#166534">KYC Status:
+                  <span *ngIf="form.kycStatus === 'PHOTO_MATCHED'">Photo Matched ✓</span>
+                  <span *ngIf="form.kycStatus === 'DEMOGRAPHIC_MATCHED'">Demographic Matched ✓</span>
+                  <span *ngIf="form.kycStatus === 'MANUAL_VERIFICATION_REQUIRED'">Manual Verification Required</span>
+                  <span *ngIf="!form.kycStatus || form.kycStatus === 'PENDING'">Pending</span>
+                </strong>
+              </div>
+              <p style="font-size:0.85rem;color:#6b7280;margin:0">
+                <span *ngIf="form.kycStatus === 'MANUAL_VERIFICATION_REQUIRED'">
+                  Your KYC will be verified manually by a DEO officer during your visit.
+                </span>
+                <span *ngIf="form.kycStatus !== 'MANUAL_VERIFICATION_REQUIRED'">
+                  Your identity has been verified and registration is complete.
+                </span>
+              </p>
+            </div>
+            <button class="btn-primary" style="margin-top:1.5rem;width:auto;padding:0.7rem 2rem" (click)="goToLogin()">
+              <i class="pi pi-sign-in"></i> Go to Login
             </button>
           </div>
         </ng-container>

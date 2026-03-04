@@ -5,7 +5,7 @@ import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { VisitorKycService } from '../services/visitor-kyc.service';
 
-type KycStep = 'id-entry' | 'otp-verification' | 'photo-capture' | 'kyc-complete';
+type KycStep = 'id-entry' | 'otp-verification' | 'photo-capture' | 'additional-details' | 'kyc-complete';
 
 interface VisitorRegistrationForm {
   fullName: string;
@@ -14,6 +14,10 @@ interface VisitorRegistrationForm {
   address: string;
   district: string;
   constituency: string;
+  booth: string;
+  village: string;
+  designation: string;
+  outsideState: boolean;
   idType: 'EPIC' | 'AADHAAR' | '';
   epicNumber: string;
   aadhaarNumber: string;
@@ -41,6 +45,10 @@ export class VisitorRegisterComponent implements OnDestroy {
     address: '',
     district: '',
     constituency: '',
+    booth: '',
+    village: '',
+    designation: '',
+    outsideState: false,
     idType: '',
     epicNumber: '',
     aadhaarNumber: '',
@@ -48,6 +56,19 @@ export class VisitorRegisterComponent implements OnDestroy {
     livePhoto: '',
     photoFromId: '',
   };
+
+  // Reference data
+  designations = [
+    'Govt Servant', 'Retd Govt Servant', 'Teacher', 'Political Leader',
+    'Students', 'Religious Leader', 'Businessman', 'Media', 'General Public',
+    'Organisation – Village Authority', 'Teachers Body', 'Civil Society / NGO',
+    'Institute', 'Others'
+  ];
+  districts = [
+    'East Khasi Hills', 'West Khasi Hills', 'South West Khasi Hills', 'Ri Bhoi',
+    'East Jaintia Hills', 'West Jaintia Hills', 'East Garo Hills', 'West Garo Hills',
+    'South Garo Hills', 'North Garo Hills', 'Eastern West Khasi Hills'
+  ];
 
   // UI state
   errorMsg = '';
@@ -60,7 +81,7 @@ export class VisitorRegisterComponent implements OnDestroy {
   otpSent = false;  // Flag to show OTP field
   otpVerified = false;
   photoCaptured = false;
-  kycStatus: 'PHOTO_MATCHED' | 'DEMOGRAPHIC_MATCHED' | 'FAILED' | '' = '';
+  kycStatus: 'PHOTO_MATCHED' | 'DEMOGRAPHIC_MATCHED' | 'FAILED' | 'MANUAL_VERIFICATION_REQUIRED' | '' = '';
   kycStatusMessage = '';
   maskedPhone = '';
   otpCode = '';
@@ -285,13 +306,16 @@ export class VisitorRegisterComponent implements OnDestroy {
         this.loading = false;
         if (res.success) {
           this.kycStatus = res.kycStatus;
-          this.currentStep = 'kyc-complete';
-          this.successMsg = res.kycStatus === 'PHOTO_MATCHED' 
-            ? 'KYC Verified (Photo Match)' 
-            : 'KYC Verified (Demographic Match)';
-          
-          // Auto-submit registration
-          setTimeout(() => this.submitRegistration(), 1500);
+          this.form.kycStatus = res.kycStatus;
+          // If manual verification was used, override kycStatus
+          if (this.manualVerification) {
+            this.kycStatus = 'MANUAL_VERIFICATION_REQUIRED';
+            this.form.kycStatus = 'MANUAL_VERIFICATION_REQUIRED';
+          }
+          this.currentStep = 'additional-details';
+          this.successMsg = res.kycStatus === 'PHOTO_MATCHED'
+            ? 'KYC Verified – Photo Match Successful'
+            : 'KYC Verified – Demographic Match';
         } else {
           this.errorMsg = res.message || 'Face validation failed.';
         }
@@ -307,14 +331,17 @@ export class VisitorRegisterComponent implements OnDestroy {
 
   submitRegistration() {
     this.loading = true;
-    const payload: Record<string, string> = {
+    const payload: Record<string, string | boolean> = {
       fullName: this.form.fullName.trim(),
       phoneNumber: this.form.phoneNumber || this.maskedPhone.replace(/\*+/g, '').trim(),
       email: this.form.email.trim(),
       address: this.form.address.trim(),
-      district: this.form.district.trim(),
-      constituency: this.form.constituency.trim(),
-      kycStatus: this.kycStatus,
+      district: this.form.outsideState ? 'NA' : this.form.district.trim(),
+      constituency: this.form.outsideState ? 'NA' : this.form.constituency.trim(),
+      booth: this.form.outsideState ? 'NA' : (this.form.booth || '').trim(),
+      village: this.form.outsideState ? 'NA' : (this.form.village || '').trim(),
+      designation: this.form.designation,
+      kycStatus: this.form.kycStatus || this.kycStatus || 'PENDING',
     };
 
     if (this.form.idType === 'EPIC') {
@@ -324,7 +351,11 @@ export class VisitorRegisterComponent implements OnDestroy {
     }
 
     if (this.form.livePhoto) {
-      payload['livePhoto'] = this.form.livePhoto;
+      payload['livePhotoBase64'] = this.form.livePhoto;
+    }
+
+    if (this.manualVerification) {
+      payload['manualVerification'] = true;
     }
 
     this.http.post<{ success: boolean; message: string }>('/api/v1/visitor/auth/register', payload).subscribe({
@@ -332,7 +363,8 @@ export class VisitorRegisterComponent implements OnDestroy {
         this.loading = false;
         if (res.success) {
           this.submitted = true;
-          this.successMsg = res.message || 'Registration completed with KYC verification!';
+          this.currentStep = 'kyc-complete';
+          this.successMsg = 'Visitor registration completed successfully.';
         } else {
           this.errorMsg = res.message || 'Registration failed.';
         }
@@ -384,6 +416,10 @@ export class VisitorRegisterComponent implements OnDestroy {
       address: '',
       district: '',
       constituency: '',
+      booth: '',
+      village: '',
+      designation: '',
+      outsideState: false,
       idType: '',
       epicNumber: '',
       aadhaarNumber: '',

@@ -61,8 +61,8 @@ export class SchemeListComponent implements OnInit {
 
   view(s: SchemeApplication) { this.selected = s; this.showDetail = true; }
 
-  getSeverity(status: string): 'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' | null | undefined {
-    const m: Record<string,'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' | null | undefined> = { APPROVED:'success', HCM_PENDING:'danger', SCHEDULED:'warn', SUBMITTED:'info', REJECTED:'danger' };
+  getSeverity(status: string): 'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' | undefined {
+    const m: Record<string,'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' | undefined> = { APPROVED:'success', HCM_PENDING:'danger', SCHEDULED:'warn', SUBMITTED:'info', REJECTED:'danger' };
     return m[status] ?? 'info';
   }
 

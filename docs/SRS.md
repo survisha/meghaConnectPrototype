@@ -1354,6 +1354,123 @@ volumes:
 
 ---
 
+## 20. Public / Citizen Module
+
+> Implemented in v1.2 by Agent Narsingh. Covers R001–R003 as specified in the task description.
+
+### 20.1 Public / Citizen Registration Flow (R001)
+
+Citizens self-register through `#visitor-register.component` in a 5-step KYC flow:
+
+| Step | Name | Description |
+|---|---|---|
+| 1 | ID Type Selection | Citizen selects EPIC (primary) or Aadhaar and enters ID number. Backend validates format and triggers OTP to linked mobile number. |
+| 2 | OTP Verification | Citizen enters 6-digit OTP (mock, always 123456 for demo). Backend validates OTP and returns demographics (fullName, address, district, constituency). |
+| 3 | Live Photo Capture | Webcam photo is captured and sent to `/api/v1/visitor/validate-face` for match against ID photo. If matched: `PHOTO_MATCHED`; if not: `DEMOGRAPHIC_MATCHED`. |
+| 4 | Additional Details | Designation (dropdown), District, Constituency, Booth/Village selection. Outside-state checkbox sets location to `NA`. |
+| 5 | Complete | Success message: **"Visitor registration completed successfully."** Stored with kycStatus. |
+
+**KYC Status Values**
+
+| Status | Meaning |
+|---|---|
+| `PHOTO_MATCHED` | Live photo matched ID photo via face recognition |
+| `DEMOGRAPHIC_MATCHED` | OTP verified, demographics matched, no photo match |
+| `MANUAL_VERIFICATION_REQUIRED` | Mobile not linked to ID; manual phone provided; DEO must verify in person |
+| `PENDING` | Default; KYC not yet completed |
+
+**Designation Options:** Govt Servant, Retd Govt Servant, Teacher, Political Leader, Students, Religious Leader, Businessman, Media, General Public, Organisation – Village Authority, Teachers Body, Civil Society / NGO, Institute, Others
+
+**Location Dropdowns:** District (11 Meghalaya districts), Constituency (text), Booth/Village
+
+**Backend APIs:**
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/v1/visitor/validate-idType` | POST | Validate EPIC/Aadhaar format; generate KYC OTP |
+| `/api/v1/visitor/verify-otp` | POST | Validate KYC OTP; return demographics |
+| `/api/v1/visitor/validate-face` | POST | Mock face matching (always PHOTO_MATCHED) |
+| `/api/v1/visitor/auth/register` | POST | Register new visitor with all fields including kycStatus, designation, location |
+
+---
+
+### 20.2 Public / Citizen Login Flow (R002)
+
+Login screen: `#public-login.component`
+
+| Step | Description |
+|---|---|
+| 1 | Citizen enters 10-digit mobile number |
+| 2 | Backend checks if mobile is registered; generates OTP via `/api/v1/visitor/auth/generate-otp` |
+| 3 | Citizen enters 6-digit OTP → validate via `/api/v1/visitor/auth/validate-otp` |
+| 4 | On success: JWT issued, visitor redirected to `#visitor-dashboard.component` |
+| 5 (error) | If mobile not registered: "Mobile number not registered. Please register first." |
+
+---
+
+### 20.3 Visitor Dashboard (R002)
+
+Dashboard screen: `#visitor-dashboard.component`
+
+- KPI cards: My Appointments, Total Visits, Active Schemes, Grievances
+- Quick actions: Book New Appointment, Apply for Scheme, Raise Grievance
+- Visitor profile panel with KYC status
+- Appointment history list
+- Active schemes list
+
+---
+
+### 20.4 Appointment Booking Flow (R003)
+
+Booking screen: `#appointment-form.component` (6-step multi-step form)
+
+| Step | Description |
+|---|---|
+| 0 – Personal Info | Name, Phone, EPIC, Designation, District, Constituency, Booth, Address, Organisation flag |
+| 1 – Agenda | Agenda Type (dropdown), Requested Location, Brief Description |
+| 2 – Scheme Details | Only shown for "Scheme availment (CM)"; Scheme Type, Application Type (New/Reminder), Project Details, Beneficiary, Cost, MLA/MDC Approval, Scheme History (last 2 years) |
+| 3 – Associates | Add/remove associate visitors (Name, Phone, EPIC, Designation, Address); stored as ASSOCIATES |
+| 4 – Documents | EPIC scan, Application Letter, Plans & Estimates (3 files), Bank Account Details, Approval letter (if MLA/MDC=Yes), CM Care documents (if scheme=CM Care), Organisation certificate (if org) |
+| 5 – Review & Submit | Summary review + POST to `/api/v1/visitor/appointments` |
+
+**Agenda Types:** Scheme Availment (CM), Governance, Trade & Commerce, Political Discussion, Public Grievance
+
+**Scheme Types:** CMSDF, CMSG, CM Care, CM Connect, CM Elevate, Others
+
+**Project Categories:** Electricity, Road, House, School, Community Hall, Retaining Wall, Office, Travel, Medical, Musical Instrument, Sports Equipment, Buses, Pickup Van, Computer Lab Upgradation, Repair, Others
+
+**Application Type:** New Application, Reminder for Old Application
+
+**Beneficiary Types:** Individual, Community/Society, School/Youth Organisation, All of the Above, Others
+
+**People Benefiting:** 1 to 100, 101 to 500, 501 to 1000, Above 1000
+
+**CM Care Specific Uploads:** Eligibility Proof, Hospital Documents, Supporting Documents
+
+**Backend API:**
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/v1/visitor/appointments` | POST | Submit appointment from citizen portal; creates Person record if not found by applicantId |
+
+---
+
+### 20.5 Database Changes
+
+**V8 migration (`V8__appointment_booking_fields.sql`):**
+
+| Column | Table | Description |
+|---|---|---|
+| `application_type` | `appointments` | NEW_APPLICATION or REMINDER |
+| `scheme_history_json` | `appointments` | JSON array of schemes taken in last 2 years |
+| `address` | `visitor_associates` | Address of associate visitor |
+
+**Entity changes:**
+- `Person.kycStatus` – mapped to `kyc_status` column (added in V7) – stores granular KYC status
+- `PublicRegistrationDto` – added `kycStatus`, `livePhotoBase64`, `manualVerification`
+
+---
+
 **Document Control**
 
 | Version | Date | Author | Changes |
@@ -1361,6 +1478,7 @@ volumes:
 | 0.1 | Feb 2026 | CMO Tech Team | Initial draft |
 | 1.0 | Mar 2026 | CMO Tech Team | Full specification with Mermaid diagrams |
 | 1.1 | Mar 2026 | Agent Narsingh | Added automated task-assignment workflow; all future tasks auto-routed to #agent-Narsingh and SRS auto-updated on each change |
+| 1.2 | Mar 2026 | Agent Narsingh | Implemented Public/Citizen module: Registration (5-step KYC with Designation/Location), Login, Visitor Dashboard, Appointment Booking (6-step with Associates, CM Care, scheme history); added VisitorAppointmentController, V8 DB migration, fixed pre-existing type errors in Angular components |
 
 > **Workflow Note:** From version 1.1 onwards, all development tasks are automatically assigned to `#agent-Narsingh` (see `.github/copilot-instructions.md` and `docs/task-assignment-prompt.md`). The agent updates this SRS document after every task.
 

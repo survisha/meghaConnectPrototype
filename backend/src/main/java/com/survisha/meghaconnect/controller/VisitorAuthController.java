@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.time.LocalDateTime;
 
 /**
  * Visitor (citizen) authentication endpoints.
@@ -216,7 +217,20 @@ public class VisitorAuthController {
             kycType = "AADHAAR";
         }
 
-        // Persist visitor with KYC status PENDING (kycVerified = false)
+        // Determine KYC status
+        // If manual verification was used, override to MANUAL_VERIFICATION_REQUIRED regardless of claimed status
+        String kycStatus;
+        if (Boolean.TRUE.equals(dto.getManualVerification())) {
+            kycStatus = "MANUAL_VERIFICATION_REQUIRED";
+        } else if (dto.getKycStatus() != null && !dto.getKycStatus().trim().isEmpty()) {
+            kycStatus = dto.getKycStatus().trim();
+        } else {
+            kycStatus = "PENDING";
+        }
+
+        boolean kycVerified = "PHOTO_MATCHED".equals(kycStatus) || "DEMOGRAPHIC_MATCHED".equals(kycStatus);
+
+        // Persist visitor
         Person visitor = Person.builder()
                 .fullName(dto.getFullName().trim())
                 .phoneNumber(dto.getPhoneNumber().trim())
@@ -224,7 +238,9 @@ public class VisitorAuthController {
                 .epicNumber(dto.getEpicNumber())
                 .aadhaarNumber(dto.getAadhaarNumber())
                 .kycType(kycType)
-                .kycVerified(false)
+                .kycVerified(kycVerified)
+                .kycVerifiedAt(kycVerified ? java.time.LocalDateTime.now() : null)
+                .kycStatus(kycStatus)
                 .address(dto.getAddress())
                 .designation(dto.getDesignation())
                 .district(dto.getDistrict())
@@ -238,9 +254,9 @@ public class VisitorAuthController {
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
         response.put("visitorId", saved.getId());
-        response.put("kycStatus", "PENDING");
+        response.put("kycStatus", kycStatus);
         response.put("kycType", kycType);
-        response.put("message", "Registration successful. Please login with your mobile number.");
+        response.put("message", "Visitor registration completed successfully.");
         return ResponseEntity.ok(response);
     }
 
@@ -264,6 +280,7 @@ public class VisitorAuthController {
             response.put("aadhaarNumber", p.getAadhaarNumber() != null ? p.getAadhaarNumber() : "");
             response.put("kycType", p.getKycType() != null ? p.getKycType() : "NONE");
             response.put("kycVerified", Boolean.TRUE.equals(p.getKycVerified()));
+            response.put("kycStatus", p.getKycStatus() != null ? p.getKycStatus() : "PENDING");
             response.put("address", p.getAddress() != null ? p.getAddress() : "");
             response.put("district", p.getDistrict() != null ? p.getDistrict() : "");
             return ResponseEntity.ok(response);

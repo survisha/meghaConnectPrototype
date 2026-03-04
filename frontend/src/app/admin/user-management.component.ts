@@ -50,8 +50,8 @@ export class UserManagementComponent {
       .map((u: any) => ({ username: u.username, fullName: u.fullName, role: u.role, password: u.password }));
   }
 
-  roleBadge(role: UserRole): string {
-    const map: Record<string, string> = {
+  roleBadge(role: UserRole): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' | undefined {
+    const map: Record<string, 'success' | 'info' | 'warn' | 'danger' | 'secondary'> = {
       HCM: 'danger', ADMIN: 'warn', SAIDUL_OSD: 'warn',
       APPROVER_JT_SECY: 'info', CMO_OFFICER: 'info',
       DATA_ENTRY_OPERATOR: 'secondary',

@@ -24,5 +24,5 @@ export class PendingFollowupsComponent implements OnInit {
   }
 
   getDirClass(c: string) { return { GREEN: 'dir-green', YELLOW: 'dir-yellow', BLUE: 'dir-blue' }[c] ?? ''; }
-  getSeverity(s: string): 'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' | null | undefined { return s === 'Overdue' ? 'danger' : s === 'In Progress' ? 'warn' : s === 'Under Review' ? 'info' : 'secondary'; }
+  getSeverity(s: string): 'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' | undefined { return s === 'Overdue' ? 'danger' : s === 'In Progress' ? 'warn' : s === 'Under Review' ? 'info' : 'secondary'; }
 }

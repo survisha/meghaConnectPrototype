@@ -64,7 +64,7 @@ export class VisitorDashboardComponent implements OnInit {
     });
   }
 
-  getStatusSeverity(s: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | null | undefined {
+  getStatusSeverity(s: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' | undefined {
     const m: Record<string, 'success' | 'info' | 'warn' | 'danger' | 'secondary'> = {
       SUBMITTED: 'info', CMO_REVIEW: 'warn', HCM_PENDING: 'danger', SCHEDULED: 'warn',
       COMPLETED: 'success', CANCELLED: 'secondary', UNDER_REVIEW: 'warn',

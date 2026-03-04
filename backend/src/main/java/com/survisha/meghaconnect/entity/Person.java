@@ -82,6 +82,13 @@ public class Person extends BaseEntity {
     @Column(length = 500)
     private String faceEmbeddingRef;
 
+    /**
+     * Granular KYC status:
+     * PENDING | PHOTO_MATCHED | DEMOGRAPHIC_MATCHED | FAILED | NOT_VERIFIED | MANUAL_VERIFICATION_REQUIRED
+     */
+    @Column(length = 50)
+    private String kycStatus;
+
     @OneToMany(mappedBy = "applicant", fetch = FetchType.LAZY)
     private List<Appointment> appointments;
 }

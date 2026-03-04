@@ -51,8 +51,8 @@ export class AppointmentListComponent implements OnInit {
     );
   }
 
-  getStatusSeverity(s: AppointmentStatus): 'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' | null | undefined {
-    const m: Record<string,'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' | null | undefined> = {
+  getStatusSeverity(s: AppointmentStatus): 'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' | undefined {
+    const m: Record<string,'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' | undefined> = {
       SUBMITTED: 'info', DEO_PROCESSED: 'info', CMO_REVIEW: 'warn',
       APPROVER_REVIEW: 'warn', HCM_PENDING: 'danger', HCM_ACCEPTED: 'success',
       SCHEDULED: 'success', COMPLETED: 'success', HCM_REJECTED: 'danger',

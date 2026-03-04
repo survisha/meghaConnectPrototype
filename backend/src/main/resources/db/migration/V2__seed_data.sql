@@ -2,6 +2,18 @@
 -- MeghaConnect Seed Data (Demo) – MySQL 8
 -- ============================================================
 -- Passwords are BCrypt hashes of demo passwords
+-- 
+-- DEMO USER CREDENTIALS (Plain Text):
+-- ┌──────────┬─────────────┬─────────────────────────┐
+-- │ Username │ Password    │ Role                    │
+-- ├──────────┼─────────────┼─────────────────────────┤
+-- │ hcm      │ hcm123      │ HCM                     │
+-- │ admin    │ admin123    │ ADMIN                   │
+-- │ saidul   │ osd123      │ SAIDUL_OSD              │
+-- │ jtsecy   │ jts123      │ APPROVER_JT_SECY        │
+-- │ cmo      │ cmo123      │ CMO_OFFICER             │
+-- │ deo1     │ deo123      │ DATA_ENTRY_OPERATOR     │
+-- └──────────┴─────────────┴─────────────────────────┘
 
 -- USERS
 INSERT INTO users (username, password_hash, full_name, role, active, offline_access, created_at)

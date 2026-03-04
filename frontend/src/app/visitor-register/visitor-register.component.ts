@@ -1,4 +1,4 @@
-import { Component, OnDestroy } from '@angular/core';
+import { Component, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -87,6 +87,7 @@ export class VisitorRegisterComponent implements OnDestroy {
   otpCode = '';
   manualPhone = '';  // Optional mobile number for manual verification
   manualVerification = false;  // Flag if manual mobile was provided
+  actualPhoneNumber = '';  // Store actual 10-digit phone number
   
   // Camera state
   videoStream: MediaStream | null = null;
@@ -97,7 +98,8 @@ export class VisitorRegisterComponent implements OnDestroy {
   constructor(
     private http: HttpClient, 
     private router: Router,
-    private kycService: VisitorKycService
+    private kycService: VisitorKycService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnDestroy() {
@@ -154,6 +156,7 @@ export class VisitorRegisterComponent implements OnDestroy {
           this.idValidated = true;
           this.otpSent = true;  // Show OTP field
           this.maskedPhone = res.phoneNumber || '';
+          this.actualPhoneNumber = res.actualPhoneNumber || this.manualPhone || '';  // Store actual phone
           this.manualVerification = res.manualVerification || false;
           this.successMsg = `OTP sent to ${this.maskedPhone}`;
           
@@ -195,25 +198,35 @@ export class VisitorRegisterComponent implements OnDestroy {
 
     this.kycService.verifyOtp({
       idNumber: this.idNumber,
-      otp: this.otpCode,  // Use otpCode instead of form.otp
+      otp: this.otpCode,
     }).subscribe({
       next: res => {
         this.loading = false;
+        
         if (res.success && res.demographics) {
           this.otpVerified = true;
-          this.currentStep = 'photo-capture';
           
           // Auto-populate demographics
-          this.form.fullName = res.demographics.name;
-          this.form.address = res.demographics.address;
-          this.form.district = res.demographics.district;
-          this.form.constituency = res.demographics.constituency;
-          this.form.photoFromId = res.demographics.photoFromId || '';
+          const demo = res.demographics;
           
-          // Store the verified phone number
-          this.form.phoneNumber = this.manualPhone || this.maskedPhone.replace(/\*+/g, '');
+          // Use Object.assign to update form to ensure Angular tracks changes
+          Object.assign(this.form, {
+            fullName: demo.fullName || '',
+            address: demo.address || '',
+            district: demo.district || '',
+            constituency: demo.constituency || '',
+            photoFromId: demo.photoFromId || '',
+            phoneNumber: this.actualPhoneNumber  // Use stored actual phone number
+          });
           
           this.successMsg = 'OTP verified! Demographics auto-populated.';
+          
+          // Force change detection and transition to next step
+          this.cdr.detectChanges();
+          setTimeout(() => {
+            this.currentStep = 'photo-capture';
+            this.cdr.detectChanges();
+          }, 200);
         } else {
           this.errorMsg = res.message || 'Invalid OTP. Please try again.';
         }
@@ -234,7 +247,7 @@ export class VisitorRegisterComponent implements OnDestroy {
         video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
       });
       
-      this.showCamera = true;
+      this.isCameraActive = true;  // Changed from showCamera to isCameraActive
       
       // Wait for next tick to ensure video element exists
       setTimeout(() => {
@@ -267,15 +280,18 @@ export class VisitorRegisterComponent implements OnDestroy {
     }
 
     context.drawImage(videoElement, 0, 0);
-    this.form.livePhoto = canvas.toDataURL('image/jpeg', 0.8);
+    const photoData = canvas.toDataURL('image/jpeg', 0.8);
+    this.form.livePhoto = photoData;
+    this.capturedPhotoUrl = photoData;  // Set for display
     this.photoCaptured = true;
     this.stopCamera();
-    this.showCamera = false;
+    this.isCameraActive = false;  // Changed from showCamera to isCameraActive
     this.successMsg = 'Photo captured successfully!';
   }
 
   retakePhoto() {
     this.form.livePhoto = '';
+    this.capturedPhotoUrl = '';
     this.photoCaptured = false;
     this.openCamera();
   }

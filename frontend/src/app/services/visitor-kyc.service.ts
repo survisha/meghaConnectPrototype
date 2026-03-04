@@ -14,6 +14,7 @@ export interface IdValidationResponse {
   message: string;
   otpSent: boolean;
   phoneNumber?: string; // Masked phone number for display
+  actualPhoneNumber?: string; // Actual 10-digit phone number for storage
   manualVerification?: boolean; // Flag if manual phone number was provided
   otp?: string; // DEMO ONLY - OTP for testing
 }
@@ -24,7 +25,7 @@ export interface OtpVerificationRequest {
 }
 
 export interface VisitorDemographics {
-  name: string;
+  fullName: string;
   address: string;
   district: string;
   constituency: string;

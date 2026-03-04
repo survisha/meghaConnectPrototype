@@ -134,6 +134,7 @@ public class VisitorKycController {
             response.put("otpSent", true);
             response.put("otp", otp);  // DEMO ONLY: Remove in production
             response.put("phoneNumber", maskedPhone);  // Return masked phone for UI display
+            response.put("actualPhoneNumber", phoneNumber);  // Return actual phone for storage
             response.put("manualVerification", manualVerification);  // Flag for DEO review
             response.put("message", "OTP sent to " + maskedPhone);
             return ResponseEntity.ok(response);
@@ -264,10 +265,10 @@ public class VisitorKycController {
     @PostMapping("/validate-face")
     public ResponseEntity<Map<String, Object>> validateFace(@RequestBody Map<String, String> request) {
         String idType = request.get("idType");
-        String idValue = request.get("idValue");
-        String livePhotoBase64 = request.get("livePhotoBase64");
+        String idValue = request.get("idNumber");
+        String livePhotoBase64 = request.get("livePhoto");
 
-        if (idType == null || idValue == null || livePhotoBase64 == null) {
+        if (idValue == null || livePhotoBase64 == null) {
             Map<String, Object> error = new HashMap<>();
             error.put("success", false);
             error.put("message", "idType, idValue, and livePhotoBase64 are required");

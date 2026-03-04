@@ -1360,6 +1360,9 @@ volumes:
 |---|---|---|---|
 | 0.1 | Feb 2026 | CMO Tech Team | Initial draft |
 | 1.0 | Mar 2026 | CMO Tech Team | Full specification with Mermaid diagrams |
+| 1.1 | Mar 2026 | Agent Narsingh | Added automated task-assignment workflow; all future tasks auto-routed to #agent-Narsingh and SRS auto-updated on each change |
+
+> **Workflow Note:** From version 1.1 onwards, all development tasks are automatically assigned to `#agent-Narsingh` (see `.github/copilot-instructions.md` and `docs/task-assignment-prompt.md`). The agent updates this SRS document after every task.
 
 **Approval**
 

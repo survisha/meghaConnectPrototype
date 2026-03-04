@@ -1,10 +1,12 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment.development';
 
 export interface IdValidationRequest {
   idType: 'EPIC' | 'AADHAAR';
   idNumber: string;
+  phoneNumber?: string; // Optional - for manual verification fallback
 }
 
 export interface IdValidationResponse {
@@ -12,6 +14,8 @@ export interface IdValidationResponse {
   message: string;
   otpSent: boolean;
   phoneNumber?: string; // Masked phone number for display
+  manualVerification?: boolean; // Flag if manual phone number was provided
+  otp?: string; // DEMO ONLY - OTP for testing
 }
 
 export interface OtpVerificationRequest {
@@ -51,11 +55,13 @@ export class VisitorKycService {
   constructor(private http: HttpClient) {}
 
   /**
-   * Step 1: Validate EPIC or Aadhaar ID
-   * Sends OTP to the mobile number linked to the ID
+   * Step 1: Validate EPIC or Aadhaar ID Type
+   * - Sends OTP to the mobile number registered with the ID
+   * - If phoneNumber is provided manually, OTP is sent to that number (manual verification)
+   * - Backend calls external EPIC/Aadhaar service to get registered mobile number
    */
   validateVisitorId(request: IdValidationRequest): Observable<IdValidationResponse> {
-    return this.http.post<IdValidationResponse>('/api/v1/visitor/validate-id', request);
+    return this.http.post<IdValidationResponse>(`${environment.apiUrl}/visitor/validate-idType`, request);
   }
 
   /**
@@ -63,7 +69,7 @@ export class VisitorKycService {
    * Returns demographic details if OTP is valid
    */
   verifyOtp(request: OtpVerificationRequest): Observable<OtpVerificationResponse> {
-    return this.http.post<OtpVerificationResponse>('/api/v1/visitor/verify-otp', request);
+    return this.http.post<OtpVerificationResponse>(`${environment.apiUrl}/visitor/verify-otp`, request);
   }
 
   /**
@@ -71,7 +77,7 @@ export class VisitorKycService {
    * Returns KYC status (PHOTO_MATCHED or DEMOGRAPHIC_MATCHED)
    */
   validateFace(request: FaceValidationRequest): Observable<FaceValidationResponse> {
-    return this.http.post<FaceValidationResponse>('/api/v1/visitor/validate-face', request);
+    return this.http.post<FaceValidationResponse>(`${environment.apiUrl}/visitor/validate-face`, request);
   }
 
   /**

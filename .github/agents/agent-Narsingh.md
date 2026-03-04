@@ -39,7 +39,7 @@
 **Visitor KYC Validation (Multi-step, MOCK):**
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| POST | `/api/v1/visitor/validate-id` | none | `{idType,idValue,phoneNumber}` → `{success,otpSent,otp,message}` - Validates EPIC/Aadhaar format and sends OTP (mock: OTP=123456) |
+| POST | `/api/v1/visitor/validate-idType` | none | `{idType,idValue,phoneNumber?}` → `{success,otpSent,otp,phoneNumber,manualVerification,message}` - Validates EPIC/Aadhaar format, gets registered mobile from ID service (mock), sends OTP. phoneNumber is optional for manual verification fallback |
 | POST | `/api/v1/visitor/verify-otp` | none | `{phoneNumber,otp,idType,idValue}` → `{success,verified,demographics:{fullName,address,district,constituency}}` - Verifies OTP and returns mock demographics |
 | POST | `/api/v1/visitor/validate-face` | none | `{idType,idValue,livePhotoBase64}` → `{success,matched,kycStatus,confidence,message}` - Validates face photo (mock: always returns PHOTO_MATCHED) |
 
@@ -134,25 +134,30 @@
 New visitor registration on `/register-visitor` uses a 4-step KYC validation flow with ID verification, OTP validation, and live photo capture with face matching.
 
 **Flow Steps:**
-1. **ID Entry (Step 1):** Visitor selects ID type (EPIC/Aadhaar) and enters ID number + mobile
+1. **ID Entry (Step 1):** Visitor selects ID type (EPIC/Aadhaar) and enters ID number
    - Frontend validates format (EPIC: 3 letters + 7 digits, Aadhaar: 12 digits)
-   - Calls `POST /api/v1/visitor/validate-id` → backend validates format and sends OTP (mock: always "123456")
-   - Progress: `id-entry` → `otp-verification`
+   - **Optional:** If registered mobile is unavailable, visitor can provide manual mobile number
+   - Calls `POST /api/v1/visitor/validate-idType` → backend validates format
+   - Backend simulates calling EPIC/Aadhaar API to get registered mobile number
+   - If manual mobile provided, that number is used and `manualVerification` flag is set
+   - OTP is sent to mobile number (mock: always "123456")
+   - OTP field appears in same step
+   - Progress: `id-entry` (OTP sent, field shown)
 
-2. **OTP Verification (Step 2):** Visitor enters 6-digit OTP
+2. **OTP Verification (Still Step 1):** Visitor enters 6-digit OTP in same screen
    - Calls `POST /api/v1/visitor/verify-otp` → backend validates OTP (accepts "123456")
    - On success: Returns mock demographics data (fullName, address, district, constituency)
    - Frontend auto-populates form fields with demographics
-   - Progress: `otp-verification` → `photo-capture`
+   - Progress: `id-entry` → `photo-capture`
 
-3. **Photo Capture (Step 3):** Visitor captures live photo via camera
+3. **Photo Capture (Step 2):** Visitor captures live photo via camera
    - Frontend uses `navigator.mediaDevices.getUserMedia()` to access camera
    - Photo captured as base64-encoded JPEG
    - Calls `POST /api/v1/visitor/validate-face` with `{idType, idValue, livePhotoBase64}`
    - Backend returns face validation result (mock: always PHOTO_MATCHED with 95.5% confidence)
    - Progress: `photo-capture` → `kyc-complete`
 
-4. **Complete Registration (Step 4):** Final review and submission
+4. **Complete Registration (Step 3):** Final review and submission
    - All fields displayed (demographics read-only, email editable)
    - KYC status badge shown (green for PHOTO_MATCHED, yellow for DEMOGRAPHIC_MATCHED)
    - Calls `POST /api/v1/visitor/auth/register` with complete data + `kycStatus`
@@ -164,10 +169,14 @@ New visitor registration on `/register-visitor` uses a 4-step KYC validation flo
 - `DEMOGRAPHIC_MATCHED`: OTP verified but no photo match or photo capture skipped → `kycVerified=false`
 - `FAILED`: OTP invalid or face recognition failed → registration blocked
 - `PENDING`: Default state for existing records (pre-V7 data)
+- **Manual Verification:** If visitor provides manual mobile number (not registered with ID), `manualVerification=true` flag is set and record is marked for DEO review
 
 **Mock Behavior (Demo Only):**
 - OTP is always "123456" for successful verification
 - EPIC/Aadhaar validation is format-only (no API integration)
+- If phoneNumber not provided, mock registered numbers used:
+  - EPIC → "9876543210"
+  - Aadhaar → "8787654321"
 - Face matching always returns PHOTO_MATCHED (no actual face recognition)
 - Demographics returned are hard-coded sample data:
   - EPIC → "Rajesh Kumar Sharma, Laitumkhrah, East Khasi Hills, Shillong North"

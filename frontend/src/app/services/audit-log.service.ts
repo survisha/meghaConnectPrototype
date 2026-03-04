@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { AuditEntry } from '../models';
+import { environment } from '../../environments/environment.development';
 
 export interface AuditPage {
   content: AuditEntry[];
@@ -15,7 +16,7 @@ export interface AuditPage {
 @Injectable({ providedIn: 'root' })
 export class AuditLogService {
 
-  private readonly baseUrl = '/api/v1/audit-logs';
+  private readonly baseUrl = environment.apiUrl + '/audit-logs';
 
   constructor(private http: HttpClient) {}
 

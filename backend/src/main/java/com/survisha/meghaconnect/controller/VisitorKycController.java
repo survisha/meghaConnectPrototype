@@ -14,9 +14,9 @@ import java.util.Map;
  * All paths under /api/v1/visitor/** are publicly accessible for KYC validation.
  *
  * Multi-step KYC Flow:
- *   1. POST /api/v1/visitor/validate-id   – Validate EPIC/Aadhaar and send OTP
- *   2. POST /api/v1/visitor/verify-otp    – Verify OTP and return mock demographics
- *   3. POST /api/v1/visitor/validate-face – Validate live photo (always returns PHOTO_MATCHED for demo)
+ *   1. POST /api/v1/visitor/validate-idType   – Validate EPIC/Aadhaar and send OTP
+ *   2. POST /api/v1/visitor/verify-otp        – Verify OTP and return mock demographics
+ *   3. POST /api/v1/visitor/validate-face     – Validate live photo (always returns PHOTO_MATCHED for demo)
  *
  * NOTE: This is a MOCK implementation for frontend/mobile development.
  * - OTP is always "123456" for demo purposes
@@ -42,38 +42,43 @@ public class VisitorKycController {
     // ── 1. Validate ID (EPIC/Aadhaar) ────────────────────────────────────────
 
     /**
-     * Validates the visitor's ID (EPIC or Aadhaar) and sends an OTP to the mobile number.
+     * Validates the visitor's ID (EPIC or Aadhaar) and sends an OTP to the registered mobile number.
      *
      * Mock behavior:
      * - EPIC format: 3 uppercase letters + 7 digits (e.g., ABC1234567)
      * - Aadhaar format: Exactly 12 digits
-     * - OTP is generated and sent to the mobile number (mock: OTP = 123456)
+     * - In production, EPIC/Aadhaar API will return registered mobile number and send OTP
+     * - For demo, if phoneNumber is provided, OTP is sent to that number (for manual verification)
+     * - If phoneNumber not provided, mock registered number is used (simulating API response)
      *
      * Request body:
      * {
      *   "idType": "EPIC" | "AADHAAR",
      *   "idValue": "ABC1234567" | "123456789012",
-     *   "phoneNumber": "9876543210"
+     *   "phoneNumber": "9876543210" (optional - for manual verification fallback)
      * }
      *
      * Response:
      * {
      *   "success": true,
      *   "otpSent": true,
-     *   "message": "OTP sent to ****3210"
+     *   "phoneNumber": "****3210",
+     *   "message": "OTP sent to ****3210",
+     *   "manualVerification": false (true if phoneNumber was provided manually)
      * }
      */
-    @PostMapping("/validate-id")
-    public ResponseEntity<Map<String, Object>> validateId(@RequestBody Map<String, String> request) {
+    @PostMapping("/validate-idType")
+    public ResponseEntity<Map<String, Object>> validateIdType(@RequestBody Map<String, String> request) {
         String idType = request.get("idType");
-        String idValue = request.get("idValue");
-        String phoneNumber = request.get("phoneNumber");
+        String idValue = request.get("idNumber");
+        String phoneNumber = request.get("phoneNumber");  // Optional - for manual verification fallback
+        boolean manualVerification = (phoneNumber != null && !phoneNumber.isEmpty());
 
-        // Validate input
-        if (idType == null || idValue == null || phoneNumber == null) {
+        // Validate required input
+        if (idType == null || idValue == null) {
             Map<String, Object> error = new HashMap<>();
             error.put("success", false);
-            error.put("message", "idType, idValue, and phoneNumber are required");
+            error.put("message", "idType and idValue are required");
             return ResponseEntity.badRequest().body(error);
         }
 
@@ -99,8 +104,8 @@ public class VisitorKycController {
             }
         }
 
-        // Validate phone number format
-        if (!phoneNumber.matches("^[0-9]{10}$")) {
+        // If phone number is provided (manual fallback), validate format
+        if (manualVerification && !phoneNumber.matches("^[0-9]{10}$")) {
             Map<String, Object> error = new HashMap<>();
             error.put("success", false);
             error.put("errorCode", "INVALID_PHONE_FORMAT");
@@ -109,7 +114,12 @@ public class VisitorKycController {
         }
 
         // TODO: In production, call actual EPIC/Aadhaar verification API here
-        // For now, just validate format and generate OTP
+        // The API should return the registered mobile number linked to the ID
+        // For demo: if phoneNumber not provided, use mock registered number
+        if (!manualVerification) {
+            // Simulate EPIC/Aadhaar API returning registered mobile number
+            phoneNumber = "EPIC".equals(idType) ? "9876543210" : "8787654321";
+        }
 
         try {
             // Generate OTP (mock: always returns "123456")
@@ -123,6 +133,8 @@ public class VisitorKycController {
             response.put("success", true);
             response.put("otpSent", true);
             response.put("otp", otp);  // DEMO ONLY: Remove in production
+            response.put("phoneNumber", maskedPhone);  // Return masked phone for UI display
+            response.put("manualVerification", manualVerification);  // Flag for DEO review
             response.put("message", "OTP sent to " + maskedPhone);
             return ResponseEntity.ok(response);
         } catch (IllegalStateException e) {
@@ -166,15 +178,14 @@ public class VisitorKycController {
      */
     @PostMapping("/verify-otp")
     public ResponseEntity<Map<String, Object>> verifyOtp(@RequestBody Map<String, String> request) {
-        String phoneNumber = request.get("phoneNumber");
         String otp = request.get("otp");
-        String idType = request.get("idType");
-        String idValue = request.get("idValue");
-
-        if (phoneNumber == null || otp == null || idType == null || idValue == null) {
+        String idValue = request.get("idNumber");
+        String phoneNumber = "9876543210";//request.get("phonenumber");
+        String idType="EPIC";
+        if (otp == null || idValue == null) {
             Map<String, Object> error = new HashMap<>();
             error.put("success", false);
-            error.put("message", "phoneNumber, otp, idType, and idValue are required");
+            error.put("message", "otp, idType are required");
             return ResponseEntity.badRequest().body(error);
         }
 

@@ -3,11 +3,12 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { ScheduleEvent } from '../models';
+import { environment } from '../../environments/environment.development';
 
 @Injectable({ providedIn: 'root' })
 export class ScheduleEventService {
 
-  private readonly baseUrl = '/api/v1/schedule';
+  private readonly baseUrl = environment.apiUrl + '/schedule';
 
   constructor(private http: HttpClient) {}
 

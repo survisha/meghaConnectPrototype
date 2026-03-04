@@ -57,12 +57,15 @@ export class VisitorRegisterComponent implements OnDestroy {
   
   // KYC state
   idValidated = false;
+  otpSent = false;  // Flag to show OTP field
   otpVerified = false;
   photoCaptured = false;
   kycStatus: 'PHOTO_MATCHED' | 'DEMOGRAPHIC_MATCHED' | 'FAILED' | '' = '';
   kycStatusMessage = '';
   maskedPhone = '';
   otpCode = '';
+  manualPhone = '';  // Optional mobile number for manual verification
+  manualVerification = false;  // Flag if manual mobile was provided
   
   // Camera state
   videoStream: MediaStream | null = null;
@@ -102,20 +105,41 @@ export class VisitorRegisterComponent implements OnDestroy {
       return;
     }
 
+    // Check if manual phone number is provided and valid
+    if (this.manualPhone && this.manualPhone.length !== 10) {
+      this.errorMsg = 'Manual mobile number must be exactly 10 digits.';
+      return;
+    }
+
     this.errorMsg = '';
     this.loading = true;
 
-    this.kycService.validateVisitorId({
+    // Build request with optional phoneNumber
+    const request: any = {
       idType: this.form.idType as 'EPIC' | 'AADHAAR',
       idNumber: this.idNumber,
-    }).subscribe({
+    };
+
+    // Add manual phone number if provided
+    if (this.manualPhone && this.manualPhone.length === 10) {
+      request.phoneNumber = this.manualPhone;
+      this.manualVerification = true;
+    }
+
+    this.kycService.validateVisitorId(request).subscribe({
       next: res => {
         this.loading = false;
         if (res.success && res.otpSent) {
           this.idValidated = true;
-          this.currentStep = 'otp-verification';
+          this.otpSent = true;  // Show OTP field
           this.maskedPhone = res.phoneNumber || '';
+          this.manualVerification = res.manualVerification || false;
           this.successMsg = `OTP sent to ${this.maskedPhone}`;
+          
+          // Show manual verification warning if applicable
+          if (this.manualVerification) {
+            this.successMsg += ' (Manual verification required)';
+          }
         } else {
           this.errorMsg = res.message || 'ID validation failed.';
         }
@@ -127,10 +151,16 @@ export class VisitorRegisterComponent implements OnDestroy {
     });
   }
 
+  resendOtp() {
+    this.otpCode = '';
+    this.otpSent = false;
+    this.validateId();
+  }
+
   // ── STEP 2: OTP VERIFICATION ────────────────────────────────────────────
 
   get canVerifyOtp(): boolean {
-    return this.form.otp.length === 6;
+    return this.otpCode.length === 6;
   }
 
   verifyOtp() {
@@ -144,7 +174,7 @@ export class VisitorRegisterComponent implements OnDestroy {
 
     this.kycService.verifyOtp({
       idNumber: this.idNumber,
-      otp: this.form.otp,
+      otp: this.otpCode,  // Use otpCode instead of form.otp
     }).subscribe({
       next: res => {
         this.loading = false;
@@ -158,6 +188,9 @@ export class VisitorRegisterComponent implements OnDestroy {
           this.form.district = res.demographics.district;
           this.form.constituency = res.demographics.constituency;
           this.form.photoFromId = res.demographics.photoFromId || '';
+          
+          // Store the verified phone number
+          this.form.phoneNumber = this.manualPhone || this.maskedPhone.replace(/\*+/g, '');
           
           this.successMsg = 'OTP verified! Demographics auto-populated.';
         } else {
@@ -319,6 +352,10 @@ export class VisitorRegisterComponent implements OnDestroy {
 
   // ── INPUT SANITIZATION ──────────────────────────────────────────────────
 
+  sanitizeManualPhone() {
+    this.manualPhone = this.manualPhone.replace(/\D/g, '');
+  }
+
   sanitizeNumericInput(field: 'phoneNumber' | 'aadhaarNumber') {
     this.form[field] = this.form[field].replace(/\D/g, '');
   }
@@ -334,9 +371,12 @@ export class VisitorRegisterComponent implements OnDestroy {
   resetForm() {
     this.currentStep = 'id-entry';
     this.idValidated = false;
+    this.otpSent = false;
     this.otpVerified = false;
     this.photoCaptured = false;
     this.kycStatus = '';
+    this.manualPhone = '';
+    this.manualVerification = false;
     this.form = {
       fullName: '',
       phoneNumber: '',

@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Appointment } from '../models';
+import { environment } from '../../environments/environment.development';
 
 export interface CreateAppointmentRequest {
   applicantId: number;
@@ -34,13 +35,12 @@ export interface AppointmentPage {
 @Injectable({ providedIn: 'root' })
 export class AppointmentService {
 
-  private readonly baseUrl = '/api/appointments';
-  private readonly v1BaseUrl = '/api/v1/appointments';
+  private readonly baseUrl = environment.apiUrl + '/appointments';
 
   constructor(private http: HttpClient) {}
 
   createAppointment(request: CreateAppointmentRequest): Observable<Appointment> {
-    return this.http.post<Appointment>(this.v1BaseUrl, request);
+    return this.http.post<Appointment>(this.baseUrl, request);
   }
 
   getPendingAppointments(page = 0, size = 20): Observable<AppointmentPage> {
@@ -48,18 +48,18 @@ export class AppointmentService {
       .set('status', 'HCM_PENDING,APPROVER_REVIEW,CMO_REVIEW')
       .set('page', page.toString())
       .set('size', size.toString());
-    return this.http.get<AppointmentPage>(this.v1BaseUrl, { params });
+    return this.http.get<AppointmentPage>(this.baseUrl, { params });
   }
 
   getAllAppointments(page = 0, size = 20): Observable<AppointmentPage> {
     const params = new HttpParams()
       .set('page', page.toString())
       .set('size', size.toString());
-    return this.http.get<AppointmentPage>(this.v1BaseUrl, { params });
+    return this.http.get<AppointmentPage>(this.baseUrl, { params });
   }
 
   getAppointmentById(id: number): Observable<Appointment> {
-    return this.http.get<Appointment>(`${this.v1BaseUrl}/${id}`);
+    return this.http.get<Appointment>(`${this.baseUrl}/${id}`);
   }
 
   approveAppointment(id: number, request: ApproveRejectRequest): Observable<Appointment> {
@@ -71,13 +71,13 @@ export class AppointmentService {
   }
 
   rescheduleAppointment(id: number, request: RescheduleRequest): Observable<Appointment> {
-    return this.http.post<Appointment>(`${this.v1BaseUrl}/${id}/schedule`, {
+    return this.http.post<Appointment>(`${this.baseUrl}/${id}/schedule`, {
       scheduledDateTime: request.scheduledDateTime,
       durationMinutes: request.durationMinutes,
     });
   }
 
   updateStatus(id: number, status: string, remarks?: string): Observable<Appointment> {
-    return this.http.patch<Appointment>(`${this.v1BaseUrl}/${id}/status`, { status, remarks });
+    return this.http.patch<Appointment>(`${this.baseUrl}/${id}/status`, { status, remarks });
   }
 }

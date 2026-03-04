@@ -138,31 +138,76 @@
             <small class="field-hint"><i class="pi pi-info-circle"></i> Enter all 12 digits without spaces</small>
           </div>
 
-          <div class="form-group">
-            <label>Mobile Number *</label>
+          <!-- OTP Field (shown after ID validation) -->
+          <div class="form-group" *ngIf="otpSent">
+            <label>Enter OTP *</label>
+            <input
+              type="text"
+              class="input-field otp-input"
+              [(ngModel)]="otpCode"
+              placeholder="Enter 6-digit OTP"
+              maxlength="6"
+              (input)="sanitizeOtpInput()"
+              style="text-align:center;font-size:1.5rem;letter-spacing:0.5rem;font-weight:600"
+            />
+            <small class="field-hint" style="color:#16a34a">
+              <i class="pi pi-mobile"></i> OTP sent to {{ maskedPhone }}
+            </small>
+          </div>
+
+          <!-- Optional Mobile Number Field -->
+          <div class="form-group" *ngIf="!otpSent">
+            <label>Mobile Number (Optional)</label>
             <input
               type="tel"
               class="input-field"
-              [(ngModel)]="form.phoneNumber"
+              [(ngModel)]="manualPhone"
               placeholder="10-digit mobile number"
               maxlength="10"
-              (input)="sanitizeNumericInput('phoneNumber')"
+              (input)="sanitizeManualPhone()"
             />
-            <small class="field-hint"><i class="pi pi-mobile"></i> OTP will be sent to this number</small>
+            <small class="field-hint" style="color:#B45309">
+              <i class="pi pi-exclamation-triangle"></i> 
+              <strong>Only if registered mobile not available.</strong> Provide your current mobile number. 
+              OTP will be sent to this number and KYC will be marked for manual verification by DEO.
+            </small>
           </div>
 
-          <div class="kyc-notice">
+          <div class="kyc-notice" *ngIf="!otpSent">
             <i class="pi pi-info-circle"></i>
-            We will validate your ID and send an OTP to your mobile number.
+            We will validate your ID and send OTP to the registered mobile number.
+          </div>
+
+          <div class="kyc-notice" *ngIf="otpSent && !otpVerified" style="background:#f0fdf4;border-color:#86efac">
+            <i class="pi pi-check-circle" style="color:#16a34a"></i>
+            OTP sent successfully! Enter the code above to continue.
           </div>
 
           <div style="display:flex;gap:1rem;margin-top:1.5rem">
             <button class="btn-outline" (click)="goToLogin()">
               <i class="pi pi-arrow-left"></i> Back to Login
             </button>
-            <button class="btn-primary flex-1" [disabled]="loading" (click)="validateId()">
-              <span *ngIf="!loading"><i class="pi pi-arrow-right"></i> Validate & Send OTP</span>
-              <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Validating...</span>
+            <button 
+              *ngIf="!otpSent" 
+              class="btn-primary flex-1" 
+              [disabled]="loading || !canValidateId" 
+              (click)="validateId()">
+              <span *ngIf="!loading"><i class="pi pi-send"></i> Send OTP</span>
+              <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Sending...</span>
+            </button>
+            <button 
+              *ngIf="otpSent && !otpVerified" 
+              class="btn-primary flex-1" 
+              [disabled]="loading || otpCode.length !== 6" 
+              (click)="verifyOtp()">
+              <span *ngIf="!loading"><i class="pi pi-check"></i> Verify OTP</span>
+              <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Verifying...</span>
+            </button>
+          </div>
+
+          <div *ngIf="otpSent" style="text-align:center;margin-top:1rem">
+            <button class="btn-link" (click)="resendOtp()" [disabled]="loading">
+              <i class="pi pi-refresh"></i> Resend OTP
             </button>
           </div>
         </ng-container>

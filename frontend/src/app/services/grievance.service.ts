@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Grievance, GrievanceCategory, GrievanceStatus } from '../models';
+import { environment } from '../../environments/environment.development';
 
 export interface CreateGrievanceRequest {
   applicantName: string;
@@ -25,7 +26,7 @@ export interface GrievancePage {
 @Injectable({ providedIn: 'root' })
 export class GrievanceService {
 
-  private readonly baseUrl = '/api/v1/grievances';
+  private readonly baseUrl = environment.apiUrl + '/grievances';
 
   constructor(private http: HttpClient) {}
 

@@ -4,6 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { tap, map, catchError } from 'rxjs/operators';
 import { UserRole } from '../models';
+import { environment } from '../../environments/environment.development';
 
 export interface AuthUser {
   username: string;
@@ -41,7 +42,7 @@ export class AuthService {
   }
 
   login(username: string, password: string): Observable<boolean> {
-    return this.http.post<LoginResponse>('/api/v1/auth/login', { username, password }).pipe(
+    return this.http.post<LoginResponse>(`${environment.apiUrl}/auth/login`, { username, password }).pipe(
       tap(res => {
         // Strip Spring Security "ROLE_" prefix to match frontend UserRole type
         const role = (res.role ?? '').replace(/^ROLE_/, '') as UserRole;

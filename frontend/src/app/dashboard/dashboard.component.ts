@@ -7,13 +7,14 @@ import { AuditLogService } from '../services/audit-log.service';
 import { ScheduleEvent } from '../models';
 import { Button } from 'primeng/button';
 import { UIChart } from 'primeng/chart';
+import { AiInsightsDashboardComponent } from '../ai-insights-dashboard/ai-insights-dashboard.component';
 
 interface QuickAction { label: string; icon: string; route: string; severity: string; }
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, Button, UIChart],
+  imports: [CommonModule, RouterLink, Button, UIChart, AiInsightsDashboardComponent],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss'],
 })
@@ -123,6 +124,8 @@ export class DashboardComponent implements OnInit {
         roles: ['ADMIN','SAIDUL_OSD','DATA_ENTRY_OPERATOR'] },
       { label: 'Walk-in Counter', icon: 'pi pi-sign-in', route: '/appointments/walkin', severity: 'success',
         roles: ['ADMIN','SAIDUL_OSD','DATA_ENTRY_OPERATOR'] },
+      { label: 'Register Visitor', icon: 'pi pi-user-plus', route: '/deo/register-visitor', severity: 'success',
+        roles: ['DATA_ENTRY_OPERATOR','ADMIN','SAIDUL_OSD'] },
       { label: 'Apply for Scheme', icon: 'pi pi-briefcase', route: '/schemes/apply', severity: 'warning',
         roles: ['ADMIN','SAIDUL_OSD'] },
       { label: 'Identify Person', icon: 'pi pi-id-card', route: '/identify', severity: 'info',

@@ -1,0 +1,164 @@
+.ai-insights {
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+}
+
+.ai-insights-header {
+  background: linear-gradient(135deg, #4527a0, #6a1b9a);
+  color: white;
+  padding: 0.85rem 1.25rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ai-badge {
+  margin-left: auto;
+  background: rgba(255,255,255,0.2);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.loading-state {
+  padding: 1.5rem;
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.total-stat {
+  padding: 1.25rem 1.5rem 0.5rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.total-value {
+  font-size: 2.4rem;
+  font-weight: 800;
+  color: #4527a0;
+  line-height: 1;
+}
+
+.total-label {
+  font-size: 0.88rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.insights-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+}
+
+.insight-card {
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 0.85rem;
+  border: 1px solid #e5e7eb;
+}
+
+.insight-title {
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.insight-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.82rem;
+}
+
+.insight-rank {
+  width: 18px;
+  height: 18px;
+  background: #e8eaf6;
+  color: #1a237e;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.insight-name {
+  width: 110px;
+  font-weight: 500;
+  color: #1f2937;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-size: 0.81rem;
+}
+
+.district-name { width: 140px; }
+
+.insight-bar-bg {
+  flex: 1;
+  background: #e5e7eb;
+  border-radius: 999px;
+  height: 6px;
+  overflow: hidden;
+}
+
+.insight-bar {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #1a237e, #3949ab);
+  transition: width 0.5s ease;
+}
+
+.district-bar {
+  background: linear-gradient(90deg, #0277bd, #0288d1);
+}
+
+.category-bar {
+  background: linear-gradient(90deg, #2e7d32, #43a047);
+}
+
+.insight-count {
+  width: 28px;
+  text-align: right;
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+.ai-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0 1.25rem 1.25rem;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, #f3e8ff, #faf5ff);
+  border: 1px solid #e9d5ff;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  color: #5b21b6;
+  line-height: 1.5;
+
+  i { flex-shrink: 0; margin-top: 2px; }
+}

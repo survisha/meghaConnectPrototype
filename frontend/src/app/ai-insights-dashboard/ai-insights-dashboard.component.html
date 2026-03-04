@@ -1,0 +1,65 @@
+<div class="ai-insights">
+  <div class="ai-insights-header">
+    <i class="pi pi-sparkles"></i>
+    <span>AI Dashboard Insights</span>
+    <div class="ai-badge">Powered by AI</div>
+  </div>
+
+  <div *ngIf="loading" class="loading-state">
+    <i class="pi pi-spin pi-spinner"></i> Loading AI insights…
+  </div>
+
+  <ng-container *ngIf="!loading && insights">
+    <!-- Total this month -->
+    <div class="total-stat">
+      <div class="total-value">{{ insights.totalApplicationsThisMonth }}</div>
+      <div class="total-label">Total Applications This Month</div>
+    </div>
+
+    <div class="insights-grid">
+      <!-- Top Requested Schemes -->
+      <div class="insight-card">
+        <div class="insight-title"><i class="pi pi-briefcase"></i> Top Requested Schemes</div>
+        <div *ngFor="let s of insights.topSchemes; let i = index" class="insight-row">
+          <span class="insight-rank">{{ i + 1 }}</span>
+          <span class="insight-name">{{ s.scheme }}</span>
+          <div class="insight-bar-bg">
+            <div class="insight-bar" [style.width]="s.percentage + '%'"></div>
+          </div>
+          <span class="insight-count">{{ s.count }}</span>
+        </div>
+      </div>
+
+      <!-- District-wise Distribution -->
+      <div class="insight-card">
+        <div class="insight-title"><i class="pi pi-map"></i> District-wise Applications</div>
+        <div *ngFor="let d of insights.districtDistribution" class="insight-row">
+          <span class="insight-name district-name">{{ d.district }}</span>
+          <div class="insight-bar-bg">
+            <div class="insight-bar district-bar" [style.width]="getBarWidth(d.applications, maxDistrictApps)"></div>
+          </div>
+          <span class="insight-count">{{ d.applications }}</span>
+        </div>
+      </div>
+
+      <!-- Top Project Categories -->
+      <div class="insight-card">
+        <div class="insight-title"><i class="pi pi-tag"></i> Top Project Categories</div>
+        <div *ngFor="let c of insights.topCategories; let i = index" class="insight-row">
+          <span class="insight-rank">{{ i + 1 }}</span>
+          <span class="insight-name">{{ c.category }}</span>
+          <div class="insight-bar-bg">
+            <div class="insight-bar category-bar" [style.width]="getBarWidth(c.count, maxCategoryCount)"></div>
+          </div>
+          <span class="insight-count">{{ c.count }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Note -->
+    <div class="ai-note">
+      <i class="pi pi-info-circle"></i>
+      <span>{{ insights.aiNote }}</span>
+    </div>
+  </ng-container>
+</div>

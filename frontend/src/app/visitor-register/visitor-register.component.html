@@ -27,6 +27,18 @@
   <div class="register-right">
     <div class="register-card">
 
+      <!-- R011: DEO Mode Banner -->
+      <div *ngIf="isDeoMode" style="background:linear-gradient(135deg,#1a237e,#3949ab);color:white;padding:0.75rem 1rem;border-radius:8px;margin-bottom:1rem;display:flex;align-items:center;gap:0.5rem;font-size:0.88rem">
+        <i class="pi pi-user-plus" style="font-size:1.1rem"></i>
+        <div>
+          <strong>DEO Assisted Registration</strong>
+          <div style="font-size:0.78rem;opacity:.85">You are registering a walk-in visitor on behalf of the citizen.</div>
+        </div>
+        <button (click)="goToLogin()" style="margin-left:auto;background:rgba(255,255,255,0.2);border:none;color:white;padding:0.3rem 0.75rem;border-radius:6px;cursor:pointer;font-size:0.8rem">
+          <i class="pi pi-arrow-left"></i> Back to Dashboard
+        </button>
+      </div>
+
       <!-- Multi-step KYC Registration -->
       <ng-container>
         <div class="card-header" *ngIf="!submitted">
@@ -316,6 +328,26 @@
             <span *ngIf="form.kycStatus === 'PHOTO_MATCHED'"><strong>KYC Verified – Photo Match Successful.</strong> Please complete the remaining details.</span>
             <span *ngIf="form.kycStatus === 'DEMOGRAPHIC_MATCHED'"><strong>KYC Verified – Demographic Match.</strong> Please complete the remaining details.</span>
             <span *ngIf="form.kycStatus === 'MANUAL_VERIFICATION_REQUIRED'"><strong>Manual Verification Required.</strong> Your KYC will be verified by a DEO officer.</span>
+          </div>
+
+          <!-- R009: AI KYC Confidence Indicator -->
+          <div *ngIf="kycConfidenceScore > 0" style="margin-bottom:1rem;padding:0.85rem 1rem;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px">
+            <div style="font-weight:700;font-size:0.82rem;color:#374151;margin-bottom:0.5rem;display:flex;align-items:center;gap:0.4rem">
+              <i class="pi pi-sparkles" style="color:#1a237e"></i> AI KYC Confidence Indicator
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:0.82rem;margin-bottom:0.35rem">
+              <span>Photo Match Score: <strong>{{ kycConfidenceScore }}%</strong></span>
+              <span style="font-weight:600"
+                [style.color]="kycConfidenceScore >= 80 ? '#16a34a' : kycConfidenceScore >= 60 ? '#ca8a04' : '#dc2626'">
+                KYC Status: {{ kycConfidenceLabel }}
+              </span>
+            </div>
+            <div style="height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden">
+              <div style="height:100%;border-radius:999px;transition:width 0.5s ease"
+                [style.width]="kycConfidenceScore + '%'"
+                [style.background]="kycConfidenceScore >= 80 ? '#16a34a' : kycConfidenceScore >= 60 ? '#ca8a04' : '#dc2626'">
+              </div>
+            </div>
           </div>
 
           <div class="form-group">

@@ -82,6 +82,29 @@
               [severity]="visitorProfile.kycVerified ? 'success' : 'warn'">
             </p-tag>
           </div>
+
+          <!-- R009: AI KYC Confidence Indicator -->
+          <ng-container *ngIf="kycConfidenceDisplay">
+            <div class="profile-row" style="flex-direction:column;align-items:flex-start;gap:0.4rem">
+              <span class="profile-label">AI KYC Confidence</span>
+              <div style="width:100%">
+                <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:0.25rem">
+                  <span style="font-weight:600" [style.color]="kycConfidenceDisplay.color">
+                    Photo Match Score: {{ kycConfidenceDisplay.score }}%
+                  </span>
+                  <span style="font-weight:600" [style.color]="kycConfidenceDisplay.color">
+                    KYC Status: {{ kycConfidenceDisplay.label }}
+                  </span>
+                </div>
+                <div style="height:8px;background:#e5e7eb;border-radius:999px;overflow:hidden">
+                  <div style="height:100%;border-radius:999px;transition:width 0.5s ease"
+                    [style.width]="kycConfidenceDisplay.score + '%'"
+                    [style.background]="kycConfidenceDisplay.color">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ng-container>
         </ng-container>
         <div *ngIf="!loading && !visitorProfile" class="empty-state">
           Profile not loaded. <a routerLink="/public-login">Please login again.</a>
@@ -163,4 +186,7 @@
     </div>
 
   </div>
+
+  <!-- R008: AI Chatbot Widget -->
+  <app-ai-chatbot></app-ai-chatbot>
 </div>

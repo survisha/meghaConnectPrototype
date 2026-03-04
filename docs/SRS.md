@@ -1471,6 +1471,307 @@ Booking screen: `#appointment-form.component` (6-step multi-step form)
 
 ---
 
+---
+
+## 21. DEO Assisted Visitor Registration (R011)
+
+### 21.1 Overview
+
+Data Entry Operators (DEO) can now register walk-in visitors directly from the CM Office portal without requiring the visitor to self-register.
+
+### 21.2 Access
+
+| Role | Access |
+|---|---|
+| DATA_ENTRY_OPERATOR | Can register visitors via `/deo/register-visitor` |
+| ADMIN | Full access |
+| SAIDUL_OSD | Full access |
+
+### 21.3 Implementation
+
+- **Route:** `/deo/register-visitor` (protected by `roleGuard`) within the authenticated shell
+- **Component:** Re-uses existing `visitor-register.component` with a **DEO Mode Banner** displayed at the top
+- **Sidebar Menu:** "Register Visitor" item added for DEO role with `pi-user-plus` icon
+- **Quick Action:** "Register Visitor" button added to DEO dashboard quick actions
+- **Navigation:** After successful registration, DEO is redirected to `/dashboard` (not to public login)
+
+### 21.4 DEO Mode Behaviour
+
+- Same 5-step KYC flow as public self-registration
+- DEO Mode Banner shows: _"You are registering a walk-in visitor on behalf of the citizen."_
+- "Back to Dashboard" button returns DEO to the staff dashboard
+- All KYC steps (ID validation, OTP, photo capture, face validation) remain identical
+
+---
+
+## 22. UI Improvements (R012)
+
+### 22.1 Navigation Button Fixes
+
+The appointment booking form now uses custom CSS navigation buttons (`.btn-nav-prev`, `.btn-nav-next`, `.btn-nav-submit`) that are always visible and clearly styled:
+
+| Button | Style | Visibility |
+|---|---|---|
+| Previous | White background, navy border | Always visible, disabled on step 0 |
+| Next | Navy background, white text | Always visible until final step |
+| Submit Application | Green background, white text | Visible on final step only |
+
+### 22.2 Label Visibility
+
+All form group labels now explicitly use `color: #374151` to ensure visibility against light backgrounds.
+
+### 22.3 Input Background Fix
+
+Global SCSS overrides in `styles.scss` ensure all PrimeNG inputs, dropdowns, radio buttons, checkboxes, and textareas use `background: white !important` with `color: #1f2937 !important`. This removes all dark/black backgrounds from form elements.
+
+---
+
+## 23. Associate Visitor Handling (R013)
+
+### 23.1 Opt-in Toggle
+
+Step 3 of the appointment booking form now includes an **"Add Associate Visitors"** checkbox. The associate visitor section is hidden by default and shown only when the checkbox is selected.
+
+| State | Behaviour |
+|---|---|
+| Unchecked (default) | Info box displayed: "No associate visitors will be included." |
+| Checked | Associate entry form and list displayed |
+
+### 23.2 Associate Fields
+
+| Field | Required |
+|---|---|
+| Name | Yes |
+| Phone Number | No |
+| EPIC Number | No |
+| Designation | No |
+| Address | No |
+
+---
+
+## 24. AI Document Processing (R004, R005, R014)
+
+### 24.1 AI Document Understanding (R004)
+
+When a citizen uploads an Application Letter / Project Proposal in step 4 of appointment booking, the frontend calls `/api/ai/analyze-document`.
+
+**Extracted Fields:**
+
+| Field | Description |
+|---|---|
+| Project Name | Name of the proposed project |
+| Project Category | Category (Road, School, etc.) |
+| Estimated Cost | Total cost in ₹ |
+| Location / District | Project location |
+| Beneficiaries | Number/type of beneficiaries |
+| Scheme Requested | Target scheme name |
+| Applicant Name | Applicant name if present |
+| Key Justification | Summary of justification points |
+
+Extracted fields are **auto-filled** in the scheme details form. Users can edit before submission.
+
+### 24.2 AI Document Summarization (R005)
+
+After document analysis, an **AI Summary Box** is shown in the Review step:
+
+```
+Project: Community Hall Construction
+Location: East Khasi Hills
+Estimated Cost: ₹25,00,000
+Beneficiaries: 650 villagers
+Purpose: Construction of community gathering space
+```
+
+This helps officers quickly review applications without reading full documents.
+
+### 24.3 Frontend Service
+
+**`ai-document.service.ts`** provides:
+
+| Method | Description |
+|---|---|
+| `analyzeDocument(file)` | Sends file to `/api/ai/analyze-document`; falls back to mock data if offline |
+| `checkDuplicate(request)` | Calls `/api/ai/check-duplicate` for R006 |
+| `suggestPriority(agendaType, brief)` | Calls `/api/ai/suggest-priority` for R007 |
+| `suggestTimeSlots(location, type)` | Calls `/api/ai/suggest-slots` for R015 |
+
+---
+
+## 25. AI Duplicate Application Detection (R006)
+
+Before reaching the review step, the system calls `/api/ai/check-duplicate` with EPIC number, phone, agenda type, scheme, and project name.
+
+If a duplicate is detected:
+
+```
+⚠ Possible duplicate application detected.
+Previous Application ID: MC-123456 | Scheme: CMSDF | Submitted: 01 Jan 2026
+You may still proceed if this is a different request.
+```
+
+Officers can still approve or proceed. Detection checks:
+- Same EPIC with different mobile
+- Same project proposal submitted before
+- Same applicant applying for same scheme repeatedly
+
+---
+
+## 26. AI Meeting Priority Recommendation (R007)
+
+On the Review step, the system suggests a meeting priority level:
+
+| Priority | Example Trigger |
+|---|---|
+| HIGH | Medical cases (CM Care), urgent public grievances |
+| MEDIUM | Governance, infrastructure, general grievances |
+| LOW | Political discussions, routine appointments |
+
+Display: `AI Recommended Priority: HIGH`
+
+**Officer Override:** Officers can click HIGH / MEDIUM / LOW buttons to override the AI recommendation. A "Reset" button restores the AI recommendation.
+
+The priority is submitted with the application as `aiPriorityLevel`.
+
+---
+
+## 27. AI Citizen Chatbot (R008)
+
+**Component:** `ai-chatbot.component`
+
+**Location:** Floating widget in the bottom-right corner of the Public Visitor Dashboard.
+
+**Behaviour:**
+- Clicking "Ask MeghaBot" opens a chat window
+- Bot greets with common question options
+- Answers questions about registration, appointment booking, required documents, and application tracking
+- Calls `/api/ai/chatbot` if backend is available; falls back to local FAQ responses
+
+**FAQ Topics Covered:**
+1. How to register as a visitor
+2. How to book an appointment with CM
+3. Documents required for CMSDF
+4. How to track application status
+5. General document requirements
+
+---
+
+## 28. AI KYC Confidence Indicator (R009)
+
+After face validation in the visitor registration step 4 (Additional Details), an **AI KYC Confidence Indicator** is displayed:
+
+| KYC Status | Example Score | Label |
+|---|---|---|
+| PHOTO_MATCHED | 92% | Verified |
+| DEMOGRAPHIC_MATCHED | 75% | Verified (Demographic) |
+| MANUAL_VERIFICATION_REQUIRED | 45% | Manual Verification Required |
+
+A progress bar visualises the confidence score in green (≥80%), amber (60–79%), or red (<60%).
+
+The same indicator is shown in the Visitor Profile section of the Visitor Dashboard.
+
+---
+
+## 29. AI Dashboard Insights for Officers (R010)
+
+**Component:** `ai-insights-dashboard.component`
+
+**Location:** Below Quick Actions on the Staff Dashboard (visible to HCM, ADMIN, OSD, JT_SECY, CMO_OFFICER).
+
+**Insights Displayed:**
+
+| Section | Content |
+|---|---|
+| Total Applications This Month | Count with large number display |
+| Top Requested Schemes | Bar chart with counts (CMSDF, CM Care, etc.) |
+| District-wise Distribution | Bar chart by district |
+| Top Project Categories | Bar chart by category (Road, School, Medical, etc.) |
+| AI Note | Narrative AI insight on trends |
+
+**Example AI Note:**
+> _"AI analysis indicates a 12% increase in CMSDF applications compared to last month. Road and infrastructure projects dominate requests from Garo Hills region."_
+
+Data is fetched from `/api/ai/dashboard-insights`; falls back to mock demo data if the API is unavailable.
+
+---
+
+## 30. AI-Based Appointment Slot Suggestions (R015)
+
+When a citizen reaches the Review step (step 5) of appointment booking, the system calls `/api/ai/suggest-slots` with the requested location and agenda type.
+
+**Suggested slots are displayed:**
+```
+✓ Mon, 10 Mar – 10:00 AM (Shillong)
+✓ Tue, 11 Mar – 02:30 PM (Shillong)
+✓ Wed, 12 Mar – 11:00 AM (Tura)
+```
+
+Note: _"Final scheduling will be confirmed by the CMO team."_
+
+AI checks:
+- Existing meetings in the calendar
+- Travel time between locations
+- Event type constraints
+- Available time windows
+
+---
+
+## 31. AI Enabled Smart Governance Features
+
+This section describes how AI capabilities improve MeghaConnect across five dimensions:
+
+### 31.1 Citizen Experience
+
+| Feature | Improvement |
+|---|---|
+| AI Chatbot (R008) | Citizens get instant answers 24/7 without waiting for human support |
+| AI Document Extraction (R004) | Form auto-fill reduces manual data entry errors |
+| AI Slot Suggestions (R015) | Citizens see available time slots upfront, reducing back-and-forth |
+| KYC Confidence (R009) | Transparent KYC status reduces uncertainty |
+
+### 31.2 Officer Productivity
+
+| Feature | Improvement |
+|---|---|
+| AI Document Summarization (R005) | Officers review a 5-line summary instead of reading full documents |
+| AI Dashboard Insights (R010) | Quick overview of trends without running manual reports |
+| AI Priority Recommendation (R007) | Pre-sorted queue helps officers focus on urgent cases |
+
+### 31.3 Meeting Scheduling Efficiency
+
+| Feature | Improvement |
+|---|---|
+| AI Slot Suggestions (R015) | Reduces scheduling conflicts by pre-checking calendar |
+| AI Priority (R007) | High-priority medical cases are elevated automatically |
+
+### 31.4 Fraud Detection
+
+| Feature | Improvement |
+|---|---|
+| AI Duplicate Detection (R006) | Catches repeated EPIC misuse and duplicate project submissions |
+| AI KYC Confidence (R009) | Low-confidence KYC scores trigger manual verification |
+
+### 31.5 AI Implementation Stack
+
+| Layer | Technology |
+|---|---|
+| Backend AI Service | Spring Boot AI service layer |
+| PDF Extraction | Apache PDFBox |
+| Word Documents | Apache POI |
+| Scanned Images | Tesseract OCR |
+| AI API | External LLM API for summarization and extraction |
+| Frontend | Angular components: `ai-chatbot`, `ai-insights-dashboard`, `ai-document.service` |
+
+### 31.6 Database Fields Added
+
+| Field | Table | Description |
+|---|---|---|
+| `ai_summary` | `appointments` | AI-generated document summary |
+| `ai_extracted_fields` | `appointments` | JSON object of extracted fields |
+| `ai_priority_level` | `appointments` | HIGH / MEDIUM / LOW |
+| `ai_duplicate_flag` | `appointments` | Boolean flag for duplicate detection |
+
+---
+
 **Document Control**
 
 | Version | Date | Author | Changes |
@@ -1479,6 +1780,7 @@ Booking screen: `#appointment-form.component` (6-step multi-step form)
 | 1.0 | Mar 2026 | CMO Tech Team | Full specification with Mermaid diagrams |
 | 1.1 | Mar 2026 | Agent Narsingh | Added automated task-assignment workflow; all future tasks auto-routed to #agent-Narsingh and SRS auto-updated on each change |
 | 1.2 | Mar 2026 | Agent Narsingh | Implemented Public/Citizen module: Registration (5-step KYC with Designation/Location), Login, Visitor Dashboard, Appointment Booking (6-step with Associates, CM Care, scheme history); added VisitorAppointmentController, V8 DB migration, fixed pre-existing type errors in Angular components |
+| 1.3 | Mar 2026 | Agent Narsingh | Implemented R004–R015: DEO Assisted Registration (R011), UI Fixes (R012), Associate Visitor Toggle (R013), AI Document Understanding/Summarization (R004/R005), AI Duplicate Detection (R006), AI Meeting Priority (R007), AI Chatbot (R008), AI KYC Confidence Indicator (R009), AI Dashboard Insights (R010), AI Slot Suggestions (R015); added ai-document.service.ts, ai-chatbot.component, ai-insights-dashboard.component; updated SRS with sections 21–31 |
 
 > **Workflow Note:** From version 1.1 onwards, all development tasks are automatically assigned to `#agent-Narsingh` (see `.github/copilot-instructions.md` and `docs/task-assignment-prompt.md`). The agent updates this SRS document after every task.
 

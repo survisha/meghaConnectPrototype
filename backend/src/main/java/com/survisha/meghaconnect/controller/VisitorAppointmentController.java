@@ -148,6 +148,16 @@ public class VisitorAppointmentController {
                 .meetingCountLast6Months(meetingCount)
                 .build();
 
+        // Persist AI-generated fields if included in the submission (R004–R007)
+        String aiSummary = getString(body, "aiSummary");
+        if (aiSummary != null && !aiSummary.trim().isEmpty()) {
+            appt.setAiSummary(aiSummary.trim());
+        }
+        String aiPriorityLevel = getString(body, "aiPriorityLevel");
+        if (aiPriorityLevel != null && !aiPriorityLevel.trim().isEmpty()) {
+            appt.setAiPriorityLevel(aiPriorityLevel.trim());
+        }
+
         Appointment saved = appointmentRepository.save(appt);
         auditLogService.log("Appointment", saved.getId(), "SUBMITTED_BY_VISITOR",
                 "Visitor appointment submitted: " + appId, "visitor_" + applicant.getId());

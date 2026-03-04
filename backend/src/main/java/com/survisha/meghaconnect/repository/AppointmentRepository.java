@@ -19,4 +19,13 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long>,
 
     @Query("SELECT COUNT(a) FROM Appointment a WHERE a.applicant.id = :personId AND a.scheduledDateTime >= :sixMonthsAgo AND a.status = 'COMPLETED'")
     int countMeetingsLast6Months(Long personId, java.time.LocalDateTime sixMonthsAgo);
+
+    @Query("SELECT a FROM Appointment a WHERE a.applicant.epicNumber = :epicNumber")
+    List<Appointment> findByApplicant_EpicNumber(String epicNumber);
+
+    @Query("SELECT a FROM Appointment a WHERE a.applicant.phoneNumber = :phoneNumber")
+    List<Appointment> findByApplicant_PhoneNumber(String phoneNumber);
+
+    @Query("SELECT COUNT(a) FROM Appointment a WHERE a.createdAt >= :from")
+    long countCreatedSince(java.time.LocalDateTime from);
 }

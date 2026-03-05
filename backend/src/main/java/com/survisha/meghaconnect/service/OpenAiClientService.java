@@ -58,7 +58,7 @@ public class OpenAiClientService {
 
     @PostConstruct
     public void init() {
-        if (apiKey != null && !apiKey.isBlank()) {
+        if (apiKey != null && !apiKey.trim().isEmpty()) {
             client = new OpenAiService(apiKey, Duration.ofSeconds(timeoutSeconds));
             log.info("OpenAI client initialised (model={}, timeout={}s)", model, timeoutSeconds);
         } else {

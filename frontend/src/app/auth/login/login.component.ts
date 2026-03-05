@@ -3,14 +3,25 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
-import { Button } from 'primeng/button';
-import { InputText } from 'primeng/inputtext';
-import { Password } from 'primeng/password';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, Button, InputText, Password],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterLink,
+    MatFormFieldModule,
+    MatInputModule,
+    MatButtonModule,
+    MatIconModule,
+    MatProgressSpinnerModule
+  ],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss'],
 })

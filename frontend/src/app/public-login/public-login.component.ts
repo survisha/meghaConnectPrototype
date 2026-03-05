@@ -4,13 +4,27 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../services/auth.service';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatButtonModule } from '@angular/material/button';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatIconModule } from '@angular/material/icon';
 
 type LoginStep = 'enter-mobile' | 'enter-otp';
 
 @Component({
   selector: 'app-public-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterLink,
+    MatFormFieldModule,
+    MatInputModule,
+    MatButtonModule,
+    MatProgressSpinnerModule,
+    MatIconModule
+  ],
   templateUrl: './public-login.component.html',
   styleUrls: ['./public-login.component.scss'],
 })

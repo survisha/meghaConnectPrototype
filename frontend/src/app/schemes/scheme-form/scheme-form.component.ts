@@ -2,19 +2,29 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { Steps } from 'primeng/steps';
-import { Select } from 'primeng/select';
-import { InputText } from 'primeng/inputtext';
-import { Textarea } from 'primeng/textarea';
-import { InputNumber } from 'primeng/inputnumber';
-import { FileUpload } from 'primeng/fileupload';
-import { RadioButton } from 'primeng/radiobutton';
-import { Divider } from 'primeng/divider';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatButtonModule } from '@angular/material/button';
+import { MatRadioModule } from '@angular/material/radio';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatIconModule } from '@angular/material/icon';
 
 @Component({
   selector: 'app-scheme-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, Steps, Select, InputText, Textarea, InputNumber, FileUpload, RadioButton, Divider],
+  imports: [
+    CommonModule, 
+    FormsModule, 
+    RouterLink, 
+    MatFormFieldModule, 
+    MatInputModule, 
+    MatSelectModule, 
+    MatButtonModule, 
+    MatRadioModule, 
+    MatDividerModule, 
+    MatIconModule
+  ],
   templateUrl: './scheme-form.component.html',
   styleUrls: ['./scheme-form.component.scss'],
 })

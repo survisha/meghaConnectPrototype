@@ -4,6 +4,15 @@ import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { VisitorKycService } from '../services/visitor-kyc.service';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatButtonModule } from '@angular/material/button';
+import { MatSelectModule } from '@angular/material/select';
+import { MatRadioModule } from '@angular/material/radio';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatIconModule } from '@angular/material/icon';
+import { MatStepperModule } from '@angular/material/stepper';
 
 type KycStep = 'id-entry' | 'otp-verification' | 'photo-capture' | 'additional-details' | 'kyc-complete';
 
@@ -30,7 +39,19 @@ interface VisitorRegistrationForm {
 @Component({
   selector: 'app-visitor-register',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatButtonModule,
+    MatSelectModule,
+    MatRadioModule,
+    MatCheckboxModule,
+    MatProgressSpinnerModule,
+    MatIconModule,
+    MatStepperModule
+  ],
   templateUrl: './visitor-register.component.html',
   styleUrls: ['./visitor-register.component.scss'],
 })

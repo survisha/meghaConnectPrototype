@@ -1,11 +1,30 @@
 <div>
   <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem">
-    <button pButton icon="pi pi-arrow-left" class="p-button-text p-button-sm" routerLink="/schemes"></button>
+    <button mat-icon-button routerLink="/schemes"><mat-icon>arrow_back</mat-icon></button>
     <h2 class="page-title" style="margin:0">New Scheme Application</h2>
   </div>
 
   <div class="section-card" style="margin-bottom:1.5rem">
-    <div class="section-card-body"><p-steps [model]="steps" [activeIndex]="step" [readonly]="true"></p-steps></div>
+    <div class="section-card-body">
+      <!-- Custom Material Stepper -->
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;position:relative">
+        <div *ngFor="let s of steps; let i = index" style="flex:1;display:flex;flex-direction:column;align-items:center;position:relative">
+          <div [style.width.px]="40" [style.height.px]="40" [style.border-radius]="'50%'" 
+               [style.display]="'flex'" [style.align-items]="'center'" [style.justify-content]="'center'"
+               [style.font-weight]="'600'" [style.font-size]="'1rem'" [style.color]="'white'"
+               [style.background]="i === step ? '#1a237e' : i < step ? '#16a34a' : '#e5e7eb'"
+               [style.z-index]="2">
+            <span *ngIf="i < step" style="font-size:1.2rem">✓</span>
+            <span *ngIf="i >= step">{{ i + 1 }}</span>
+          </div>
+          <div *ngIf="i < steps.length - 1" [style.position]="'absolute'" [style.top.px]="20" 
+               [style.left]="'50%'" [style.width]="'100%'" [style.height.px]="2" 
+               [style.background]="i < step ? '#16a34a' : '#e5e7eb'" [style.z-index]="1"></div>
+          <div [style.margin-top.rem]="0.5" [style.font-size.rem]="0.85" [style.text-align]="'center'"
+               [style.color]="i === step ? '#1a237e' : '#6b7280'">{{ s.label }}</div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Step 0 -->
@@ -14,15 +33,19 @@
     <div class="section-card-body">
       <div class="form-grid">
         <div class="form-group" style="grid-column:1/-1">
-          <label>Scheme Type *</label>
-          <p-select [options]="schemeTypes" [(ngModel)]="form.schemeType" placeholder="Select CM Scheme" styleClass="w-full"></p-select>
+          <mat-form-field appearance="outline" style="width:100%">
+            <mat-label>Scheme Type *</mat-label>
+            <mat-select [(ngModel)]="form.schemeType" placeholder="Select CM Scheme">
+              <mat-option *ngFor="let opt of schemeTypes" [value]="opt.value">{{ opt.label }}</mat-option>
+            </mat-select>
+          </mat-form-field>
         </div>
         <div class="form-group">
-          <label>Application Type</label>
-          <div style="display:flex;gap:1rem;margin-top:0.5rem">
-            <p-radiobutton name="appType" [value]="false" [(ngModel)]="form.isReminder" label="New Application"></p-radiobutton>
-            <p-radiobutton name="appType" [value]="true" [(ngModel)]="form.isReminder" label="Reminder for Existing"></p-radiobutton>
-          </div>
+          <label style="display:block;margin-bottom:0.5rem;font-weight:600;font-size:0.9rem">Application Type</label>
+          <mat-radio-group [(ngModel)]="form.isReminder" style="display:flex;gap:1rem">
+            <mat-radio-button [value]="false">New Application</mat-radio-button>
+            <mat-radio-button [value]="true">Reminder for Existing</mat-radio-button>
+          </mat-radio-group>
         </div>
       </div>
     </div>
@@ -34,31 +57,47 @@
     <div class="section-card-body">
       <div class="form-grid">
         <div class="form-group" style="grid-column:1/-1">
-          <label>Project Name *</label>
-          <input pInputText [(ngModel)]="form.projectName" placeholder="Full name of project/work" style="width:100%"/>
+          <mat-form-field appearance="outline" style="width:100%">
+            <mat-label>Project Name *</mat-label>
+            <input matInput [(ngModel)]="form.projectName" placeholder="Full name of project/work"/>
+          </mat-form-field>
         </div>
         <div class="form-group">
-          <label>Category *</label>
-          <p-select [options]="projectCategories" [(ngModel)]="form.projectCategory" placeholder="Select category" styleClass="w-full"></p-select>
+          <mat-form-field appearance="outline" style="width:100%">
+            <mat-label>Category *</mat-label>
+            <mat-select [(ngModel)]="form.projectCategory" placeholder="Select category">
+              <mat-option *ngFor="let cat of projectCategories" [value]="cat">{{ cat }}</mat-option>
+            </mat-select>
+          </mat-form-field>
         </div>
         <div class="form-group">
-          <label>Who Will Benefit *</label>
-          <p-select [options]="beneficiaryTypes" [(ngModel)]="form.beneficiaryType" placeholder="Beneficiary type" styleClass="w-full"></p-select>
+          <mat-form-field appearance="outline" style="width:100%">
+            <mat-label>Who Will Benefit *</mat-label>
+            <mat-select [(ngModel)]="form.beneficiaryType" placeholder="Beneficiary type">
+              <mat-option *ngFor="let type of beneficiaryTypes" [value]="type">{{ type }}</mat-option>
+            </mat-select>
+          </mat-form-field>
         </div>
         <div class="form-group">
-          <label>No. of Beneficiaries</label>
-          <p-select [options]="beneficiaryCounts" [(ngModel)]="form.beneficiaryCount" placeholder="Range" styleClass="w-full"></p-select>
+          <mat-form-field appearance="outline" style="width:100%">
+            <mat-label>No. of Beneficiaries</mat-label>
+            <mat-select [(ngModel)]="form.beneficiaryCount" placeholder="Range">
+              <mat-option *ngFor="let count of beneficiaryCounts" [value]="count">{{ count }}</mat-option>
+            </mat-select>
+          </mat-form-field>
         </div>
         <div class="form-group">
-          <label>MLA / MDC Approved?</label>
-          <div style="display:flex;gap:1rem;margin-top:0.5rem">
-            <p-radiobutton name="mla" [value]="true" [(ngModel)]="form.mlaMdcApproved" label="Yes"></p-radiobutton>
-            <p-radiobutton name="mla" [value]="false" [(ngModel)]="form.mlaMdcApproved" label="No"></p-radiobutton>
-          </div>
+          <label style="display:block;margin-bottom:0.5rem;font-weight:600;font-size:0.9rem">MLA / MDC Approved?</label>
+          <mat-radio-group [(ngModel)]="form.mlaMdcApproved" style="display:flex;gap:1rem">
+            <mat-radio-button [value]="true">Yes</mat-radio-button>
+            <mat-radio-button [value]="false">No</mat-radio-button>
+          </mat-radio-group>
         </div>
         <div class="form-group" style="grid-column:1/-1">
-          <label>Project Justification *</label>
-          <textarea pTextarea [(ngModel)]="form.justification" rows="4" style="width:100%" placeholder="Why is this project needed? Who will benefit and how?"></textarea>
+          <mat-form-field appearance="outline" style="width:100%">
+            <mat-label>Project Justification *</mat-label>
+            <textarea matInput [(ngModel)]="form.justification" rows="4" placeholder="Why is this project needed? Who will benefit and how?"></textarea>
+          </mat-form-field>
         </div>
       </div>
     </div>
@@ -77,22 +116,25 @@
           <span style="width:36px"></span>
         </div>
         <div *ngFor="let item of form.items; let i=index" class="item-row">
-          <input pInputText [(ngModel)]="item.description" placeholder="Description" style="flex:3;min-width:0"/>
-          <input pInputText type="number" [(ngModel)]="item.quantity" style="flex:1;text-align:center"/>
-          <input pInputText type="number" [(ngModel)]="item.unitCost" style="flex:1;text-align:right"/>
+          <input matInput [(ngModel)]="item.description" placeholder="Description" style="flex:3;min-width:0" class="mat-input"/>
+          <input matInput type="number" [(ngModel)]="item.quantity" style="flex:1;text-align:center" class="mat-input"/>
+          <input matInput type="number" [(ngModel)]="item.unitCost" style="flex:1;text-align:right" class="mat-input"/>
           <span style="flex:1;text-align:right;font-weight:600">₹{{ (item.quantity * item.unitCost).toLocaleString() }}</span>
-          <button pButton icon="pi pi-trash" class="p-button-text p-button-danger p-button-sm" (click)="removeItem(i)"></button>
+          <button mat-icon-button color="warn" (click)="removeItem(i)"><mat-icon>delete</mat-icon></button>
         </div>
         <div class="item-total">
           <span>Total Estimated Cost:</span>
           <strong style="color:#1a237e;font-size:1.1rem">₹{{ totalCost.toLocaleString() }}</strong>
         </div>
       </div>
-      <button pButton label="+ Add Item" icon="pi pi-plus" class="p-button-outlined p-button-sm" (click)="addItem()" style="margin-top:1rem"></button>
-      <p-divider></p-divider>
+      <button mat-stroked-button (click)="addItem()" style="margin-top:1rem"><mat-icon>add</mat-icon> Add Item</button>
+      <mat-divider style="margin:1.5rem 0"></mat-divider>
       <div class="form-group">
-        <label>Community Contribution (₹)</label>
-        <p-inputNumber [(ngModel)]="form.communityContribution" mode="currency" currency="INR" locale="en-IN" styleClass="w-full"></p-inputNumber>
+        <mat-form-field appearance="outline" style="width:100%">
+          <mat-label>Community Contribution (₹)</mat-label>
+          <input matInput type="number" [(ngModel)]="form.communityContribution" placeholder="0"/>
+          <span matPrefix>₹&nbsp;</span>
+        </mat-form-field>
       </div>
     </div>
   </div>
@@ -101,11 +143,41 @@
   <div class="section-card" *ngIf="step===3">
     <div class="section-card-header"><i class="pi pi-paperclip"></i> Required Documents</div>
     <div class="section-card-body">
-      <div class="doc-row"><div class="doc-label">Plans &amp; Estimates (3 nos) <span class="req">*</span></div><p-fileUpload mode="basic" chooseLabel="Upload" accept=".pdf" styleClass="p-button-sm p-button-outlined"></p-fileUpload></div>
-      <div class="doc-row"><div class="doc-label">Bank Account Details <span class="req">*</span></div><p-fileUpload mode="basic" chooseLabel="Upload" accept=".pdf,.jpg" styleClass="p-button-sm p-button-outlined"></p-fileUpload></div>
-      <div class="doc-row"><div class="doc-label">MLA / MDC Letter (if applicable)</div><p-fileUpload mode="basic" chooseLabel="Upload" accept=".pdf" styleClass="p-button-sm p-button-outlined"></p-fileUpload></div>
-      <div class="doc-row"><div class="doc-label">Hospital / Medical Docs (CM Care)</div><p-fileUpload mode="basic" chooseLabel="Upload" accept=".pdf" styleClass="p-button-sm p-button-outlined"></p-fileUpload></div>
-      <div class="doc-row"><div class="doc-label">Organisation Registration Certificate</div><p-fileUpload mode="basic" chooseLabel="Upload" accept=".pdf" styleClass="p-button-sm p-button-outlined"></p-fileUpload></div>
+      <div class="doc-row">
+        <div class="doc-label">Plans &amp; Estimates (3 nos) <span class="req">*</span></div>
+        <button mat-stroked-button>
+          <mat-icon>upload_file</mat-icon> Upload
+          <input type="file" accept=".pdf" style="position:absolute;opacity:0;width:100%;height:100%;cursor:pointer"/>
+        </button>
+      </div>
+      <div class="doc-row">
+        <div class="doc-label">Bank Account Details <span class="req">*</span></div>
+        <button mat-stroked-button>
+          <mat-icon>upload_file</mat-icon> Upload
+          <input type="file" accept=".pdf,.jpg" style="position:absolute;opacity:0;width:100%;height:100%;cursor:pointer"/>
+        </button>
+      </div>
+      <div class="doc-row">
+        <div class="doc-label">MLA / MDC Letter (if applicable)</div>
+        <button mat-stroked-button>
+          <mat-icon>upload_file</mat-icon> Upload
+          <input type="file" accept=".pdf" style="position:absolute;opacity:0;width:100%;height:100%;cursor:pointer"/>
+        </button>
+      </div>
+      <div class="doc-row">
+        <div class="doc-label">Hospital / Medical Docs (CM Care)</div>
+        <button mat-stroked-button>
+          <mat-icon>upload_file</mat-icon> Upload
+          <input type="file" accept=".pdf" style="position:absolute;opacity:0;width:100%;height:100%;cursor:pointer"/>
+        </button>
+      </div>
+      <div class="doc-row">
+        <div class="doc-label">Organisation Registration Certificate</div>
+        <button mat-stroked-button>
+          <mat-icon>upload_file</mat-icon> Upload
+          <input type="file" accept=".pdf" style="position:absolute;opacity:0;width:100%;height:100%;cursor:pointer"/>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -126,8 +198,8 @@
   </div>
 
   <div style="display:flex;justify-content:space-between;margin-top:1.5rem">
-    <button pButton label="← Previous" class="p-button-outlined p-button-sm" (click)="prevStep()" [disabled]="step===0"></button>
-    <button *ngIf="step < steps.length-1" pButton label="Next →" class="p-button-sm" (click)="nextStep()"></button>
-    <button *ngIf="step===steps.length-1" pButton label="Submit Application" icon="pi pi-check" class="p-button-success p-button-sm" (click)="submit()"></button>
+    <button mat-stroked-button (click)="prevStep()" [disabled]="step===0"><i class="pi pi-chevron-left"></i> Previous</button>
+    <button *ngIf="step < steps.length-1" mat-raised-button color="primary" (click)="nextStep()">Next <i class="pi pi-chevron-right"></i></button>
+    <button *ngIf="step===steps.length-1" mat-raised-button color="accent" (click)="submit()"><mat-icon>check</mat-icon> Submit Application</button>
   </div>
 </div>

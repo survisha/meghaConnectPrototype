@@ -29,33 +29,32 @@
 
       <!-- Step 1: Enter mobile -->
       <ng-container *ngIf="step === 'enter-mobile'">
-        <div class="form-group">
-          <label for="phone">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>
             <i class="pi pi-phone"></i>
-            <span>Mobile Number</span>
-          </label>
+            <span> Mobile Number</span>
+          </mat-label>
           <input
-            id="phone"
+            matInput
             type="tel"
-            class="input-field"
             [(ngModel)]="phoneNumber"
             placeholder="Enter 10-digit mobile number"
             maxlength="10"
             (keyup.enter)="checkMobile()"
           />
-        </div>
+        </mat-form-field>
 
         <div *ngIf="errorMsg" class="error-msg">
           <i class="pi pi-exclamation-circle"></i>
           {{ errorMsg }}
           <div *ngIf="errorMsg.includes('register')" style="margin-top:0.75rem">
-            <button class="btn-primary" (click)="goToRegister()">
+            <button mat-raised-button color="primary" (click)="goToRegister()">
               <i class="pi pi-user-plus"></i> Register as New Visitor
             </button>
           </div>
         </div>
 
-        <button class="btn-primary full-width" [disabled]="loading" (click)="checkMobile()">
+        <button mat-raised-button color="primary" class="full-width" [disabled]="loading" (click)="checkMobile()">
           <span *ngIf="!loading"><i class="pi pi-send"></i> Generate OTP</span>
           <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Checking…</span>
         </button>
@@ -63,7 +62,7 @@
         <div class="divider">
           <span>New visitor?</span>
         </div>
-        <button class="btn-outline full-width" (click)="goToRegister()">
+        <button mat-stroked-button class="full-width" (click)="goToRegister()">
           <i class="pi pi-user-plus"></i> Register as New Visitor
         </button>
 
@@ -83,37 +82,37 @@
           <span>OTP sent to <strong>{{ phoneNumber }}</strong></span>
         </div>
 
-        <div class="form-group">
-          <label for="otp">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>
             <i class="pi pi-key"></i>
-            <span>Enter OTP</span>
-          </label>
+            <span> Enter OTP</span>
+          </mat-label>
           <input
-            id="otp"
+            matInput
             type="text"
-            class="input-field otp-input"
+            class="otp-input"
             [(ngModel)]="otp"
             placeholder="6-digit OTP"
             maxlength="6"
             (keyup.enter)="validateOtp()"
             autofocus
           />
-        </div>
+        </mat-form-field>
 
         <div *ngIf="errorMsg" class="error-msg">
           <i class="pi pi-exclamation-circle"></i> {{ errorMsg }}
         </div>
 
-        <button class="btn-primary full-width" [disabled]="loading" (click)="validateOtp()">
+        <button mat-raised-button color="primary" class="full-width" [disabled]="loading" (click)="validateOtp()">
           <span *ngIf="!loading"><i class="pi pi-check"></i> Verify &amp; Login</span>
           <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Verifying…</span>
         </button>
 
         <div style="display:flex;gap:1rem;margin-top:0.75rem">
-          <button class="btn-text" (click)="goBack()">
+          <button mat-button (click)="goBack()">
             <i class="pi pi-arrow-left"></i> Change Number
           </button>
-          <button class="btn-text" (click)="sendOtp()" [disabled]="loading">
+          <button mat-button (click)="sendOtp()" [disabled]="loading">
             <i class="pi pi-refresh"></i> Resend OTP
           </button>
         </div>

@@ -34,7 +34,7 @@
           <strong>DEO Assisted Registration</strong>
           <div style="font-size:0.78rem;opacity:.85">You are registering a walk-in visitor on behalf of the citizen.</div>
         </div>
-        <button (click)="goToLogin()" style="margin-left:auto;background:rgba(255,255,255,0.2);border:none;color:white;padding:0.3rem 0.75rem;border-radius:6px;cursor:pointer;font-size:0.8rem">
+        <button (click)="goToLogin()" mat-stroked-button style="margin-left:auto">
           <i class="pi pi-arrow-left"></i> Back to Dashboard
         </button>
       </div>
@@ -97,80 +97,77 @@
         <ng-container *ngIf="currentStep === 'id-entry'">
           <div class="section-title">Step 1: Enter Your ID Details</div>
 
-          <div class="form-group">
-            <label>ID Type *</label>
-            <div class="radio-group">
-              <label class="radio-option" [class.selected]="form.idType === 'EPIC'">
-                <input type="radio" [(ngModel)]="form.idType" value="EPIC" />
-                <span><i class="pi pi-id-card"></i> EPIC (Voter ID)</span>
-              </label>
-              <label class="radio-option" [class.selected]="form.idType === 'AADHAAR'">
-                <input type="radio" [(ngModel)]="form.idType" value="AADHAAR" />
-                <span><i class="pi pi-id-card"></i> Aadhaar Card</span>
-              </label>
-            </div>
-          </div>
+          <mat-radio-group [(ngModel)]="form.idType" class="full-width">
+            <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:#374151">ID Type *</label>
+            <mat-radio-button value="EPIC" style="margin-right:1.5rem">
+              <i class="pi pi-id-card"></i> EPIC (Voter ID)
+            </mat-radio-button>
+            <mat-radio-button value="AADHAAR">
+              <i class="pi pi-id-card"></i> Aadhaar Card
+            </mat-radio-button>
+          </mat-radio-group>
 
-          <div class="form-group" *ngIf="form.idType === 'EPIC'">
-            <label>EPIC Number *</label>
+          <mat-form-field appearance="outline" class="full-width" *ngIf="form.idType === 'EPIC'" style="margin-top:1rem">
+            <mat-label>EPIC Number *</mat-label>
             <input
+              matInput
               type="text"
-              class="input-field"
               [(ngModel)]="form.epicNumber"
               placeholder="e.g. ABC1234567"
               maxlength="10"
               (input)="sanitizeEpicInput()"
             />
-            <small class="field-hint"><i class="pi pi-info-circle"></i> Format: 3 uppercase letters + 7 digits (e.g., ABC1234567)</small>
-          </div>
+            <mat-hint><i class="pi pi-info-circle"></i> Format: 3 uppercase letters + 7 digits (e.g., ABC1234567)</mat-hint>
+          </mat-form-field>
 
-          <div class="form-group" *ngIf="form.idType === 'AADHAAR'">
-            <label>Aadhaar Number *</label>
+          <mat-form-field appearance="outline" class="full-width" *ngIf="form.idType === 'AADHAAR'" style="margin-top:1rem">
+            <mat-label>Aadhaar Number *</mat-label>
             <input
+              matInput
               type="text"
-              class="input-field"
               [(ngModel)]="form.aadhaarNumber"
               placeholder="Enter 12-digit Aadhaar"
               maxlength="12"
               (input)="sanitizeNumericInput('aadhaarNumber')"
             />
-            <small class="field-hint"><i class="pi pi-info-circle"></i> Enter all 12 digits without spaces</small>
-          </div>
+            <mat-hint><i class="pi pi-info-circle"></i> Enter all 12 digits without spaces</mat-hint>
+          </mat-form-field>
 
           <!-- OTP Field (shown after ID validation) -->
-          <div class="form-group" *ngIf="otpSent">
-            <label>Enter OTP *</label>
+          <mat-form-field appearance="outline" class="full-width" *ngIf="otpSent" style="margin-top:1rem">
+            <mat-label>Enter OTP *</mat-label>
             <input
+              matInput
               type="text"
-              class="input-field otp-input"
+              class="otp-input"
               [(ngModel)]="otpCode"
               placeholder="Enter 6-digit OTP"
               maxlength="6"
               (input)="sanitizeOtpInput()"
               style="text-align:center;font-size:1.5rem;letter-spacing:0.5rem;font-weight:600"
             />
-            <small class="field-hint" style="color:#16a34a">
+            <mat-hint style="color:#16a34a">
               <i class="pi pi-mobile"></i> OTP sent to {{ maskedPhone }}
-            </small>
-          </div>
+            </mat-hint>
+          </mat-form-field>
 
           <!-- Optional Mobile Number Field -->
-          <div class="form-group" *ngIf="!otpSent">
-            <label>Mobile Number (Optional)</label>
+          <mat-form-field appearance="outline" class="full-width" *ngIf="!otpSent" style="margin-top:1rem">
+            <mat-label>Mobile Number (Optional)</mat-label>
             <input
+              matInput
               type="tel"
-              class="input-field"
               [(ngModel)]="manualPhone"
               placeholder="10-digit mobile number"
               maxlength="10"
               (input)="sanitizeManualPhone()"
             />
-            <small class="field-hint" style="color:#B45309">
+            <mat-hint style="color:#B45309">
               <i class="pi pi-exclamation-triangle"></i> 
               <strong>Only if registered mobile not available.</strong> Provide your current mobile number. 
               OTP will be sent to this number and KYC will be marked for manual verification by DEO.
-            </small>
-          </div>
+            </mat-hint>
+          </mat-form-field>
 
           <div class="kyc-notice" *ngIf="!otpSent">
             <i class="pi pi-info-circle"></i>
@@ -183,12 +180,14 @@
           </div>
 
           <div style="display:flex;gap:1rem;margin-top:1.5rem">
-            <button class="btn-outline" (click)="goToLogin()">
+            <button mat-stroked-button (click)="goToLogin()">
               <i class="pi pi-arrow-left"></i> Back to Login
             </button>
             <button 
               *ngIf="!otpSent" 
-              class="btn-primary flex-1" 
+              mat-raised-button 
+              color="primary" 
+              class="flex-1" 
               [disabled]="loading || !canValidateId" 
               (click)="validateId()">
               <span *ngIf="!loading"><i class="pi pi-send"></i> Send OTP</span>
@@ -196,7 +195,9 @@
             </button>
             <button 
               *ngIf="otpSent && !otpVerified" 
-              class="btn-primary flex-1" 
+              mat-raised-button 
+              color="primary" 
+              class="flex-1" 
               [disabled]="loading || otpCode.length !== 6" 
               (click)="verifyOtp()">
               <span *ngIf="!loading"><i class="pi pi-check"></i> Verify OTP</span>
@@ -205,7 +206,7 @@
           </div>
 
           <div *ngIf="otpSent" style="text-align:center;margin-top:1rem">
-            <button class="btn-link" (click)="resendOtp()" [disabled]="loading">
+            <button mat-button (click)="resendOtp()" [disabled]="loading">
               <i class="pi pi-refresh"></i> Resend OTP
             </button>
           </div>
@@ -296,19 +297,19 @@
           </div>
 
           <div style="display:flex;gap:1rem;margin-top:1rem">
-            <button *ngIf="!isCameraActive && !capturedPhotoUrl" class="btn-primary flex-1" (click)="openCamera()">
+            <button *ngIf="!isCameraActive && !capturedPhotoUrl" mat-raised-button color="primary" class="flex-1" (click)="openCamera()">
               <i class="pi pi-camera"></i> Open Camera
             </button>
 
-            <button *ngIf="isCameraActive" class="btn-primary flex-1" (click)="capturePhoto()">
+            <button *ngIf="isCameraActive" mat-raised-button color="primary" class="flex-1" (click)="capturePhoto()">
               <i class="pi pi-image"></i> Capture Photo
             </button>
 
-            <button *ngIf="capturedPhotoUrl && !isCameraActive" class="btn-outline" (click)="retakePhoto()">
+            <button *ngIf="capturedPhotoUrl && !isCameraActive" mat-stroked-button (click)="retakePhoto()">
               <i class="pi pi-refresh"></i> Retake Photo
             </button>
 
-            <button *ngIf="capturedPhotoUrl && !isCameraActive" class="btn-primary flex-1" [disabled]="loading" (click)="validateFace()">
+            <button *ngIf="capturedPhotoUrl && !isCameraActive" mat-raised-button color="primary" class="flex-1" [disabled]="loading" (click)="validateFace()">
               <span *ngIf="!loading"><i class="pi pi-arrow-right"></i> Validate & Continue</span>
               <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Validating...</span>
             </button>
@@ -350,44 +351,41 @@
             </div>
           </div>
 
-          <div class="form-group">
-            <label>Designation *</label>
-            <select class="input-field" [(ngModel)]="form.designation">
-              <option value="">-- Select Designation --</option>
-              <option *ngFor="let d of designations" [value]="d">{{ d }}</option>
-            </select>
-          </div>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Designation *</mat-label>
+            <mat-select [(ngModel)]="form.designation">
+              <mat-option value="">-- Select Designation --</mat-option>
+              <mat-option *ngFor="let d of designations" [value]="d">{{ d }}</mat-option>
+            </mat-select>
+          </mat-form-field>
 
-          <div class="form-group">
-            <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer">
-              <input type="checkbox" [(ngModel)]="form.outsideState" style="width:auto;margin:0" />
-              <span>Applicant is outside Meghalaya (Location = NA)</span>
-            </label>
-          </div>
+          <mat-checkbox [(ngModel)]="form.outsideState" style="margin-bottom:1rem">
+            Applicant is outside Meghalaya (Location = NA)
+          </mat-checkbox>
 
           <ng-container *ngIf="!form.outsideState">
             <div class="form-row two-col">
-              <div class="form-group">
-                <label>District</label>
-                <select class="input-field" [(ngModel)]="form.district">
-                  <option value="">-- Select District --</option>
-                  <option *ngFor="let d of districts" [value]="d">{{ d }}</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label>Constituency</label>
-                <input type="text" class="input-field" [(ngModel)]="form.constituency" placeholder="Constituency name" />
-              </div>
+              <mat-form-field appearance="outline" style="flex:1">
+                <mat-label>District</mat-label>
+                <mat-select [(ngModel)]="form.district">
+                  <mat-option value="">-- Select District --</mat-option>
+                  <mat-option *ngFor="let d of districts" [value]="d">{{ d }}</mat-option>
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline" style="flex:1">
+                <mat-label>Constituency</mat-label>
+                <input matInput type="text" [(ngModel)]="form.constituency" placeholder="Constituency name" />
+              </mat-form-field>
             </div>
             <div class="form-row two-col">
-              <div class="form-group">
-                <label>Booth / Village</label>
-                <input type="text" class="input-field" [(ngModel)]="form.booth" placeholder="Booth or Village" />
-              </div>
-              <div class="form-group">
-                <label>Village (if different)</label>
-                <input type="text" class="input-field" [(ngModel)]="form.village" placeholder="Village name" />
-              </div>
+              <mat-form-field appearance="outline" style="flex:1">
+                <mat-label>Booth / Village</mat-label>
+                <input matInput type="text" [(ngModel)]="form.booth" placeholder="Booth or Village" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" style="flex:1">
+                <mat-label>Village (if different)</mat-label>
+                <input matInput type="text" [(ngModel)]="form.village" placeholder="Village name" />
+              </mat-form-field>
             </div>
           </ng-container>
 
@@ -398,16 +396,16 @@
             </div>
           </ng-container>
 
-          <div class="form-group" style="margin-top:1rem">
-            <label>Email (Optional)</label>
-            <input type="email" class="input-field" [(ngModel)]="form.email" placeholder="Enter your email" />
-          </div>
+          <mat-form-field appearance="outline" class="full-width" style="margin-top:1rem">
+            <mat-label>Email (Optional)</mat-label>
+            <input matInput type="email" [(ngModel)]="form.email" placeholder="Enter your email" />
+          </mat-form-field>
 
           <div style="display:flex;gap:1rem;margin-top:1.5rem">
-            <button class="btn-outline" (click)="currentStep = 'photo-capture'">
+            <button mat-stroked-button (click)="currentStep = 'photo-capture'">
               <i class="pi pi-arrow-left"></i> Back
             </button>
-            <button class="btn-primary flex-1" [disabled]="loading || !form.designation" (click)="submitRegistration()">
+            <button mat-raised-button color="primary" class="flex-1" [disabled]="loading || !form.designation" (click)="submitRegistration()">
               <span *ngIf="!loading"><i class="pi pi-check"></i> Complete Registration</span>
               <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Registering...</span>
             </button>
@@ -439,7 +437,7 @@
                 </span>
               </p>
             </div>
-            <button class="btn-primary" style="margin-top:1.5rem;width:auto;padding:0.7rem 2rem" (click)="goToLogin()">
+            <button mat-raised-button color="primary" style="margin-top:1.5rem;width:auto;padding:0.7rem 2rem" (click)="goToLogin()">
               <i class="pi pi-sign-in"></i> Go to Login
             </button>
           </div>

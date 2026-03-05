@@ -3,12 +3,15 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { InputText } from 'primeng/inputtext';
-import { Select } from 'primeng/select';
-import { Textarea } from 'primeng/textarea';
-import { Steps } from 'primeng/steps';
-import { FileUpload } from 'primeng/fileupload';
-import { RadioButton } from 'primeng/radiobutton';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatButtonModule } from '@angular/material/button';
+import { MatStepperModule } from '@angular/material/stepper';
+import { MatRadioModule } from '@angular/material/radio';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AiDocumentService, AiExtractedFields, AiDocumentAnalysisResponse, DuplicateCheckResponse } from '../../services/ai-document.service';
 
 interface Associate {
@@ -22,7 +25,20 @@ interface Associate {
 @Component({
   selector: 'app-appointment-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, InputText, Select, Textarea, Steps, FileUpload, RadioButton],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterLink,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    MatButtonModule,
+    MatStepperModule,
+    MatRadioModule,
+    MatCheckboxModule,
+    MatIconModule,
+    MatProgressSpinnerModule
+  ],
   templateUrl: './appointment-form.component.html',
   styleUrls: ['./appointment-form.component.scss'],
 })

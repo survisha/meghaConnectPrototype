@@ -9,6 +9,41 @@ body {
   background-color: #f0f2f5;
 }
 
+/* ======================================================================
+   CRITICAL UI/UX RULE: ALL INPUTS MUST HAVE WHITE BACKGROUNDS
+   This rule takes precedence over ALL other styles including PrimeNG
+   ====================================================================== */
+input,
+textarea,
+select,
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="number"],
+input[type="tel"],
+input[type="date"],
+input[type="time"],
+input[type="url"],
+input[type="search"] {
+  background: white !important;
+  background-color: white !important;
+  color: #1f2937 !important;
+  border: 1px solid #d1d5db !important;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  background: white !important;
+  background-color: white !important;
+}
+
+input:hover,
+textarea:hover,
+select:hover {
+  background: white !important;
+}
+
 .megha-header {
   background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
   color: white;
@@ -149,8 +184,26 @@ body {
 
 /* Input Field Styling - Global overrides for all PrimeNG inputs */
 ::ng-deep {
+  /* CRITICAL: Force white backgrounds on ALL input elements */
+  input,
+  textarea,
+  select,
+  input[type="text"],
+  input[type="password"],
+  input[type="email"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="date"],
+  input[type="checkbox"],
+  input[type="radio"] {
+    background: white !important;
+    background-color: white !important;
+    color: #1f2937 !important;
+  }
+  
   .p-inputtext {
     background: white !important;
+    background-color: white !important;
     color: #1f2937 !important;
     border: 1px solid #d1d5db !important;
     
@@ -160,40 +213,91 @@ body {
     
     &:enabled:hover {
       border-color: #9ca3af !important;
+      background: white !important;
     }
     
     &:enabled:focus {
       border-color: #1a237e !important;
       box-shadow: 0 0 0 0.2rem rgba(26, 35, 126, 0.15) !important;
       background: white !important;
+      background-color: white !important;
     }
   }
   
   .p-password input.p-inputtext {
     background: white !important;
+    background-color: white !important;
     color: #1f2937 !important;
   }
   
   .p-inputnumber input.p-inputtext {
     background: white !important;
+    background-color: white !important;
     color: #1f2937 !important;
   }
   
   .p-dropdown {
     background: white !important;
+    background-color: white !important;
     border: 1px solid #d1d5db !important;
     
     .p-dropdown-label {
+      color: #1f2937 !important;
+      background: white !important;
+    }
+    
+    &:not(.p-disabled):hover {
+      border-color: #9ca3af !important;
+      background: white !important;
+    }
+  }
+  
+  .p-select {
+    background: white !important;
+    background-color: white !important;
+    border: 1px solid #d1d5db !important;
+    
+    .p-select-label {
+      color: #1f2937 !important;
+      background: transparent !important;
+    }
+    
+    .p-select-trigger {
+      background: transparent !important;
       color: #1f2937 !important;
     }
     
     &:not(.p-disabled):hover {
       border-color: #9ca3af !important;
+      background: white !important;
+      background-color: white !important;
     }
+    
+    &:not(.p-disabled).p-focus {
+      border-color: #1a237e !important;
+      background: white !important;
+      background-color: white !important;
+    }
+  }
+  
+  /* Ultra-specific p-select overrides - force white on ALL states */
+  .p-select,
+  p-select,
+  .p-select .p-inputtext,
+  .p-component.p-select {
+    background: white !important;
+    background-color: white !important;
+  }
+  
+  .p-select-trigger,
+  .p-select .p-select-trigger {
+    background: transparent !important;
+    background-color: transparent !important;
   }
   
   .p-multiselect {
     background: white !important;
+    background-color: white !important;
     border: 1px solid #d1d5db !important;
     
     .p-multiselect-label {
@@ -203,21 +307,26 @@ body {
   
   .p-calendar input.p-inputtext {
     background: white !important;
+    background-color: white !important;
     color: #1f2937 !important;
   }
   
   textarea.p-inputtextarea {
     background: white !important;
+    background-color: white !important;
     color: #1f2937 !important;
     border: 1px solid #d1d5db !important;
     
     &:enabled:hover {
       border-color: #9ca3af !important;
+      background: white !important;
     }
     
     &:enabled:focus {
       border-color: #1a237e !important;
       box-shadow: 0 0 0 0.2rem rgba(26, 35, 126, 0.15) !important;
+      background: white !important;
+      background-color: white !important;
     }
   }
   
@@ -569,3 +678,141 @@ body {
   }
 }
 
+/* ======================================================================
+   ANGULAR MATERIAL WHITE BACKGROUND OVERRIDES
+   Ensures all Material components respect the white background mandate
+   ====================================================================== */
+
+// Material form fields - MUST have white backgrounds
+.mat-mdc-form-field,
+.mat-form-field {
+  .mat-mdc-text-field-wrapper,
+  .mat-form-field-wrapper {
+    background: white !important;
+    background-color: white !important;
+  }
+  
+  .mdc-text-field,
+  .mat-mdc-input-element,
+  input.mat-input-element,
+  textarea.mat-input-element {
+    background: white !important;
+    background-color: white !important;
+    color: #1f2937 !important;
+  }
+  
+  .mat-mdc-select,
+  .mat-select {
+    background: white !important;
+    background-color: white !important;
+    color: #1f2937 !important;
+  }
+}
+
+// Material select dropdown panel
+.mat-mdc-select-panel,
+.mat-select-panel {
+  background: white !important;
+  background-color: white !important;
+}
+
+// Material autocomplete panel
+.mat-mdc-autocomplete-panel,
+.mat-autocomplete-panel {
+  background: white !important;
+  background-color: white !important;
+}
+
+// Material datepicker
+.mat-datepicker-content,
+.mat-calendar {
+  background: white !important;
+  background-color: white !important;
+}
+
+// Material dialog
+.mat-mdc-dialog-container,
+.mat-dialog-container {
+  background: white !important;
+  background-color: white !important;
+  
+  .mat-mdc-dialog-content,
+  .mat-dialog-content {
+    background: white !important;
+    color: #1f2937 !important;
+  }
+}
+
+// Material table - white row backgrounds
+.mat-mdc-table,
+mat-table {
+  background: white !important;
+  
+  .mat-mdc-row,
+  .mat-row,
+  mat-row {
+    background: white !important;
+    background-color: white !important;
+    color: #1f2937 !important;
+  }
+  
+  .mat-mdc-cell,
+  .mat-cell,
+  mat-cell {
+    background: inherit !important;
+    color: #1f2937 !important;
+  }
+}
+
+// Material card
+.mat-mdc-card,
+.mat-card {
+  background: white !important;
+  background-color: white !important;
+  
+  .mat-mdc-card-content,
+  .mat-card-content {
+    background: white !important;
+    color: #1f2937 !important;
+  }
+}
+
+// Material expansion panel
+.mat-expansion-panel {
+  background: white !important;
+  
+  .mat-expansion-panel-content {
+    background: white !important;
+    color: #1f2937 !important;
+  }
+}
+
+// Material stepper
+.mat-stepper-horizontal,
+.mat-stepper-vertical {
+  background: white !important;
+  
+  .mat-step-header {
+    background: white !important;
+  }
+  
+  .mat-horizontal-content-container,
+  .mat-vertical-content {
+    background: white !important;
+  }
+}
+
+// Ultra-specific Material input overrides (highest priority)
+.mat-mdc-form-field .mat-mdc-text-field-wrapper .mdc-text-field input,
+.mat-mdc-form-field .mat-mdc-text-field-wrapper .mdc-text-field textarea,
+.mat-mdc-form-field .mat-mdc-text-field-wrapper .mdc-text-field select,
+mat-form-field input,
+mat-form-field textarea,
+mat-form-field select {
+  background: white !important;
+  background-color: white !important;
+  color: #1f2937 !important;
+}
+
+html, body { height: 100%; }
+body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }

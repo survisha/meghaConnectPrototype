@@ -12,15 +12,19 @@
           You will be contacted to schedule your appointment.
         </div>
       </div>
-      <a routerLink="/visitor">
-        <button pButton label="Back to Dashboard" icon="pi pi-home" class="p-button-outlined"></button>
+      <a routerLink="/visitor" style="text-decoration:none">
+        <button mat-raised-button color="primary">
+          <i class="pi pi-home"></i> Back to Dashboard
+        </button>
       </a>
     </div>
   </ng-container>
 
   <ng-container *ngIf="!submitted">
     <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem">
-      <button pButton icon="pi pi-arrow-left" class="p-button-text p-button-sm" routerLink="/visitor"></button>
+      <button mat-icon-button routerLink="/visitor">
+        <i class="pi pi-arrow-left"></i>
+      </button>
       <h2 class="page-title" style="margin:0">New Appointment Request</h2>
     </div>
 
@@ -30,7 +34,25 @@
 
     <div class="section-card" style="margin-bottom:1.5rem">
       <div class="section-card-body">
-        <p-steps [model]="steps" [activeIndex]="step" [readonly]="true"></p-steps>
+        <!-- Custom stepper using Material styles -->
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem">
+          <div *ngFor="let s of steps; let i = index" style="flex:1;display:flex;flex-direction:column;align-items:center">
+            <div style="display:flex;align-items:center;width:100%">
+              <div [style.background]="i === step ? '#1a237e' : i < step ? '#16a34a' : '#e5e7eb'"
+                   style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:600;font-size:0.85rem">
+                <span *ngIf="i < step">✓</span>
+                <span *ngIf="i >= step">{{ i + 1 }}</span>
+              </div>
+              <div *ngIf="i < steps.length - 1" 
+                   [style.background]="i < step ? '#16a34a' : '#e5e7eb'"
+                   style="flex:1;height:2px;margin:0 0.25rem"></div>
+            </div>
+            <div [style.color]="i === step ? '#1a237e' : '#6b7280'"
+                 style="margin-top:0.5rem;font-size:0.75rem;text-align:center;font-weight:500">
+              {{ s.label }}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -39,47 +61,60 @@
       <div class="section-card-header"><i class="pi pi-user"></i> Personal Information</div>
       <div class="section-card-body">
         <div class="form-grid">
-          <div class="form-group">
-            <label>Full Name *</label>
-            <input pInputText [(ngModel)]="form.fullName" placeholder="Full name" style="width:100%"/>
-          </div>
-          <div class="form-group">
-            <label>Phone Number * <small>(Unique ID)</small></label>
-            <input pInputText [(ngModel)]="form.phoneNumber" placeholder="10-digit mobile number" style="width:100%"/>
-          </div>
-          <div class="form-group">
-            <label>EPIC / Voter ID *</label>
-            <input pInputText [(ngModel)]="form.epicNumber" placeholder="Election ID Card number" style="width:100%"/>
-          </div>
-          <div class="form-group">
-            <label>Designation *</label>
-            <p-select [options]="designations" [(ngModel)]="form.designation" placeholder="Select designation" styleClass="w-full"></p-select>
-          </div>
-          <div class="form-group">
-            <label>District</label>
-            <p-select [options]="districts" [(ngModel)]="form.district" placeholder="Select district" styleClass="w-full"></p-select>
-          </div>
-          <div class="form-group">
-            <label>Constituency</label>
-            <input pInputText [(ngModel)]="form.constituency" placeholder="Constituency name" style="width:100%"/>
-          </div>
-          <div class="form-group">
-            <label>Booth / Village</label>
-            <input pInputText [(ngModel)]="form.booth" placeholder="Booth or village" style="width:100%"/>
-          </div>
-          <div class="form-group">
-            <label>Last Appointment Date with HCM</label>
-            <input pInputText [(ngModel)]="form.lastMeetingDate" placeholder="DD/MM/YYYY (if known)" style="width:100%"/>
-          </div>
+          <mat-form-field appearance="outline" class="form-group">
+            <mat-label>Full Name *</mat-label>
+            <input matInput [(ngModel)]="form.fullName" placeholder="Full name" />
+          </mat-form-field>
+          
+          <mat-form-field appearance="outline" class="form-group">
+            <mat-label>Phone Number *</mat-label>
+            <input matInput [(ngModel)]="form.phoneNumber" placeholder="10-digit mobile number" />
+            <mat-hint>Unique ID</mat-hint>
+          </mat-form-field>
+          
+          <mat-form-field appearance="outline" class="form-group">
+            <mat-label>EPIC / Voter ID *</mat-label>
+            <input matInput [(ngModel)]="form.epicNumber" placeholder="Election ID Card number" />
+          </mat-form-field>
+          
+          <mat-form-field appearance="outline" class="form-group">
+            <mat-label>Designation *</mat-label>
+            <mat-select [(ngModel)]="form.designation" placeholder="Select designation">
+              <mat-option *ngFor="let d of designations" [value]="d">{{ d }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+          
+          <mat-form-field appearance="outline" class="form-group">
+            <mat-label>District</mat-label>
+            <mat-select [(ngModel)]="form.district" placeholder="Select district">
+              <mat-option *ngFor="let d of districts" [value]="d">{{ d }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+          
+          <mat-form-field appearance="outline" class="form-group">
+            <mat-label>Constituency</mat-label>
+            <input matInput [(ngModel)]="form.constituency" placeholder="Constituency name" />
+          </mat-form-field>
+          
+          <mat-form-field appearance="outline" class="form-group">
+            <mat-label>Booth / Village</mat-label>
+            <input matInput [(ngModel)]="form.booth" placeholder="Booth or village" />
+          </mat-form-field>
+          
+          <mat-form-field appearance="outline" class="form-group">
+            <mat-label>Last Appointment Date with HCM</mat-label>
+            <input matInput [(ngModel)]="form.lastMeetingDate" placeholder="DD/MM/YYYY (if known)" />
+          </mat-form-field>
+          
+          <mat-form-field appearance="outline" class="form-group" style="grid-column:1/-1">
+            <mat-label>Full Address</mat-label>
+            <textarea matInput [(ngModel)]="form.address" rows="2" placeholder="Complete address"></textarea>
+          </mat-form-field>
+          
           <div class="form-group" style="grid-column:1/-1">
-            <label>Full Address</label>
-            <textarea pTextarea [(ngModel)]="form.address" rows="2" style="width:100%" placeholder="Complete address"></textarea>
-          </div>
-          <div class="form-group" style="grid-column:1/-1">
-            <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-weight:normal">
-              <input type="checkbox" [(ngModel)]="form.isOrganisation" style="width:auto;margin:0" />
-              <span>I represent an Organisation</span>
-            </label>
+            <mat-checkbox [(ngModel)]="form.isOrganisation">
+              I represent an Organisation
+            </mat-checkbox>
           </div>
         </div>
       </div>
@@ -90,18 +125,24 @@
       <div class="section-card-header"><i class="pi pi-file-edit"></i> Appointment Agenda</div>
       <div class="section-card-body">
         <div class="form-grid">
-          <div class="form-group">
-            <label>Agenda Type *</label>
-            <p-select [options]="agendaTypes" [(ngModel)]="form.agendaType" placeholder="Select agenda" styleClass="w-full"></p-select>
-          </div>
-          <div class="form-group">
-            <label>Requested Location *</label>
-            <p-select [options]="locations" [(ngModel)]="form.requestedLocation" placeholder="Meeting location" styleClass="w-full"></p-select>
-          </div>
-          <div class="form-group" style="grid-column:1/-1">
-            <label>Brief Description of Agenda *</label>
-            <textarea pTextarea [(ngModel)]="form.agendaBrief" rows="4" style="width:100%" placeholder="Describe your purpose of visit in detail..."></textarea>
-          </div>
+          <mat-form-field appearance="outline" class="form-group">
+            <mat-label>Agenda Type *</mat-label>
+            <mat-select [(ngModel)]="form.agendaType" placeholder="Select agenda">
+              <mat-option *ngFor="let a of agendaTypes" [value]="a">{{ a }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+          
+          <mat-form-field appearance="outline" class="form-group">
+            <mat-label>Requested Location *</mat-label>
+            <mat-select [(ngModel)]="form.requestedLocation" placeholder="Meeting location">
+              <mat-option *ngFor="let l of locations" [value]="l">{{ l }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+          
+          <mat-form-field appearance="outline" class="form-group" style="grid-column:1/-1">
+            <mat-label>Brief Description of Agenda *</mat-label>
+            <textarea matInput [(ngModel)]="form.agendaBrief" rows="4" placeholder="Describe your purpose of visit in detail..."></textarea>
+          </mat-form-field>
         </div>
       </div>
     </div>
@@ -116,48 +157,67 @@
           This section is only required for CM Scheme applications. You selected "<strong>{{ form.agendaType || 'None' }}</strong>". Click Next to continue.
         </div>
         <div *ngIf="isScheme" class="form-grid">
-          <div class="form-group">
-            <label>Scheme Type *</label>
-            <p-select [options]="schemeTypes" [(ngModel)]="form.schemeType" placeholder="Select scheme" styleClass="w-full"></p-select>
-          </div>
-          <div class="form-group">
-            <label>Application Type *</label>
-            <p-select [options]="applicationTypes" [(ngModel)]="form.applicationType" placeholder="New or Reminder" optionLabel="label" optionValue="value" styleClass="w-full"></p-select>
-          </div>
-          <div class="form-group">
-            <label>Project Category *</label>
-            <p-select [options]="projectCategories" [(ngModel)]="form.projectCategory" placeholder="Category" styleClass="w-full"></p-select>
-          </div>
+          <mat-form-field appearance="outline" class="form-group">
+            <mat-label>Scheme Type *</mat-label>
+            <mat-select [(ngModel)]="form.schemeType" placeholder="Select scheme">
+              <mat-option *ngFor="let s of schemeTypes" [value]="s">{{ s }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+          
+          <mat-form-field appearance="outline" class="form-group">
+            <mat-label>Application Type *</mat-label>
+            <mat-select [(ngModel)]="form.applicationType" placeholder="New or Reminder">
+              <mat-option *ngFor="let at of applicationTypes" [value]="at.value">{{ at.label }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+          
+          <mat-form-field appearance="outline" class="form-group">
+            <mat-label>Project Category *</mat-label>
+            <mat-select [(ngModel)]="form.projectCategory" placeholder="Category">
+              <mat-option *ngFor="let pc of projectCategories" [value]="pc">{{ pc }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+          
+          <mat-form-field appearance="outline" class="form-group" style="grid-column:1/-1">
+            <mat-label>Project Name *</mat-label>
+            <input matInput [(ngModel)]="form.projectName" placeholder="Name of the project" />
+          </mat-form-field>
+          
+          <mat-form-field appearance="outline" class="form-group">
+            <mat-label>Who will benefit from this project</mat-label>
+            <mat-select [(ngModel)]="form.beneficiaryType" placeholder="Who benefits?">
+              <mat-option *ngFor="let bt of beneficiaryTypes" [value]="bt">{{ bt }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+          
+          <mat-form-field appearance="outline" class="form-group">
+            <mat-label>Total People Benefiting</mat-label>
+            <mat-select [(ngModel)]="form.beneficiaryCount" placeholder="Count">
+              <mat-option *ngFor="let bc of beneficiaryCounts" [value]="bc">{{ bc }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+          
+          <mat-form-field appearance="outline" class="form-group">
+            <mat-label>Estimated Cost of Project (₹)</mat-label>
+            <input matInput [(ngModel)]="form.estimatedCost" placeholder="Total project cost" />
+          </mat-form-field>
+          
+          <mat-form-field appearance="outline" class="form-group">
+            <mat-label>Community Contribution (₹)</mat-label>
+            <input matInput [(ngModel)]="form.communityContribution" placeholder="Amount from community" />
+          </mat-form-field>
+          
+          <mat-form-field appearance="outline" class="form-group" style="grid-column:1/-1">
+            <mat-label>Justification of Project</mat-label>
+            <textarea matInput [(ngModel)]="form.justification" rows="3" placeholder="Why is this project needed?"></textarea>
+          </mat-form-field>
+          
           <div class="form-group" style="grid-column:1/-1">
-            <label>Project Name *</label>
-            <input pInputText [(ngModel)]="form.projectName" placeholder="Name of the project" style="width:100%"/>
-          </div>
-          <div class="form-group">
-            <label>Who will benefit from this project</label>
-            <p-select [options]="beneficiaryTypes" [(ngModel)]="form.beneficiaryType" placeholder="Who benefits?" styleClass="w-full"></p-select>
-          </div>
-          <div class="form-group">
-            <label>Total People Benefiting</label>
-            <p-select [options]="beneficiaryCounts" [(ngModel)]="form.beneficiaryCount" placeholder="Count" styleClass="w-full"></p-select>
-          </div>
-          <div class="form-group">
-            <label>Estimated Cost of Project (₹)</label>
-            <input pInputText [(ngModel)]="form.estimatedCost" placeholder="Total project cost" style="width:100%"/>
-          </div>
-          <div class="form-group">
-            <label>Community Contribution (₹)</label>
-            <input pInputText [(ngModel)]="form.communityContribution" placeholder="Amount from community" style="width:100%"/>
-          </div>
-          <div class="form-group" style="grid-column:1/-1">
-            <label>Justification of Project</label>
-            <textarea pTextarea [(ngModel)]="form.justification" rows="3" style="width:100%" placeholder="Why is this project needed?"></textarea>
-          </div>
-          <div class="form-group" style="grid-column:1/-1">
-            <label>MLA / MDC / Community Leader Approval</label>
-            <div style="display:flex;align-items:center;gap:0.75rem;margin-top:0.35rem">
-              <p-radiobutton name="mlaMdc" [value]="true" [(ngModel)]="form.mlaMdcApproved" label="Yes"></p-radiobutton>
-              <p-radiobutton name="mlaMdc" [value]="false" [(ngModel)]="form.mlaMdcApproved" label="No"></p-radiobutton>
-            </div>
+            <label style="display:block;margin-bottom:0.5rem;font-weight:600">MLA / MDC / Community Leader Approval</label>
+            <mat-radio-group [(ngModel)]="form.mlaMdcApproved">
+              <mat-radio-button [value]="true" style="margin-right:1.5rem">Yes</mat-radio-button>
+              <mat-radio-button [value]="false">No</mat-radio-button>
+            </mat-radio-group>
           </div>
           <div class="form-group" style="grid-column:1/-1">
             <label>Schemes taken in last 2 years (select all applicable)</label>
@@ -181,8 +241,9 @@
       <div class="section-card-body">
         <!-- R013: Toggle for associate visitors -->
         <div class="associate-toggle">
-          <input type="checkbox" id="includeAssociates" [(ngModel)]="includeAssociates" style="width:auto;margin:0;cursor:pointer" />
-          <label for="includeAssociates">Add Associate Visitors</label>
+          <mat-checkbox id="includeAssociates" [(ngModel)]="includeAssociates">
+            Add Associate Visitors
+          </mat-checkbox>
           <span style="margin-left:auto;font-size:0.8rem;color:#6b7280">Check to include colleagues or family members visiting with you</span>
         </div>
 
@@ -195,28 +256,36 @@
           <div style="padding:1rem;background:#f9fafb;border-radius:8px;margin-bottom:1rem;border:1px solid #e5e7eb">
             <div style="font-weight:600;font-size:0.85rem;margin-bottom:0.75rem;color:#374151">Add Associate</div>
             <div class="form-grid">
-              <div class="form-group">
-                <label>Name *</label>
-                <input pInputText [(ngModel)]="newAssociate.name" placeholder="Full name" style="width:100%"/>
-              </div>
-              <div class="form-group">
-                <label>Phone Number</label>
-                <input pInputText [(ngModel)]="newAssociate.phoneNumber" placeholder="10-digit mobile" style="width:100%"/>
-              </div>
-              <div class="form-group">
-                <label>EPIC Number</label>
-                <input pInputText [(ngModel)]="newAssociate.epicNumber" placeholder="Voter ID" style="width:100%"/>
-              </div>
-              <div class="form-group">
-                <label>Designation</label>
-                <p-select [options]="designations" [(ngModel)]="newAssociate.designation" placeholder="Select" styleClass="w-full"></p-select>
-              </div>
-              <div class="form-group" style="grid-column:1/-1">
-                <label>Address</label>
-                <input pInputText [(ngModel)]="newAssociate.address" placeholder="Address" style="width:100%"/>
-              </div>
+              <mat-form-field appearance="outline" class="form-group">
+                <mat-label>Name *</mat-label>
+                <input matInput [(ngModel)]="newAssociate.name" placeholder="Full name" />
+              </mat-form-field>
+              
+              <mat-form-field appearance="outline" class="form-group">
+                <mat-label>Phone Number</mat-label>
+                <input matInput [(ngModel)]="newAssociate.phoneNumber" placeholder="10-digit mobile" />
+              </mat-form-field>
+              
+              <mat-form-field appearance="outline" class="form-group">
+                <mat-label>EPIC Number</mat-label>
+                <input matInput [(ngModel)]="newAssociate.epicNumber" placeholder="Voter ID" />
+              </mat-form-field>
+              
+              <mat-form-field appearance="outline" class="form-group">
+                <mat-label>Designation</mat-label>
+                <mat-select [(ngModel)]="newAssociate.designation" placeholder="Select">
+                  <mat-option *ngFor="let d of designations" [value]="d">{{ d }}</mat-option>
+                </mat-select>
+              </mat-form-field>
+              
+              <mat-form-field appearance="outline" class="form-group" style="grid-column:1/-1">
+                <mat-label>Address</mat-label>
+                <input matInput [(ngModel)]="newAssociate.address" placeholder="Address" />
+              </mat-form-field>
             </div>
-            <button pButton label="Add Associate" icon="pi pi-plus" class="p-button-outlined p-button-sm" (click)="addAssociate()" [disabled]="!newAssociate.name.trim()"></button>
+            <button mat-stroked-button (click)="addAssociate()" [disabled]="!newAssociate.name.trim()">
+              <i class="pi pi-plus"></i> Add Associate
+            </button>
           </div>
 
           <!-- Associates list -->
@@ -227,7 +296,9 @@
                 <div style="font-weight:600;font-size:0.9rem;color:#1f2937">{{ a.name }}</div>
                 <div style="font-size:0.8rem;color:#6b7280">{{ a.phoneNumber || '–' }} · {{ a.designation || '–' }}</div>
               </div>
-              <button pButton icon="pi pi-trash" class="p-button-text p-button-danger p-button-sm" (click)="removeAssociate(i)"></button>
+              <button mat-icon-button color="warn" (click)="removeAssociate(i)">
+                <i class="pi pi-trash"></i>
+              </button>
             </div>
           </div>
           <div *ngIf="associates.length === 0" class="info-box">No associates added. Click "Add Associate" above to add one.</div>
@@ -291,52 +362,72 @@
 
         <div class="doc-row">
           <div class="doc-label">EPIC / Voter ID Scan <span class="req">*</span></div>
-          <p-fileUpload mode="basic" chooseLabel="Upload EPIC" accept=".pdf,.jpg,.png" maxFileSize="5000000" styleClass="p-button-outlined p-button-sm"></p-fileUpload>
+          <button mat-stroked-button type="button">
+            <mat-icon>upload_file</mat-icon> Upload EPIC
+            <input type="file" accept=".pdf,.jpg,.png" style="position:absolute;opacity:0;width:100%;height:100%;cursor:pointer"/>
+          </button>
         </div>
         <div class="doc-row">
           <div class="doc-label">
             Application Letter / Project Proposal <span class="req">*</span>
             <small style="color:#1a237e;font-size:0.75rem;display:block">AI will auto-extract project details from this document</small>
           </div>
-          <p-fileUpload
-            mode="basic"
-            chooseLabel="Upload &amp; Analyse"
-            accept=".pdf,.doc,.docx,.jpg,.png"
-            maxFileSize="10000000"
-            styleClass="p-button-outlined p-button-sm"
-            (onSelect)="onDocumentUpload($event)">
-          </p-fileUpload>
+          <button mat-stroked-button type="button" (click)="fileInput.click()">
+            <mat-icon>upload_file</mat-icon> Upload &amp; Analyse
+            <input #fileInput type="file" accept=".pdf,.doc,.docx,.jpg,.png" (change)="onDocumentUpload($event)" style="display:none"/>
+          </button>
         </div>
         <div class="doc-row">
           <div class="doc-label">Plans &amp; Estimates (up to 3) <span style="color:#6b7280;font-size:0.8rem">(for schemes)</span></div>
-          <p-fileUpload mode="basic" chooseLabel="Upload Plans" accept=".pdf" maxFileSize="10000000" styleClass="p-button-outlined p-button-sm"></p-fileUpload>
+          <button mat-stroked-button type="button">
+            <mat-icon>upload_file</mat-icon> Upload Plans
+            <input type="file" accept=".pdf" style="position:absolute;opacity:0;width:100%;height:100%;cursor:pointer"/>
+          </button>
         </div>
         <div class="doc-row">
           <div class="doc-label">Bank Account Details <span class="req">*</span></div>
-          <p-fileUpload mode="basic" chooseLabel="Upload Bank Details" accept=".pdf,.jpg,.png" maxFileSize="5000000" styleClass="p-button-outlined p-button-sm"></p-fileUpload>
+          <button mat-stroked-button type="button">
+            <mat-icon>upload_file</mat-icon> Upload Bank Details
+            <input type="file" accept=".pdf,.jpg,.png" style="position:absolute;opacity:0;width:100%;height:100%;cursor:pointer"/>
+          </button>
         </div>
         <div class="doc-row" *ngIf="form.mlaMdcApproved">
           <div class="doc-label">MLA/MDC/Community Leader Approval Letter <span class="req">*</span></div>
-          <p-fileUpload mode="basic" chooseLabel="Upload Letter" accept=".pdf" maxFileSize="5000000" styleClass="p-button-outlined p-button-sm"></p-fileUpload>
+          <button mat-stroked-button type="button">
+            <mat-icon>upload_file</mat-icon> Upload Letter
+            <input type="file" accept=".pdf" style="position:absolute;opacity:0;width:100%;height:100%;cursor:pointer"/>
+          </button>
         </div>
         <ng-container *ngIf="isCmCare">
           <div style="font-weight:600;font-size:0.85rem;color:#374151;margin:1rem 0 0.5rem">CM Care – Additional Documents</div>
           <div class="doc-row">
             <div class="doc-label">Eligibility Proof <span class="req">*</span></div>
-            <p-fileUpload mode="basic" chooseLabel="Upload" accept=".pdf,.jpg,.png" maxFileSize="5000000" styleClass="p-button-outlined p-button-sm"></p-fileUpload>
+            <button mat-stroked-button type="button">
+              <mat-icon>upload_file</mat-icon> Upload
+              <input type="file" accept=".pdf,.jpg,.png" style="position:absolute;opacity:0;width:100%;height:100%;cursor:pointer"/>
+            </button>
           </div>
           <div class="doc-row">
             <div class="doc-label">Hospital Documents <span class="req">*</span></div>
-            <p-fileUpload mode="basic" chooseLabel="Upload" accept=".pdf,.jpg,.png" maxFileSize="5000000" styleClass="p-button-outlined p-button-sm"></p-fileUpload>
+            <button mat-stroked-button type="button">
+              <mat-icon>upload_file</mat-icon> Upload
+              <input type="file" accept=".pdf,.jpg,.png" style="position:absolute;opacity:0;width:100%;height:100%;cursor:pointer"/>
+            </button>
           </div>
           <div class="doc-row">
             <div class="doc-label">Supporting Documents</div>
-            <p-fileUpload mode="basic" chooseLabel="Upload" accept=".pdf,.jpg,.png" maxFileSize="5000000" styleClass="p-button-outlined p-button-sm"></p-fileUpload>
+            <button mat-stroked-button type="button">
+              <mat-icon>upload_file</mat-icon> Upload
+              <input type="file" accept=".pdf,.jpg,.png" style="position:absolute;opacity:0;width:100%;height:100%;cursor:pointer"/>
+            </button>
           </div>
         </ng-container>
         <div class="doc-row" *ngIf="form.isOrganisation">
           <div class="doc-label">Organisation Registration Certificate <span class="req">*</span></div>
-          <p-fileUpload mode="basic" chooseLabel="Upload Certificate" accept=".pdf,.jpg,.png" maxFileSize="5000000" styleClass="p-button-outlined p-button-sm"></p-fileUpload>
+          <button mat-stroked-button type="button">
+            <mat-icon>upload_file</mat-icon> Upload Certificate
+            <input type="file" accept=".pdf,.jpg,.png" style="position:absolute;opacity:0;width:100%;height:100%;cursor:pointer"/>
+          </button>
         </div>
       </div>
     </div>
@@ -427,13 +518,13 @@
 
     <!-- Navigation Buttons (R012) -->
     <div class="nav-buttons">
-      <button class="btn-nav-prev" (click)="prevStep()" [disabled]="step===0">
+      <button mat-stroked-button (click)="prevStep()" [disabled]="step===0">
         <i class="pi pi-arrow-left"></i> Previous
       </button>
-      <button *ngIf="step < steps.length-1" class="btn-nav-next" (click)="nextStep()">
+      <button *ngIf="step < steps.length-1" mat-raised-button color="primary" (click)="nextStep()">
         Next <i class="pi pi-arrow-right"></i>
       </button>
-      <button *ngIf="step === steps.length-1" class="btn-nav-submit" [disabled]="loading" (click)="submit()">
+      <button *ngIf="step === steps.length-1" mat-raised-button color="primary" [disabled]="loading" (click)="submit()">
         <i class="pi pi-check"></i>
         <span *ngIf="!loading">Submit Application</span>
         <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Submitting…</span>

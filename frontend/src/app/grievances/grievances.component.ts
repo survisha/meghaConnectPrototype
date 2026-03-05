@@ -4,22 +4,36 @@ import { FormsModule } from '@angular/forms';
 import { GrievanceService } from '../services/grievance.service';
 import { AuthService } from '../services/auth.service';
 import { Grievance, GrievanceCategory, GrievanceStatus } from '../models';
-import { TableModule } from 'primeng/table';
-import { Tag } from 'primeng/tag';
-import { Select } from 'primeng/select';
-import { InputText } from 'primeng/inputtext';
-import { Textarea } from 'primeng/textarea';
-import { Dialog } from 'primeng/dialog';
-import { Divider } from 'primeng/divider';
-import { Steps } from 'primeng/steps';
-import { Toast } from 'primeng/toast';
-import { MessageService } from 'primeng/api';
+import { MatTableModule } from '@angular/material/table';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatButtonModule } from '@angular/material/button';
+import { MatDialogModule, MatDialog } from '@angular/material/dialog';
+import { MatStepperModule } from '@angular/material/stepper';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatDividerModule } from '@angular/material/divider';
 
 @Component({
   selector: 'app-grievances',
   standalone: true,
-  imports: [CommonModule, FormsModule, TableModule, Tag, Select, InputText, Textarea, Dialog, Divider, Steps, Toast],
-  providers: [MessageService],
+  imports: [
+    CommonModule,
+    FormsModule,
+    MatTableModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    MatButtonModule,
+    MatDialogModule,
+    MatStepperModule,
+    MatIconModule,
+    MatProgressSpinnerModule,
+    MatChipsModule,
+    MatDividerModule
+  ],
   templateUrl: './grievances.component.html',
   styleUrls: ['./grievances.component.scss'],
 })
@@ -30,6 +44,9 @@ export class GrievancesComponent implements OnInit {
   filterStatus = '';
   filterCategory = '';
   loading = false;
+
+  // Mat-table columns
+  displayedColumns: string[] = ['ticketId', 'applicant', 'district', 'category', 'subject', 'submitted', 'status', 'actions'];
 
   showForm = false;
   showDetail = false;
@@ -72,8 +89,7 @@ export class GrievancesComponent implements OnInit {
 
   constructor(
     private grievanceService: GrievanceService,
-    public auth: AuthService,
-    private messageService: MessageService
+    public auth: AuthService
   ) {}
 
   ngOnInit() {
@@ -122,9 +138,9 @@ export class GrievancesComponent implements OnInit {
         this.showForm = false;
         this.step = 0;
         this.form = { applicantName: '', phoneNumber: '', district: '', constituency: '', category: '', subject: '', description: '' };
-        this.messageService.add({ severity: 'success', summary: 'Grievance Submitted', detail: `Ticket ID: ${newGrievance.ticketId}`, life: 5000 });
+        console.log('Grievance submitted successfully. Ticket ID:', newGrievance.ticketId);
       },
-      error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to submit grievance.' })
+      error: () => console.error('Failed to submit grievance.')
     });
   }
 
@@ -136,7 +152,7 @@ export class GrievancesComponent implements OnInit {
         this.applyFilter();
         this.showDetail = false;
       },
-      error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update status.' })
+      error: () => console.error('Failed to update status.')
     });
   }
 
@@ -146,6 +162,18 @@ export class GrievancesComponent implements OnInit {
       FORWARDED: 'warn', RESOLVED: 'success', CLOSED: 'secondary',
     };
     return m[s] ?? 'info';
+  }
+
+  getStatusColor(s: GrievanceStatus): string {
+    const colorMap: Record<GrievanceStatus, string> = {
+      SUBMITTED: '#3b82f6',
+      ACKNOWLEDGED: '#6366f1',
+      UNDER_REVIEW: '#f59e0b',
+      FORWARDED: '#f97316',
+      RESOLVED: '#10b981',
+      CLOSED: '#6b7280',
+    };
+    return colorMap[s] ?? '#6b7280';
   }
 
   getCategoryLabel(c: GrievanceCategory): string {

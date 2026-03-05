@@ -70,32 +70,38 @@
             </button>
           </div>
         </div>
-        <div class="form-group">
-          <label for="username">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>
             <i class="pi pi-user"></i>
-            <span>Username</span>
-          </label>
-          <input pInputText id="username" [(ngModel)]="username" placeholder="Enter username" style="width:100%"/>
-        </div>
-        <div class="form-group">
-          <label for="password">
+            <span> Username</span>
+          </mat-label>
+          <input matInput id="username" [(ngModel)]="username" placeholder="Enter username" />
+        </mat-form-field>
+        
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>
             <i class="pi pi-lock"></i>
-            <span>Password</span>
-          </label>
-          <p-password inputId="password" [(ngModel)]="password" [feedback]="false" [toggleMask]="true" styleClass="w-full" inputStyleClass="w-full"></p-password>
-        </div>
+            <span> Password</span>
+          </mat-label>
+          <input matInput type="password" id="password" [(ngModel)]="password" placeholder="Enter password" (keyup.enter)="login()" />
+        </mat-form-field>
         <div *ngIf="errorMsg" style="color:#dc2626;font-size:0.85rem;margin-bottom:0.75rem">
           <i class="pi pi-exclamation-circle"></i> {{ errorMsg }}
         </div>
-        <p-button label="Sign In" icon="pi pi-sign-in" [loading]="loading" (onClick)="login()" styleClass="w-full"></p-button>
+        <button mat-raised-button color="primary" class="full-width" [disabled]="loading" (click)="login()">
+          <span *ngIf="!loading"><i class="pi pi-sign-in"></i> Sign In</span>
+          <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Signing in...</span>
+        </button>
       </ng-container>
 
       <ng-container *ngIf="isPublicMode">
         <div class="public-info">
           <p><i class="pi pi-info-circle"></i> Citizens can log in using their registered mobile number and OTP.</p>
         </div>
-        <a routerLink="/public-login">
-          <p-button label="Citizen OTP Login" icon="pi pi-users" styleClass="w-full p-button-success"></p-button>
+        <a routerLink="/public-login" style="text-decoration:none;display:block">
+          <button mat-raised-button color="accent" class="full-width">
+            <i class="pi pi-users"></i> Citizen OTP Login
+          </button>
         </a>
         <div style="text-align:center;margin-top:0.75rem;font-size:0.85rem;color:#6b7280">
           New visitor? <a routerLink="/register-visitor" style="color:#1a237e;font-weight:600">Register here</a>

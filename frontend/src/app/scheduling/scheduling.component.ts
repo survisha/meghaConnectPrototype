@@ -3,15 +3,24 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ScheduleEventService } from '../services/schedule-event.service';
 import { ScheduleEvent, EventType } from '../models';
-import { Dialog } from 'primeng/dialog';
-import { Select } from 'primeng/select';
-import { InputText } from 'primeng/inputtext';
-import { Textarea } from 'primeng/textarea';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 
 @Component({
   selector: 'app-scheduling',
   standalone: true,
-  imports: [CommonModule, FormsModule, Dialog, Select, InputText, Textarea],
+  imports: [
+    CommonModule, 
+    FormsModule, 
+    MatFormFieldModule, 
+    MatInputModule, 
+    MatSelectModule, 
+    MatButtonModule, 
+    MatIconModule
+  ],
   templateUrl: './scheduling.component.html',
   styleUrls: ['./scheduling.component.scss'],
 })

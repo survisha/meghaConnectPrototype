@@ -4,6 +4,7 @@ import com.survisha.meghaconnect.entity.User;
 import com.survisha.meghaconnect.repository.UserRepository;
 import com.survisha.meghaconnect.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -26,6 +27,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import java.util.Collections;
 import java.util.List;
 
+@Slf4j
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -73,13 +75,27 @@ public class SecurityConfig {
     @Bean
     public UserDetailsService userDetailsService() {
         return (String username) -> {
+            log.debug("[SECURITY] Loading user details for username: {}", username);
+            
             User u = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
-            return org.springframework.security.core.userdetails.User.builder()
+                .orElseThrow(() -> {
+                    log.warn("[SECURITY] User not found in database: {}", username);
+                    return new UsernameNotFoundException("User not found: " + username);
+                });
+            
+            log.debug("[SECURITY] User found - Username: {}, Role: {}, Active: {}", 
+                u.getUsername(), u.getRole(), u.isActive());
+            log.debug("[SECURITY] Password hash (first 20 chars): {}...", 
+                u.getPasswordHash() != null ? u.getPasswordHash().substring(0, Math.min(20, u.getPasswordHash().length())) : "NULL");
+            
+            UserDetails userDetails = org.springframework.security.core.userdetails.User.builder()
                 .username(u.getUsername())
                 .password(u.getPasswordHash())
                 .authorities(Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + u.getRole().name())))
                 .build();
+            
+            log.debug("[SECURITY] UserDetails created - Authorities: {}", userDetails.getAuthorities());
+            return userDetails;
         };
     }
 

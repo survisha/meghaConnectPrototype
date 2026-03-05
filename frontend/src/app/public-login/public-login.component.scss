@@ -253,3 +253,53 @@
 }
 
 .back-link a:hover { color: #1a237e; text-decoration: underline; }
+
+// Material button alignment fixes
+::ng-deep {
+  .login-card {
+    // Ensure all Material buttons have proper icon alignment
+    button[mat-button],
+    button[mat-raised-button],
+    button[mat-stroked-button] {
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 0.5rem;
+      white-space: nowrap !important;
+      
+      .mat-button-wrapper {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 0.5rem;
+        white-space: nowrap !important;
+      }
+      
+      i {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        line-height: 1;
+        vertical-align: middle;
+        flex-shrink: 0;
+      }
+      
+      span {
+        white-space: nowrap !important;
+      }
+    }
+    
+    // Specific styling for the OTP step action buttons
+    div[style*="display:flex"] {
+      button[mat-button] {
+        min-width: 140px;
+        padding: 0.5rem 1rem;
+        flex: 1;
+        
+        i {
+          font-size: 1rem;
+        }
+      }
+    }
+  }
+}

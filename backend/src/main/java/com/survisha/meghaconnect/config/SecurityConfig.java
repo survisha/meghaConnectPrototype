@@ -43,13 +43,26 @@ public class SecurityConfig {
             // The frontend SPA sends JWT in Authorization header, not via cookies.
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
+                // Public API endpoints (authentication, registration, visitor auth)
                 .antMatchers("/api/v1/auth/**", "/actuator/health").permitAll()
                 .antMatchers("/api/v1/appointments").permitAll()   // Public can submit
                 .antMatchers("/api/v1/public/**").permitAll()       // Public registration
                 .antMatchers("/api/v1/visitor/auth/**").permitAll() // Visitor OTP auth
                 .antMatchers("/api/v1/visitor/**").permitAll()      // Visitor KYC endpoints
                 .antMatchers("/api/ai/**").permitAll()              // AI endpoints (R004–R010, R015)
-                .anyRequest().authenticated()
+                
+                // Static resources (Angular frontend - embedded in JAR)
+                .antMatchers("/", "/index.html").permitAll()        // Root and index
+                .antMatchers("/**/*.js", "/**/*.css", "/**/*.ico").permitAll()  // JS, CSS, favicon
+                .antMatchers("/**/*.png", "/**/*.jpg", "/**/*.jpeg", "/**/*.svg").permitAll()  // Images
+                .antMatchers("/**/*.woff", "/**/*.woff2", "/**/*.ttf", "/**/*.eot").permitAll()  // Fonts
+                .antMatchers("/browser/**", "/asserts/**", "/assets/**").permitAll()  // Static asset folders
+                
+                // All other API requests require authentication
+                .antMatchers("/api/**").authenticated()
+                
+                // Allow frontend routes (Angular handles routing)
+                .anyRequest().permitAll()
             )
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authenticationProvider(authenticationProvider())

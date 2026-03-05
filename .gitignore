@@ -10,6 +10,7 @@ frontend/.angular/
 
 # Java build artifacts
 backend/target/
+backend/src/main/resources/static/
 
 # IDE
 .idea/

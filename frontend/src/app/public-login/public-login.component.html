@@ -49,13 +49,15 @@
           {{ errorMsg }}
           <div *ngIf="errorMsg.includes('register')" style="margin-top:0.75rem">
             <button mat-raised-button color="primary" (click)="goToRegister()">
-              <i class="pi pi-user-plus"></i> Register as New Visitor
+              <i class="pi pi-user-plus"></i>
+              <span>Register as New Visitor</span>
             </button>
           </div>
         </div>
 
         <button mat-raised-button color="primary" class="full-width" [disabled]="loading" (click)="checkMobile()">
-          <span *ngIf="!loading"><i class="pi pi-send"></i> Generate OTP</span>
+          <i class="pi pi-send"></i>
+          <span *ngIf="!loading">Generate OTP</span>
           <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Checking…</span>
         </button>
 
@@ -63,7 +65,8 @@
           <span>New visitor?</span>
         </div>
         <button mat-stroked-button color="primary" class="full-width" (click)="goToRegister()">
-          <i class="pi pi-user-plus"></i> Register as New Visitor
+          <i class="pi pi-user-plus"></i>
+          <span>Register as New Visitor</span>
         </button>
 
         <div class="back-link">
@@ -104,16 +107,19 @@
         </div>
 
         <button mat-raised-button color="primary" class="full-width" [disabled]="loading" (click)="validateOtp()">
-          <span *ngIf="!loading"><i class="pi pi-check"></i> Verify &amp; Login</span>
+          <i class="pi pi-check"></i>
+          <span *ngIf="!loading">Verify &amp; Login</span>
           <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Verifying…</span>
         </button>
 
-        <div style="display:flex;gap:1rem;margin-top:0.75rem">
+        <div style="display:flex;gap:1rem;margin-top:0.75rem;justify-content:space-between">
           <button mat-button color="primary" (click)="goBack()">
-            <i class="pi pi-arrow-left"></i> Change Number
+            <i class="pi pi-arrow-left"></i>
+            <span>Change Number</span>
           </button>
           <button mat-button color="primary" (click)="sendOtp()" [disabled]="loading">
-            <i class="pi pi-refresh"></i> Resend OTP
+            <i class="pi pi-refresh"></i>
+            <span>Resend OTP</span>
           </button>
         </div>
       </ng-container>

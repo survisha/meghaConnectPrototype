@@ -1,0 +1,145 @@
+# ============================================
+# MeghaConnect - Production Configuration
+# ============================================
+# Copy this file next to the JAR and run with:
+# java -jar meghaconnect-1.0.0-SNAPSHOT.jar --spring.config.location=application-prod.properties
+
+# ============================================
+# DATABASE CONFIGURATION
+# ============================================
+spring.datasource.url=jdbc:mysql://localhost:3306/meghaconnect?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Kolkata
+spring.datasource.username=meghaconnect_user
+spring.datasource.password=CHANGE_THIS_PASSWORD
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+
+# Connection Pool (HikariCP)
+spring.datasource.hikari.maximum-pool-size=20
+spring.datasource.hikari.minimum-idle=5
+spring.datasource.hikari.connection-timeout=30000
+spring.datasource.hikari.idle-timeout=600000
+spring.datasource.hikari.max-lifetime=1800000
+
+# ============================================
+# JPA / HIBERNATE
+# ============================================
+spring.jpa.hibernate.ddl-auto=none
+spring.jpa.show-sql=false
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQL8Dialect
+spring.jpa.properties.hibernate.format_sql=false
+spring.jpa.properties.hibernate.jdbc.batch_size=20
+spring.jpa.properties.hibernate.order_inserts=true
+spring.jpa.properties.hibernate.order_updates=true
+
+# ============================================
+# FLYWAY MIGRATION
+# ============================================
+spring.flyway.enabled=true
+spring.flyway.baseline-on-migrate=true
+spring.flyway.locations=classpath:db/migration
+spring.flyway.validate-on-migrate=true
+
+# ============================================
+# JWT SECURITY
+# ============================================
+# IMPORTANT: Change this secret in production!
+# Generate a strong secret: openssl rand -base64 64
+app.jwt.secret=CHANGE_THIS_TO_STRONG_RANDOM_SECRET_KEY_MIN_256_BITS
+app.jwt.expiration-ms=86400000
+
+# ============================================
+# SERVER CONFIGURATION
+# ============================================
+server.port=8080
+server.address=0.0.0.0
+server.servlet.context-path=/
+
+# Compression (improves frontend load time)
+server.compression.enabled=true
+server.compression.mime-types=text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
+server.compression.min-response-size=1024
+
+# Session
+server.servlet.session.timeout=30m
+server.servlet.session.cookie.http-only=true
+server.servlet.session.cookie.secure=false
+
+# ============================================
+# LOGGING
+# ============================================
+logging.level.root=INFO
+logging.level.com.survisha.meghaconnect=DEBUG
+logging.level.org.springframework.web=INFO
+logging.level.org.springframework.security=INFO
+logging.level.org.hibernate.SQL=WARN
+
+# Log file configuration
+logging.file.name=logs/meghaconnect.log
+logging.file.max-size=10MB
+logging.file.max-history=30
+logging.file.total-size-cap=500MB
+
+# Log pattern
+logging.pattern.console=%d{yyyy-MM-dd HH:mm:ss} - %logger{36} - %msg%n
+logging.pattern.file=%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n
+
+# ============================================
+# SPRING BOOT ACTUATOR (Monitoring)
+# ============================================
+management.endpoints.web.exposure.include=health,info,metrics
+management.endpoint.health.show-details=when-authorized
+management.health.db.enabled=true
+management.health.diskspace.enabled=true
+
+# ============================================
+# FILE UPLOAD (for appointment documents)
+# ============================================
+spring.servlet.multipart.enabled=true
+spring.servlet.multipart.max-file-size=10MB
+spring.servlet.multipart.max-request-size=10MB
+
+# ============================================
+# CORS CONFIGURATION
+# ============================================
+# Uncomment and modify for specific domain in production
+# cors.allowed-origins=https://meghaconnect.meghalaya.gov.in
+# cors.allowed-methods=GET,POST,PUT,PATCH,DELETE,OPTIONS
+# cors.allowed-headers=*
+# cors.allow-credentials=true
+
+# ============================================
+# PRODUCTION SECURITY SETTINGS
+# ============================================
+# Enable HTTPS redirect if behind reverse proxy
+# server.forward-headers-strategy=framework
+# server.tomcat.remoteip.protocol-header=x-forwarded-proto
+# server.servlet.session.cookie.secure=true
+
+# ============================================
+# APPLICATION-SPECIFIC SETTINGS
+# ============================================
+# OTP Configuration (for visitor login)
+app.otp.validity-minutes=5
+app.otp.max-attempts=5
+app.otp.rate-limit-per-hour=10
+
+# File Storage Path (for document uploads)
+app.file.upload-dir=./uploads
+app.file.max-size-mb=10
+app.file.allowed-extensions=pdf,doc,docx,jpg,jpeg,png
+
+# AI Service Configuration (for appointment agenda analysis)
+# app.ai.service.url=http://localhost:5000
+# app.ai.service.timeout-ms=30000
+
+# ============================================
+# TROUBLESHOOTING
+# ============================================
+# Uncomment below for debugging database issues:
+# logging.level.org.hibernate.SQL=DEBUG
+# logging.level.org.hibernate.type.descriptor.sql.BasicBinder=TRACE
+
+# Uncomment below for debugging security issues:
+# logging.level.org.springframework.security=DEBUG
+
+# Uncomment below for debugging Flyway migrations:
+# logging.level.org.flywaydb=DEBUG

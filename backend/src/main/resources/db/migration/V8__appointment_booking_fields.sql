@@ -5,8 +5,25 @@
 -- Adds support for:
 --   - Application type (NEW_APPLICATION / REMINDER) on appointments
 --   - Scheme history list as JSON on appointments
+--   - visitor_associates table creation
 --   - Address field for visitor associates
 -- ============================================================
+
+-- 0. CREATE visitor_associates TABLE (if not exists - was missing from V1-V7)
+CREATE TABLE IF NOT EXISTS visitor_associates (
+    associate_id         BIGINT       NOT NULL AUTO_INCREMENT,
+    primary_visitor_id   BIGINT       NOT NULL,
+    full_name            VARCHAR(200) NOT NULL,
+    phone_number         VARCHAR(20),
+    epic_number          VARCHAR(50),
+    designation          VARCHAR(100),
+    district             VARCHAR(100),
+    photo_path           VARCHAR(200),
+    created_at           DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at           DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (associate_id),
+    CONSTRAINT fk_associate_visitor FOREIGN KEY (primary_visitor_id) REFERENCES persons(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 1. ADD application_type TO appointments TABLE (idempotent)
 SET @dbname = DATABASE();

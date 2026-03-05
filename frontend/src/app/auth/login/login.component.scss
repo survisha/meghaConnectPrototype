@@ -259,19 +259,29 @@
   button {
     flex: 1;
     border: none;
-    padding: 0.75rem;
+    padding: 0.875rem 1rem;
     cursor: pointer;
     background: white;
     color: #6b7280;
     font-size: 0.9rem;
+    font-weight: 500;
     transition: all 0.2s;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
+    min-height: 44px;
     
     i {
       font-size: 1rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    span {
+      display: inline-flex;
+      align-items: center;
     }
     
     &.active { 
@@ -340,6 +350,35 @@
 
 // Input field styling
 ::ng-deep {
+  // Material form fields
+  .login-card {
+    mat-form-field.full-width {
+      width: 100%;
+      display: block;
+      
+      .mat-mdc-text-field-wrapper {
+        width: 100%;
+      }
+      
+      .mat-mdc-form-field-flex {
+        align-items: center;
+      }
+      
+      input {
+        padding: -0.4rem 0.75rem;
+      }
+    }
+    
+    // Consistent button styling
+    button.full-width {
+      width: 100%;
+      min-height: 44px;
+      padding: 0.75rem 1rem;
+      font-size: 0.95rem;
+      font-weight: 500;
+    }
+  }
+  
   .p-inputtext {
     background: white !important;
     color: #1f2937 !important;

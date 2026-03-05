@@ -63,6 +63,101 @@ This is a **MANDATORY** design requirement across the entire application:
 - Existing components violating this rule must be fixed immediately
 - This rule takes precedence over any PrimeNG theme defaults
 
+### Critical UI/UX Rule: Button Visibility Mandate
+
+**ALL BUTTONS MUST BE VISIBLE AND PROPERLY STYLED**
+
+This is a **MANDATORY** design requirement to ensure all interactive elements are visible:
+
+| Button Type | Framework | Background | Text Color | Border | Min Height |
+|---|---|---|---|---|---|
+| Primary raised | `mat-raised-button color="primary"` | `#1a237e` (primary blue) | `white` | None | `36px` |
+| Accent raised | `mat-raised-button color="accent"` | `#00897b` (teal) | `white` | None | `36px` |
+| Outlined/Stroked | `mat-stroked-button` or `mat-outlined-button` | `transparent` | `#1a237e` | `1.5px solid` | `36px` |
+| Text button | `mat-button` | `transparent` | `#1a237e` | None | `36px` |
+| Icon button | `mat-icon-button` | `transparent` | `#1a237e` | None | `40px` |
+| Warn button | `mat-raised-button color="warn"` | `#dc2626` (red) | `white` | None | `36px` |
+
+**Implementation Requirements:**
+- **ALWAYS use Angular Material button directives**: `mat-raised-button`, `mat-stroked-button`, `mat-button`, `mat-icon-button`
+- **NEVER use plain HTML `<button>` tags** without Material directives
+- All buttons MUST have explicit `color` attribute: `color="primary"`, `color="accent"`, or `color="warn"`
+- Buttons MUST import `MatButtonModule` in component imports
+- Full-width buttons MUST use `class="full-width"` utility class
+- Icon buttons MUST wrap icons in `<mat-icon>` tags
+
+**Global Button Styles (`frontend/src/styles.scss`):**
+```scss
+// All Material buttons have:
+- min-height: 36px (40px for icon buttons)
+- padding: 0 16px
+- font-weight: 500
+- display: inline-flex with gap for icons
+- Proper hover states with background color changes
+- Disabled states with reduced opacity
+- Box shadows for raised buttons
+```
+
+**Usage Examples:**
+```html
+<!-- Primary action button (visible blue background) -->
+<button mat-raised-button color="primary" (click)="submit()">
+  <mat-icon>check</mat-icon> Submit
+</button>
+
+<!-- Secondary action button (outlined) -->
+<button mat-stroked-button (click)="cancel()">
+  Cancel
+</button>
+
+<!-- Text button for tertiary actions -->
+<button mat-button (click)="reset()">
+  <i class="pi pi-refresh"></i> Reset
+</button>
+
+<!-- Icon-only button -->
+<button mat-icon-button (click)="close()">
+  <mat-icon>close</mat-icon>
+</button>
+
+<!-- Full-width button -->
+<button mat-raised-button color="primary" class="full-width" (click)="save()">
+  Save Changes
+</button>
+
+<!-- Disabled button -->
+<button mat-raised-button color="primary" [disabled]="loading || !isValid">
+  <span *ngIf="!loading">Submit</span>
+  <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Processing...</span>
+</button>
+```
+
+**Common Button Patterns:**
+- **Form submit**: `mat-raised-button color="primary"` (visible blue)
+- **Cancel/Back**: `mat-stroked-button` (outlined, no color attr = default)
+- **Delete/Remove**: `mat-raised-button color="warn"` (red background)
+- **Next/Continue**: `mat-raised-button color="primary"`
+- **Previous**: `mat-stroked-button` with left arrow icon
+- **Add/Create**: `mat-raised-button color="primary"` with plus icon
+- **Close dialog**: `mat-icon-button` with `<mat-icon>close</mat-icon>`
+
+**Enforcement:**
+- ALL buttons MUST be visible in UI (proper background, text color, height)
+- ANY button visibility issue MUST be reported immediately
+- Global button styles in `frontend/src/styles.scss` enforce this - do NOT override without critical reason
+- Component-specific button styles are FORBIDDEN unless for specialized layouts
+- Buttons MUST maintain 36px minimum height for accessibility (touch targets)
+- This rule takes precedence over any Angular Material theme defaults
+
+**Testing Checklist:**
+- [ ] All buttons render with visible background/border
+- [ ] Button text is readable (white on primary blue, dark on outlined)
+- [ ] Hover states work (background color change visible)
+- [ ] Disabled buttons show visually distinct state
+- [ ] Icons in buttons are properly aligned and visible
+- [ ] Full-width buttons span container width
+- [ ] Buttons are keyboard accessible (tab navigation)
+
 ### UI Framework Mandate: Angular Material for Forms & Tables, PrimeNG for Charts Only
 
 **ALL forms, tables, and UI components MUST use Angular Material**
@@ -160,5 +255,6 @@ This is a **MANDATORY** architecture requirement:
 | Agent instructions | Defined in `.github/agents/agent-Narsingh.md` |
 | Commit message | Must reference the task and include `[agent-Narsingh]` tag |
 | Input backgrounds | **MUST BE WHITE** - Never black or dark backgrounds |
+| Button visibility | **MUST BE VISIBLE** - Always use Material directives (`mat-raised-button`, `mat-stroked-button`, etc.) |
 | UI Framework | **MUST USE Angular Material** - PrimeNG only for charts |
 | Forms & Tables | **Angular Material only** - mat-input, mat-select, mat-table, etc. |

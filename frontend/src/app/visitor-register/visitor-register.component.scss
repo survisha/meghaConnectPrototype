@@ -471,3 +471,58 @@ textarea.input-field { resize: vertical; }
   font-size: 0.85rem;
   opacity: 0.9;
 }
+
+// Material form field spacing and alignment
+mat-form-field {
+  display: block;
+  margin-bottom: 1rem;
+  
+  &.full-width {
+    width: 100%;
+  }
+}
+
+mat-radio-group {
+  display: block;
+  margin-bottom: 1rem;
+  
+  mat-radio-button {
+    margin-bottom: 0.5rem;
+  }
+}
+
+mat-checkbox {
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.form-row.two-col {
+  mat-form-field {
+    margin-bottom: 0;
+  }
+}
+
+// Radio button group styling
+mat-radio-group {
+  display: flex !important;
+  gap: 1.5rem;
+  align-items: center;
+  
+  &.full-width {
+    width: 100%;
+  }
+}
+
+// Field label styling (for radio groups, checkboxes, etc.)
+.field-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.95rem;
+}
+
+// Form group styling
+.form-group {
+  margin-bottom: 1rem;
+}

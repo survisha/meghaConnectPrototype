@@ -814,5 +814,451 @@ mat-form-field select {
   color: #1f2937 !important;
 }
 
+// ===================================
+// Material Button Visibility Fix (CRITICAL)
+// ===================================
+// Ensure Material buttons are ALWAYS visible and properly styled
+// This fixes the invisible button issue across all components
+
+// Base button structure - ensure proper height and padding
+.mdc-button,
+.mat-mdc-button,
+.mat-mdc-raised-button,
+.mat-mdc-unelevated-button,
+.mat-mdc-outlined-button,
+.mat-mdc-icon-button {
+  // Critical: ensure button has height and is visible
+  min-height: 36px !important;
+  height: auto !important;
+  padding: 0 16px !important;
+  font-weight: 500 !important;
+  font-size: 14px !important;
+  line-height: 36px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  position: relative !important;
+  overflow: visible !important;
+  cursor: pointer !important;
+  border-radius: 4px !important;
+  transition: all 0.2s !important;
+  
+  // Ensure button label is visible
+  .mdc-button__label,
+  span {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    z-index: 1 !important;
+    position: relative !important;
+  }
+  
+  // Ensure icons in buttons are visible
+  mat-icon,
+  .mat-icon,
+  i {
+    display: inline-flex !important;
+    align-items: center !important;
+    font-size: 18px !important;
+  }
+}
+
+// Icon buttons - smaller, square
+.mat-mdc-icon-button {
+  min-width: 40px !important;
+  width: 40px !important;
+  height: 40px !important;
+  padding: 8px !important;
+  line-height: 24px !important;
+  border-radius: 50% !important;
+}
+
+// Primary raised buttons - ensure VISIBLE background
+.mat-mdc-raised-button.mat-primary,
+.mat-mdc-unelevated-button.mat-primary {
+  background-color: #1a237e !important;
+  color: white !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.12) !important;
+  
+  .mdc-button__label,
+  span,
+  mat-icon,
+  i {
+    color: white !important;
+  }
+  
+  &:hover:not([disabled]) {
+    background-color: #283593 !important;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.16) !important;
+  }
+  
+  &[disabled] {
+    background-color: rgba(26, 35, 126, 0.4) !important;
+    color: rgba(255, 255, 255, 0.6) !important;
+    cursor: not-allowed !important;
+    box-shadow: none !important;
+  }
+}
+
+// Accent buttons
+.mat-mdc-raised-button.mat-accent,
+.mat-mdc-unelevated-button.mat-accent {
+  background-color: #00897b !important;
+  color: white !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.12) !important;
+  
+  .mdc-button__label,
+  span,
+  mat-icon,
+  i {
+    color: white !important;
+  }
+  
+  &:hover:not([disabled]) {
+    background-color: #00695c !important;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.16) !important;
+  }
+}
+
+// Stroked/Outlined buttons - ensure VISIBLE border and text
+.mat-mdc-outlined-button {
+  border: 1.5px solid currentColor !important;
+  background-color: transparent !important;
+  
+  // Default unthemed outlined button - ensure visible
+  &:not(.mat-primary):not(.mat-accent):not(.mat-warn) {
+    color: #1a237e !important;
+    border-color: #1a237e !important;
+    
+    .mdc-button__label,
+    span,
+    mat-icon,
+    i {
+      color: #1a237e !important;
+    }
+    
+    &:hover:not([disabled]) {
+      background-color: rgba(26, 35, 126, 0.08) !important;
+    }
+  }
+  
+  &.mat-primary {
+    color: #1a237e !important;
+    border-color: #1a237e !important;
+    
+    .mdc-button__label,
+    span,
+    mat-icon,
+    i {
+      color: #1a237e !important;
+    }
+    
+    &:hover:not([disabled]) {
+      background-color: rgba(26, 35, 126, 0.08) !important;
+    }
+  }
+  
+  &.mat-accent {
+    color: #00897b !important;
+    border-color: #00897b !important;
+    
+    .mdc-button__label,
+    span {
+      color: #00897b !important;
+    }
+    
+    &:hover:not([disabled]) {
+      background-color: rgba(0, 137, 123, 0.08) !important;
+    }
+  }
+  
+  &[disabled] {
+    border-color: rgba(0, 0, 0, 0.12) !important;
+    color: rgba(0, 0, 0, 0.26) !important;
+    cursor: not-allowed !important;
+  }
+}
+
+// Basic text buttons - ensure visible text
+.mat-mdc-button {
+  background: transparent !important;
+  
+  // Default unthemed text button - ensure visible
+  &:not(.mat-primary):not(.mat-accent):not(.mat-warn) {
+    color: #1a237e !important;
+    
+    .mdc-button__label,
+    span,
+    mat-icon,
+    i {
+      color: #1a237e !important;
+    }
+    
+    &:hover:not([disabled]) {
+      background-color: rgba(26, 35, 126, 0.04) !important;
+    }
+  }
+  
+  &.mat-primary {
+    color: #1a237e !important;
+    
+    .mdc-button__label,
+    span,
+    mat-icon,
+    i {
+      color: #1a237e !important;
+    }
+    
+    &:hover:not([disabled]) {
+      background-color: rgba(26, 35, 126, 0.04) !important;
+    }
+  }
+  
+  &.mat-accent {
+    color: #00897b !important;
+    
+    .mdc-button__label,
+    span {
+      color: #00897b !important;
+    }
+    
+    &:hover:not([disabled]) {
+      background-color: rgba(0, 137, 123, 0.04) !important;
+    }
+  }
+}
+
+// Warn buttons
+.mat-mdc-button.mat-warn,
+.mat-mdc-raised-button.mat-warn,
+.mat-mdc-outlined-button.mat-warn {
+  color: #dc2626 !important;
+  
+  .mdc-button__label,
+  span {
+    color: #dc2626 !important;
+  }
+}
+
+.mat-mdc-raised-button.mat-warn {
+  background-color: #dc2626 !important;
+  color: white !important;
+  
+  .mdc-button__label,
+  span {
+    color: white !important;
+  }
+  
+  &:hover:not([disabled]) {
+    background-color: #991b1b !important;
+  }
+}
+
+// Full-width button utility
+button.full-width,
+.mat-mdc-button.full-width,
+.mat-mdc-raised-button.full-width,
+.mat-mdc-outlined-button.full-width,
+.mat-mdc-unelevated-button.full-width {
+  width: 100% !important;
+  display: flex !important;
+  max-width: 100% !important;
+}
+
+// Ensure ripple effects are visible but don't break layout
+.mat-ripple,
+.mat-mdc-button-persistent-ripple,
+.mdc-button__ripple {
+  pointer-events: none !important;
+}
+
+// ===================================
+// Material Radio Button Visibility & Styling
+// ===================================
+.mat-mdc-radio-button {
+  display: inline-flex !important;
+  align-items: center !important;
+  margin-bottom: 0.5rem !important;
+  cursor: pointer !important;
+  
+  .mdc-radio {
+    padding: 0 !important;
+    margin-right: 8px !important;
+    
+    .mdc-radio__background {
+      width: 20px !important;
+      height: 20px !important;
+      
+      .mdc-radio__outer-circle {
+        border-width: 2px !important;
+        border-color: #6b7280 !important;
+      }
+      
+      .mdc-radio__inner-circle {
+        border-width: 10px !important;
+        border-color: #1a237e !important;
+      }
+    }
+  }
+  
+  &.mat-mdc-radio-checked {
+    .mdc-radio__background {
+      .mdc-radio__outer-circle {
+        border-color: #1a237e !important;
+      }
+    }
+  }
+  
+  .mdc-label,
+  label {
+    color: #374151 !important;
+    font-size: 0.95rem !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.35rem !important;
+  }
+  
+  &:hover:not(.mat-mdc-radio-disabled) {
+    .mdc-radio__background .mdc-radio__outer-circle {
+      border-color: #1a237e !important;
+    }
+  }
+}
+
+// ===================================
+// Material Checkbox Visibility & Styling
+// ===================================
+.mat-mdc-checkbox {
+  display: inline-flex !important;
+  align-items: center !important;
+  margin-bottom: 0.5rem !important;
+  cursor: pointer !important;
+  
+  .mdc-checkbox {
+    padding: 0 !important;
+    margin-right: 8px !important;
+    
+    .mdc-checkbox__background {
+      width: 20px !important;
+      height: 20px !important;
+      border: 2px solid #6b7280 !important;
+      border-radius: 4px !important;
+      
+      .mdc-checkbox__checkmark {
+        color: white !important;
+      }
+    }
+  }
+  
+  &.mat-mdc-checkbox-checked {
+    .mdc-checkbox__background {
+      background-color: #1a237e !important;
+      border-color: #1a237e !important;
+    }
+  }
+  
+  .mdc-label,
+  label {
+    color: #374151 !important;
+    font-size: 0.95rem !important;
+    cursor: pointer !important;
+  }
+  
+  &:hover:not(.mat-mdc-checkbox-disabled) {
+    .mdc-checkbox__background {
+      border-color: #1a237e !important;
+    }
+  }
+}
+
+// ===================================
+// Material Form Field Grid Alignment Fix
+// ===================================
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  
+  mat-form-field {
+    width: 100%;
+    
+    &.form-group {
+      display: inline-flex !important; // Override form-group flex-direction
+      width: 100%;
+    }
+  }
+  
+  .form-group:not(mat-form-field) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  
+  .full-width {
+    grid-column: 1 / -1;
+  }
+}
+
+// Single column form sections
+.form-section {
+  mat-form-field {
+    width: 100%;
+    margin-bottom: 0.5rem;
+  }
+}
+
+// Filter bar alignment
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+  
+  mat-form-field {
+    margin-bottom: 0 !important;
+    
+    &.filter-search {
+      flex: 1;
+      min-width: 220px;
+    }
+    
+    &.filter-select {
+      min-width: 180px;
+    }
+  }
+  
+  .result-count {
+    font-size: 0.82rem;
+    color: #6b7280;
+    margin-left: auto;
+    white-space: nowrap;
+  }
+}
+
+// Dialog forms
+.dialog-content {
+  mat-form-field {
+    width: 100%;
+  }
+  
+  .form-row {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    
+    mat-form-field {
+      flex: 1;
+      
+      &.half-width {
+        flex: 1;
+      }
+    }
+  }
+}
+
 html, body { height: 100%; }
 body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }

@@ -34,7 +34,7 @@
           <strong>DEO Assisted Registration</strong>
           <div style="font-size:0.78rem;opacity:.85">You are registering a walk-in visitor on behalf of the citizen.</div>
         </div>
-        <button (click)="goToLogin()" mat-stroked-button style="margin-left:auto">
+        <button (click)="goToLogin()" mat-stroked-button color="primary" style="margin-left:auto">
           <i class="pi pi-arrow-left"></i> Back to Dashboard
         </button>
       </div>
@@ -97,17 +97,19 @@
         <ng-container *ngIf="currentStep === 'id-entry'">
           <div class="section-title">Step 1: Enter Your ID Details</div>
 
-          <mat-radio-group [(ngModel)]="form.idType" class="full-width">
-            <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:#374151">ID Type *</label>
-            <mat-radio-button value="EPIC" style="margin-right:1.5rem">
-              <i class="pi pi-id-card"></i> EPIC (Voter ID)
-            </mat-radio-button>
-            <mat-radio-button value="AADHAAR">
-              <i class="pi pi-id-card"></i> Aadhaar Card
-            </mat-radio-button>
-          </mat-radio-group>
+          <div class="form-group">
+            <label class="field-label">ID Type *</label>
+            <mat-radio-group [(ngModel)]="form.idType" class="full-width">
+              <mat-radio-button value="EPIC">
+                <i class="pi pi-id-card"></i> EPIC (Voter ID)
+              </mat-radio-button>
+              <mat-radio-button value="AADHAAR">
+                <i class="pi pi-id-card"></i> Aadhaar Card
+              </mat-radio-button>
+            </mat-radio-group>
+          </div>
 
-          <mat-form-field appearance="outline" class="full-width" *ngIf="form.idType === 'EPIC'" style="margin-top:1rem">
+          <mat-form-field appearance="outline" class="full-width" *ngIf="form.idType === 'EPIC'">
             <mat-label>EPIC Number *</mat-label>
             <input
               matInput
@@ -120,7 +122,7 @@
             <mat-hint><i class="pi pi-info-circle"></i> Format: 3 uppercase letters + 7 digits (e.g., ABC1234567)</mat-hint>
           </mat-form-field>
 
-          <mat-form-field appearance="outline" class="full-width" *ngIf="form.idType === 'AADHAAR'" style="margin-top:1rem">
+          <mat-form-field appearance="outline" class="full-width" *ngIf="form.idType === 'AADHAAR'">
             <mat-label>Aadhaar Number *</mat-label>
             <input
               matInput
@@ -134,7 +136,7 @@
           </mat-form-field>
 
           <!-- OTP Field (shown after ID validation) -->
-          <mat-form-field appearance="outline" class="full-width" *ngIf="otpSent" style="margin-top:1rem">
+          <mat-form-field appearance="outline" class="full-width" *ngIf="otpSent">
             <mat-label>Enter OTP *</mat-label>
             <input
               matInput
@@ -152,7 +154,7 @@
           </mat-form-field>
 
           <!-- Optional Mobile Number Field -->
-          <mat-form-field appearance="outline" class="full-width" *ngIf="!otpSent" style="margin-top:1rem">
+          <mat-form-field appearance="outline" class="full-width" *ngIf="!otpSent">
             <mat-label>Mobile Number (Optional)</mat-label>
             <input
               matInput
@@ -180,7 +182,7 @@
           </div>
 
           <div style="display:flex;gap:1rem;margin-top:1.5rem">
-            <button mat-stroked-button (click)="goToLogin()">
+            <button mat-stroked-button color="primary" (click)="goToLogin()">
               <i class="pi pi-arrow-left"></i> Back to Login
             </button>
             <button 
@@ -206,7 +208,7 @@
           </div>
 
           <div *ngIf="otpSent" style="text-align:center;margin-top:1rem">
-            <button mat-button (click)="resendOtp()" [disabled]="loading">
+            <button mat-button color="primary" (click)="resendOtp()" [disabled]="loading">
               <i class="pi pi-refresh"></i> Resend OTP
             </button>
           </div>
@@ -305,7 +307,7 @@
               <i class="pi pi-image"></i> Capture Photo
             </button>
 
-            <button *ngIf="capturedPhotoUrl && !isCameraActive" mat-stroked-button (click)="retakePhoto()">
+            <button *ngIf="capturedPhotoUrl && !isCameraActive" mat-stroked-button color="primary" (click)="retakePhoto()">
               <i class="pi pi-refresh"></i> Retake Photo
             </button>
 
@@ -359,7 +361,7 @@
             </mat-select>
           </mat-form-field>
 
-          <mat-checkbox [(ngModel)]="form.outsideState" style="margin-bottom:1rem">
+          <mat-checkbox [(ngModel)]="form.outsideState">
             Applicant is outside Meghalaya (Location = NA)
           </mat-checkbox>
 
@@ -396,13 +398,13 @@
             </div>
           </ng-container>
 
-          <mat-form-field appearance="outline" class="full-width" style="margin-top:1rem">
+          <mat-form-field appearance="outline" class="full-width">
             <mat-label>Email (Optional)</mat-label>
             <input matInput type="email" [(ngModel)]="form.email" placeholder="Enter your email" />
           </mat-form-field>
 
           <div style="display:flex;gap:1rem;margin-top:1.5rem">
-            <button mat-stroked-button (click)="currentStep = 'photo-capture'">
+            <button mat-stroked-button color="primary" (click)="currentStep = 'photo-capture'">
               <i class="pi pi-arrow-left"></i> Back
             </button>
             <button mat-raised-button color="primary" class="flex-1" [disabled]="loading || !form.designation" (click)="submitRegistration()">

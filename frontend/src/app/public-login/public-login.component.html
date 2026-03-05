@@ -62,7 +62,7 @@
         <div class="divider">
           <span>New visitor?</span>
         </div>
-        <button mat-stroked-button class="full-width" (click)="goToRegister()">
+        <button mat-stroked-button color="primary" class="full-width" (click)="goToRegister()">
           <i class="pi pi-user-plus"></i> Register as New Visitor
         </button>
 
@@ -109,10 +109,10 @@
         </button>
 
         <div style="display:flex;gap:1rem;margin-top:0.75rem">
-          <button mat-button (click)="goBack()">
+          <button mat-button color="primary" (click)="goBack()">
             <i class="pi pi-arrow-left"></i> Change Number
           </button>
-          <button mat-button (click)="sendOtp()" [disabled]="loading">
+          <button mat-button color="primary" (click)="sendOtp()" [disabled]="loading">
             <i class="pi pi-refresh"></i> Resend OTP
           </button>
         </div>

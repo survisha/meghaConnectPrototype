@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 @Table(name = "audit_logs",
     indexes = {
         @Index(name = "idx_audit_entity", columnList = "entityType, entityId"),
-        @Index(name = "idx_audit_user",   columnList = "performedBy"),
+        @Index(name = "idx_audit_user",   columnList = "username"),
     })
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class AuditLog {
@@ -22,16 +22,16 @@ public class AuditLog {
 
     private Long entityId;
 
-    @Column(nullable = false, length = 100)
+    @Column(name = "action_type", nullable = false, length = 100)
     private String action;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "description", columnDefinition = "TEXT")
     private String details;
 
-    @Column(nullable = false, length = 100)
+    @Column(name = "username", nullable = false, length = 100)
     private String performedBy;
 
-    @Column(nullable = false)
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime timestamp;
 
     @Column(length = 50)

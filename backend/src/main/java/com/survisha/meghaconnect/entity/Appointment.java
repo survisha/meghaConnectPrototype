@@ -83,6 +83,7 @@ public class Appointment extends BaseEntity {
     private LocalDateTime snoozedUntil;
 
     // Repeat tracking
+    @Column(name = "meeting_count_last6_months")
     private Integer meetingCountLast6Months;
 
     @OneToMany(mappedBy = "appointment", cascade = CascadeType.ALL, fetch = FetchType.LAZY)

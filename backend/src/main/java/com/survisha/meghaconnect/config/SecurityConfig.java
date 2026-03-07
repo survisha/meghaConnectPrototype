@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -23,6 +24,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfigurationSource;
 
 import java.util.Collections;
 import java.util.List;
@@ -37,14 +39,19 @@ public class SecurityConfig {
     private final UserRepository userRepository;
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthFilter) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthFilter, CorsConfigurationSource corsConfigurationSource) throws Exception {
         return http
+            // Enable CORS with custom configuration
+            .cors(cors -> cors.configurationSource(corsConfigurationSource))
             // CSRF is disabled because this is a stateless REST API that uses
             // JWT Bearer tokens in the Authorization header (not session cookies).
             // CSRF attacks exploit cookie-based authentication, which is not used here.
             // The frontend SPA sends JWT in Authorization header, not via cookies.
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
+                // Allow all OPTIONS requests (CORS preflight)
+                .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                
                 // Public API endpoints (authentication, registration, visitor auth)
                 .antMatchers("/api/v1/auth/**", "/actuator/health").permitAll()
                 .antMatchers("/api/v1/appointments").permitAll()   // Public can submit

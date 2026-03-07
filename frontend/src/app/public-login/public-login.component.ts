@@ -9,6 +9,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
+import { AiChatbotComponent } from '../ai-chatbot/ai-chatbot.component';
 
 type LoginStep = 'enter-mobile' | 'enter-otp';
 
@@ -23,7 +24,8 @@ type LoginStep = 'enter-mobile' | 'enter-otp';
     MatInputModule,
     MatButtonModule,
     MatProgressSpinnerModule,
-    MatIconModule
+    MatIconModule,
+    AiChatbotComponent
   ],
   templateUrl: './public-login.component.html',
   styleUrls: ['./public-login.component.scss'],

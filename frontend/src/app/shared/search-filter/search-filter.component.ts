@@ -35,33 +35,33 @@ export interface SearchFilterValues {
       <div class="filter-row">
         <mat-form-field *ngIf="config.showPhone !== false" appearance="outline" class="filter-field">
           <mat-label>Phone Number</mat-label>
-          <input matInput [(ngModel)]="values.phoneNumber" placeholder="Search by phone" style="background:white!important">
+          <input matInput [(ngModel)]="values.phoneNumber" placeholder="Search by phone">
           <mat-icon matSuffix>phone</mat-icon>
         </mat-form-field>
         <mat-form-field *ngIf="config.showEpic" appearance="outline" class="filter-field">
           <mat-label>EPIC Number</mat-label>
-          <input matInput [(ngModel)]="values.epicNumber" placeholder="Voter ID" style="background:white!important">
+          <input matInput [(ngModel)]="values.epicNumber" placeholder="Voter ID">
           <mat-icon matSuffix>credit_card</mat-icon>
         </mat-form-field>
         <mat-form-field *ngIf="config.showName !== false" appearance="outline" class="filter-field">
           <mat-label>Name</mat-label>
-          <input matInput [(ngModel)]="values.name" placeholder="Full name" style="background:white!important">
+          <input matInput [(ngModel)]="values.name" placeholder="Full name">
           <mat-icon matSuffix>person</mat-icon>
         </mat-form-field>
         <mat-form-field *ngIf="config.showDistrict" appearance="outline" class="filter-field">
           <mat-label>District</mat-label>
-          <mat-select [(ngModel)]="values.district" style="background:white!important">
+          <mat-select [(ngModel)]="values.district">
             <mat-option value="">All Districts</mat-option>
             <mat-option *ngFor="let d of districts" [value]="d">{{ d }}</mat-option>
           </mat-select>
         </mat-form-field>
         <mat-form-field *ngIf="config.showVillage" appearance="outline" class="filter-field">
           <mat-label>Village / Booth</mat-label>
-          <input matInput [(ngModel)]="values.village" placeholder="Village" style="background:white!important">
+          <input matInput [(ngModel)]="values.village" placeholder="Village">
         </mat-form-field>
         <mat-form-field *ngIf="config.showStatus && config.statusOptions" appearance="outline" class="filter-field">
           <mat-label>Status</mat-label>
-          <mat-select [(ngModel)]="values.status" style="background:white!important">
+          <mat-select [(ngModel)]="values.status">
             <mat-option value="">All</mat-option>
             <mat-option *ngFor="let s of config.statusOptions" [value]="s.value">{{ s.label }}</mat-option>
           </mat-select>
@@ -83,6 +83,7 @@ export interface SearchFilterValues {
     .filter-field { min-width: 180px; flex: 1; }
     .filter-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
     mat-form-field { background: white !important; }
+    mat-form-field input, mat-select { background: white !important; }
   `]
 })
 export class SearchFilterComponent {

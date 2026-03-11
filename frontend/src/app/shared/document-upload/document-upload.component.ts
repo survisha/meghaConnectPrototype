@@ -115,7 +115,7 @@ export class DocumentUploadComponent {
   }
 
   uploadAll() {
-    // Placeholder - in real implementation iterate pending files
+    // TODO: iterate pending File objects and call uploadFile() for each; tracked for production implementation
     this.msg.add({ severity: 'info', summary: 'Upload', detail: `${this.documents.length} file(s) queued for upload` });
     this.uploaded.emit([...this.documents]);
   }

@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { CalendarDashboardComponent } from './calendar/calendar-dashboard.component';
 import { LoginComponent } from './auth/login/login.component';
 import { PublicLoginComponent } from './public-login/public-login.component';
 import { VisitorRegisterComponent } from './visitor-register/visitor-register.component';
@@ -60,6 +61,7 @@ export const routes: Routes = [
       { path: 'reports/audit', component: AuditTrailComponent, canActivate: [roleGuard('ADMIN')] },
       { path: 'admin/users', component: UserManagementComponent, canActivate: [roleGuard(...FULL_CONTROL)] },
       { path: 'office', component: OfficeDashboardComponent, canActivate: [roleGuard('HCM', 'ADMIN', 'SAIDUL_OSD', 'CMO_OFFICER')] },
+      { path: 'calendar', component: CalendarDashboardComponent, canActivate: [roleGuard('HCM', 'ADMIN', 'SAIDUL_OSD', 'APPROVER_JT_SECY', 'CMO_OFFICER')] },
     ]
   },
   { path: '**', redirectTo: '' }

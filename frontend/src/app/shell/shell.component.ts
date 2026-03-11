@@ -28,6 +28,8 @@ export class ShellComponent implements OnInit {
       roles: ['PUBLIC'] },
     { label: 'Calendar / Schedule', icon: 'pi-calendar', route: '/scheduling',
       roles: ['HCM','ADMIN','SAIDUL_OSD','APPROVER_JT_SECY','CMO_OFFICER'] },
+    { label: 'Calendar', icon: 'pi-calendar-plus', route: '/calendar',
+      roles: ['HCM','ADMIN','SAIDUL_OSD','APPROVER_JT_SECY','CMO_OFFICER'] },
     { label: 'Office Execution', icon: 'pi-building', route: '/office',
       roles: ['HCM','ADMIN','SAIDUL_OSD','CMO_OFFICER'] },
     {

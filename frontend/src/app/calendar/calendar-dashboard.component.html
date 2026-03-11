@@ -1,0 +1,261 @@
+<div>
+
+  <!-- ── Header ─────────────────────────────────────────────────── -->
+  <div class="cal-header">
+    <h2 class="cal-title">
+      <i class="pi pi-calendar"></i>
+      Calendar
+    </h2>
+    <div class="header-controls">
+      <!-- Navigation -->
+      <div class="nav-group">
+        <button mat-icon-button (click)="navigate(-1)" matTooltip="Previous">
+          <mat-icon>chevron_left</mat-icon>
+        </button>
+        <span class="date-label">{{ dateLabel }}</span>
+        <button mat-icon-button (click)="navigate(1)" matTooltip="Next">
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+        <button mat-stroked-button (click)="goToday()" style="margin-left:4px">Today</button>
+      </div>
+
+      <!-- View Toggle -->
+      <div class="view-toggle">
+        <button [class.active]="viewMode==='day'"   (click)="setView('day')">Day</button>
+        <button [class.active]="viewMode==='week'"  (click)="setView('week')">Week</button>
+        <button [class.active]="viewMode==='month'" (click)="setView('month')">Month</button>
+      </div>
+
+      <!-- Add Event -->
+      <button mat-raised-button color="primary" (click)="openCreateDialog()">
+        <mat-icon>add</mat-icon> Add Event
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Legend ──────────────────────────────────────────────────── -->
+  <div class="legend-bar">
+    <span *ngFor="let l of legend" class="legend-chip" [style.background]="l.color">
+      {{ l.label }}
+    </span>
+    <span class="legend-chip" style="background:#16a34a">✓ Approved</span>
+    <span class="legend-chip" style="background:#ca8a04">⏳ Pending</span>
+    <span class="legend-chip" style="background:#dc2626">⚠ Conflict</span>
+  </div>
+
+  <!-- ── Loading ──────────────────────────────────────────────────── -->
+  <div class="cal-loading" *ngIf="loading">
+    <i class="pi pi-spin pi-spinner" style="font-size:1.5rem"></i>
+    Loading schedule…
+  </div>
+
+  <!-- ═══ DAY VIEW ═══════════════════════════════════════════════ -->
+  <div class="cal-card" *ngIf="!loading && viewMode==='day'">
+    <div class="day-grid">
+      <ng-container *ngFor="let h of hours; trackBy: trackByHour">
+        <!-- time label -->
+        <div class="time-label">{{ hourLabel(h) }}</div>
+
+        <!-- slot -->
+        <div class="time-slot" (click)="openCreateDialog(currentDate)">
+          <ng-container *ngFor="let ev of getEventsForHour(h); trackBy: trackById">
+            <!-- event chip -->
+            <span
+              class="event-chip"
+              [class.conflict-chip]="ev.isConflict"
+              [class.dragging]="draggingEvent?.id === ev.id"
+              [style.background]="getChipColor(ev)"
+              (mousedown)="onDragStart(ev, $event)"
+              (click)="openDetail(ev, $event)"
+              [matTooltip]="ev.title + ' · ' + formatTime(ev.startTime) + ' – ' + formatTime(ev.endTime)"
+            >
+              <span class="event-type-badge" style="
+                background:rgba(255,255,255,.25);
+                border-radius:3px;padding:0 4px;font-size:0.7rem">
+                {{ ev.eventType }}
+              </span>
+              {{ ev.title }}
+              <span *ngIf="ev.isConflict" style="margin-left:4px">⚠</span>
+            </span>
+
+            <!-- travel buffer bar -->
+            <div *ngIf="ev.travelTimeMinutes && ev.travelTimeMinutes > 0"
+                 class="travel-bar"
+                 [style.width]="(ev.travelTimeMinutes / 60 * 100) + '%'"
+                 [matTooltip]="'+' + ev.travelTimeMinutes + ' min travel'">
+            </div>
+          </ng-container>
+
+          <span *ngIf="getEventsForHour(h).length === 0"
+                style="flex:1;display:block;min-height:56px;cursor:pointer"></span>
+        </div>
+      </ng-container>
+    </div>
+  </div>
+
+  <!-- ═══ WEEK VIEW ══════════════════════════════════════════════ -->
+  <div class="cal-card" *ngIf="!loading && viewMode==='week'">
+
+    <!-- week header row -->
+    <div class="week-header">
+      <div class="week-header-corner"></div>
+      <div *ngFor="let wd of weekDays"
+           class="week-day-header"
+           [class.today]="wd.isToday">
+        <span class="day-num">{{ wd.num }}</span>
+        {{ wd.label }}
+      </div>
+    </div>
+
+    <!-- week body -->
+    <div class="week-body">
+      <div *ngFor="let h of hours; trackBy: trackByHour" class="week-time-row">
+        <div class="week-time-label">{{ hourLabel(h) }}</div>
+        <div *ngFor="let wd of weekDays"
+             class="week-cell"
+             [class.today]="wd.isToday"
+             (click)="openCreateDialog(wd.date)">
+          <span *ngFor="let ev of getEventsForHour(h, wd.date); trackBy: trackById"
+                class="event-chip"
+                [class.conflict-chip]="ev.isConflict"
+                [class.dragging]="draggingEvent?.id === ev.id"
+                [style.background]="getChipColor(ev)"
+                (mousedown)="onDragStart(ev, $event)"
+                (click)="openDetail(ev, $event)"
+                [matTooltip]="ev.title">
+            {{ ev.eventType }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ MONTH VIEW ═════════════════════════════════════════════ -->
+  <div class="cal-card" *ngIf="!loading && viewMode==='month'">
+
+    <!-- day-of-week headers -->
+    <div class="month-header">
+      <div class="month-day-name" *ngFor="let n of ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']">{{ n }}</div>
+    </div>
+
+    <!-- cells -->
+    <div class="month-body">
+      <div *ngFor="let cell of monthCells; trackBy: trackByDate"
+           class="month-cell"
+           [class.other-month]="!cell.isCurrentMonth"
+           [class.today]="cell.isToday"
+           (click)="onMonthCellClick(cell)">
+
+        <div class="day-number">{{ cell.dayNum }}</div>
+
+        <!-- up to 3 chips -->
+        <ng-container *ngFor="let ev of cell.events.slice(0,3); trackBy: trackById">
+          <span class="event-chip"
+                [class.conflict-chip]="ev.isConflict"
+                [style.background]="getChipColor(ev)"
+                (click)="openDetail(ev, $event)"
+                [matTooltip]="ev.title + ' ' + formatTime(ev.startTime)"
+                style="font-size:0.68rem;padding:2px 6px;margin-bottom:2px;display:flex">
+            {{ ev.eventType }} {{ ev.title | slice:0:12 }}{{ ev.title.length > 12 ? '…' : '' }}
+          </span>
+        </ng-container>
+
+        <!-- +N more -->
+        <span *ngIf="cell.events.length > 3" class="more-chip">
+          +{{ cell.events.length - 3 }} more
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Drag ghost ───────────────────────────────────────────────── -->
+  <div *ngIf="draggingEvent"
+       class="drag-ghost"
+       [style.left.px]="dragGhostX"
+       [style.top.px]="dragGhostY"
+       [style.background]="getChipColor(draggingEvent)">
+    {{ draggingEvent.eventType }}: {{ draggingEvent.title }}
+  </div>
+
+  <!-- ── FAB ──────────────────────────────────────────────────────── -->
+  <div class="fab-add">
+    <button mat-raised-button color="primary"
+            style="border-radius:28px;padding:0 20px;height:48px;font-size:0.95rem"
+            (click)="openCreateDialog()"
+            matTooltip="Create new event">
+      <mat-icon>add</mat-icon> New Event
+    </button>
+  </div>
+
+  <!-- ── Event detail slide panel ─────────────────────────────────── -->
+  <div class="detail-panel" [class.open]="showDetailPanel">
+    <div class="detail-header">
+      <span>{{ selectedEvent?.title }}</span>
+      <button mat-icon-button (click)="closeDetail()"><mat-icon>close</mat-icon></button>
+    </div>
+    <div class="detail-body" *ngIf="selectedEvent">
+      <div class="event-chip" [style.background]="getChipColor(selectedEvent)"
+           style="font-size:0.9rem;padding:6px 14px;border-radius:8px">
+        {{ selectedEvent.eventType }} – {{ selectedEvent.title }}
+      </div>
+
+      <div class="detail-row">
+        <span class="dl">Start</span>
+        <span class="dv">{{ formatTime(selectedEvent.startTime) }}</span>
+      </div>
+      <div class="detail-row">
+        <span class="dl">End</span>
+        <span class="dv">{{ formatTime(selectedEvent.endTime) }}</span>
+      </div>
+      <div class="detail-row">
+        <span class="dl">Location</span>
+        <span class="dv">{{ selectedEvent.location }}</span>
+      </div>
+      <div class="detail-row" *ngIf="selectedEvent.status">
+        <span class="dl">Status</span>
+        <span class="dv" [style.color]="statusColors[selectedEvent.status]">
+          {{ selectedEvent.status | titlecase }}
+        </span>
+      </div>
+      <div class="detail-row" *ngIf="selectedEvent.travelTimeMinutes">
+        <span class="dl">Travel</span>
+        <span class="dv"><i class="pi pi-car"></i> {{ selectedEvent.travelTimeMinutes }} min</span>
+      </div>
+      <div class="detail-row" *ngIf="selectedEvent.description">
+        <span class="dl">Notes</span>
+        <span class="dv">{{ selectedEvent.description }}</span>
+      </div>
+
+      <div class="conflict-badge" *ngIf="selectedEvent.isConflict">
+        <i class="pi pi-exclamation-triangle"></i>
+        Scheduling conflict detected
+      </div>
+
+      <div class="ai-notes" *ngIf="selectedEvent.shortNotes">
+        <strong><i class="pi pi-sparkles" style="margin-right:4px"></i>AI Summary:</strong>
+        {{ selectedEvent.shortNotes }}
+      </div>
+    </div>
+    <div class="detail-footer" *ngIf="selectedEvent">
+      <button mat-stroked-button (click)="closeDetail()">Close</button>
+      <button mat-raised-button color="accent"
+              (click)="openEditDialog(selectedEvent, $event)">
+        <mat-icon>edit</mat-icon> Edit
+      </button>
+      <button mat-raised-button color="warn"
+              (click)="deleteEvent(selectedEvent, $event)">
+        <mat-icon>delete</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Create / Edit dialog ──────────────────────────────────────── -->
+  <app-calendar-event-dialog
+    *ngIf="showEventDialog"
+    [event]="editingEvent"
+    [date]="preselectedDate"
+    (saved)="onEventSaved($event)"
+    (cancelled)="onEventCancelled()">
+  </app-calendar-event-dialog>
+
+</div>

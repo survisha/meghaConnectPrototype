@@ -1814,6 +1814,68 @@ Each feature has a deterministic fallback:
 
 ---
 
+## 32. Office Execution Module
+
+### 32.1 Purpose
+
+The Office Execution Module provides CMO officers with a real-time meeting management interface following HCM decisions. It bridges the gap between approved appointments and their physical execution in the Chief Minister's chamber.
+
+### 32.2 Functional Requirements
+
+| Req ID | Requirement |
+|---|---|
+| OE-001 | Officers can schedule a post-HCM-decision meeting from any `HCM_ACCEPTED` appointment |
+| OE-002 | Meeting IDs are auto-generated in `MCM-YYYYMMDD-XXXX` format |
+| OE-003 | SMS and WhatsApp notifications are sent to the attendee on scheduling |
+| OE-004 | Today's meeting schedule is displayed in both brief (table) and detailed (card) formats |
+| OE-005 | Officers can start a meeting, triggering a countdown timer |
+| OE-006 | Timer shows MM:SS remaining; when it expires a "TIME UP" alert is shown |
+| OE-007 | Officers can end a meeting (marks status COMPLETED) at any time |
+| OE-008 | Walk-in meetings can be scheduled without a linked appointment (sentinel value −1) |
+| OE-009 | KPI dashboard shows: Today's Meetings, In Progress, Completed, Pending |
+
+### 32.3 Data Model
+
+```typescript
+interface ScheduledMeeting {
+  id:              number;
+  meetingId:       string;          // MCM-YYYYMMDD-XXXX
+  appointmentId:   number;          // -1 for walk-in
+  title:           string;
+  dateTime:        string;          // ISO-8601
+  durationMinutes: number;
+  location:        string;          // SHILLONG | TURA | DELHI | OTHERS
+  status:          'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  attendeeName:    string;
+  phoneNumber:     string;
+  agendaBrief:     string;
+  eventType:       EventType;       // A1–A4, B1–B2
+}
+```
+
+### 32.4 Timer Architecture
+
+- Each meeting that transitions to `IN_PROGRESS` spawns an `interval(1000)` RxJS subscription.
+- The `activeTimers` Map (`Map<number, ActiveTimer>`) tracks remaining seconds and expiry state.
+- Timers are fully cleaned up in `ngOnDestroy` to prevent memory leaks.
+- `getTimerPercent()` drives the progress bar: `(elapsed / total) * 100`.
+
+### 32.5 Component Structure
+
+| File | Purpose |
+|---|---|
+| `office/office-dashboard.component.ts` | Logic: scheduling, timer, notification dispatch |
+| `office/office-dashboard.component.html` | Template: KPI cards, brief/detailed toggle, dialogs |
+| `office/office-dashboard.component.scss` | Styles: dark timer section, KPI cards, Material overrides |
+
+### 32.6 Route & Access Control
+
+| Path | Guard Roles |
+|---|---|
+| `/office` | `HCM`, `ADMIN`, `SAIDUL_OSD`, `CMO_OFFICER` |
+
+---
+
 **Document Control**
 
 | Version | Date | Author | Changes |
@@ -1827,6 +1889,7 @@ Each feature has a deterministic fallback:
 | 1.5 | Mar 2026 | Agent Narsingh | Added frontend service layer: `package.json` (Angular 19 + Material + PrimeNG dependencies), `citizen.service.ts` (citizen search/CRUD via `/persons` API), `notification.service.ts` (SMS/WhatsApp/meeting-confirmation channels), `calendar.service.ts` (schedule events CRUD, conflict detection, event colour mapping) |
 | 1.6 | Mar 2026 | Agent Narsingh | Added 5 reusable shared Angular standalone components: `SearchFilterComponent` (multi-field filter bar with phone/EPIC/name/district/village/status), `DocumentUploadComponent` (drag-and-drop file upload with size validation and PrimeNG toast), `MeetingCardComponent` (meeting summary card with status tag and action buttons), `StatusBadgeComponent` (pill badge for all workflow statuses), `TimelineViewComponent` (audit/history timeline). All inputs comply with white-background mandate. |
 | 1.7 | Mar 2026 | Agent Narsingh | Implemented DEO Dashboard module (`deo/deo-dashboard.component`): citizen search via phone/EPIC/name/district (dispatching to dedicated `PersonService` methods with `forkJoin` deduplication), citizen profile card with action panel, walk-in appointment dialog (Angular Material form + `CreateAppointmentRequest`), group appointment dialog (primary visitor + up to 5 searchable associates linked by ID). All inputs white-background compliant. `MatCheckboxModule` included. |
+| 1.8 | Mar 2026 | Agent Narsingh | Implemented Office Execution Module (Section 32): `OfficeDashboardComponent` at `/office` route. Features: post-HCM meeting scheduler, `MCM-YYYYMMDD-XXXX` meeting ID generation, SMS/WhatsApp notifications via `NotificationService`, brief (p-table) and detailed (MeetingCard grid) schedule views, RxJS `interval(1000)` countdown timer with MM:SS display + progress bar + TIME UP alert, KPI cards, walk-in support (sentinel −1), full `ngOnDestroy` cleanup. Role-guarded for HCM/ADMIN/SAIDUL_OSD/CMO_OFFICER. |
 
 > **Workflow Note:** From version 1.1 onwards, all development tasks are automatically assigned to `#agent-Narsingh` (see `.github/copilot-instructions.md` and `docs/task-assignment-prompt.md`). The agent updates this SRS document after every task.
 

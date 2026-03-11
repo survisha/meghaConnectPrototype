@@ -80,6 +80,12 @@ export class ShellComponent implements OnInit {
     },
     { label: 'User Management', icon: 'pi-shield', route: '/admin/users',
       roles: ['HCM','ADMIN','SAIDUL_OSD'] },
+    { label: 'System Config', icon: 'pi-cog', route: '/admin/config',
+      roles: ['HCM','ADMIN','SAIDUL_OSD'] },
+    { label: 'HCM Dashboard', icon: 'pi-chart-bar', route: '/hcm',
+      roles: ['HCM','ADMIN','SAIDUL_OSD'] },
+    { label: 'DEO Dashboard', icon: 'pi-desktop', route: '/deo',
+      roles: ['DATA_ENTRY_OPERATOR','ADMIN','SAIDUL_OSD'] },
   ];
 
   constructor(public auth: AuthService, private router: Router) {}

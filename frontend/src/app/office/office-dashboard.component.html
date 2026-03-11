@@ -1,0 +1,423 @@
+<p-toast position="top-right"></p-toast>
+
+<div class="office-dashboard">
+
+  <!-- ── Page Header ─────────────────────────────────────────── -->
+  <div class="page-header">
+    <div class="page-header__left">
+      <div class="page-header__icon">
+        <mat-icon>domain</mat-icon>
+      </div>
+      <div>
+        <h1 class="page-header__title">Office Execution</h1>
+        <p class="page-header__subtitle">Chief Minister's Office – Post-HCM Decision Meeting Management</p>
+      </div>
+    </div>
+    <div class="page-header__actions">
+      <button mat-stroked-button (click)="loadAcceptedAppointments()">
+        <mat-icon>refresh</mat-icon> Refresh
+      </button>
+      <button mat-raised-button color="primary" (click)="openScheduleDialog()">
+        <mat-icon>add_circle</mat-icon> Schedule Meeting
+      </button>
+    </div>
+  </div>
+
+  <!-- ── KPI Cards ───────────────────────────────────────────── -->
+  <div class="kpi-row">
+    <div class="kpi-card kpi-card--blue">
+      <div class="kpi-card__icon"><mat-icon>calendar_today</mat-icon></div>
+      <div class="kpi-card__body">
+        <div class="kpi-card__value">{{ todaysMeetings.length }}</div>
+        <div class="kpi-card__label">Today's Meetings</div>
+      </div>
+    </div>
+    <div class="kpi-card kpi-card--green">
+      <div class="kpi-card__icon"><mat-icon>play_circle</mat-icon></div>
+      <div class="kpi-card__body">
+        <div class="kpi-card__value">{{ inProgressMeetings.length }}</div>
+        <div class="kpi-card__label">In Progress</div>
+      </div>
+    </div>
+    <div class="kpi-card kpi-card--teal">
+      <div class="kpi-card__icon"><mat-icon>check_circle</mat-icon></div>
+      <div class="kpi-card__body">
+        <div class="kpi-card__value">{{ completedCount }}</div>
+        <div class="kpi-card__label">Completed</div>
+      </div>
+    </div>
+    <div class="kpi-card kpi-card--amber">
+      <div class="kpi-card__icon"><mat-icon>hourglass_empty</mat-icon></div>
+      <div class="kpi-card__body">
+        <div class="kpi-card__value">{{ pendingCount }}</div>
+        <div class="kpi-card__label">Pending</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Active Meeting Timers ──────────────────────────────── -->
+  <div class="timer-section" *ngIf="hasActiveMeetings">
+    <div class="timer-section__header">
+      <mat-icon class="timer-section__icon">timer</mat-icon>
+      <h2 class="timer-section__title">Active Meetings</h2>
+    </div>
+    <div class="timer-cards">
+      <div *ngFor="let m of inProgressMeetings" class="timer-card"
+           [class.timer-card--expired]="isTimerExpired(m.id)">
+        <div class="timer-card__info">
+          <span class="timer-card__id">{{ m.meetingId }}</span>
+          <span class="timer-card__title">{{ m.title }}</span>
+          <span class="timer-card__attendee">
+            <mat-icon style="font-size:14px;height:14px;width:14px;vertical-align:middle">person</mat-icon>
+            {{ m.attendeeName }}
+          </span>
+          <span class="timer-card__location">
+            <mat-icon style="font-size:14px;height:14px;width:14px;vertical-align:middle">location_on</mat-icon>
+            {{ m.location }}
+          </span>
+        </div>
+
+        <div class="timer-card__center">
+          <div class="timer-display" *ngIf="!isTimerExpired(m.id)">
+            <div class="timer-display__value">{{ getTimerDisplay(m.id) }}</div>
+            <div class="timer-display__label">remaining</div>
+          </div>
+          <div class="timer-expired-badge" *ngIf="isTimerExpired(m.id)">
+            <mat-icon>alarm_off</mat-icon>
+            TIME UP
+          </div>
+          <div class="timer-progress" *ngIf="!isTimerExpired(m.id)">
+            <div class="timer-progress__bar"
+                 [style.width.%]="getTimerPercent(m.id, m.durationMinutes)"></div>
+          </div>
+        </div>
+
+        <div class="timer-card__actions">
+          <button mat-raised-button color="warn" (click)="endMeeting(m)">
+            <mat-icon>stop</mat-icon> End
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Schedule View Toggle ───────────────────────────────── -->
+  <div class="schedule-panel">
+    <div class="schedule-panel__toolbar">
+      <div class="toggle-group">
+        <button class="toggle-btn" [class.toggle-btn--active]="scheduleView === 'brief'"
+                (click)="scheduleView = 'brief'">
+          <mat-icon>format_list_bulleted</mat-icon> Brief Schedule
+        </button>
+        <button class="toggle-btn" [class.toggle-btn--active]="scheduleView === 'detailed'"
+                (click)="scheduleView = 'detailed'">
+          <mat-icon>view_agenda</mat-icon> Detailed Schedule
+        </button>
+      </div>
+      <span class="schedule-panel__date">
+        <mat-icon style="font-size:16px;height:16px;width:16px;vertical-align:middle">today</mat-icon>
+        {{ today | date:'EEEE, dd MMMM yyyy' }}
+      </span>
+    </div>
+
+    <!-- ── Brief View ─────────────────────────────────────────── -->
+    <div *ngIf="scheduleView === 'brief'" class="brief-view">
+      <p-table [value]="todaysMeetings" [paginator]="todaysMeetings.length > 10"
+               [rows]="10" [loading]="loading"
+               styleClass="p-datatable-sm p-datatable-striped">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Meeting ID</th>
+            <th>Time</th>
+            <th>Duration</th>
+            <th>Attendee</th>
+            <th>Location</th>
+            <th>Event</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-m>
+          <tr>
+            <td><code class="meeting-id-code">{{ m.meetingId }}</code></td>
+            <td>{{ formatMeetingTime(m.dateTime) }}</td>
+            <td>{{ m.durationMinutes }} min</td>
+            <td>{{ m.attendeeName }}</td>
+            <td>
+              <span class="loc-badge">{{ m.location }}</span>
+            </td>
+            <td>
+              <span class="event-type-chip">{{ m.eventType }}</span>
+            </td>
+            <td>
+              <p-tag [value]="m.status" [severity]="getStatusSeverity(m.status)"
+                     styleClass="text-xs"></p-tag>
+            </td>
+            <td>
+              <div class="table-actions">
+                <button mat-icon-button title="Details" (click)="viewMeetingDetails(m)">
+                  <mat-icon>info</mat-icon>
+                </button>
+                <button mat-icon-button title="Start" *ngIf="m.status === 'SCHEDULED'"
+                        (click)="startMeeting(m)" style="color:#16a34a">
+                  <mat-icon>play_arrow</mat-icon>
+                </button>
+                <button mat-icon-button title="End" *ngIf="m.status === 'IN_PROGRESS'"
+                        (click)="endMeeting(m)" style="color:#dc2626">
+                  <mat-icon>stop</mat-icon>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="8" class="empty-message">
+              <mat-icon>event_busy</mat-icon>
+              No meetings scheduled for today.
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+
+    <!-- ── Detailed View ──────────────────────────────────────── -->
+    <div *ngIf="scheduleView === 'detailed'" class="detailed-view">
+      <div class="meeting-cards-grid" *ngIf="todaysMeetings.length; else noMeetings">
+        <div *ngFor="let m of todaysMeetings" class="meeting-card-wrapper">
+          <app-meeting-card
+            [meeting]="toMeetingCardData(m)"
+            [showActions]="true"
+            (viewDetails)="viewMeetingDetails($event)"
+            (startMeeting)="startMeeting($event)"
+            (endMeeting)="endMeeting($event)">
+          </app-meeting-card>
+
+          <!-- Inline timer badge on card when IN_PROGRESS -->
+          <div *ngIf="m.status === 'IN_PROGRESS'" class="card-timer-overlay"
+               [class.card-timer-overlay--expired]="isTimerExpired(m.id)">
+            <mat-icon>{{ isTimerExpired(m.id) ? 'alarm_off' : 'timer' }}</mat-icon>
+            <span *ngIf="!isTimerExpired(m.id)">{{ getTimerDisplay(m.id) }}</span>
+            <span *ngIf="isTimerExpired(m.id)">TIME UP</span>
+          </div>
+        </div>
+      </div>
+      <ng-template #noMeetings>
+        <div class="empty-state">
+          <mat-icon>event_busy</mat-icon>
+          <p>No meetings scheduled for today.</p>
+          <button mat-raised-button color="primary" (click)="openScheduleDialog()">
+            <mat-icon>add</mat-icon> Schedule First Meeting
+          </button>
+        </div>
+      </ng-template>
+    </div>
+  </div>
+
+</div>
+
+<!-- ─────────────────────────────────────────────────────────────── -->
+<!--  Schedule Meeting Dialog                                        -->
+<!-- ─────────────────────────────────────────────────────────────── -->
+<p-dialog header="Schedule New Meeting" [(visible)]="showScheduleDialog"
+          [modal]="true" [style]="{width: '580px'}" [closable]="true"
+          [draggable]="false" [resizable]="false" styleClass="office-dialog">
+
+  <form [formGroup]="scheduleForm" class="schedule-form" (ngSubmit)="scheduleMeeting()">
+
+    <!-- Appointment select -->
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Select Accepted Appointment</mat-label>
+      <mat-select formControlName="appointmentId">
+        <mat-option *ngFor="let apt of acceptedAppointments" [value]="apt.id">
+          {{ apt.applicant.fullName }} – {{ apt.agendaType }}
+        </mat-option>
+        <mat-option [value]="-1">Other / Walk-in</mat-option>
+      </mat-select>
+      <mat-hint>Choose an HCM-accepted appointment to formalise.</mat-hint>
+      <mat-error *ngIf="scheduleForm.get('appointmentId')?.hasError('required')">
+        Appointment is required.
+      </mat-error>
+    </mat-form-field>
+
+    <div class="form-row">
+      <!-- Date -->
+      <mat-form-field appearance="outline" class="half-width">
+        <mat-label>Meeting Date</mat-label>
+        <input matInput type="date" formControlName="date" />
+        <mat-icon matSuffix>calendar_today</mat-icon>
+        <mat-error *ngIf="scheduleForm.get('date')?.hasError('required')">Date is required.</mat-error>
+      </mat-form-field>
+
+      <!-- Time -->
+      <mat-form-field appearance="outline" class="half-width">
+        <mat-label>Start Time</mat-label>
+        <input matInput type="time" formControlName="time" />
+        <mat-icon matSuffix>schedule</mat-icon>
+        <mat-error *ngIf="scheduleForm.get('time')?.hasError('required')">Time is required.</mat-error>
+      </mat-form-field>
+    </div>
+
+    <div class="form-row">
+      <!-- Duration -->
+      <mat-form-field appearance="outline" class="half-width">
+        <mat-label>Duration</mat-label>
+        <mat-select formControlName="durationMinutes">
+          <mat-option *ngFor="let opt of durationOptions" [value]="opt.value">
+            {{ opt.label }}
+          </mat-option>
+        </mat-select>
+        <mat-error *ngIf="scheduleForm.get('durationMinutes')?.hasError('required')">
+          Duration is required.
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Location -->
+      <mat-form-field appearance="outline" class="half-width">
+        <mat-label>Location</mat-label>
+        <mat-select formControlName="location">
+          <mat-option *ngFor="let loc of locationOptions" [value]="loc.value">
+            {{ loc.label }}
+          </mat-option>
+        </mat-select>
+        <mat-error *ngIf="scheduleForm.get('location')?.hasError('required')">
+          Location is required.
+        </mat-error>
+      </mat-form-field>
+    </div>
+
+    <!-- Notes / Agenda brief -->
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Agenda Notes</mat-label>
+      <textarea matInput formControlName="notes" rows="3"
+                placeholder="Brief agenda notes for the meeting…"></textarea>
+      <mat-hint>Optional – supplements the appointment brief.</mat-hint>
+    </mat-form-field>
+
+    <!-- Meeting ID preview -->
+    <div class="meeting-id-preview">
+      <mat-icon>badge</mat-icon>
+      Auto-generated Meeting ID: <strong>{{ generateMeetingId() }}</strong>
+    </div>
+
+    <!-- Notification note -->
+    <div class="notification-note">
+      <mat-icon>notifications_active</mat-icon>
+      SMS &amp; WhatsApp notification will be sent automatically upon scheduling.
+    </div>
+
+  </form>
+
+  <ng-template pTemplate="footer">
+    <button mat-stroked-button (click)="showScheduleDialog = false">
+      <mat-icon>close</mat-icon> Cancel
+    </button>
+    <button mat-raised-button color="primary" (click)="scheduleMeeting()"
+            [disabled]="submitting">
+      <mat-icon>{{ submitting ? 'hourglass_empty' : 'event_available' }}</mat-icon>
+      {{ submitting ? 'Scheduling…' : 'Schedule & Notify' }}
+    </button>
+  </ng-template>
+</p-dialog>
+
+<!-- ─────────────────────────────────────────────────────────────── -->
+<!--  Meeting Details Dialog                                         -->
+<!-- ─────────────────────────────────────────────────────────────── -->
+<p-dialog header="Meeting Details" [(visible)]="showDetailsDialog"
+          [modal]="true" [style]="{width: '520px'}" [closable]="true"
+          [draggable]="false" [resizable]="false" styleClass="office-dialog"
+          *ngIf="selectedMeeting">
+
+  <div class="details-content">
+    <div class="details-id-row">
+      <code class="details-id">{{ selectedMeeting!.meetingId }}</code>
+      <p-tag [value]="selectedMeeting!.status"
+             [severity]="getStatusSeverity(selectedMeeting!.status)"></p-tag>
+    </div>
+
+    <h3 class="details-title">{{ selectedMeeting!.title }}</h3>
+
+    <div class="details-grid">
+      <div class="detail-item">
+        <mat-icon>person</mat-icon>
+        <div>
+          <div class="detail-label">Attendee</div>
+          <div class="detail-value">{{ selectedMeeting!.attendeeName }}</div>
+        </div>
+      </div>
+      <div class="detail-item">
+        <mat-icon>phone</mat-icon>
+        <div>
+          <div class="detail-label">Phone</div>
+          <div class="detail-value">{{ selectedMeeting!.phoneNumber || '—' }}</div>
+        </div>
+      </div>
+      <div class="detail-item">
+        <mat-icon>event</mat-icon>
+        <div>
+          <div class="detail-label">Date &amp; Time</div>
+          <div class="detail-value">{{ selectedMeeting!.dateTime | date:'dd MMM yyyy, h:mm a' }}</div>
+        </div>
+      </div>
+      <div class="detail-item">
+        <mat-icon>schedule</mat-icon>
+        <div>
+          <div class="detail-label">Duration</div>
+          <div class="detail-value">{{ selectedMeeting!.durationMinutes }} minutes</div>
+        </div>
+      </div>
+      <div class="detail-item">
+        <mat-icon>location_on</mat-icon>
+        <div>
+          <div class="detail-label">Location</div>
+          <div class="detail-value">{{ selectedMeeting!.location }}</div>
+        </div>
+      </div>
+      <div class="detail-item">
+        <mat-icon>label</mat-icon>
+        <div>
+          <div class="detail-label">Event Type</div>
+          <div class="detail-value">{{ selectedMeeting!.eventType }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="details-agenda" *ngIf="selectedMeeting!.agendaBrief">
+      <div class="detail-label">Agenda Brief</div>
+      <p class="details-agenda__text">{{ selectedMeeting!.agendaBrief }}</p>
+    </div>
+
+    <!-- Timer within details dialog when IN_PROGRESS -->
+    <div class="details-timer" *ngIf="selectedMeeting!.status === 'IN_PROGRESS'">
+      <div class="details-timer__display"
+           [class.details-timer__display--expired]="isTimerExpired(selectedMeeting!.id)">
+        <mat-icon>{{ isTimerExpired(selectedMeeting!.id) ? 'alarm_off' : 'timer' }}</mat-icon>
+        <span *ngIf="!isTimerExpired(selectedMeeting!.id)">
+          {{ getTimerDisplay(selectedMeeting!.id) }} remaining
+        </span>
+        <span *ngIf="isTimerExpired(selectedMeeting!.id)">TIME UP</span>
+      </div>
+    </div>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <button mat-stroked-button (click)="showDetailsDialog = false">
+      Close
+    </button>
+    <button mat-raised-button color="primary"
+            *ngIf="selectedMeeting!.status === 'SCHEDULED'"
+            (click)="startMeeting(selectedMeeting!); showDetailsDialog = false">
+      <mat-icon>play_arrow</mat-icon> Start Meeting
+    </button>
+    <button mat-raised-button color="warn"
+            *ngIf="selectedMeeting!.status === 'IN_PROGRESS'"
+            (click)="endMeeting(selectedMeeting!); showDetailsDialog = false">
+      <mat-icon>stop</mat-icon> End Meeting
+    </button>
+    <button mat-stroked-button
+            *ngIf="selectedMeeting!.status === 'SCHEDULED'"
+            (click)="cancelMeeting(selectedMeeting!)">
+      <mat-icon>cancel</mat-icon> Cancel
+    </button>
+  </ng-template>
+</p-dialog>

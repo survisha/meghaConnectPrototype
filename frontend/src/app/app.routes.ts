@@ -25,6 +25,7 @@ import { authGuard } from './guards/auth.guard';
 import { roleGuard } from './guards/role.guard';
 
 import { UserRole } from './models';
+import { OfficeDashboardComponent } from './office/office-dashboard.component';
 
 const FULL_CONTROL: UserRole[] = ['HCM', 'ADMIN', 'SAIDUL_OSD'];
 const STAFF_ROLES: UserRole[] = ['HCM', 'ADMIN', 'SAIDUL_OSD', 'APPROVER_JT_SECY', 'CMO_OFFICER', 'DATA_ENTRY_OPERATOR'];
@@ -58,6 +59,7 @@ export const routes: Routes = [
       { path: 'reports/followups', component: PendingFollowupsComponent, canActivate: [roleGuard(...REPORTS_ROLES)] },
       { path: 'reports/audit', component: AuditTrailComponent, canActivate: [roleGuard('ADMIN')] },
       { path: 'admin/users', component: UserManagementComponent, canActivate: [roleGuard(...FULL_CONTROL)] },
+      { path: 'office', component: OfficeDashboardComponent, canActivate: [roleGuard('HCM', 'ADMIN', 'SAIDUL_OSD', 'CMO_OFFICER')] },
     ]
   },
   { path: '**', redirectTo: '' }

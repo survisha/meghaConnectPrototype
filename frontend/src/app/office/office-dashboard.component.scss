@@ -1,0 +1,675 @@
+// ─── Variables ─────────────────────────────────────────────────────────────
+$primary:    #1a237e;
+$primary-lt: #e8eaf6;
+$green:      #16a34a;
+$teal:       #0d9488;
+$amber:      #d97706;
+$red:        #dc2626;
+$grey-50:    #f8fafc;
+$grey-100:   #f1f5f9;
+$grey-200:   #e2e8f0;
+$grey-500:   #64748b;
+$grey-700:   #374151;
+$grey-900:   #111827;
+$radius:     10px;
+$shadow-sm:  0 1px 4px rgba(0, 0, 0, .06);
+$shadow-md:  0 4px 12px rgba(0, 0, 0, .10);
+
+// ─── Layout ─────────────────────────────────────────────────────────────────
+.office-dashboard {
+  padding: 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  font-family: 'Roboto', sans-serif;
+
+  // Global white background for ALL form inputs (mandate)
+  input, textarea, select,
+  .mat-mdc-input-element,
+  .mat-mdc-select-value,
+  .mat-mdc-form-field-input-control {
+    background: white !important;
+    background-color: white !important;
+    color: #1f2937 !important;
+  }
+
+  .mat-mdc-form-field .mat-mdc-text-field-wrapper {
+    background: white !important;
+  }
+}
+
+// ─── Page Header ────────────────────────────────────────────────────────────
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+
+  &__left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  &__icon {
+    width: 52px;
+    height: 52px;
+    background: $primary;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: $shadow-md;
+
+    mat-icon {
+      color: white;
+      font-size: 26px;
+      height: 26px;
+      width: 26px;
+    }
+  }
+
+  &__title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: $primary;
+    margin: 0;
+  }
+
+  &__subtitle {
+    font-size: 0.8rem;
+    color: $grey-500;
+    margin: 0;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+}
+
+// ─── KPI Cards ──────────────────────────────────────────────────────────────
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+
+  @media (max-width: 900px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.kpi-card {
+  background: white;
+  border-radius: $radius;
+  padding: 1.25rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: $shadow-sm;
+  border-left: 4px solid transparent;
+  transition: box-shadow .2s;
+
+  &:hover { box-shadow: $shadow-md; }
+
+  &__icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    mat-icon { font-size: 22px; height: 22px; width: 22px; }
+  }
+
+  &__value {
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  &__label {
+    font-size: 0.75rem;
+    color: $grey-500;
+    margin-top: 2px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+
+  // Colour variants
+  &--blue  { border-left-color: $primary; .kpi-card__icon { background: $primary-lt; mat-icon { color: $primary; } } .kpi-card__value { color: $primary; } }
+  &--green { border-left-color: $green;   .kpi-card__icon { background: #dcfce7; mat-icon { color: $green; } }   .kpi-card__value { color: $green; } }
+  &--teal  { border-left-color: $teal;    .kpi-card__icon { background: #ccfbf1; mat-icon { color: $teal; } }    .kpi-card__value { color: $teal; } }
+  &--amber { border-left-color: $amber;   .kpi-card__icon { background: #fef3c7; mat-icon { color: $amber; } }   .kpi-card__value { color: $amber; } }
+}
+
+// ─── Timer Section ──────────────────────────────────────────────────────────
+.timer-section {
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+  border-radius: $radius;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  box-shadow: $shadow-md;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+
+    mat-icon { color: #fbbf24; }
+  }
+
+  &__icon { color: #fbbf24 !important; }
+
+  &__title {
+    color: white;
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+  }
+}
+
+.timer-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.timer-card {
+  background: rgba(255, 255, 255, .07);
+  border: 1px solid rgba(255, 255, 255, .15);
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex: 1;
+  min-width: 300px;
+  transition: background .2s;
+
+  &:hover { background: rgba(255, 255, 255, .12); }
+
+  &--expired {
+    background: rgba(220, 38, 38, .15);
+    border-color: rgba(220, 38, 38, .4);
+  }
+
+  &__info {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex: 1;
+  }
+
+  &__id {
+    font-family: monospace;
+    font-size: 0.72rem;
+    color: #94a3b8;
+    background: rgba(255,255,255,.08);
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: inline-block;
+    width: fit-content;
+  }
+
+  &__title {
+    color: white;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  &__attendee,
+  &__location {
+    color: #cbd5e1;
+    font-size: 0.78rem;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  &__center {
+    text-align: center;
+    min-width: 120px;
+  }
+
+  &__actions { flex-shrink: 0; }
+}
+
+.timer-display {
+  &__value {
+    font-size: 2.4rem;
+    font-weight: 800;
+    color: #fbbf24;
+    font-family: 'Courier New', monospace;
+    letter-spacing: .05em;
+    line-height: 1;
+  }
+
+  &__label {
+    font-size: 0.72rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-top: 2px;
+  }
+}
+
+.timer-expired-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: $red;
+  color: white;
+  font-weight: 800;
+  font-size: 1.1rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  animation: pulse 1s ease-in-out infinite;
+
+  mat-icon { font-size: 20px; height: 20px; width: 20px; }
+}
+
+@keyframes pulse {
+  0%   { opacity: 1; }
+  50%  { opacity: .7; }
+  100% { opacity: 1; }
+}
+
+.timer-progress {
+  height: 4px;
+  background: rgba(255,255,255,.15);
+  border-radius: 2px;
+  margin-top: 8px;
+  overflow: hidden;
+
+  &__bar {
+    height: 100%;
+    background: linear-gradient(90deg, #fbbf24, #f97316);
+    border-radius: 2px;
+    transition: width .9s linear;
+  }
+}
+
+// ─── Schedule Panel ─────────────────────────────────────────────────────────
+.schedule-panel {
+  background: white;
+  border-radius: $radius;
+  box-shadow: $shadow-sm;
+  overflow: hidden;
+
+  &__toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid $grey-200;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  &__date {
+    font-size: 0.82rem;
+    color: $grey-500;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+}
+
+// ─── Toggle Group ───────────────────────────────────────────────────────────
+.toggle-group {
+  display: flex;
+  background: $grey-100;
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: $grey-700;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+
+  mat-icon { font-size: 16px; height: 16px; width: 16px; }
+
+  &--active {
+    background: white;
+    color: $primary;
+    box-shadow: $shadow-sm;
+    font-weight: 600;
+  }
+
+  &:hover:not(&--active) { background: $grey-200; }
+}
+
+// ─── Brief View Table ───────────────────────────────────────────────────────
+.brief-view {
+  padding: 1rem 1.25rem;
+
+  :host ::ng-deep .p-datatable {
+    .p-datatable-thead > tr > th {
+      background: $grey-50 !important;
+      color: $grey-700 !important;
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      border-bottom: 2px solid $grey-200;
+      padding: 0.6rem 0.75rem;
+    }
+
+    .p-datatable-tbody > tr > td {
+      font-size: 0.83rem;
+      color: $grey-900;
+      padding: 0.6rem 0.75rem;
+      vertical-align: middle;
+      background: white !important;
+    }
+
+    .p-datatable-tbody > tr:hover > td {
+      background: $grey-50 !important;
+    }
+  }
+}
+
+.meeting-id-code {
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  background: $primary-lt;
+  color: $primary;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.loc-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #f0fdf4;
+  color: $green;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.event-type-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: $primary-lt;
+  color: $primary;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.table-actions {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+}
+
+.empty-message {
+  text-align: center;
+  color: $grey-500;
+  padding: 2rem !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+
+  mat-icon { font-size: 36px; height: 36px; width: 36px; color: $grey-200; }
+}
+
+// ─── Detailed View ──────────────────────────────────────────────────────────
+.detailed-view {
+  padding: 1rem 1.25rem;
+}
+
+.meeting-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1rem;
+}
+
+.meeting-card-wrapper {
+  position: relative;
+}
+
+.card-timer-overlay {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #16a34a;
+  color: white;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  pointer-events: none;
+  font-family: 'Courier New', monospace;
+
+  mat-icon { font-size: 14px; height: 14px; width: 14px; }
+
+  &--expired {
+    background: $red;
+    animation: pulse 1s ease-in-out infinite;
+  }
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: $grey-500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+
+  mat-icon { font-size: 48px; height: 48px; width: 48px; color: $grey-200; }
+  p { margin: 0; font-size: 0.9rem; }
+}
+
+// ─── Schedule Form ──────────────────────────────────────────────────────────
+.schedule-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0.5rem 0;
+}
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+
+  @media (max-width: 480px) { flex-direction: column; }
+}
+
+.full-width  { width: 100%; }
+.half-width  { flex: 1; }
+
+// Force white background on all form fields inside schedule form
+.schedule-form {
+  .mat-mdc-text-field-wrapper,
+  .mat-mdc-form-field-flex,
+  input.mat-mdc-input-element,
+  textarea.mat-mdc-input-element {
+    background: white !important;
+    background-color: white !important;
+  }
+}
+
+.meeting-id-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: $primary-lt;
+  color: $primary;
+  border-radius: 6px;
+  padding: 0.6rem 0.9rem;
+  font-size: 0.83rem;
+
+  mat-icon { font-size: 18px; height: 18px; width: 18px; }
+  strong { font-family: monospace; font-size: 0.9rem; }
+}
+
+.notification-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f0fdf4;
+  color: $green;
+  border-radius: 6px;
+  padding: 0.6rem 0.9rem;
+  font-size: 0.8rem;
+
+  mat-icon { font-size: 18px; height: 18px; width: 18px; }
+}
+
+// ─── Details Dialog ─────────────────────────────────────────────────────────
+.details-content {
+  padding: 0.5rem 0;
+}
+
+.details-id-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.details-id {
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  background: $primary-lt;
+  color: $primary;
+  padding: 3px 8px;
+  border-radius: 5px;
+}
+
+.details-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: $primary;
+  margin: 0 0 1rem;
+}
+
+.details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+
+  @media (max-width: 440px) { grid-template-columns: 1fr; }
+}
+
+.detail-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+
+  mat-icon { color: $grey-500; font-size: 18px; height: 18px; width: 18px; margin-top: 1px; }
+}
+
+.detail-label {
+  font-size: 0.7rem;
+  color: $grey-500;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  font-weight: 600;
+}
+
+.detail-value {
+  font-size: 0.85rem;
+  color: $grey-900;
+  margin-top: 1px;
+}
+
+.details-agenda {
+  background: $grey-50;
+  border-radius: 6px;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+
+  .detail-label { margin-bottom: 4px; }
+
+  &__text {
+    margin: 0;
+    font-size: 0.85rem;
+    color: $grey-700;
+    line-height: 1.5;
+  }
+}
+
+.details-timer {
+  margin-top: 0.5rem;
+
+  &__display {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #16a34a;
+    color: white;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    font-weight: 700;
+    font-size: 1rem;
+    font-family: 'Courier New', monospace;
+
+    mat-icon { font-size: 20px; height: 20px; width: 20px; }
+
+    &--expired {
+      background: $red;
+      animation: pulse 1s ease-in-out infinite;
+    }
+  }
+}
+
+// ─── PrimeNG Dialog Overrides ───────────────────────────────────────────────
+:host ::ng-deep .office-dialog {
+  .p-dialog-header {
+    background: $primary !important;
+    color: white !important;
+    border-radius: $radius $radius 0 0;
+    padding: 1rem 1.25rem;
+
+    .p-dialog-header-icons button { color: white !important; }
+    .p-dialog-title { font-weight: 700; }
+  }
+
+  .p-dialog-content {
+    background: white !important;
+    padding: 1.25rem;
+  }
+
+  .p-dialog-footer {
+    background: $grey-50 !important;
+    border-top: 1px solid $grey-200;
+    padding: 0.75rem 1.25rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    border-radius: 0 0 $radius $radius;
+  }
+}

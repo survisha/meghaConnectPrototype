@@ -1,0 +1,273 @@
+<p-toast></p-toast>
+
+<div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.75rem">
+    <h2 class="page-title" style="margin:0;display:flex;align-items:center;gap:0.5rem">
+      <i class="pi pi-desktop"></i> DEO Dashboard
+    </h2>
+    <a mat-stroked-button routerLink="/deo/register-visitor">
+      <mat-icon>person_add</mat-icon> Register New Visitor
+    </a>
+  </div>
+
+  <!-- KPI Cards -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:1.5rem">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:#1a237e"><i class="pi pi-sign-in" style="font-size:1.3rem"></i></div>
+      <div>
+        <div style="font-size:1.8rem;font-weight:700;color:#1a237e">{{ stats.todayWalkin }}</div>
+        <div style="font-size:0.78rem;color:#6b7280">Walk-ins Today</div>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:#2e7d32"><i class="pi pi-users" style="font-size:1.3rem"></i></div>
+      <div>
+        <div style="font-size:1.8rem;font-weight:700;color:#2e7d32">{{ stats.todayGroup }}</div>
+        <div style="font-size:0.78rem;color:#6b7280">Group Appointments</div>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:#f57f17"><i class="pi pi-user-plus" style="font-size:1.3rem"></i></div>
+      <div>
+        <div style="font-size:1.8rem;font-weight:700;color:#f57f17">{{ stats.registered }}</div>
+        <div style="font-size:0.78rem;color:#6b7280">Registered This Month</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search Panel -->
+  <div class="section-card" style="margin-bottom:1.25rem">
+    <div class="section-card-header"><i class="pi pi-search"></i> Search Citizen</div>
+    <div style="padding:1rem">
+      <app-search-filter
+        [config]="searchConfig"
+        (search)="onSearch($event)"
+        (reset)="onSearchReset()">
+      </app-search-filter>
+
+      <!-- Search Results Table -->
+      <div *ngIf="searchResults.length > 0" style="margin-top:1rem">
+        <p-table [value]="searchResults" [paginator]="searchResults.length > 10" [rows]="10"
+                 styleClass="p-datatable-sm" [rowHover]="true"
+                 (onRowSelect)="selectCitizen($event.data)"
+                 selectionMode="single" [(selection)]="selectedCitizen">
+          <ng-template pTemplate="header">
+            <tr>
+              <th>Name</th>
+              <th>Phone</th>
+              <th>EPIC</th>
+              <th>District</th>
+              <th>Constituency</th>
+              <th>Action</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-citizen>
+            <tr [pSelectableRow]="citizen" style="cursor:pointer">
+              <td><strong>{{ citizen.fullName }}</strong></td>
+              <td>{{ citizen.phoneNumber }}</td>
+              <td><code>{{ citizen.epicNumber }}</code></td>
+              <td>{{ citizen.district }}</td>
+              <td>{{ citizen.constituency }}</td>
+              <td>
+                <button mat-raised-button color="primary"
+                        (click)="selectCitizen(citizen); $event.stopPropagation()">
+                  <mat-icon>how_to_reg</mat-icon> Select
+                </button>
+              </td>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="emptymessage">
+            <tr>
+              <td colspan="6" style="text-align:center;color:#6b7280">No citizens found</td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+
+      <div *ngIf="searching" style="text-align:center;padding:2rem;color:#6b7280">
+        <i class="pi pi-spin pi-spinner" style="font-size:1.5rem"></i>
+        <p>Searching...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Selected Citizen Profile -->
+  <div *ngIf="selectedCitizen" class="section-card" style="margin-bottom:1.25rem">
+    <div class="section-card-header"><i class="pi pi-user"></i> Selected Citizen Profile</div>
+    <div style="padding:1rem">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:1rem">
+        <app-profile-card [person]="selectedCitizen" style="flex:1;min-width:280px"></app-profile-card>
+        <div style="display:flex;flex-wrap:wrap;gap:0.5rem">
+          <button mat-raised-button color="primary" (click)="openWalkin()">
+            <mat-icon>person_pin</mat-icon> Walk-in Appointment
+          </button>
+          <button mat-raised-button color="accent" (click)="openGroupAppointment()">
+            <mat-icon>group_add</mat-icon> Group Appointment
+          </button>
+          <a mat-stroked-button [routerLink]="['/appointments/new']">
+            <mat-icon>event</mat-icon> New Appointment
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Walk-in Appointment Dialog ─── -->
+<p-dialog [(visible)]="showWalkinDialog" [modal]="true" [style]="{width:'550px'}"
+          header="Create Walk-in Appointment" [closable]="true">
+  <form [formGroup]="appointmentForm" *ngIf="selectedCitizen"
+        style="display:flex;flex-direction:column;gap:1rem;padding:0.5rem">
+
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:0.75rem;font-size:0.85rem">
+      <i class="pi pi-user" style="color:#15803d;margin-right:0.5rem"></i>
+      Creating appointment for <strong>{{ selectedCitizen.fullName }}</strong>
+    </div>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Event Type</mat-label>
+      <mat-select formControlName="eventType" style="background:white!important">
+        <mat-option *ngFor="let et of eventTypes" [value]="et.value">{{ et.label }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Agenda Type</mat-label>
+      <mat-select formControlName="agendaType" style="background:white!important">
+        <mat-option *ngFor="let at of agendaTypes" [value]="at">{{ at }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Agenda Brief</mat-label>
+      <textarea matInput formControlName="agendaBrief" rows="3"
+                placeholder="Brief description of the agenda"
+                style="background:white!important"></textarea>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Location</mat-label>
+      <mat-select formControlName="requestedLocation" style="background:white!important">
+        <mat-option *ngFor="let loc of locations" [value]="loc.value">{{ loc.label }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-checkbox formControlName="mlaMdcApproved" color="primary">MLA/MDC Approved</mat-checkbox>
+
+    <app-document-upload label="Supporting Documents" [autoUpload]="false"></app-document-upload>
+  </form>
+
+  <ng-template pTemplate="footer">
+    <button mat-stroked-button (click)="showWalkinDialog = false">Cancel</button>
+    <button mat-raised-button color="primary"
+            (click)="submitWalkin()" [disabled]="appointmentForm.invalid">
+      <mat-icon>check</mat-icon> Create Walk-in
+    </button>
+  </ng-template>
+</p-dialog>
+
+<!-- ─── Group Appointment Dialog ─── -->
+<p-dialog [(visible)]="showGroupDialog" [modal]="true" [style]="{width:'680px'}"
+          header="Create Group Appointment" [closable]="true">
+  <div style="padding:0.5rem" *ngIf="selectedCitizen">
+
+    <!-- Primary Visitor -->
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:0.75rem;margin-bottom:1rem">
+      <div style="font-size:0.8rem;font-weight:600;color:#1d4ed8;margin-bottom:0.5rem">
+        <i class="pi pi-star"></i> PRIMARY VISITOR
+      </div>
+      <app-profile-card [person]="selectedCitizen"></app-profile-card>
+    </div>
+
+    <!-- Associates -->
+    <div style="margin-bottom:1rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem">
+        <span style="font-weight:600;color:#374151;font-size:0.88rem">
+          Associate Members ({{ associates.length }}/{{ maxAssociates }})
+        </span>
+        <button mat-stroked-button (click)="addAssociate()" [disabled]="associates.length >= maxAssociates">
+          <mat-icon>person_add</mat-icon> Add Associate
+        </button>
+      </div>
+
+      <div *ngFor="let assoc of associates; let i = index"
+           style="background:white;border:1px solid #e5e7eb;border-radius:8px;padding:0.75rem;margin-bottom:0.5rem">
+        <div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.5rem">
+          <mat-form-field appearance="outline" style="flex:1;margin-bottom:0">
+            <mat-label>Search Associate by Name / Phone</mat-label>
+            <input matInput [(ngModel)]="assoc.searchQuery"
+                   placeholder="Type name or phone number..."
+                   style="background:white!important">
+          </mat-form-field>
+          <button mat-raised-button color="primary" (click)="searchAssociate(i)" style="height:40px">
+            <mat-icon>search</mat-icon>
+          </button>
+          <button mat-icon-button color="warn" (click)="removeAssociate(i)">
+            <mat-icon>remove_circle</mat-icon>
+          </button>
+        </div>
+
+        <div *ngIf="assoc.searchResults.length > 0"
+             style="border:1px solid #e5e7eb;border-radius:6px;max-height:150px;overflow-y:auto">
+          <div *ngFor="let r of assoc.searchResults"
+               (click)="selectAssociate(i, r)"
+               class="associate-result-row">
+            <strong>{{ r.fullName }}</strong> — {{ r.phoneNumber }} — {{ r.district }}
+          </div>
+        </div>
+
+        <div *ngIf="assoc.person"
+             style="background:#f0fdf4;border-radius:6px;padding:0.5rem;font-size:0.85rem;color:#15803d;margin-top:0.25rem">
+          <i class="pi pi-check-circle"></i>
+          Selected: <strong>{{ assoc.person.fullName }}</strong> ({{ assoc.person.phoneNumber }})
+          <span style="font-size:0.75rem;color:#6b7280;margin-left:0.5rem">
+            Associated with: {{ selectedCitizen?.fullName }}
+          </span>
+        </div>
+      </div>
+
+      <div *ngIf="associates.length === 0"
+           style="text-align:center;color:#9ca3af;font-size:0.85rem;padding:0.5rem">
+        No associates added. Click "Add Associate" to add group members.
+      </div>
+    </div>
+
+    <!-- Group Appointment Form -->
+    <form [formGroup]="groupForm" style="display:flex;flex-direction:column;gap:0.75rem">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
+        <mat-form-field appearance="outline">
+          <mat-label>Event Type</mat-label>
+          <mat-select formControlName="eventType" style="background:white!important">
+            <mat-option *ngFor="let et of eventTypes" [value]="et.value">{{ et.label }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Location</mat-label>
+          <mat-select formControlName="requestedLocation" style="background:white!important">
+            <mat-option *ngFor="let loc of locations" [value]="loc.value">{{ loc.label }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+      <mat-form-field appearance="outline">
+        <mat-label>Agenda Type</mat-label>
+        <mat-select formControlName="agendaType" style="background:white!important">
+          <mat-option *ngFor="let at of agendaTypes" [value]="at">{{ at }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Agenda Brief</mat-label>
+        <textarea matInput formControlName="agendaBrief" rows="2"
+                  placeholder="Brief description"
+                  style="background:white!important"></textarea>
+      </mat-form-field>
+    </form>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <button mat-stroked-button (click)="showGroupDialog = false">Cancel</button>
+    <button mat-raised-button color="primary"
+            (click)="submitGroupAppointment()" [disabled]="groupForm.invalid">
+      <mat-icon>group</mat-icon> Create Group Appointment
+    </button>
+  </ng-template>
+</p-dialog>

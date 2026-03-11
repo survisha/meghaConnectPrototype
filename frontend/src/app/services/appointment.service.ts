@@ -14,6 +14,11 @@ export interface CreateAppointmentRequest {
   isWalkIn?: boolean;
 }
 
+export interface CreateGroupAppointmentRequest extends CreateAppointmentRequest {
+  isGroupAppointment: true;
+  associateIds: number[];
+}
+
 export interface ApproveRejectRequest {
   remarks?: string;
 }

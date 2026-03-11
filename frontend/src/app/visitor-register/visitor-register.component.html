@@ -27,17 +27,7 @@
   <div class="register-right">
     <div class="register-card">
 
-      <!-- R011: DEO Mode Banner -->
-      <div *ngIf="isDeoMode" style="background:linear-gradient(135deg,#1a237e,#3949ab);color:white;padding:0.75rem 1rem;border-radius:8px;margin-bottom:1rem;display:flex;align-items:center;gap:0.5rem;font-size:0.88rem">
-        <i class="pi pi-user-plus" style="font-size:1.1rem"></i>
-        <div>
-          <strong>DEO Assisted Registration</strong>
-          <div style="font-size:0.78rem;opacity:.85">You are registering a walk-in visitor on behalf of the citizen.</div>
-        </div>
-        <button (click)="goToLogin()" mat-stroked-button color="primary" style="margin-left:auto">
-          <i class="pi pi-arrow-left"></i> Back to Dashboard
-        </button>
-      </div>
+      
 
       <!-- Multi-step KYC Registration -->
       <ng-container>

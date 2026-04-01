@@ -46,7 +46,10 @@ export interface Appointment {
   shortNotes?: string;
   directions?: Direction[];
   isWalkIn?: boolean;
+  submittedAt?: string;
+  updatedAt?: string;
 }
+
 
 export interface ScheduleEvent {
   id: number;

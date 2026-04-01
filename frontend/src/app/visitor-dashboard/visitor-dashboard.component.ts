@@ -41,11 +41,42 @@ export class VisitorDashboardComponent implements OnInit {
   constructor(public auth: AuthService, private http: HttpClient) {}
 
   ngOnInit() {
+    // Initialize dummy data for demo purposes
+    this.visitorProfile = {
+      fullName: 'Rajesh Kumar Sharma',
+      phoneNumber: '+91-9876543210',
+      address: 'Ward No. 5, Police Bazar Road',
+      district: 'East Khasi Hills',
+      kycType: 'AADHAAR',
+      kycVerified: true,
+      kycStatus: 'PHOTO_MATCHED',
+      kycConfidence: 94
+    };
+
+    this.myAppointments = [
+      { id: 'APT-2024-001', title: 'Meeting with CM regarding Road Development', status: 'SCHEDULED', date: '2024-03-28 11:00 AM' },
+      { id: 'APT-2024-002', title: 'Discussion on Education Policy', status: 'COMPLETED', date: '2024-03-15 10:00 AM' },
+      { id: 'APT-2024-003', title: 'Healthcare Infrastructure Proposal', status: 'CMO_REVIEW', date: '2024-03-20 02:00 PM' }
+    ];
+
+    this.mySchemes = [
+      { id: 'SCH-2024-045', title: 'CM Self-Development Fund', status: 'APPROVED', date: '2024-03-10', extra: '₹50,000' },
+      { id: 'SCH-2024-078', title: 'CM Care Program', status: 'UNDER_REVIEW', date: '2024-03-22', extra: '₹25,000' },
+      { id: 'SCH-2024-091', title: 'CM Elevate Scholarship', status: 'APPROVED', date: '2024-02-28', extra: '₹15,000' }
+    ];
+
+    this.myGrievances = [
+      { id: 'GRV-2024-012', title: 'Water Supply Issue in Ward 5', status: 'RESOLVED', date: '2024-03-05' },
+      { id: 'GRV-2024-034', title: 'Street Light Maintenance Request', status: 'UNDER_REVIEW', date: '2024-03-18' }
+    ];
+
+    this.totalVisits = 7;
+
     this.cards = [
-      { label: 'My Appointments', value: 0, icon: 'pi-calendar',              color: '#1a237e', bg: '#e8eaf6' },
-      { label: 'Total Visits',    value: 0, icon: 'pi-map-marker',             color: '#065f46', bg: '#d1fae5' },
-      { label: 'Active Schemes',  value: 0, icon: 'pi-briefcase',              color: '#b45309', bg: '#fef3c7' },
-      { label: 'Grievances',      value: 0, icon: 'pi-comments',               color: '#dc2626', bg: '#fee2e2' },
+      { label: 'My Appointments', value: this.myAppointments.length, icon: 'pi-calendar',              color: '#1a237e', bg: '#e8eaf6' },
+      { label: 'Total Visits',    value: this.totalVisits, icon: 'pi-map-marker',             color: '#065f46', bg: '#d1fae5' },
+      { label: 'Active Schemes',  value: this.mySchemes.length, icon: 'pi-briefcase',              color: '#b45309', bg: '#fef3c7' },
+      { label: 'Grievances',      value: this.myGrievances.length, icon: 'pi-comments',               color: '#dc2626', bg: '#fee2e2' },
     ];
 
     const visitorId = sessionStorage.getItem('megha_visitor_id');

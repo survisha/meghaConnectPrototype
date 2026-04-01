@@ -3,11 +3,13 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { UIChart } from 'primeng/chart';
 import { TableModule } from 'primeng/table';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 
 @Component({
   selector: 'app-reports',
   standalone: true,
-  imports: [CommonModule, RouterLink, UIChart, TableModule],
+  imports: [CommonModule, RouterLink, UIChart, TableModule, MatButtonModule, MatIconModule],
   templateUrl: './reports.component.html',
   styleUrls: ['./reports.component.scss'],
 })

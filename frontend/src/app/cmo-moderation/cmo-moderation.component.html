@@ -1,107 +1,174 @@
-<p-toast></p-toast>
-
 <div class="page-title-row">
-  <h2 class="page-title"><i class="pi pi-filter" style="margin-right:0.5rem"></i>CMO Moderation – Officer Review</h2>
-  <span class="badge-count">{{ appointments.length }} to review</span>
+  <h2 class="page-title">
+    <mat-icon style="margin-right:0.5rem">filter_alt</mat-icon>
+    CMO Moderation – Officer Review
+  </h2>
+  <span class="badge-count" [matBadge]="appointments.length" matBadgeOverlap="false">to review</span>
 </div>
 
 <div class="section-card">
   <div class="section-card-header">
-    <i class="pi pi-inbox"></i> Incoming Appointments
-    <span style="margin-left:auto;font-size:0.8rem;color:#6b7280">Drag rows to reorder &bull; Modify category &amp; location before forwarding</span>
+    <mat-icon>inbox</mat-icon> Incoming Appointments
+    <span style="margin-left:auto;font-size:0.8rem;color:#6b7280">Modify category &amp; location before forwarding</span>
   </div>
 
-  <p-table [value]="appointments" [paginator]="true" [rows]="10"
-           styleClass="p-datatable-sm p-datatable-striped"
-           responsiveLayout="scroll">
-    <ng-template pTemplate="header">
-      <tr>
-        <th>App ID</th>
-        <th>Applicant</th>
-        <th>District</th>
-        <th>Agenda</th>
-        <th>Category</th>
-        <th>Location</th>
-        <th>MLA Approved</th>
-        <th>Status</th>
-        <th>Actions</th>
-      </tr>
-    </ng-template>
-    <ng-template pTemplate="body" let-appt>
-      <tr>
-        <td><a [routerLink]="['/appointments', appt.id]" class="app-id-link">{{ appt.applicationId }}</a></td>
-        <td>
+  <div class="table-container">
+    <table mat-table [dataSource]="appointments" class="cmo-table">
+      
+      <!-- Application ID Column -->
+      <ng-container matColumnDef="applicationId">
+        <th mat-header-cell *matHeaderCellDef>App ID</th>
+        <td mat-cell *matCellDef="let appt">
+          <a [routerLink]="['/appointments', appt.id]" class="app-id-link">{{ appt.applicationId }}</a>
+        </td>
+      </ng-container>
+
+      <!-- Applicant Column -->
+      <ng-container matColumnDef="applicant">
+        <th mat-header-cell *matHeaderCellDef>Applicant</th>
+        <td mat-cell *matCellDef="let appt">
           <div style="font-weight:600">{{ appt.applicant.fullName }}</div>
           <div style="font-size:0.78rem;color:#6b7280">{{ appt.applicant.designation }}</div>
         </td>
-        <td>{{ appt.applicant.district }}</td>
-        <td>{{ appt.agendaType }}</td>
-        <td><span class="event-type-pill">{{ appt.eventType }}</span></td>
-        <td>{{ appt.requestedLocation }}</td>
-        <td>
+      </ng-container>
+
+      <!-- District Column -->
+      <ng-container matColumnDef="district">
+        <th mat-header-cell *matHeaderCellDef>District</th>
+        <td mat-cell *matCellDef="let appt">{{ appt.applicant.district }}</td>
+      </ng-container>
+
+      <!-- Agenda Column -->
+      <ng-container matColumnDef="agenda">
+        <th mat-header-cell *matHeaderCellDef>Agenda</th>
+        <td mat-cell *matCellDef="let appt">{{ appt.agendaType }}</td>
+      </ng-container>
+
+      <!-- Category Column -->
+      <ng-container matColumnDef="category">
+        <th mat-header-cell *matHeaderCellDef>Category</th>
+        <td mat-cell *matCellDef="let appt">
+          <span class="event-type-pill">{{ appt.eventType }}</span>
+        </td>
+      </ng-container>
+
+      <!-- Location Column -->
+      <ng-container matColumnDef="location">
+        <th mat-header-cell *matHeaderCellDef>Location</th>
+        <td mat-cell *matCellDef="let appt">{{ appt.requestedLocation }}</td>
+      </ng-container>
+
+      <!-- MLA Approved Column -->
+      <ng-container matColumnDef="mlaApproved">
+        <th mat-header-cell *matHeaderCellDef>MLA Approved</th>
+        <td mat-cell *matCellDef="let appt">
           <span [style.color]="appt.mlaMdcApproved ? '#16a34a' : '#dc2626'" style="font-weight:600">
-            {{ appt.mlaMdcApproved ? '✅ Yes' : '❌ No' }}
+            <mat-icon [style.color]="appt.mlaMdcApproved ? '#16a34a' : '#dc2626'" style="font-size:18px;vertical-align:middle">
+              {{ appt.mlaMdcApproved ? 'check_circle' : 'cancel' }}
+            </mat-icon>
+            {{ appt.mlaMdcApproved ? 'Yes' : 'No' }}
           </span>
         </td>
-        <td><p-tag [value]="appt.status.replace('_',' ')" [severity]="getSeverity(appt.status)"></p-tag></td>
-        <td>
+      </ng-container>
+
+      <!-- Status Column -->
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef>Status</th>
+        <td mat-cell *matCellDef="let appt">
+          <mat-chip class="status-chip status-{{ getSeverity(appt.status) }}">
+            {{ getStatusLabel(appt.status) }}
+          </mat-chip>
+        </td>
+      </ng-container>
+
+      <!-- Actions Column -->
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef>Actions</th>
+        <td mat-cell *matCellDef="let appt">
           <div class="action-btns">
-            <button pButton icon="pi pi-pencil" label="Modify"
-                    class="p-button-warning p-button-sm"
-                    (click)="openModify(appt)"></button>
-            <button pButton icon="pi pi-send" label="Forward"
-                    class="p-button-info p-button-sm"
-                    (click)="forwardToApprover(appt)"></button>
+            <button mat-mini-fab class="modify-btn" 
+                    matTooltip="Modify Category & Location"
+                    matTooltipPosition="above"
+                    (click)="openModify(appt)">
+              <mat-icon>edit</mat-icon>
+            </button>
+            <button mat-mini-fab class="forward-btn"
+                    matTooltip="Forward to Approver"
+                    matTooltipPosition="above"
+                    (click)="forwardToApprover(appt)">
+              <mat-icon>send</mat-icon>
+            </button>
           </div>
         </td>
-      </tr>
-    </ng-template>
-    <ng-template pTemplate="emptymessage">
-      <tr>
-        <td colspan="9" style="text-align:center;padding:2rem;color:#9ca3af">
-          <i class="pi pi-check-circle" style="font-size:2rem;color:#16a34a"></i>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+
+      <!-- Empty State -->
+      <tr class="mat-row" *matNoDataRow>
+        <td class="mat-cell" [attr.colspan]="displayedColumns.length" style="text-align:center;padding:2rem;color:#9ca3af">
+          <mat-icon style="font-size:2rem;color:#16a34a;width:2rem;height:2rem">check_circle</mat-icon>
           <p>All appointments reviewed.</p>
         </td>
       </tr>
-    </ng-template>
-  </p-table>
+    </table>
+  </div>
 </div>
 
 <!-- Modify Dialog -->
-<p-dialog header="Modify Category &amp; Location"
-          [(visible)]="showModifyDialog"
-          [style]="{width:'500px'}"
-          [modal]="true">
-  <div style="padding:0.5rem 0">
-    <div *ngIf="selected" class="dialog-appt-summary">
-      <strong>{{ selected.applicationId }}</strong> – {{ selected.applicant.fullName }}
-      <div style="font-size:0.82rem;color:#6b7280;margin-top:4px">{{ selected.agendaBrief | slice:0:100 }}{{ selected.agendaBrief.length > 100 ? '…' : '' }}</div>
+<div class="dialog-overlay" *ngIf="showModifyDialog" (click)="showModifyDialog = false">
+  <div class="material-dialog" (click)="$event.stopPropagation()">
+    <div class="dialog-header">
+      <h3>
+        <mat-icon style="vertical-align:middle;margin-right:8px">edit</mat-icon>
+        Modify Category &amp; Location
+      </h3>
+      <button mat-icon-button (click)="showModifyDialog = false">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+    
+    <div class="dialog-content">
+      <div *ngIf="selected" class="dialog-appt-summary">
+        <strong>{{ selected.applicationId }}</strong> – {{ selected.applicant.fullName }}
+        <div style="font-size:0.82rem;color:#6b7280;margin-top:4px">
+          {{ selected.agendaBrief | slice:0:100 }}{{ selected.agendaBrief.length > 100 ? '…' : '' }}
+        </div>
+      </div>
+
+      <div style="margin-top:1.25rem;display:grid;gap:1rem">
+        <mat-form-field appearance="outline" style="width:100%">
+          <mat-label>Appointment Category *</mat-label>
+          <mat-select [(ngModel)]="modifyEventType">
+            <mat-option *ngFor="let opt of eventTypeOptions" [value]="opt.value">
+              {{ opt.label }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" style="width:100%">
+          <mat-label>Location *</mat-label>
+          <mat-select [(ngModel)]="modifyLocation">
+            <mat-option *ngFor="let opt of locationOptions" [value]="opt.value">
+              {{ opt.label }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" style="width:100%">
+          <mat-label>CMO Remarks</mat-label>
+          <textarea matInput [(ngModel)]="modifyRemarks" rows="3"
+                    placeholder="Add verification notes or comments..."></textarea>
+        </mat-form-field>
+      </div>
     </div>
 
-    <div style="margin-top:1.25rem;display:grid;gap:1rem">
-      <div>
-        <label class="field-label">Appointment Category *</label>
-        <p-select [options]="eventTypeOptions" [(ngModel)]="modifyEventType"
-                  optionLabel="label" optionValue="value"
-                  [style]="{width:'100%'}"></p-select>
-      </div>
-      <div>
-        <label class="field-label">Location *</label>
-        <p-select [options]="locationOptions" [(ngModel)]="modifyLocation"
-                  optionLabel="label" optionValue="value"
-                  [style]="{width:'100%'}"></p-select>
-      </div>
-      <div>
-        <label class="field-label">CMO Remarks</label>
-        <textarea pTextarea [(ngModel)]="modifyRemarks" rows="3"
-                  style="width:100%"
-                  placeholder="Add verification notes or comments..."></textarea>
-      </div>
+    <div class="dialog-footer">
+      <button mat-stroked-button (click)="showModifyDialog = false">Cancel</button>
+      <button mat-raised-button color="primary" (click)="saveModify()">
+        <mat-icon>send</mat-icon> Save &amp; Forward to Approver
+      </button>
     </div>
   </div>
-  <ng-template pTemplate="footer">
-    <button pButton label="Cancel" class="p-button-text" (click)="showModifyDialog=false"></button>
-    <button pButton label="Save &amp; Forward to Approver" icon="pi pi-send"
-            class="p-button-success" (click)="saveModify()"></button>
-  </ng-template>
-</p-dialog>
+</div>

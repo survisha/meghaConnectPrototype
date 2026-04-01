@@ -33,8 +33,39 @@
 
 .action-btns {
   display: flex;
-  gap: 0.4rem;
-  flex-wrap: wrap;
+  gap: 0.5rem;
+  flex-wrap: nowrap;
+
+  button[mat-mini-fab] {
+    width: 36px;
+    height: 36px;
+
+    mat-icon {
+      font-size: 20px;
+      line-height: 20px;
+      width: 20px;
+      height: 20px;
+      color: white;
+    }
+
+    &.modify-btn {
+      background-color: #f59e0b !important;
+      &:hover:not(:disabled) {
+        background-color: #d97706 !important;
+      }
+    }
+
+    &.forward-btn {
+      background-color: #2563eb !important;
+      &:hover:not(:disabled) {
+        background-color: #1d4ed8 !important;
+      }
+    }
+
+    &:disabled {
+      opacity: 0.4;
+    }
+  }
 }
 
 .dialog-appt-summary {
@@ -72,4 +103,139 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+}
+
+// Material Table Styles
+.table-container {
+  overflow-x: auto;
+}
+
+.cmo-table {
+  width: 100%;
+  background: white;
+
+  th.mat-header-cell {
+    background: #f8fafc;
+    color: #1f2937;
+    font-weight: 700;
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 1rem 0.75rem;
+    border-bottom: 2px solid #e5e7eb;
+  }
+
+  td.mat-cell {
+    padding: 0.875rem 0.75rem;
+    font-size: 0.9rem;
+    color: #374151;
+    border-bottom: 1px solid #f3f4f6;
+  }
+
+  tr.mat-row {
+    transition: background-color 0.2s;
+    &:hover {
+      background-color: #f9fafb;
+    }
+  }
+}
+
+// Status Chip Styles
+mat-chip.status-chip {
+  font-size: 0.75rem;
+  font-weight: 600;
+  min-height: 24px;
+  padding: 4px 10px;
+  border-radius: 12px;
+
+  &.status-success {
+    background-color: #d1fae5 !important;
+    color: #065f46 !important;
+  }
+
+  &.status-info {
+    background-color: #dbeafe !important;
+    color: #1e40af !important;
+  }
+
+  &.status-warn {
+    background-color: #fef3c7 !important;
+    color: #b45309 !important;
+  }
+
+  &.status-danger {
+    background-color: #fee2e2 !important;
+    color: #991b1b !important;
+  }
+
+  &.status-secondary {
+    background-color: #f3f4f6 !important;
+    color: #4b5563 !important;
+  }
+}
+
+// Custom Dialog Styles
+.dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1001;
+}
+
+.material-dialog {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  .dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f8fafc;
+
+    h3 {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #1a237e;
+      display: flex;
+      align-items: center;
+    }
+  }
+
+  .dialog-content {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e5e7eb;
+    background: #f9fafb;
+  }
 }

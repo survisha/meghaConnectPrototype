@@ -2,36 +2,57 @@
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.75rem">
     <h2 class="page-title" style="margin:0">Analytics &amp; Reports</h2>
     <div style="display:flex;gap:0.5rem">
-      <button pButton label="Heatmap" icon="pi pi-map" class="p-button-outlined p-button-sm" routerLink="/reports/heatmap"></button>
-      <button pButton label="Pending Follow-ups" icon="pi pi-clock" class="p-button-outlined p-button-sm" routerLink="/reports/followups"></button>
-      <button pButton label="Audit Trail" icon="pi pi-history" class="p-button-outlined p-button-sm" routerLink="/reports/audit"></button>
+      <button mat-stroked-button routerLink="/reports/heatmap">
+        <mat-icon>map</mat-icon>
+        Heatmap
+      </button>
+      <button mat-stroked-button routerLink="/reports/followups">
+        <mat-icon>schedule</mat-icon>
+        Pending Follow-ups
+      </button>
+      <button mat-stroked-button routerLink="/reports/audit">
+        <mat-icon>history</mat-icon>
+        Audit Trail
+      </button>
     </div>
   </div>
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
     <div class="section-card">
-      <div class="section-card-header"><i class="pi pi-chart-bar"></i> Meetings per Day (This Week)</div>
-      <div class="section-card-body" style="height:280px;display:flex;align-items:center;justify-content:center">
-        <p-chart type="bar" [data]="meetingsPerDay" [options]="chartOpts" style="width:100%"></p-chart>
+      <div class="section-card-header" style="display:flex;align-items:center;gap:0.5rem">
+        <mat-icon style="font-size:1.2rem;width:1.2rem;height:1.2rem">bar_chart</mat-icon>
+        <span>Meetings per Day (This Week)</span>
+      </div>
+      <div class="section-card-body" style="height:280px;display:flex;align-items:center;justify-content:center;padding:0.5rem">
+        <p-chart type="bar" [data]="meetingsPerDay" [options]="chartOpts" style="width:100%;max-height:240px"></p-chart>
       </div>
     </div>
 
     <div class="section-card">
-      <div class="section-card-header"><i class="pi pi-chart-pie"></i> Approval vs Rejection Ratio</div>
-      <div class="section-card-body" style="height:280px;display:flex;align-items:center;justify-content:center">
-        <p-chart type="doughnut" [data]="approvalRatio" [options]="chartOpts" style="width:100%;max-width:320px"></p-chart>
+      <div class="section-card-header" style="display:flex;align-items:center;gap:0.5rem">
+        <mat-icon style="font-size:1.2rem;width:1.2rem;height:1.2rem">pie_chart</mat-icon>
+        <span>Approval vs Rejection Ratio</span>
+      </div>
+      <div class="section-card-body" style="height:280px;display:flex;align-items:center;justify-content:center;padding:1rem">
+        <p-chart type="doughnut" [data]="approvalRatio" [options]="chartOpts" style="width:100%;max-width:260px;max-height:260px"></p-chart>
       </div>
     </div>
 
     <div class="section-card" style="grid-column:1/-1">
-      <div class="section-card-header"><i class="pi pi-chart-bar"></i> Scheme-wise Application Status</div>
-      <div class="section-card-body" style="height:280px;display:flex;align-items:center;justify-content:center">
-        <p-chart type="bar" [data]="schemeWise" [options]="barChartOpts" style="width:100%"></p-chart>
+      <div class="section-card-header" style="display:flex;align-items:center;gap:0.5rem">
+        <mat-icon style="font-size:1.2rem;width:1.2rem;height:1.2rem">bar_chart</mat-icon>
+        <span>Scheme-wise Application Status</span>
+      </div>
+      <div class="section-card-body" style="height:280px;display:flex;align-items:center;justify-content:center;padding:0.5rem">
+        <p-chart type="bar" [data]="schemeWise" [options]="barChartOpts" style="width:100%;max-height:240px"></p-chart>
       </div>
     </div>
 
     <div class="section-card" style="grid-column:1/-1">
-      <div class="section-card-header"><i class="pi pi-map-marker"></i> Top Constituencies by Applications</div>
+      <div class="section-card-header" style="display:flex;align-items:center;gap:0.5rem">
+        <mat-icon style="font-size:1.2rem;width:1.2rem;height:1.2rem">location_on</mat-icon>
+        <span>Top Constituencies by Applications</span>
+      </div>
       <div class="section-card-body" style="padding:0">
         <p-table [value]="topConstituencies" styleClass="p-datatable-sm">
           <ng-template pTemplate="header">

@@ -1,11 +1,11 @@
 <div>
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.75rem">
     <h2 class="page-title" style="margin:0;display:flex;align-items:center;gap:0.5rem">
-      <i class="pi pi-calendar" style="font-size:1.3rem"></i>
+      <mat-icon style="font-size:1.3rem">event</mat-icon>
       Calendar &amp; Schedule
     </h2>
     <div style="display:flex;gap:0.5rem;align-items:center">
-      <span style="color:#6b7280;font-size:0.85rem;margin-right:0.5rem">15 March 2024</span>
+      <span style="color:#6b7280;font-size:0.85rem;margin-right:0.5rem">{{ formatDate(selectedDate) }}</span>
       <div class="view-toggle">
         <button [class.active]="viewMode==='day'" (click)="viewMode='day'">Day</button>
         <button [class.active]="viewMode==='week'" (click)="viewMode='week'">Week</button>
@@ -25,44 +25,131 @@
     <span class="legend-item event-b2">B2: Walk-in</span>
   </div>
 
-  <!-- Day View Timeline -->
-  <div class="section-card" *ngIf="viewMode==='day'">
-    <div class="section-card-header"><i class="pi pi-calendar"></i> Thursday, 15 March 2024 – Daily Schedule</div>
-    <div class="timeline-grid">
-      <div *ngFor="let hour of hours" class="time-row">
-        <div class="time-label">{{ hour }}</div>
-        <div class="time-slots">
-          <div *ngFor="let evt of getEventsForHour(hour)"
-               class="{{getEventClass(evt.eventType)}} timeline-event"
-               (click)="openEvent(evt)">
-            <div class="event-title" style="color:#1f2937">
-              <span class="event-type-badge" [style.background]="getEventColor(evt.eventType)">{{ evt.eventType }}</span>
-              {{ evt.title }}
+  <!-- Calendar and Day View Layout -->
+  <div style="display: grid; grid-template-columns: 320px 1fr; gap: 1rem; margin-bottom: 1rem;" *ngIf="viewMode==='day'">
+    
+    <!-- Calendar Sidebar -->
+    <mat-card style="padding: 1rem; background: white; border: 1px solid #e5e7eb; border-radius: 8px;">
+      <mat-card-content>
+        <h3 style="margin: 0 0 1rem 0; font-size: 1rem; font-weight: 600; color: #1f2937;">
+          <mat-icon style="vertical-align: middle; font-size: 1.2rem; margin-right: 0.5rem;">date_range</mat-icon>
+          Select Date
+        </h3>
+        <mat-calendar 
+          [(selected)]="selectedDate" 
+          (selectedChange)="onDateSelected($event)"
+          [dateClass]="dateClass"
+          style="width: 100%;">
+        </mat-calendar>
+        
+        <div style="margin-top: 1rem; padding: 0.75rem; background: #f3f4f6; border-radius: 6px;">
+          <div style="font-size: 0.85rem; color: #6b7280; margin-bottom: 0.5rem;">
+            <strong>{{ getEventsForSelectedDate().length }}</strong> event(s) on this date
+          </div>
+          <div style="font-size: 0.75rem; color: #9ca3af;">
+            <mat-icon style="font-size: 0.9rem; vertical-align: middle;">info</mat-icon>
+            Dates with events are highlighted
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Day Timeline with Drag & Drop -->
+    <div class="section-card">
+      <div class="section-card-header">
+        <mat-icon>event_note</mat-icon> {{ formatDate(selectedDate) }} – Daily Schedule
+        <span style="font-size: 0.85rem; font-weight: normal; margin-left: 1rem; color: #6b7280;">
+          (Drag events to reschedule)
+        </span>
+      </div>
+      <div class="timeline-grid">
+        <div *ngFor="let hour of hours" class="time-row">
+          <div class="time-label">{{ hour }}</div>
+          <div 
+            class="time-slots"
+            cdkDropList
+            [cdkDropListData]="getEventsForHour(hour)"
+            (cdkDropListDropped)="onEventDrop($event, hour)">
+            <div *ngFor="let evt of getEventsForHour(hour)"
+                 class="{{getEventClass(evt.eventType)}} timeline-event"
+                 cdkDrag
+                 [cdkDragData]="evt"
+                 (click)="openEvent(evt)">
+              <div class="drag-handle" cdkDragHandle>
+                <mat-icon style="font-size: 1rem; color: #6b7280;">drag_indicator</mat-icon>
+              </div>
+              <div class="event-content">
+                <div class="event-title" style="color:#1f2937">
+                  <span class="event-type-badge" [style.background]="getEventColor(evt.eventType)">{{ evt.eventType }}</span>
+                  {{ evt.title }}
+                </div>
+                <div class="event-time" style="color:#374151">
+                  <mat-icon style="font-size:1rem;vertical-align:middle;margin-right:2px">schedule</mat-icon> {{ formatTime(evt.startTime) }} – {{ formatTime(evt.endTime) }}
+                  &nbsp;|&nbsp;<mat-icon style="font-size:1rem;vertical-align:middle;margin-right:2px">location_on</mat-icon> {{ evt.location }}
+                  <span *ngIf="evt.travelTimeMinutes" style="margin-left:8px">
+                    <mat-icon style="font-size:1rem;vertical-align:middle;margin-right:2px;color:#374151">directions_car</mat-icon> +{{ evt.travelTimeMinutes }}min travel
+                  </span>
+                </div>
+                <div *ngIf="evt.isConflict" style="color:#dc2626;font-size:0.75rem;margin-top:2px;display:flex;align-items:center;gap:0.3rem">
+                  <mat-icon style="font-size:0.9rem">warning</mat-icon> CONFLICT DETECTED
+                </div>
+              </div>
+              
+              <!-- Drag Preview -->
+              <div *cdkDragPreview class="drag-preview {{getEventClass(evt.eventType)}}">
+                <mat-icon style="font-size: 1rem; margin-right: 0.5rem; vertical-align: middle;">drag_indicator</mat-icon>
+                <span class="event-type-badge" [style.background]="getEventColor(evt.eventType)">{{ evt.eventType }}</span>
+                {{ evt.title }}
+              </div>
+              
+              <!-- Drag Placeholder -->
+              <div *cdkDragPlaceholder class="drag-placeholder">
+                <mat-icon style="opacity: 0.3;">open_in_full</mat-icon>
+                Drop here to reschedule
+              </div>
             </div>
-            <div class="event-time" style="color:#374151">
-              <i class="pi pi-clock"></i> {{ formatTime(evt.startTime) }} – {{ formatTime(evt.endTime) }}
-              &nbsp;|&nbsp;<i class="pi pi-map-marker"></i> {{ evt.location }}
-              <span *ngIf="evt.travelTimeMinutes" style="margin-left:8px">
-                <i class="pi pi-car" style="color:#374151"></i> +{{ evt.travelTimeMinutes }}min travel
-              </span>
-            </div>
-            <div *ngIf="evt.isConflict" style="color:#dc2626;font-size:0.75rem;margin-top:2px;display:flex;align-items:center;gap:0.3rem">
-              <i class="pi pi-exclamation-triangle"></i> CONFLICT DETECTED
+            <div *ngIf="getEventsForHour(hour).length === 0" class="empty-slot" 
+                 cdkDropList
+                 [cdkDropListData]="getEventsForHour(hour)"
+                 (cdkDropListDropped)="onEventDrop($event, hour)">
+              <span style="color: #9ca3af; font-size: 0.85rem;">No events</span>
             </div>
           </div>
-          <div *ngIf="getEventsForHour(hour).length === 0" class="empty-slot"></div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Week / Month placeholder -->
-  <div class="section-card" *ngIf="viewMode !== 'day'">
-    <div class="section-card-header"><i class="pi pi-calendar"></i> {{ viewMode === 'week' ? 'Week' : 'Month' }} View</div>
-    <div class="section-card-body" style="text-align:center;padding:3rem;color:#6b7280">
-      <i class="pi pi-calendar" style="font-size:3rem;margin-bottom:1rem;display:block;opacity:.4"></i>
-      <p>{{ viewMode === 'week' ? 'Week' : 'Month' }} view – prototype in progress</p>
-      <p style="font-size:0.85rem">Switch to <strong>Day View</strong> to see the full schedule timeline.</p>
+  <!-- Week / Month View with Calendar -->
+  <div *ngIf="viewMode !== 'day'">
+    <div class="section-card">
+      <div class="section-card-header">
+        <mat-icon>calendar_month</mat-icon> {{ viewMode === 'week' ? 'Week' : 'Month' }} View
+      </div>
+      <div class="section-card-body" style="padding: 2rem;">
+        
+        <!-- Full Calendar Display for Month View -->
+        <div style="max-width: 600px; margin: 0 auto;">
+          <mat-calendar 
+            [(selected)]="selectedDate" 
+            (selectedChange)="onDateSelected($event)"
+            [dateClass]="dateClass"
+            style="width: 100%;">
+          </mat-calendar>
+          
+          <div style="margin-top: 2rem; text-align: center; color: #6b7280;">
+            <p style="font-size: 0.95rem;">
+              <mat-icon style="vertical-align: middle; margin-right: 0.5rem;">info</mat-icon>
+              Select a date to view events in <strong>Day View</strong>
+            </p>
+            <button mat-raised-button color="primary" (click)="viewMode='day'" style="margin-top: 1rem;">
+              <mat-icon>calendar_today</mat-icon>
+              Switch to Day View
+            </button>
+          </div>
+        </div>
+        
+      </div>
     </div>
   </div>
 
@@ -86,14 +173,14 @@
         <div *ngIf="selectedEvent.travelTimeMinutes" class="detail-row">
           <span class="dl">Travel Time</span>
           <span style="color:#1f2937;display:flex;align-items:center;gap:0.3rem">
-            <i class="pi pi-car"></i> {{ selectedEvent.travelTimeMinutes }} minutes
+            <mat-icon style="font-size:1.1rem">directions_car</mat-icon> {{ selectedEvent.travelTimeMinutes }} minutes
           </span>
         </div>
         <div *ngIf="selectedEvent.isConflict" class="conflict-warn" style="display:flex;align-items:center;gap:0.5rem">
-          <i class="pi pi-exclamation-triangle"></i> This event has a scheduling conflict!
+          <mat-icon style="font-size:1.1rem">warning</mat-icon> This event has a scheduling conflict!
         </div>
         <div *ngIf="selectedEvent.shortNotes" style="padding:0.75rem;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;font-size:0.85rem;color:#1e40af">
-          <strong><i class="pi pi-sparkles" style="margin-right:4px"></i>AI Summary:</strong> {{ selectedEvent.shortNotes }}
+          <strong><mat-icon style="font-size:1rem;vertical-align:middle;margin-right:4px">auto_awesome</mat-icon>AI Summary:</strong> {{ selectedEvent.shortNotes }}
         </div>
       </div>
       <div class="dialog-footer">

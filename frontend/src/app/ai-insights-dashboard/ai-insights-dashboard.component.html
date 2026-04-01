@@ -1,12 +1,12 @@
 <div class="ai-insights">
   <div class="ai-insights-header">
-    <i class="pi pi-sparkles"></i>
+    <mat-icon>auto_awesome</mat-icon>
     <span>AI Dashboard Insights</span>
-    <div class="ai-badge">Powered by AI</div>
+   
   </div>
 
   <div *ngIf="loading" class="loading-state">
-    <i class="pi pi-spin pi-spinner"></i> Loading AI insights…
+    <mat-icon class="spinner">progress_activity</mat-icon> Loading AI insights…
   </div>
 
   <ng-container *ngIf="!loading && insights">
@@ -19,7 +19,7 @@
     <div class="insights-grid">
       <!-- Top Requested Schemes -->
       <div class="insight-card">
-        <div class="insight-title"><i class="pi pi-briefcase"></i> Top Requested Schemes</div>
+        <div class="insight-title"><mat-icon>business_center</mat-icon> Top Requested Schemes</div>
         <div *ngFor="let s of insights.topSchemes; let i = index" class="insight-row">
           <span class="insight-rank">{{ i + 1 }}</span>
           <span class="insight-name">{{ s.scheme }}</span>
@@ -32,7 +32,7 @@
 
       <!-- District-wise Distribution -->
       <div class="insight-card">
-        <div class="insight-title"><i class="pi pi-map"></i> District-wise Applications</div>
+        <div class="insight-title"><mat-icon>location_city</mat-icon> District-wise Applications</div>
         <div *ngFor="let d of insights.districtDistribution" class="insight-row">
           <span class="insight-name district-name">{{ d.district }}</span>
           <div class="insight-bar-bg">
@@ -44,7 +44,7 @@
 
       <!-- Top Project Categories -->
       <div class="insight-card">
-        <div class="insight-title"><i class="pi pi-tag"></i> Top Project Categories</div>
+        <div class="insight-title"><mat-icon>label</mat-icon> Top Project Categories</div>
         <div *ngFor="let c of insights.topCategories; let i = index" class="insight-row">
           <span class="insight-rank">{{ i + 1 }}</span>
           <span class="insight-name">{{ c.category }}</span>
@@ -58,7 +58,7 @@
 
     <!-- AI Note -->
     <div class="ai-note">
-      <i class="pi pi-info-circle"></i>
+      <mat-icon>info</mat-icon>
       <span>{{ insights.aiNote }}</span>
     </div>
   </ng-container>

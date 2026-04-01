@@ -114,7 +114,11 @@
 
 .card-body { padding: 1rem; }
 
-.profile-card .section-card-header { color: #1a237e; }
+.section-card-header {
+  background: linear-gradient(135deg, #1a237e, #3949ab) !important;
+  color: white !important;
+  i { color: white !important; }
+}
 
 .profile-row {
   display: flex;
@@ -176,6 +180,8 @@
   text-align: center;
 }
 
-.analytics-value { font-size: 1.5rem; font-weight: 700; color: #1a237e; }
+.analytics-value { font-size: 1.5rem; font-weight: 700; color: #1a237e !important; }
 .analytics-label { font-size: 0.72rem; color: #6b7280; margin-top: 2px; }
+
+.kpi-value { color: #1a237e !important; }
 

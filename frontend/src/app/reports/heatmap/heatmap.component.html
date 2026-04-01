@@ -1,33 +1,83 @@
 <div>
   <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;flex-wrap:wrap">
-    <button pButton icon="pi pi-arrow-left" class="p-button-text p-button-sm" routerLink="/reports"></button>
-    <h2 class="page-title" style="margin:0">Scheme Heatmap – Meghalaya</h2>
+    <button mat-icon-button routerLink="/reports">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <h2 class="page-title" style="margin:0">
+      <mat-icon style="vertical-align:middle;margin-right:0.5rem">map</mat-icon>
+      Scheme Heatmap – Meghalaya
+    </h2>
     <div style="margin-left:auto;display:flex;gap:0.75rem;align-items:center">
-      <label style="font-size:0.85rem;font-weight:600">Scheme:</label>
-      <p-select [options]="schemeOptions" [(ngModel)]="selectedScheme" styleClass="dd-sm" (ngModelChange)="addMarkers()"></p-select>
+      <mat-form-field appearance="outline" style="width:180px">
+        <mat-label>Scheme</mat-label>
+        <mat-select [(ngModel)]="selectedScheme" (ngModelChange)="addMarkers()">
+          <mat-option *ngFor="let opt of schemeOptions" [value]="opt.value">
+            {{ opt.label }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+  </div>
+
+  <!-- Summary Stats -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem">
+    <div class="stat-card">
+      <div class="stat-label">Total Applications</div>
+      <div class="stat-value" style="color:#1a237e">{{ totalApplications }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Approved</div>
+      <div class="stat-value" style="color:#16a34a">{{ totalApproved }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Pending</div>
+      <div class="stat-value" style="color:#f59e0b">{{ totalPending }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Approval Rate</div>
+      <div class="stat-value" style="color:#2563eb">{{ approvalRate.toFixed(1) }}%</div>
     </div>
   </div>
 
   <div style="display:grid;grid-template-columns:1fr 280px;gap:1.5rem">
     <!-- Map -->
     <div class="section-card">
-      <div class="section-card-header"><i class="pi pi-map"></i> District-wise Scheme Distribution</div>
-      <div #mapContainer class="map-container"></div>
+      <div class="section-card-header">
+        <mat-icon>map</mat-icon> District-wise Scheme Distribution
+      </div>
+      <div #mapContainer class="map-container">
+        <!-- Loading State -->
+        <div *ngIf="mapLoading" class="map-placeholder">
+          <mat-icon style="font-size:48px;width:48px;height:48px;color:#9ca3af;margin-bottom:1rem">map</mat-icon>
+          <div style="color:#6b7280;font-size:0.9rem">Loading map...</div>
+        </div>
+        <!-- Leaflet Not Available -->
+        <div *ngIf="!mapLoading && !leafletAvailable" class="map-placeholder">
+          <mat-icon style="font-size:48px;width:48px;height:48px;color:#f59e0b;margin-bottom:1rem">warning</mat-icon>
+          <div style="color:#dc2626;font-weight:600;margin-bottom:0.5rem">Map library not loaded</div>
+          <div style="color:#6b7280;font-size:0.85rem">Leaflet.js is required for map visualization</div>
+          <div style="color:#6b7280;font-size:0.85rem;margin-top:0.25rem">Please ensure Leaflet CSS and JS are loaded in index.html</div>
+        </div>
+      </div>
       <div class="map-legend">
         <span class="legend-dot" style="background:#dc2626"></span> High (40+)
         <span class="legend-dot" style="background:#f59e0b;margin-left:0.75rem"></span> Medium (20-40)
         <span class="legend-dot" style="background:#16a34a;margin-left:0.75rem"></span> Low (0-20)
+        <span style="margin-left:auto;font-size:0.75rem;color:#6b7280">Click bubbles for details</span>
       </div>
     </div>
 
     <!-- District Table -->
     <div class="section-card">
-      <div class="section-card-header"><i class="pi pi-list"></i> District Summary</div>
+      <div class="section-card-header">
+        <mat-icon>list</mat-icon> District Summary
+      </div>
       <div style="overflow-y:auto;max-height:500px">
         <div *ngFor="let d of districtData" class="district-row">
-          <div>
-            <div style="font-weight:600;font-size:0.85rem">{{ d.name }}</div>
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:0.85rem;color:#1f2937">{{ d.name }}</div>
             <div style="font-size:0.75rem;color:#6b7280">{{ d.approved }}/{{ d.applications }} approved</div>
+            <div style="font-size:0.72rem;color:#9ca3af;margin-top:2px">Rate: {{ d.approvalRate }}%</div>
           </div>
           <div class="heat-badge" [style.background]="d.color">{{ d.applications }}</div>
         </div>
@@ -36,7 +86,7 @@
   </div>
 
   <div class="info-note" style="margin-top:1rem">
-    <i class="pi pi-info-circle"></i>
-    Map shows bubble chart by district. Full GeoJSON district boundary overlay and assembly constituency-level heatmap integration planned via Leaflet + GeoJSON.
+    <mat-icon style="margin-right:0.5rem">info</mat-icon>
+    Map shows bubble chart by district with size proportional to application volume. Click on bubbles to see detailed statistics.
   </div>
 </div>

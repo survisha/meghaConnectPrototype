@@ -1,35 +1,57 @@
 <div>
-  <h2 class="page-title">Public Identification</h2>
+  <h2 class="page-title">
+    <mat-icon style="vertical-align:middle;margin-right:0.5rem">person_search</mat-icon>
+    Public Identification
+  </h2>
   <p style="color:#6b7280;font-size:0.9rem;margin-bottom:1.5rem">
     Search for a person by phone, EPIC, name, or constituency. Supports facial recognition (plug-and-play API).
   </p>
 
   <!-- Search Panel -->
   <div class="section-card" style="margin-bottom:1.5rem">
-    <div class="section-card-header"><i class="pi pi-search"></i> Search</div>
+    <div class="section-card-header">
+      <mat-icon>search</mat-icon> Search
+    </div>
     <div class="section-card-body">
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1rem">
-        <div>
-          <label class="field-label">📞 Phone Number</label>
-          <input pInputText [(ngModel)]="searchPhone" placeholder="Mobile number" style="width:100%"/>
-        </div>
-        <div>
-          <label class="field-label">🪪 EPIC / Voter ID</label>
-          <input pInputText [(ngModel)]="searchEpic" placeholder="EPIC number" style="width:100%"/>
-        </div>
-        <div>
-          <label class="field-label">👤 Name</label>
-          <input pInputText [(ngModel)]="searchName" placeholder="Full or partial name" style="width:100%"/>
-        </div>
-        <div>
-          <label class="field-label">📍 District</label>
-          <p-select [options]="districts" [(ngModel)]="searchDistrict" placeholder="Select district" styleClass="w-full" [showClear]="true"></p-select>
-        </div>
+        <mat-form-field appearance="outline" style="width:100%">
+          <mat-label>Phone Number</mat-label>
+          <mat-icon matPrefix>phone</mat-icon>
+          <input matInput [(ngModel)]="searchPhone" placeholder="Mobile number"/>
+        </mat-form-field>
+        
+        <mat-form-field appearance="outline" style="width:100%">
+          <mat-label>EPIC / Voter ID</mat-label>
+          <mat-icon matPrefix>badge</mat-icon>
+          <input matInput [(ngModel)]="searchEpic" placeholder="EPIC number"/>
+        </mat-form-field>
+        
+        <mat-form-field appearance="outline" style="width:100%">
+          <mat-label>Name</mat-label>
+          <mat-icon matPrefix>person</mat-icon>
+          <input matInput [(ngModel)]="searchName" placeholder="Full or partial name"/>
+        </mat-form-field>
+        
+        <mat-form-field appearance="outline" style="width:100%">
+          <mat-label>District</mat-label>
+          <mat-icon matPrefix>place</mat-icon>
+          <mat-select [(ngModel)]="searchDistrict" placeholder="Select district">
+            <mat-option [value]="''">-- Clear --</mat-option>
+            <mat-option *ngFor="let d of districts" [value]="d">{{ d }}</mat-option>
+          </mat-select>
+        </mat-form-field>
       </div>
+      
       <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
-        <button pButton label="Search" icon="pi pi-search" (click)="search()"></button>
-        <button pButton label="Clear" icon="pi pi-times" class="p-button-outlined" (click)="clearSearch()"></button>
-        <button pButton label="📸 Identify by Face (API)" icon="pi pi-camera" class="p-button-secondary p-button-outlined" disabled></button>
+        <button mat-raised-button color="primary" (click)="search()">
+          <mat-icon>search</mat-icon> Search
+        </button>
+        <button mat-stroked-button (click)="clearSearch()">
+          <mat-icon>close</mat-icon> Clear
+        </button>
+        <button mat-stroked-button disabled>
+          <mat-icon>camera_alt</mat-icon> Identify by Face (API)
+        </button>
       </div>
     </div>
   </div>
@@ -37,22 +59,26 @@
   <div style="display:grid;grid-template-columns:1fr 1.5fr;gap:1.5rem">
     <!-- Results List -->
     <div class="section-card">
-      <div class="section-card-header"><i class="pi pi-list"></i> Results ({{ results.length }})</div>
+      <div class="section-card-header">
+        <mat-icon>list</mat-icon> Results ({{ results.length }})
+      </div>
       <div class="section-card-body" style="padding:0">
         <div *ngIf="!searched" style="padding:2rem;text-align:center;color:#9ca3af;font-size:0.85rem">
-          Enter search criteria and click Search.
+          <mat-icon style="font-size:3rem;width:3rem;height:3rem;color:#d1d5db;margin-bottom:0.5rem">info</mat-icon>
+          <p>Enter search criteria and click Search.</p>
         </div>
         <div *ngIf="searched && results.length===0" style="padding:2rem;text-align:center;color:#9ca3af">
-          No results found.
+          <mat-icon style="font-size:3rem;width:3rem;height:3rem;color:#d1d5db;margin-bottom:0.5rem">search_off</mat-icon>
+          <p>No results found.</p>
         </div>
         <div *ngFor="let p of results" class="result-row" [class.selected]="selected?.id===p.id" (click)="select(p)">
           <div class="mini-avatar">{{ p.fullName[0] }}</div>
           <div style="flex:1">
-            <div style="font-weight:600;font-size:0.9rem">{{ p.fullName }}</div>
+            <div style="font-weight:600;font-size:0.9rem;color:#1f2937">{{ p.fullName }}</div>
             <div style="font-size:0.78rem;color:#6b7280">{{ p.designation }}</div>
             <div style="font-size:0.75rem;color:#9ca3af">{{ p.constituency }}, {{ p.district }}</div>
           </div>
-          <i class="pi pi-chevron-right" style="color:#9ca3af"></i>
+          <mat-icon style="color:#9ca3af">chevron_right</mat-icon>
         </div>
       </div>
     </div>
@@ -61,35 +87,40 @@
     <div>
       <div *ngIf="!selected" class="section-card" style="height:100%">
         <div class="section-card-body" style="display:flex;align-items:center;justify-content:center;height:300px;flex-direction:column;color:#9ca3af">
-          <i class="pi pi-user" style="font-size:3rem;margin-bottom:1rem;opacity:.4"></i>
+          <mat-icon style="font-size:3rem;width:3rem;height:3rem;margin-bottom:1rem;opacity:.4">person</mat-icon>
           <p>Select a person to view their full profile</p>
         </div>
       </div>
 
       <div *ngIf="selected">
         <div class="section-card" style="margin-bottom:1rem">
-          <div class="section-card-header"><i class="pi pi-id-card"></i> Person Profile</div>
+          <div class="section-card-header">
+            <mat-icon>badge</mat-icon> Person Profile
+          </div>
           <div class="section-card-body">
             <div class="profile-top">
               <div class="big-avatar">{{ selected.fullName[0] }}</div>
               <div>
-                <div style="font-size:1.2rem;font-weight:700">{{ selected.fullName }}</div>
+                <div style="font-size:1.2rem;font-weight:700;color:#1f2937">{{ selected.fullName }}</div>
                 <div style="color:#6b7280">{{ selected.designation }}</div>
                 <div style="margin-top:0.5rem;display:flex;gap:0.5rem;flex-wrap:wrap">
-                  <p-tag value="Active Voter" severity="success" styleClass="text-xs"></p-tag>
-                  <p-tag value="EPIC Verified" severity="info" styleClass="text-xs"></p-tag>
+                  <mat-chip class="status-chip status-success">Active Voter</mat-chip>
+                  <mat-chip class="status-chip status-info">EPIC Verified</mat-chip>
                 </div>
               </div>
             </div>
-            <p-divider></p-divider>
+            
+            <mat-divider style="margin: 1rem 0"></mat-divider>
+            
             <div class="profile-grid">
-              <div><span>Phone</span><strong>{{ selected.phoneNumber }}</strong></div>
-              <div><span>EPIC</span><strong>{{ selected.epicNumber }}</strong></div>
-              <div><span>District</span><strong>{{ selected.district }}</strong></div>
-              <div><span>Constituency</span><strong>{{ selected.constituency }}</strong></div>
-              <div><span>Booth</span><strong>{{ selected.booth }}</strong></div>
-              <div><span>Village</span><strong>{{ selected.village || '–' }}</strong></div>
+              <div><span>Phone</span><strong style="color:#1f2937">{{ selected.phoneNumber }}</strong></div>
+              <div><span>EPIC</span><strong style="color:#1f2937">{{ selected.epicNumber }}</strong></div>
+              <div><span>District</span><strong style="color:#1f2937">{{ selected.district }}</strong></div>
+              <div><span>Constituency</span><strong style="color:#1f2937">{{ selected.constituency }}</strong></div>
+              <div><span>Booth</span><strong style="color:#1f2937">{{ selected.booth }}</strong></div>
+              <div><span>Village</span><strong style="color:#1f2937">{{ selected.village || '–' }}</strong></div>
             </div>
+            
             <div *ngIf="selected.briefProfile" style="margin-top:0.75rem;padding:0.75rem;background:#f9fafb;border-radius:6px;font-size:0.85rem">
               {{ selected.briefProfile }}
             </div>
@@ -97,29 +128,62 @@
         </div>
 
         <div class="section-card">
-          <div class="section-card-header"><i class="pi pi-history"></i> Scheme &amp; Meeting History</div>
+          <div class="section-card-header">
+            <mat-icon>history</mat-icon> Scheme &amp; Meeting History
+          </div>
           <div class="section-card-body">
             <p style="font-weight:600;margin-bottom:0.5rem">Scheme History</p>
-            <div style="margin-bottom:1rem"><p-table [value]="schemeHistory" styleClass="p-datatable-sm">
-              <ng-template pTemplate="header">
-                <tr><th>Scheme</th><th>Year</th><th>Amount</th><th>Status</th></tr>
-              </ng-template>
-              <ng-template pTemplate="body" let-s>
-                <tr><td>{{ s.scheme }}</td><td>{{ s.year }}</td><td>{{ s.amount }}</td>
-                  <td><p-tag [value]="s.status" severity="success" styleClass="text-xs"></p-tag></td>
-                </tr>
-              </ng-template>
-            </p-table></div>
-            <p-divider></p-divider>
+            <div style="margin-bottom:1rem">
+              <table mat-table [dataSource]="schemeHistory" class="history-table">
+                <ng-container matColumnDef="scheme">
+                  <th mat-header-cell *matHeaderCellDef>Scheme</th>
+                  <td mat-cell *matCellDef="let s">{{ s.scheme }}</td>
+                </ng-container>
+                
+                <ng-container matColumnDef="year">
+                  <th mat-header-cell *matHeaderCellDef>Year</th>
+                  <td mat-cell *matCellDef="let s">{{ s.year }}</td>
+                </ng-container>
+                
+                <ng-container matColumnDef="amount">
+                  <th mat-header-cell *matHeaderCellDef>Amount</th>
+                  <td mat-cell *matCellDef="let s">{{ s.amount }}</td>
+                </ng-container>
+                
+                <ng-container matColumnDef="status">
+                  <th mat-header-cell *matHeaderCellDef>Status</th>
+                  <td mat-cell *matCellDef="let s">
+                    <mat-chip class="status-chip status-success">{{ s.status }}</mat-chip>
+                  </td>
+                </ng-container>
+                
+                <tr mat-header-row *matHeaderRowDef="schemeHistoryColumns"></tr>
+                <tr mat-row *matRowDef="let row; columns: schemeHistoryColumns;"></tr>
+              </table>
+            </div>
+            
+            <mat-divider style="margin: 1rem 0"></mat-divider>
+            
             <p style="font-weight:600;margin-bottom:0.5rem">Meeting History</p>
-            <p-table [value]="meetingHistory" styleClass="p-datatable-sm">
-              <ng-template pTemplate="header">
-                <tr><th>Date</th><th>Agenda</th><th>Outcome</th></tr>
-              </ng-template>
-              <ng-template pTemplate="body" let-m>
-                <tr><td>{{ m.date }}</td><td>{{ m.agenda }}</td><td>{{ m.outcome }}</td></tr>
-              </ng-template>
-            </p-table>
+            <table mat-table [dataSource]="meetingHistory" class="history-table">
+              <ng-container matColumnDef="date">
+                <th mat-header-cell *matHeaderCellDef>Date</th>
+                <td mat-cell *matCellDef="let m">{{ m.date }}</td>
+              </ng-container>
+              
+              <ng-container matColumnDef="agenda">
+                <th mat-header-cell *matHeaderCellDef>Agenda</th>
+                <td mat-cell *matCellDef="let m">{{ m.agenda }}</td>
+              </ng-container>
+              
+              <ng-container matColumnDef="outcome">
+                <th mat-header-cell *matHeaderCellDef>Outcome</th>
+                <td mat-cell *matCellDef="let m">{{ m.outcome }}</td>
+              </ng-container>
+              
+              <tr mat-header-row *matHeaderRowDef="meetingHistoryColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: meetingHistoryColumns;"></tr>
+            </table>
           </div>
         </div>
       </div>

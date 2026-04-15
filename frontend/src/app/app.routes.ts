@@ -45,7 +45,6 @@ export const routes: Routes = [
       { path: 'appointments', component: AppointmentListComponent, canActivate: [roleGuard(...STAFF_ROLES)] },
       { path: 'appointments/new', component: AppointmentFormComponent },
       { path: 'appointments/walkin', component: WalkinComponent, canActivate: [roleGuard('ADMIN', 'OSD', 'DATA_ENTRY_OPERATOR')] },
-      { path: 'appointments', component: AppointmentsComponent, canActivate: [roleGuard(...STAFF_ROLES)] },
       { path: 'approver', component: ApproverWorkflowComponent, canActivate: [roleGuard('HCM', 'ADMIN', 'OSD', 'APPROVER')] },
       { path: 'cmo-moderation', component: CmoModerationComponent, canActivate: [roleGuard('HCM', 'ADMIN', 'OSD', 'CMO_OFFICER')] },
       { path: 'schemes', component: SchemeListComponent, canActivate: [roleGuard(...REPORTS_ROLES)] },

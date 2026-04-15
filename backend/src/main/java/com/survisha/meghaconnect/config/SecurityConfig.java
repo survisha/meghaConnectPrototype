@@ -58,6 +58,7 @@ public class SecurityConfig {
                 .antMatchers("/api/v1/public/**").permitAll()       // Public registration
                 .antMatchers("/api/v1/visitor/auth/**").permitAll() // Visitor OTP auth
                 .antMatchers("/api/v1/visitor/**").permitAll()      // Visitor KYC endpoints
+                .antMatchers("/api/v1/reference/**").permitAll() // Public reference data dropdowns
                 .antMatchers("/api/ai/**").permitAll()              // AI endpoints (R004–R010, R015)
                 
                 // Static resources (Angular frontend - embedded in JAR)

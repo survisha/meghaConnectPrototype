@@ -2,8 +2,8 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { PersonService } from '../../services/person.service';
-import { Person } from '../../models';
+import { VisitorSearchService } from '../../services/visitor-search.service';
+import { Visitor } from '../../models';
 import { InputText } from 'primeng/inputtext';
 import { Tag } from 'primeng/tag';
 import { TableModule } from 'primeng/table';
@@ -19,17 +19,17 @@ import { Select } from 'primeng/select';
 export class WalkinComponent {
   phoneNumber = '';
   epicNumber = '';
-  foundPerson: Person | null = null;
+  foundPerson: Visitor | null = null;
   notFound = false;
   checkedIn = false;
   ticketId = '';
   agendaType = '';
-  associates: Person[] = [];
+  associates: Visitor[] = [];
   searching = false;
 
   agendaTypes = ['Scheme availment (CM)','Governance','Trade & Commerce','Political Discussion','Public Grievance'];
 
-  constructor(private personService: PersonService) {}
+  constructor(private visitorSearchService: VisitorSearchService) {}
 
   search() {
     this.notFound = false; this.foundPerson = null; this.searching = true;
@@ -37,13 +37,13 @@ export class WalkinComponent {
     const epic = this.epicNumber.trim();
 
     if (phone) {
-      this.personService.searchByPhone(phone).subscribe(p => {
+      this.visitorSearchService.searchByPhone(phone).subscribe(p => {
         this.foundPerson = p;
         if (!p) this.notFound = true;
         this.searching = false;
       });
     } else if (epic) {
-      this.personService.searchByEpic(epic).subscribe(p => {
+      this.visitorSearchService.searchByEpic(epic).subscribe(p => {
         this.foundPerson = p;
         if (!p) this.notFound = true;
         this.searching = false;

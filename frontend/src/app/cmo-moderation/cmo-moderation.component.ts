@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AppointmentService } from '../services/appointment.service';
-import { Appointment, EventType, Location, Person } from '../models';
+import { Appointment, EventType, Location, Visitor } from '../models';
 
 // Angular Material
 import { MatTableModule } from '@angular/material/table';
@@ -84,7 +84,7 @@ export class CmoModerationComponent implements OnInit {
   }
 
   initializeDummyData() {
-    const dummyApplicants: Person[] = [
+    const dummyApplicants: Visitor[] = [
       {
         id: 901,
         fullName: 'Dr. Carness Lyngdoh',

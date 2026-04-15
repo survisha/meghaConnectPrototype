@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { SchemeApplication } from '../models';
+import { environment } from '../../environments/environment';
 
 export interface Scheme {
   schemeId: number;
@@ -9,6 +10,11 @@ export interface Scheme {
   schemeName: string;
   description: string;
   active: boolean;
+}
+
+export interface ReferenceDataDto {
+  code: string;
+  value: string;
 }
 
 export interface CreateSchemeApplicationRequest {
@@ -33,10 +39,15 @@ export interface UpdateSchemeStatusRequest {
 @Injectable({ providedIn: 'root' })
 export class SchemeService {
 
-  private readonly schemesUrl = '/api/schemes';
-  private readonly applicationsUrl = '/api/scheme-applications';
+  private readonly schemesUrl = `${environment.apiUrl}/api/schemes`;
+  private readonly applicationsUrl = `${environment.apiUrl}/api/scheme-applications`;
 
   constructor(private http: HttpClient) {}
+
+  // Reference data
+  getSchemeTypes(): Observable<ReferenceDataDto[]> {
+    return this.http.get<ReferenceDataDto[]>(`${environment.apiUrl}/reference/CM_SCHEME`);
+  }
 
   // Scheme catalog
   getSchemes(): Observable<Scheme[]> {

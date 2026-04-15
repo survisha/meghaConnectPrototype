@@ -1,9 +1,9 @@
 package com.survisha.meghaconnect.controller;
 
 import com.survisha.meghaconnect.entity.Appointment;
-import com.survisha.meghaconnect.entity.Person;
+import com.survisha.meghaconnect.entity.Visitor;
 import com.survisha.meghaconnect.repository.AppointmentRepository;
-import com.survisha.meghaconnect.repository.PersonRepository;
+import com.survisha.meghaconnect.repository.VisitorRepository;
 import com.survisha.meghaconnect.service.AuditLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -33,7 +33,7 @@ import java.util.Map;
 public class VisitorAppointmentController {
 
     private final AppointmentRepository appointmentRepository;
-    private final PersonRepository      personRepository;
+    private final VisitorRepository      visitorRepository;
     private final AuditLogService       auditLogService;
 
     /**
@@ -66,13 +66,13 @@ public class VisitorAppointmentController {
     public ResponseEntity<Map<String, Object>> submitAppointment(@RequestBody Map<String, Object> body) {
 
         // ── Resolve applicant ───────────────────────────────────────────────
-        Person applicant = null;
+        Visitor applicant = null;
 
         Object applicantIdObj = body.get("applicantId");
         if (applicantIdObj != null) {
             try {
                 long applicantId = Long.parseLong(applicantIdObj.toString());
-                applicant = personRepository.findById(applicantId).orElse(null);
+                applicant = visitorRepository.findById(applicantId).orElse(null);
             } catch (NumberFormatException ignored) { }
         }
 
@@ -87,7 +87,7 @@ public class VisitorAppointmentController {
                 return badRequest("applicantPhone must be a valid 10-digit number");
             }
             // Reuse existing person by phone to avoid duplicates
-            applicant = personRepository.findByPhoneNumber(phone.trim()).orElseGet(() -> {
+            applicant = visitorRepository.findByPhoneNumber(phone.trim()).orElseGet(() -> {
                 String epic = getString(body, "epicNumber");
                 // Validate EPIC format if provided
                 if (epic != null && !epic.trim().isEmpty() && !epic.matches("^[A-Z]{3}[0-9]{7}$")) {
@@ -95,10 +95,10 @@ public class VisitorAppointmentController {
                 }
                 // Check EPIC uniqueness if provided
                 final String epicFinal = epic;
-                if (epicFinal != null && personRepository.findByEpicNumber(epicFinal).isPresent()) {
-                    return personRepository.findByEpicNumber(epicFinal).get();
+                if (epicFinal != null && visitorRepository.findByEpicNumber(epicFinal).isPresent()) {
+                    return visitorRepository.findByEpicNumber(epicFinal).get();
                 }
-                Person p = Person.builder()
+                Visitor p = Visitor.builder()
                         .fullName(name.trim())
                         .phoneNumber(phone.trim())
                         .epicNumber(epicFinal)
@@ -106,7 +106,7 @@ public class VisitorAppointmentController {
                         .kycVerified(false)
                         .kycStatus("PENDING")
                         .build();
-                return personRepository.save(p);
+                return visitorRepository.save(p);
             });
         }
 

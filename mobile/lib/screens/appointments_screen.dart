@@ -111,7 +111,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     final role = auth.user!.role;
     final canAddNew = [
       UserRole.ADMIN,
-      UserRole.SAIDUL_OSD,
+      UserRole.OSD,
       UserRole.DATA_ENTRY_OPERATOR,
     ].contains(role);
 

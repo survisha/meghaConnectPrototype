@@ -51,14 +51,15 @@
       </div>
 
       <div class="mode-tabs">
+         <button [class.active]="isPublicMode" (click)="isPublicMode=true">
+          <i class="pi pi-users"></i>
+          <span>Public/Citizen</span>
+        </button>
         <button [class.active]="!isPublicMode" (click)="isPublicMode=false">
           <i class="pi pi-id-card"></i>
           <span>Staff Login</span>
         </button>
-        <button [class.active]="isPublicMode" (click)="isPublicMode=true">
-          <i class="pi pi-users"></i>
-          <span>Public/Citizen</span>
-        </button>
+       
       </div>
 
       <ng-container *ngIf="!isPublicMode">

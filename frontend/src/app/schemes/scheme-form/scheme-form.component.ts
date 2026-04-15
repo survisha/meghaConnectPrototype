@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -9,6 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
+import { SchemeService } from '../../services/scheme.service';
 
 @Component({
   selector: 'app-scheme-form',
@@ -28,7 +29,7 @@ import { MatIconModule } from '@angular/material/icon';
   templateUrl: './scheme-form.component.html',
   styleUrls: ['./scheme-form.component.scss'],
 })
-export class SchemeFormComponent {
+export class SchemeFormComponent implements OnInit {
   step = 0;
   steps = [{ label: 'Scheme & Applicant' }, { label: 'Project Details' }, { label: 'Financial' }, { label: 'Documents' }, { label: 'Submit' }];
 
@@ -39,18 +40,23 @@ export class SchemeFormComponent {
     items: [{ description: '', quantity: 1, unitCost: 0 }],
   };
 
-  schemeTypes = [
-    { label: 'CMSDF – CM Special Development Fund', value: 'CMSDF' },
-    { label: 'CMSG – CM Special Grant', value: 'CMSG' },
-    { label: 'CM Care – Medical Assistance', value: 'CM_CARE' },
-    { label: 'CM Connect – Connectivity', value: 'CM_CONNECT' },
-    { label: 'CM Elevate – Youth Employment', value: 'CM_ELEVATE' },
-    { label: 'Focus+ – Focused Development', value: 'FOCUS_PLUS' },
-    { label: 'Others', value: 'OTHERS' },
-  ];
+  schemeTypes: any[] = [];
   projectCategories = ['Electricity','Road','House','School','Community hall','Retaining wall','Office','Travel','Medical','Musical instrument','Sports Equipment','Buses','Pickup Van','Computer lab upgradation','Repair','Others'];
   beneficiaryTypes = ['Individual','Community/Society','School/Youth Organisation','All of the above','Others'];
   beneficiaryCounts = ['1 TO 100','101 TO 500','501 TO 1000','Above 1000'];
+
+  constructor(private schemeService: SchemeService) {}
+
+  ngOnInit() {
+    this.schemeService.getSchemeTypes().subscribe({
+      next: (data) => {
+        this.schemeTypes = data.map(d => ({ label: d.value, value: d.code }));
+      },
+      error: (err) => {
+        console.error('Failed to load scheme types:', err);
+      }
+    });
+  }
 
   addItem() { this.form.items.push({ description: '', quantity: 1, unitCost: 0 }); }
   removeItem(i: number) { if (this.form.items.length > 1) this.form.items.splice(i, 1); }

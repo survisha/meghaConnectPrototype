@@ -1,10 +1,10 @@
 import { Injectable } from '@angular/core';
-import { Appointment, Person, ScheduleEvent, SchemeApplication, Direction, AuditEntry, Grievance } from '../models';
+import { Appointment, Visitor, ScheduleEvent, SchemeApplication, Direction, AuditEntry, Grievance } from '../models';
 
 @Injectable({ providedIn: 'root' })
 export class MockDataService {
 
-  persons: Person[] = [
+  visitors: Visitor[] = [
     { id: 1, fullName: 'Ramsing Marak', phoneNumber: '9876543210', epicNumber: 'MH/01/001/234567', photoUrl: '', designation: 'Political Leader', district: 'West Garo Hills', constituency: 'Ampati', booth: 'Booth 12', village: 'Dalu', briefProfile: 'District-level NPP leader with strong grassroots connect.' },
     { id: 2, fullName: 'Sunita Sangma', phoneNumber: '9876500001', epicNumber: 'MH/01/002/345678', photoUrl: '', designation: 'Teacher', district: 'East Khasi Hills', constituency: 'Shillong East', booth: 'Booth 5', village: 'Laitumkhrah', briefProfile: 'Government school teacher, active in community.' },
     { id: 3, fullName: 'Bijoy Momin', phoneNumber: '9812345678', epicNumber: 'MH/02/003/456789', photoUrl: '', designation: 'General Public', district: 'South Garo Hills', constituency: 'Baghmara', booth: 'Booth 3', village: 'Baghmara Town', briefProfile: 'Farmer seeking agricultural support.' },
@@ -14,7 +14,7 @@ export class MockDataService {
   appointments: Appointment[] = [
     {
       id: 1, applicationId: 'MC-2024-00001',
-      applicant: this.persons[0],
+      applicant: this.visitors[0],
       agendaType: 'Scheme availment (CM)',
       agendaBrief: 'CMSDF application for community hall construction at Dalu village. Benefits ~500 people.',
       status: 'HCM_PENDING',
@@ -29,7 +29,7 @@ export class MockDataService {
     },
     {
       id: 2, applicationId: 'MC-2024-00002',
-      applicant: this.persons[1],
+      applicant: this.visitors[1],
       agendaType: 'Public Grievance',
       agendaBrief: 'Request for school infrastructure improvement - repair of classrooms and addition of computer lab.',
       status: 'CMO_REVIEW',
@@ -40,7 +40,7 @@ export class MockDataService {
     },
     {
       id: 3, applicationId: 'MC-2024-00003',
-      applicant: this.persons[2],
+      applicant: this.visitors[2],
       agendaType: 'Scheme availment (CM)',
       agendaBrief: 'CM Care application for medical treatment - cardiac surgery required.',
       status: 'SCHEDULED',
@@ -51,7 +51,7 @@ export class MockDataService {
     },
     {
       id: 4, applicationId: 'MC-2024-00004',
-      applicant: this.persons[3],
+      applicant: this.visitors[3],
       agendaType: 'Trade & Commerce',
       agendaBrief: 'Request for transport permit for new pickup van under CM Elevate scheme.',
       status: 'APPROVER_REVIEW',
@@ -73,9 +73,9 @@ export class MockDataService {
   ];
 
   schemeApplications: SchemeApplication[] = [
-    { id: 1, applicant: this.persons[0], schemeType: 'CMSDF', projectName: 'Community Hall, Dalu', projectCategory: 'Community hall', beneficiaryType: 'Community/Society', beneficiaryCount: '501 TO 1000', estimatedCost: 2500000, communityContribution: 500000, justification: 'No community hall in the village. Required for community events.', status: 'HCM_PENDING' },
-    { id: 2, applicant: this.persons[2], schemeType: 'CM_CARE', projectName: 'Cardiac Surgery - Bijoy Momin', projectCategory: 'Medical', beneficiaryType: 'Individual', beneficiaryCount: '1 TO 100', estimatedCost: 350000, communityContribution: 0, justification: 'Patient requires urgent cardiac bypass surgery. BPL family.', status: 'SCHEDULED', hcmDecision: 'APPROVED', hcmApprovedCost: 300000 },
-    { id: 3, applicant: this.persons[3], schemeType: 'CM_ELEVATE', projectName: 'Pickup Van for transport business', projectCategory: 'Buses', beneficiaryType: 'Individual', beneficiaryCount: '1 TO 100', estimatedCost: 800000, communityContribution: 200000, justification: 'Self-employment opportunity for youth entrepreneur.', status: 'SUBMITTED' },
+    { id: 1, applicant: this.visitors[0], schemeType: 'CMSDF', projectName: 'Community Hall, Dalu', projectCategory: 'Community hall', beneficiaryType: 'Community/Society', beneficiaryCount: '501 TO 1000', estimatedCost: 2500000, communityContribution: 500000, justification: 'No community hall in the village. Required for community events.', status: 'HCM_PENDING' },
+    { id: 2, applicant: this.visitors[2], schemeType: 'CM_CARE', projectName: 'Cardiac Surgery - Bijoy Momin', projectCategory: 'Medical', beneficiaryType: 'Individual', beneficiaryCount: '1 TO 100', estimatedCost: 350000, communityContribution: 0, justification: 'Patient requires urgent cardiac bypass surgery. BPL family.', status: 'SCHEDULED', hcmDecision: 'APPROVED', hcmApprovedCost: 300000 },
+    { id: 3, applicant: this.visitors[3], schemeType: 'CM_ELEVATE', projectName: 'Pickup Van for transport business', projectCategory: 'Buses', beneficiaryType: 'Individual', beneficiaryCount: '1 TO 100', estimatedCost: 800000, communityContribution: 200000, justification: 'Self-employment opportunity for youth entrepreneur.', status: 'SUBMITTED' },
   ];
 
   auditLogs: AuditEntry[] = [

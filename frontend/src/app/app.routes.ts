@@ -26,9 +26,9 @@ import { roleGuard } from './guards/role.guard';
 
 import { UserRole } from './models';
 
-const FULL_CONTROL: UserRole[] = ['HCM', 'ADMIN', 'SAIDUL_OSD'];
-const STAFF_ROLES: UserRole[] = ['HCM', 'ADMIN', 'SAIDUL_OSD', 'APPROVER_JT_SECY', 'CMO_OFFICER', 'DATA_ENTRY_OPERATOR'];
-const REPORTS_ROLES: UserRole[] = ['HCM', 'ADMIN', 'SAIDUL_OSD', 'APPROVER_JT_SECY', 'CMO_OFFICER'];
+const FULL_CONTROL: UserRole[] = ['HCM', 'ADMIN', 'OSD'];
+const STAFF_ROLES: UserRole[] = ['HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER', 'DATA_ENTRY_OPERATOR'];
+const REPORTS_ROLES: UserRole[] = ['HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER'];
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
@@ -44,15 +44,15 @@ export const routes: Routes = [
       { path: 'scheduling', component: SchedulingComponent, canActivate: [roleGuard(...REPORTS_ROLES)] },
       { path: 'appointments', component: AppointmentListComponent, canActivate: [roleGuard(...STAFF_ROLES)] },
       { path: 'appointments/new', component: AppointmentFormComponent },
-      { path: 'appointments/walkin', component: WalkinComponent, canActivate: [roleGuard('ADMIN', 'SAIDUL_OSD', 'DATA_ENTRY_OPERATOR')] },
-      { path: 'appointments/:id', component: AppointmentDetailComponent, canActivate: [roleGuard(...STAFF_ROLES)] },
-      { path: 'approver', component: ApproverWorkflowComponent, canActivate: [roleGuard('HCM', 'ADMIN', 'SAIDUL_OSD', 'APPROVER_JT_SECY')] },
-      { path: 'cmo-moderation', component: CmoModerationComponent, canActivate: [roleGuard('HCM', 'ADMIN', 'SAIDUL_OSD', 'CMO_OFFICER')] },
+      { path: 'appointments/walkin', component: WalkinComponent, canActivate: [roleGuard('ADMIN', 'OSD', 'DATA_ENTRY_OPERATOR')] },
+      { path: 'appointments', component: AppointmentsComponent, canActivate: [roleGuard(...STAFF_ROLES)] },
+      { path: 'approver', component: ApproverWorkflowComponent, canActivate: [roleGuard('HCM', 'ADMIN', 'OSD', 'APPROVER')] },
+      { path: 'cmo-moderation', component: CmoModerationComponent, canActivate: [roleGuard('HCM', 'ADMIN', 'OSD', 'CMO_OFFICER')] },
       { path: 'schemes', component: SchemeListComponent, canActivate: [roleGuard(...REPORTS_ROLES)] },
       { path: 'schemes/apply', component: SchemeFormComponent },
       { path: 'grievances', component: GrievancesComponent },
-      { path: 'deo/register-visitor', component: VisitorRegisterComponent, canActivate: [roleGuard('ADMIN', 'SAIDUL_OSD', 'DATA_ENTRY_OPERATOR')] },
-      { path: 'identify', component: PublicIdentificationComponent, canActivate: [roleGuard('HCM', 'ADMIN', 'SAIDUL_OSD', 'DATA_ENTRY_OPERATOR')] },
+      { path: 'deo/register-visitor', component: VisitorRegisterComponent, canActivate: [roleGuard('ADMIN', 'OSD', 'DATA_ENTRY_OPERATOR')] },
+      { path: 'identify', component: PublicIdentificationComponent, canActivate: [roleGuard('HCM', 'ADMIN', 'OSD', 'DATA_ENTRY_OPERATOR')] },
       { path: 'reports', component: ReportsComponent, canActivate: [roleGuard(...REPORTS_ROLES)] },
       { path: 'reports/heatmap', component: HeatmapComponent, canActivate: [roleGuard(...REPORTS_ROLES)] },
       { path: 'reports/followups', component: PendingFollowupsComponent, canActivate: [roleGuard(...REPORTS_ROLES)] },

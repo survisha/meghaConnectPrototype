@@ -29,20 +29,20 @@ public class ScheduleEventController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('CMO_OFFICER','APPROVER_JT_SECY','HCM','SAIDUL_OSD','ADMIN')")
+    @PreAuthorize("hasAnyRole('CMO_OFFICER','APPROVER','HCM','OSD','ADMIN')")
     public ScheduleEvent create(@RequestBody ScheduleEvent event) {
         return scheduleEventService.create(event);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('CMO_OFFICER','APPROVER_JT_SECY','HCM','SAIDUL_OSD','ADMIN')")
+    @PreAuthorize("hasAnyRole('CMO_OFFICER','APPROVER','HCM','OSD','ADMIN')")
     public ScheduleEvent update(@PathVariable Long id, @RequestBody ScheduleEvent event) {
         event.setId(id);
         return scheduleEventService.update(event);
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('CMO_OFFICER','APPROVER_JT_SECY','HCM','SAIDUL_OSD','ADMIN')")
+    @PreAuthorize("hasAnyRole('CMO_OFFICER','APPROVER','HCM','OSD','ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         scheduleEventService.delete(id);
         return ResponseEntity.noContent().build();

@@ -265,9 +265,9 @@ class _UserCard extends StatelessWidget {
         return const Color(0xFF1A237E);
       case UserRole.ADMIN:
         return const Color(0xFF1565C0);
-      case UserRole.SAIDUL_OSD:
+      case UserRole.OSD:
         return const Color(0xFF0288D1);
-      case UserRole.APPROVER_JT_SECY:
+      case UserRole.APPROVER:
         return const Color(0xFF00838F);
       case UserRole.CMO_OFFICER:
         return const Color(0xFF2E7D32);

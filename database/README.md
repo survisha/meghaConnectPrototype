@@ -13,7 +13,7 @@ GRANT ALL PRIVILEGES ON DATABASE meghaconnect TO megha_user;
 | Table | Description |
 |-------|-------------|
 | `users` | System users (HCM, Admin, CMO, DEO, Public) |
-| `persons` | Citizen profiles (applicants, associates) |
+| `visitors` | Citizen profiles (applicants, associates) |
 | `schedule_events` | Calendar events (A1-A4, B1-B2) |
 | `appointments` | All appointment requests & workflow |
 | `directions` | HCM colour-coded directions (Green/Yellow/Blue) |

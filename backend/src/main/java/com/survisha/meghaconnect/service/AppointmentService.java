@@ -2,9 +2,9 @@ package com.survisha.meghaconnect.service;
 
 import com.survisha.meghaconnect.dto.AppointmentDto;
 import com.survisha.meghaconnect.entity.Appointment;
-import com.survisha.meghaconnect.entity.Person;
+import com.survisha.meghaconnect.entity.Visitor;
 import com.survisha.meghaconnect.repository.AppointmentRepository;
-import com.survisha.meghaconnect.repository.PersonRepository;
+import com.survisha.meghaconnect.repository.VisitorRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -21,7 +21,7 @@ import java.util.Optional;
 public class AppointmentService {
 
     private final AppointmentRepository appointmentRepository;
-    private final PersonRepository personRepository;
+    private final VisitorRepository visitorRepository;
     private final AuditLogService auditLogService;
 
     public Page<Appointment> findAll(Pageable pageable) {
@@ -38,8 +38,8 @@ public class AppointmentService {
 
     @Transactional
     public Appointment create(AppointmentDto dto, String createdBy) {
-        Person applicant = personRepository.findById(dto.getApplicantId())
-            .orElseThrow(() -> new IllegalArgumentException("Person not found: " + dto.getApplicantId()));
+        Visitor applicant = visitorRepository.findById(dto.getApplicantId())
+            .orElseThrow(() -> new IllegalArgumentException("Visitor not found: " + dto.getApplicantId()));
 
         int meetingCount = appointmentRepository.countMeetingsLast6Months(
             applicant.getId(), LocalDateTime.now().minusMonths(6)

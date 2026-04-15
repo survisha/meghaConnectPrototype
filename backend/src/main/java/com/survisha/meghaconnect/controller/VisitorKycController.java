@@ -114,13 +114,6 @@ public class VisitorKycController {
             return ResponseEntity.badRequest().body(error);
         }
 
-        // TODO: In production, call actual EPIC/Aadhaar verification API here
-        // The API should return the registered mobile number linked to the ID
-        // For demo: if phoneNumber not provided, use mock registered number
-        if (!manualVerification) {
-            // Simulate EPIC/Aadhaar API returning registered mobile number
-            phoneNumber = "EPIC".equals(idType) ? "9876543210" : "8787654321";
-        }
 
         try {
             // Generate OTP (mock: always returns "123456")
@@ -182,12 +175,12 @@ public class VisitorKycController {
     public ResponseEntity<Map<String, Object>> verifyOtp(@RequestBody Map<String, String> request) {
         String otp = request.get("otp");
         String idValue = request.get("idNumber");
-        String phoneNumber = "9876543210";//request.get("phonenumber");
-        String idType="EPIC";
-        if (otp == null || idValue == null) {
+        String phoneNumber = request.get("phoneNumber");
+        String idType = request.get("idType");
+        if (otp == null || idValue == null || phoneNumber == null || idType == null) {
             Map<String, Object> error = new HashMap<>();
             error.put("success", false);
-            error.put("message", "otp, idType are required");
+            error.put("message", "otp, idNumber, phoneNumber, and idType are required");
             return ResponseEntity.badRequest().body(error);
         }
 

@@ -18,7 +18,7 @@ public class AuditLogController {
     private final AuditLogRepository auditLogRepository;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','HCM','SAIDUL_OSD')")
+    @PreAuthorize("hasAnyRole('ADMIN','HCM','OSD')")
     public ResponseEntity<Page<AuditLog>> getAll(Pageable pageable) {
         return ResponseEntity.ok(auditLogRepository.findAll(pageable));
     }

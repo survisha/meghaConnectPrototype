@@ -196,8 +196,8 @@ class _ApproverWorkflowScreenState extends State<ApproverWorkflowScreen> {
                   ),
                 ),
                 Text(
-                  role == UserRole.APPROVER_JT_SECY
-                      ? 'Jt. Secretary Review'
+                  role == UserRole.APPROVER
+                      ? 'Approver Review'
                       : 'HCM Final View',
                   style: TextStyle(
                     color: Colors.white.withAlpha(204),

@@ -3,7 +3,7 @@ package com.survisha.meghaconnect.dto;
 import lombok.*;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
-public class PersonDto {
+public class VisitorDto {
     private Long id;
     private String fullName;
     private String phoneNumber;
@@ -19,6 +19,6 @@ public class PersonDto {
     private String booth;
     private String village;
     private String briefProfile;
-    /** Relative path/key in the file store (e.g. "persons/42/photo.jpg"). */
+    /** Relative path/key in the file store (e.g. "visitors/42/photo.jpg"). */
     private String photoStoragePath;
 }

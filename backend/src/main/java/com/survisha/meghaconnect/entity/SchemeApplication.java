@@ -5,6 +5,8 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.util.List;
 
+import com.survisha.meghaconnect.entity.Visitor;
+
 @Entity
 @Table(name = "scheme_applications",
     indexes = { @Index(name = "idx_scheme_applicant", columnList = "applicant_id") })
@@ -17,7 +19,7 @@ public class SchemeApplication extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "applicant_id", nullable = false)
-    private Person applicant;
+    private Visitor applicant;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "appointment_id")

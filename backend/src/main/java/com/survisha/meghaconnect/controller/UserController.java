@@ -17,13 +17,13 @@ public class UserController {
     private final UserRepository userRepository;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','HCM','SAIDUL_OSD')")
+    @PreAuthorize("hasAnyRole('ADMIN','HCM','OSD')")
     public ResponseEntity<List<User>> getAll() {
         return ResponseEntity.ok(userRepository.findAll());
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','HCM','SAIDUL_OSD')")
+    @PreAuthorize("hasAnyRole('ADMIN','HCM','OSD')")
     public ResponseEntity<User> getById(@PathVariable Long id) {
         return userRepository.findById(id)
                 .map(ResponseEntity::ok)

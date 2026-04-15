@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { environment } from '../../environments/environment.development';
+import { environment } from '../../environments/environment';
 
 export interface IdValidationRequest {
   idType: 'EPIC' | 'AADHAAR';
@@ -22,6 +22,8 @@ export interface IdValidationResponse {
 export interface OtpVerificationRequest {
   idNumber: string;
   otp: string;
+  phoneNumber: string;
+  idType: string;
 }
 
 export interface VisitorDemographics {
@@ -48,6 +50,11 @@ export interface FaceValidationResponse {
   kycStatus: 'PHOTO_MATCHED' | 'DEMOGRAPHIC_MATCHED' | 'FAILED';
   message: string;
   matchScore?: number;
+}
+
+export interface ReferenceDataDto {
+  code: string;
+  value: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -79,6 +86,10 @@ export class VisitorKycService {
    */
   validateFace(request: FaceValidationRequest): Observable<FaceValidationResponse> {
     return this.http.post<FaceValidationResponse>(`${environment.apiUrl}/visitor/validate-face`, request);
+  }
+
+  getCitizenDesignations(): Observable<ReferenceDataDto[]> {
+    return this.http.get<ReferenceDataDto[]>(`${environment.apiUrl}/reference/CITIZEN_DESIGNATION`);
   }
 
   /**

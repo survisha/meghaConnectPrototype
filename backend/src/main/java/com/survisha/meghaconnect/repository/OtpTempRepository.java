@@ -4,6 +4,7 @@ import com.survisha.meghaconnect.entity.OtpTemp;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
@@ -19,7 +20,7 @@ public interface OtpTempRepository extends JpaRepository<OtpTemp, Long> {
     /** Count failed attempts within a time window to support brute-force detection. */
     @Query("SELECT COALESCE(SUM(o.attemptCount), 0) FROM OtpTemp o " +
            "WHERE o.phoneNumber = :phone AND o.createdAt > :since")
-    int sumAttemptCountSince(String phone, LocalDateTime since);
+    int sumAttemptCountSince(@Param("phone") String phone, @Param("since") LocalDateTime since);
 
     /** Purge expired records (run periodically). */
     @Modifying

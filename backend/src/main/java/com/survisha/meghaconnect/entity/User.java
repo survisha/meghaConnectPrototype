@@ -39,6 +39,6 @@ public class User extends BaseEntity {
     private LocalDateTime delegationExpiresAt;
 
     public enum UserRole {
-        HCM, ADMIN, SAIDUL_OSD, APPROVER_JT_SECY, CMO_OFFICER, DATA_ENTRY_OPERATOR, PUBLIC
+        HCM, ADMIN, OSD, APPROVER, CMO_OFFICER, DATA_ENTRY_OPERATOR, PUBLIC
     }
 }

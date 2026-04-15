@@ -10,6 +10,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatStepperModule } from '@angular/material/stepper';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { environment } from '../../../environments/environment';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AiDocumentService, AiExtractedFields, AiDocumentAnalysisResponse, DuplicateCheckResponse } from '../../services/ai-document.service';
@@ -263,7 +264,7 @@ export class AppointmentFormComponent {
     };
 
     this.http.post<{ success: boolean; applicationId?: string; message?: string; id?: number }>(
-      '/api/v1/visitor/appointments', payload
+      `${environment.apiUrl}/visitor/appointments`, payload
     ).subscribe({
       next: res => {
         this.loading = false;

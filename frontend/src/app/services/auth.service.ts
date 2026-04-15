@@ -4,7 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { tap, map, catchError } from 'rxjs/operators';
 import { UserRole } from '../models';
-import { environment } from '../../environments/environment.development';
+import { environment } from '../../environments/environment';
 
 export interface AuthUser {
   username: string;
@@ -29,8 +29,8 @@ export class AuthService {
   DEMO_USERS = [
     { username: 'hcm', password: 'hcm123', fullName: 'HCM User', role: 'HCM' as UserRole },
     { username: 'admin', password: 'admin123', fullName: 'Admin User', role: 'ADMIN' as UserRole },
-    { username: 'saidul', password: 'osd123', fullName: 'Saidul OSD', role: 'SAIDUL_OSD' as UserRole },
-    { username: 'jtsecy', password: 'jts123', fullName: 'Joint Secretary', role: 'APPROVER_JT_SECY' as UserRole },
+    { username: 'saidul', password: 'osd123', fullName: 'OSD', role: 'OSD' as UserRole },
+    { username: 'jtsecy', password: 'jts123', fullName: 'Approver', role: 'APPROVER' as UserRole },
     { username: 'cmo', password: 'cmo123', fullName: 'CMO Officer', role: 'CMO_OFFICER' as UserRole },
     { username: 'deo1', password: 'deo123', fullName: 'Data Entry Operator', role: 'DATA_ENTRY_OPERATOR' as UserRole },
     { username: 'public1', password: 'public123', fullName: 'Public User', role: 'PUBLIC' as UserRole },

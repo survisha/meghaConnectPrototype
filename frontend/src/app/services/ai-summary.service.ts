@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface AiSummaryRequest {
   appointmentId: number;
@@ -18,7 +19,7 @@ export interface AiSummaryResponse {
 @Injectable({ providedIn: 'root' })
 export class AiSummaryService {
 
-  private readonly apiUrl = '/api/ai/generate-summary';
+  private readonly apiUrl = `${environment.apiUrl}/api/ai/generate-summary`;
 
   constructor(private http: HttpClient) {}
 

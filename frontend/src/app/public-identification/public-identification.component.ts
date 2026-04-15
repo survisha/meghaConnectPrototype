@@ -1,8 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { PersonService } from '../services/person.service';
-import { Person } from '../models';
+import { VisitorSearchService } from '../services/visitor-search.service';
+import { Visitor } from '../models';
 
 // Angular Material
 import { MatInputModule } from '@angular/material/input';
@@ -30,8 +30,8 @@ export class PublicIdentificationComponent implements OnInit {
   searchEpic = '';
   searchName = '';
   searchDistrict = '';
-  results: Person[] = [];
-  selected: Person | null = null;
+  results: Visitor[] = [];
+  selected: Visitor | null = null;
   searched = false;
   searching = false;
 
@@ -42,7 +42,7 @@ export class PublicIdentificationComponent implements OnInit {
   schemeHistory: { scheme: string; year: string; amount: string; status: string }[] = [];
   meetingHistory: { date: string; agenda: string; outcome: string }[] = [];
 
-  constructor(private personService: PersonService) {}
+  constructor(private visitorSearchService: VisitorSearchService) {}
 
   ngOnInit() {
     this.initializeDummyData();
@@ -152,7 +152,7 @@ export class PublicIdentificationComponent implements OnInit {
 
     // Try API first
     if (phone) {
-      this.personService.searchByPhone(phone).subscribe({
+      this.visitorSearchService.searchByPhone(phone).subscribe({
         next: p => {
           if (p) this.results = [p];
           this.searching = false;
@@ -164,7 +164,7 @@ export class PublicIdentificationComponent implements OnInit {
         }
       });
     } else if (epic) {
-      this.personService.searchByEpic(epic).subscribe({
+      this.visitorSearchService.searchByEpic(epic).subscribe({
         next: p => {
           if (p) this.results = [p];
           this.searching = false;
@@ -176,7 +176,7 @@ export class PublicIdentificationComponent implements OnInit {
         }
       });
     } else if (name) {
-      this.personService.searchByName(name).subscribe({
+      this.visitorSearchService.searchByName(name).subscribe({
         next: res => {
           this.results = res;
           this.searching = false;
@@ -188,7 +188,7 @@ export class PublicIdentificationComponent implements OnInit {
         }
       });
     } else if (district) {
-      this.personService.searchByDistrict(district).subscribe({
+      this.visitorSearchService.searchByDistrict(district).subscribe({
         next: res => {
           this.results = res;
           this.searching = false;
@@ -206,7 +206,7 @@ export class PublicIdentificationComponent implements OnInit {
     }
   }
 
-  select(p: Person) {
+  select(p: Visitor) {
     this.selected = p;
     this.populateHistory();
   }

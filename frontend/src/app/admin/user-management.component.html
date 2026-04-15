@@ -1,71 +1,106 @@
-<div>
+<div style="padding: 1.5rem;">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
-    <h2 class="page-title" style="margin:0"><i class="pi pi-users" style="margin-right:0.5rem"></i>User Management</h2>
-    <p-button label="Add User" icon="pi pi-plus" (onClick)="openNew()"></p-button>
+    <h2 class="page-title" style="margin:0;display:flex;align-items:center;gap:0.5rem">
+      <mat-icon>group</mat-icon> User Management
+    </h2>
+    <button mat-raised-button color="primary" (click)="openNew()">
+      <mat-icon>add</mat-icon> Add User
+    </button>
   </div>
 
   <div *ngIf="successMsg" style="background:#d1fae5;color:#065f46;padding:0.75rem 1rem;border-radius:6px;margin-bottom:1rem;display:flex;align-items:center;gap:0.5rem">
-    <i class="pi pi-check-circle"></i> {{ successMsg }}
+    <mat-icon style="color:#065f46">check_circle</mat-icon> {{ successMsg }}
   </div>
   <div *ngIf="errorMsg && !showDialog" style="background:#fee2e2;color:#991b1b;padding:0.75rem 1rem;border-radius:6px;margin-bottom:1rem;display:flex;align-items:center;gap:0.5rem">
-    <i class="pi pi-exclamation-circle"></i> {{ errorMsg }}
+    <mat-icon style="color:#991b1b">error</mat-icon> {{ errorMsg }}
   </div>
 
   <div class="section-card">
-    <div class="section-card-header"><i class="pi pi-list"></i> System Users</div>
-    <p-table [value]="users" [paginator]="true" [rows]="10" styleClass="p-datatable-sm" responsiveLayout="scroll">
-      <ng-template pTemplate="header">
-        <tr>
-          <th>Full Name</th>
-          <th>Username</th>
-          <th>Role</th>
-          <th style="text-align:center">Actions</th>
-        </tr>
-      </ng-template>
-      <ng-template pTemplate="body" let-u>
-        <tr>
-          <td><strong>{{ u.fullName }}</strong></td>
-          <td><code style="background:#f3f4f6;padding:2px 6px;border-radius:4px">{{ u.username }}</code></td>
-          <td><p-tag [value]="roleLabel(u.role)" [severity]="roleBadge(u.role)"></p-tag></td>
-          <td style="text-align:center">
-            <p-button icon="pi pi-pencil" [text]="true" severity="info" (onClick)="openEdit(u)" pTooltip="Edit"></p-button>
-            <p-button icon="pi pi-trash" [text]="true" severity="danger" (onClick)="deleteUser(u)" pTooltip="Delete" [disabled]="u.username === auth.user()?.username"></p-button>
+    <div class="section-card-header" style="display:flex;align-items:center;gap:0.5rem">
+      <mat-icon>list</mat-icon> System Users
+    </div>
+    <div style="overflow-x: auto;">
+      <table mat-table [dataSource]="users" class="user-table">
+        <!-- Full Name Column -->
+        <ng-container matColumnDef="fullName">
+          <th mat-header-cell *matHeaderCellDef>Full Name</th>
+          <td mat-cell *matCellDef="let u"><strong>{{ u.fullName }}</strong></td>
+        </ng-container>
+
+        <!-- Username Column -->
+        <ng-container matColumnDef="username">
+          <th mat-header-cell *matHeaderCellDef>Username</th>
+          <td mat-cell *matCellDef="let u"><code style="background:#f3f4f6;padding:2px 6px;border-radius:4px">{{ u.username }}</code></td>
+        </ng-container>
+
+        <!-- Role Column -->
+        <ng-container matColumnDef="role">
+          <th mat-header-cell *matHeaderCellDef>Role</th>
+          <td mat-cell *matCellDef="let u">
+            <span style="padding:4px 8px;border-radius:4px;font-size:0.85rem;font-weight:500;display:inline-block"
+              [ngStyle]="roleBadge(u.role)">
+              {{ roleLabel(u.role) }}
+            </span>
           </td>
-        </tr>
-      </ng-template>
-    </p-table>
+        </ng-container>
+
+        <!-- Actions Column -->
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef style="text-align:center">Actions</th>
+          <td mat-cell *matCellDef="let u" style="text-align:center">
+            <button mat-icon-button color="primary" (click)="openEdit(u)" matTooltip="Edit">
+              <mat-icon>edit</mat-icon>
+            </button>
+            <button mat-icon-button color="warn" (click)="deleteUser(u)" [disabled]="u.username === auth.user()?.username" matTooltip="Delete">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <!-- Header Row -->
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <!-- Data Rows -->
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+      </table>
+    </div>
   </div>
 
-  <p-dialog [(visible)]="showDialog" [header]="isEdit ? 'Edit User' : 'New User'" [modal]="true" [style]="{width:'420px'}" [draggable]="false">
-    <div style="display:flex;flex-direction:column;gap:1rem;padding-top:0.5rem">
-      <div *ngIf="errorMsg" style="background:#fee2e2;color:#991b1b;padding:0.6rem 0.75rem;border-radius:6px;font-size:0.85rem">
-        <i class="pi pi-exclamation-circle"></i> {{ errorMsg }}
-      </div>
+  <mat-dialog-container *ngIf="showDialog">
+    <h2 mat-dialog-title style="margin:0">{{ isEdit ? 'Edit User' : 'New User' }}</h2>
+    <mat-dialog-content>
+      <div style="display:flex;flex-direction:column;gap:1.5rem;padding-top:1rem">
+        <div *ngIf="errorMsg" style="background:#fee2e2;color:#991b1b;padding:0.6rem 0.75rem;border-radius:6px;font-size:0.85rem;display:flex;gap:0.5rem;align-items:center">
+          <mat-icon style="color:#991b1b;font-size:18px;width:18px;height:18px">error</mat-icon> {{ errorMsg }}
+        </div>
 
-      <div class="form-group">
-        <label>Full Name *</label>
-        <input pInputText [(ngModel)]="form.fullName" placeholder="Full Name" style="width:100%"/>
-      </div>
+        <mat-form-field appearance="outline" style="width:100%">
+          <mat-label>Full Name *</mat-label>
+          <input matInput [(ngModel)]="form.fullName" placeholder="Full Name" />
+        </mat-form-field>
 
-      <div class="form-group">
-        <label>Username *</label>
-        <input pInputText [(ngModel)]="form.username" placeholder="Username" style="width:100%" [disabled]="isEdit"/>
-      </div>
+        <mat-form-field appearance="outline" style="width:100%">
+          <mat-label>Username *</mat-label>
+          <input matInput [(ngModel)]="form.username" placeholder="Username" [disabled]="isEdit" />
+        </mat-form-field>
 
-      <div class="form-group">
-        <label>Role *</label>
-        <p-select [options]="roleOptions" [(ngModel)]="form.role" optionLabel="label" optionValue="value" styleClass="w-full" placeholder="Select role"></p-select>
-      </div>
+        <mat-form-field appearance="outline" style="width:100%">
+          <mat-label>Role *</mat-label>
+          <mat-select [(ngModel)]="form.role">
+            <mat-option *ngFor="let opt of roleOptions" [value]="opt.value">{{ opt.label }}</mat-option>
+          </mat-select>
+        </mat-form-field>
 
-      <div class="form-group">
-        <label>Password *</label>
-        <p-password [(ngModel)]="form.password" [feedback]="false" [toggleMask]="true" styleClass="w-full" inputStyleClass="w-full" placeholder="Set password"></p-password>
+        <mat-form-field appearance="outline" style="width:100%">
+          <mat-label>Password *</mat-label>
+          <input matInput [type]="showPassword ? 'text' : 'password'" [(ngModel)]="form.password" placeholder="Set password" />
+          <button mat-icon-button matSuffix (click)="showPassword = !showPassword" type="button">
+            <mat-icon>{{ showPassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
+        </mat-form-field>
       </div>
-    </div>
-
-    <ng-template pTemplate="footer">
-      <p-button label="Cancel" icon="pi pi-times" [text]="true" (onClick)="showDialog=false"></p-button>
-      <p-button [label]="isEdit ? 'Update' : 'Create'" icon="pi pi-check" (onClick)="save()"></p-button>
-    </ng-template>
-  </p-dialog>
-</div>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end" style="padding-top:1rem;gap:0.5rem">
+      <button mat-button (click)="showDialog = false">Cancel</button>
+      <button mat-raised-button color="primary" (click)="save()">{{ isEdit ? 'Update' : 'Create' }}</button>
+    </mat-dialog-actions>
+  </mat-dialog-container>

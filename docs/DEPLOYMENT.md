@@ -17,6 +17,7 @@ MeghaConnect is packaged as a single executable JAR file containing both the Spr
 ### On Target Machine (Production/Testing)
 - **Java Runtime**: JRE 8 or higher (`java -version` to check)
 - **MySQL**: 8.0+ (or compatible database)
+- **Redis**: 6.0+ (for caching)
 - **Network Access**: Port 8080 (default, configurable)
 
 ---
@@ -83,7 +84,158 @@ GRANT ALL PRIVILEGES ON meghaconnect.* TO 'meghaconnect_user'@'localhost';
 FLUSH PRIVILEGES;
 ```
 
-### 2. Copy JAR to Target Machine
+### 2. Redis Setup
+
+MeghaConnect uses Redis for caching reference data and improving performance. Redis must be running before starting the application.
+
+#### Local Development Setup
+
+**Option A: Docker (Recommended)**
+```bash
+# Pull and run Redis container
+docker run -d --name meghaconnect-redis -p 6379:6379 redis:7.2-alpine
+
+# Verify it's running
+docker ps | grep meghaconnect-redis
+
+# Test connection
+docker exec -it meghaconnect-redis redis-cli ping
+# Expected response: PONG
+
+# Stop Redis
+docker stop meghaconnect-redis
+
+# Start Redis again
+docker start meghaconnect-redis
+
+# View logs
+docker logs meghaconnect-redis
+```
+
+**Option B: Windows (Native Installation)**
+1. Download Redis for Windows: https://redis.io/download
+2. Extract to `C:\Redis`
+3. Open Command Prompt as Administrator
+```cmd
+cd C:\Redis
+redis-server.exe --service-install
+redis-server.exe --service-start
+```
+
+**Option C: WSL Ubuntu (on Windows)**
+```bash
+# Install Redis
+sudo apt update
+sudo apt install redis-server
+
+# Start Redis service
+sudo systemctl enable redis-server
+sudo systemctl start redis-server
+
+# Check status
+sudo systemctl status redis-server
+
+# Test connection
+redis-cli ping
+```
+
+#### Production Setup
+
+**Option A: Docker (Recommended for Production)**
+```bash
+# Create Redis data directory
+sudo mkdir -p /opt/redis/data
+sudo chown redis:redis /opt/redis/data
+
+# Run Redis with persistence and security
+docker run -d \
+  --name meghaconnect-redis \
+  -p 6379:6379 \
+  -v /opt/redis/data:/data \
+  -e REDIS_PASSWORD=your_secure_password_here \
+  --restart unless-stopped \
+  redis:7.2-alpine \
+  redis-server --appendonly yes --requirepass your_secure_password_here
+
+# Verify
+docker logs meghaconnect-redis
+```
+
+**Option B: Ubuntu/Debian Server**
+```bash
+# Install Redis
+sudo apt update
+sudo apt install redis-server
+
+# Configure Redis
+sudo nano /etc/redis/redis.conf
+
+# Key settings to modify:
+# bind 127.0.0.1 ::1  # Listen on localhost only
+# port 6379
+# requirepass your_secure_password_here
+# maxmemory 256mb
+# maxmemory-policy allkeys-lru
+# appendonly yes
+# appendfilename "appendonly.aof"
+
+# Restart Redis
+sudo systemctl restart redis-server
+sudo systemctl enable redis-server
+
+# Test connection
+redis-cli -a your_secure_password_here ping
+```
+
+**Option C: Red Hat/CentOS**
+```bash
+# Install Redis
+sudo yum install redis
+
+# Configure (similar to Ubuntu)
+sudo nano /etc/redis.conf
+
+# Start service
+sudo systemctl start redis
+sudo systemctl enable redis
+```
+
+**Option D: AWS ElastiCache (Managed Redis)**
+- Create ElastiCache cluster in AWS Console
+- Choose Redis engine
+- Configure security groups to allow access from your EC2 instance
+- Use the endpoint in your `application-prod.properties`
+
+**Option E: Azure Cache for Redis**
+- Create Azure Cache for Redis in Azure Portal
+- Choose Basic/Standard/Premium tier
+- Get connection string and configure in environment variables
+
+#### Redis Configuration in Application
+
+Add to your `application-prod.properties`:
+
+```properties
+# Redis Configuration
+spring.redis.host=localhost
+spring.redis.port=6379
+spring.redis.password=your_secure_password_here
+spring.redis.timeout=2000ms
+spring.redis.database=0
+
+# Cache Configuration
+spring.cache.type=redis
+spring.cache.redis.time-to-live=3600000
+```
+
+Or use environment variables:
+```bash
+export REDIS_HOST=localhost
+export REDIS_PORT=6379
+export REDIS_PASSWORD=your_secure_password_here
+```
+
+### 3. Copy JAR to Target Machine
 
 Transfer the JAR file:
 ```
@@ -270,6 +422,44 @@ USE meghaconnect;
 DELETE FROM flyway_schema_history WHERE success = 0;
 ```
 
+### Redis Connection Issues
+
+**Check if Redis is running:**
+```bash
+# Local Docker
+docker ps | grep redis
+
+# Native installation
+redis-cli ping
+
+# With password
+redis-cli -a your_password ping
+```
+
+**Check Redis logs:**
+```bash
+# Docker
+docker logs meghaconnect-redis
+
+# Systemd
+sudo journalctl -u redis-server -f
+```
+
+**Common Redis errors:**
+- `Redis is required but not available. Please start Redis server.`
+  - Solution: Start Redis server as described above
+
+- `WRONGPASS invalid username-password pair`
+  - Solution: Check `REDIS_PASSWORD` environment variable or `spring.redis.password`
+
+- `Connection refused`
+  - Solution: Verify Redis host/port, firewall rules, Docker networking
+
+**Reset Redis data (development only):**
+```bash
+redis-cli FLUSHALL
+```
+
 ### Frontend Not Loading
 
 1. Verify static files are in JAR:
@@ -382,14 +572,16 @@ server {
 
 - [ ] Change default user passwords
 - [ ] Use strong JWT secret (min 256 bits)
+- [ ] **Configure Redis password** (`requirepass` in redis.conf)
+- [ ] **Restrict Redis access** (bind to localhost only in production)
 - [ ] Enable HTTPS in production
 - [ ] Restrict CORS origins
-- [ ] Use firewall to limit port access
-- [ ] Regular security updates (Java, MySQL, OS)
+- [ ] Use firewall to limit port access (8080, 6379)
+- [ ] Regular security updates (Java, MySQL, Redis, OS)
 - [ ] Database user has minimum required privileges
 - [ ] Enable SQL injection protection (parameterized queries - already done via JPA)
 - [ ] Implement rate limiting for login endpoints
-- [ ] Regular backups of MySQL database
+- [ ] Regular backups of MySQL database and Redis data
 - [ ] Monitor application logs for suspicious activity
 
 ---
@@ -462,5 +654,5 @@ For issues or questions:
 
 ---
 
-**Last Updated**: March 5, 2026  
+**Last Updated**: April 14, 2026  
 **Version**: 1.0.0-SNAPSHOT

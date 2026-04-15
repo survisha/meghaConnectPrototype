@@ -6,13 +6,13 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Entity
-@Table(name = "persons",
+@Table(name = "visitors",
     indexes = {
-        @Index(name = "idx_person_phone", columnList = "phoneNumber"),
-        @Index(name = "idx_person_epic",  columnList = "epicNumber"),
+        @Index(name = "idx_visitor_phone", columnList = "phoneNumber"),
+        @Index(name = "idx_visitor_epic",  columnList = "epicNumber"),
     })
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
-public class Person extends BaseEntity {
+public class Visitor extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

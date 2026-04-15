@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../environments/environment';
 import { AuthService } from '../services/auth.service';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -57,7 +58,7 @@ export class PublicLoginComponent {
       return;
     }
     this.loading = true;
-    this.http.post<{ registered: boolean; message: string }>('/api/v1/visitor/auth/check-mobile', {
+    this.http.post<{ registered: boolean; message: string }>(`${environment.apiUrl}/visitor/auth/check-mobile`, {
       phoneNumber: this.phoneNumber,
     }).subscribe({
       next: res => {
@@ -80,7 +81,7 @@ export class PublicLoginComponent {
   sendOtp() {
     this.errorMsg = '';
     this.loading = true;
-    this.http.post<{ success: boolean; otp?: string; message: string }>('/api/v1/visitor/auth/generate-otp', {
+    this.http.post<{ success: boolean; otp?: string; message: string }>(`${environment.apiUrl}/visitor/auth/generate-otp`, {
       phoneNumber: this.phoneNumber,
     }).subscribe({
       next: res => {
@@ -116,7 +117,7 @@ export class PublicLoginComponent {
       visitorId: number;
       role: string;
       message: string;
-    }>('/api/v1/visitor/auth/validate-otp', {
+    }>(`${environment.apiUrl}/visitor/auth/validate-otp`, {
       phoneNumber: this.phoneNumber,
       otp: this.otp,
     }).subscribe({

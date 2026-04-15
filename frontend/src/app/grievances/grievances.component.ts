@@ -185,6 +185,6 @@ export class GrievancesComponent implements OnInit {
     return m[c] ?? c;
   }
 
-  get isStaff() { return this.auth.hasRole('HCM', 'ADMIN', 'SAIDUL_OSD', 'APPROVER_JT_SECY', 'CMO_OFFICER', 'DATA_ENTRY_OPERATOR'); }
+  get isStaff() { return this.auth.hasRole('HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER', 'DATA_ENTRY_OPERATOR'); }
   get isPublic() { return this.auth.hasRole('PUBLIC'); }
 }

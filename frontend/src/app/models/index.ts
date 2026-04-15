@@ -1,6 +1,6 @@
 export type UserRole =
-  | 'HCM' | 'ADMIN' | 'SAIDUL_OSD'
-  | 'APPROVER_JT_SECY' | 'CMO_OFFICER'
+  | 'HCM' | 'ADMIN' | 'OSD'
+  | 'APPROVER' | 'CMO_OFFICER'
   | 'DATA_ENTRY_OPERATOR' | 'PUBLIC';
 
 export type EventType = 'A1' | 'A2' | 'A3' | 'A4' | 'B1' | 'B2';
@@ -13,7 +13,7 @@ export type AppointmentStatus =
   | 'HCM_ACCEPTED' | 'HCM_SNOOZED' | 'HCM_REJECTED'
   | 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
 
-export interface Person {
+export interface Visitor {
   id: number;
   fullName: string;
   phoneNumber: string;
@@ -30,7 +30,7 @@ export interface Person {
 export interface Appointment {
   id: number;
   applicationId: string;
-  applicant: Person;
+  applicant: Visitor;
   agendaType: string;
   agendaBrief: string;
   status: AppointmentStatus;
@@ -67,7 +67,7 @@ export interface ScheduleEvent {
 export interface SchemeApplication {
   id: number;
   appointmentId?: number;
-  applicant: Person;
+  applicant: Visitor;
   schemeType: SchemeType;
   projectName: string;
   projectCategory: string;

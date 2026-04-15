@@ -1,9 +1,9 @@
 package com.survisha.meghaconnect.service;
 
 import com.survisha.meghaconnect.entity.OtpTemp;
-import com.survisha.meghaconnect.entity.Person;
+import com.survisha.meghaconnect.entity.Visitor;
 import com.survisha.meghaconnect.repository.OtpTempRepository;
-import com.survisha.meghaconnect.repository.PersonRepository;
+import com.survisha.meghaconnect.repository.VisitorRepository;
 import com.survisha.meghaconnect.security.JwtService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,14 +40,14 @@ public class VisitorOtpService {
     /** Shared SecureRandom instance – thread-safe and expensive to initialize. */
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
-    private final PersonRepository    personRepository;
+    private final VisitorRepository  visitorRepository;
     private final OtpTempRepository   otpTempRepository;
     private final JwtService          jwtService;
 
     // ── Check mobile ─────────────────────────────────────────────────────────
 
     public boolean isMobileRegistered(String phone) {
-        return personRepository.findByPhoneNumber(phone).isPresent();
+        return visitorRepository.findByPhoneNumber(phone).isPresent();
     }
 
     // ── Generate OTP ─────────────────────────────────────────────────────────
@@ -123,7 +123,7 @@ public class VisitorOtpService {
         otpTempRepository.save(record);
 
         // Build a minimal UserDetails to feed into JwtService
-        Person visitor = personRepository.findByPhoneNumber(phone)
+        Visitor visitor = visitorRepository.findByPhoneNumber(phone)
                 .orElseThrow(() -> new IllegalArgumentException("MOBILE_NOT_FOUND"));
 
         UserDetails userDetails = User.builder()

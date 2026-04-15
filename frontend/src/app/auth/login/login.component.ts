@@ -30,7 +30,7 @@ export class LoginComponent {
   password = '';
   errorMsg = '';
   loading = false;
-  isPublicMode = false;
+  isPublicMode = true;
   otpSent = false;
   otp = '';
 

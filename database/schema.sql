@@ -56,9 +56,9 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE INDEX idx_user_mobile ON users(phone_number);
 
 -- ============================================================
--- VISITORS (persons / citizens / applicants)
+-- VISITORS (visitors / citizens / applicants)
 -- ============================================================
-CREATE TABLE IF NOT EXISTS persons (
+CREATE TABLE IF NOT EXISTS visitors (
     id                  BIGINT        NOT NULL AUTO_INCREMENT,
     full_name           VARCHAR(200)  NOT NULL,
     phone_number        VARCHAR(20),
@@ -85,10 +85,10 @@ CREATE TABLE IF NOT EXISTS persons (
     PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE INDEX idx_visitor_id      ON persons(id);
-CREATE INDEX idx_person_mobile   ON persons(phone_number);
-CREATE INDEX idx_person_epic     ON persons(epic_number);
-CREATE INDEX idx_person_name     ON persons(full_name);
+CREATE INDEX idx_visitor_id      ON visitors(id);
+CREATE INDEX idx_visitor_mobile   ON visitors(phone_number);
+CREATE INDEX idx_visitor_epic     ON visitors(epic_number);
+CREATE INDEX idx_visitor_name     ON visitors(full_name);
 
 -- ============================================================
 -- VISITOR ASSOCIATES
@@ -105,7 +105,7 @@ CREATE TABLE IF NOT EXISTS visitor_associates (
     created_at           DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at           DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (associate_id),
-    CONSTRAINT fk_associate_visitor FOREIGN KEY (primary_visitor_id) REFERENCES persons(id)
+    CONSTRAINT fk_associate_visitor FOREIGN KEY (primary_visitor_id) REFERENCES visitors(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ============================================================
@@ -129,7 +129,7 @@ CREATE INDEX idx_scheme_id ON schemes(scheme_id);
 -- ============================================================
 CREATE TABLE IF NOT EXISTS scheme_applications (
     id                    BIGINT         NOT NULL AUTO_INCREMENT,
-    applicant_id          BIGINT         NOT NULL COMMENT 'FK to persons',
+    applicant_id          BIGINT         NOT NULL COMMENT 'FK to visitors',
     appointment_id        BIGINT         COMMENT 'FK to appointments (optional)',
     scheme_type           VARCHAR(50)    NOT NULL,
     project_name          VARCHAR(300)   NOT NULL,
@@ -150,7 +150,7 @@ CREATE TABLE IF NOT EXISTS scheme_applications (
     created_by            VARCHAR(100),
     updated_by            VARCHAR(100),
     PRIMARY KEY (id),
-    CONSTRAINT fk_schemeapp_person FOREIGN KEY (applicant_id) REFERENCES persons(id)
+    CONSTRAINT fk_schemeapp_visitor FOREIGN KEY (applicant_id) REFERENCES visitors(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE INDEX idx_scheme_id_app    ON scheme_applications(id);
@@ -254,7 +254,7 @@ CREATE TABLE IF NOT EXISTS appointments (
     created_by                  VARCHAR(100),
     updated_by                  VARCHAR(100),
     PRIMARY KEY (id),
-    CONSTRAINT fk_appt_person    FOREIGN KEY (applicant_id)    REFERENCES persons(id),
+    CONSTRAINT fk_appt_visitor    FOREIGN KEY (applicant_id)    REFERENCES visitors(id),
     CONSTRAINT fk_appt_event     FOREIGN KEY (schedule_event_id) REFERENCES schedule_events(id),
     CONSTRAINT fk_appt_batch     FOREIGN KEY (batch_id)        REFERENCES appointment_batches(batch_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -313,7 +313,7 @@ CREATE TABLE IF NOT EXISTS associate_mappings (
     updated_at     DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     CONSTRAINT fk_assoc_appt   FOREIGN KEY (appointment_id) REFERENCES appointments(id),
-    CONSTRAINT fk_assoc_person FOREIGN KEY (person_id)      REFERENCES persons(id)
+    CONSTRAINT fk_assoc_visitor FOREIGN KEY (person_id)      REFERENCES visitors(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ============================================================

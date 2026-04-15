@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../environments/environment';
 import { AuthService } from '../services/auth.service';
 import { Tag } from 'primeng/tag';
 import { AiChatbotComponent } from '../ai-chatbot/ai-chatbot.component';
@@ -87,7 +88,7 @@ export class VisitorDashboardComponent implements OnInit {
 
   private loadProfile(visitorId: string) {
     this.loading = true;
-    this.http.get<VisitorProfile & { success: boolean }>(`/api/v1/visitor/auth/profile/${visitorId}`).subscribe({
+    this.http.get<VisitorProfile & { success: boolean }>(`${environment.apiUrl}/visitor/auth/profile/${visitorId}`).subscribe({
       next: res => {
         this.loading = false;
         if (res.success) {

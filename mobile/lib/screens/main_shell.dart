@@ -36,13 +36,13 @@ class _NavItem {
 const _allRoles = [
   UserRole.HCM,
   UserRole.ADMIN,
-  UserRole.SAIDUL_OSD,
-  UserRole.APPROVER_JT_SECY,
+  UserRole.OSD,
+  UserRole.APPROVER,
   UserRole.CMO_OFFICER,
   UserRole.DATA_ENTRY_OPERATOR,
 ];
 
-const _fullControl = [UserRole.HCM, UserRole.ADMIN, UserRole.SAIDUL_OSD];
+const _fullControl = [UserRole.HCM, UserRole.ADMIN, UserRole.OSD];
 
 final _navTree = <_NavItem>[
   _NavItem(
@@ -64,8 +64,8 @@ final _navTree = <_NavItem>[
     roles: [
       UserRole.HCM,
       UserRole.ADMIN,
-      UserRole.SAIDUL_OSD,
-      UserRole.APPROVER_JT_SECY,
+      UserRole.OSD,
+      UserRole.APPROVER,
       UserRole.CMO_OFFICER,
     ],
   ),
@@ -76,8 +76,8 @@ final _navTree = <_NavItem>[
     roles: [
       UserRole.HCM,
       UserRole.ADMIN,
-      UserRole.SAIDUL_OSD,
-      UserRole.APPROVER_JT_SECY,
+      UserRole.OSD,
+      UserRole.APPROVER,
     ],
   ),
   _NavItem(
@@ -96,13 +96,13 @@ final _navTree = <_NavItem>[
         label: 'New Appointment',
         icon: Icons.add_circle_outline,
         route: 'new_appointment',
-        roles: [UserRole.ADMIN, UserRole.SAIDUL_OSD, UserRole.DATA_ENTRY_OPERATOR, UserRole.PUBLIC],
+        roles: [UserRole.ADMIN, UserRole.OSD, UserRole.DATA_ENTRY_OPERATOR, UserRole.PUBLIC],
       ),
       _NavItem(
         label: 'Walk-in Counter',
         icon: Icons.login_outlined,
         route: 'walkin',
-        roles: [UserRole.ADMIN, UserRole.SAIDUL_OSD, UserRole.DATA_ENTRY_OPERATOR],
+        roles: [UserRole.ADMIN, UserRole.OSD, UserRole.DATA_ENTRY_OPERATOR],
       ),
     ],
   ),
@@ -113,8 +113,8 @@ final _navTree = <_NavItem>[
     roles: [
       UserRole.HCM,
       UserRole.ADMIN,
-      UserRole.SAIDUL_OSD,
-      UserRole.APPROVER_JT_SECY,
+      UserRole.OSD,
+      UserRole.APPROVER,
       UserRole.CMO_OFFICER,
       UserRole.PUBLIC,
     ],
@@ -132,7 +132,7 @@ final _navTree = <_NavItem>[
     roles: [
       UserRole.HCM,
       UserRole.ADMIN,
-      UserRole.SAIDUL_OSD,
+      UserRole.OSD,
       UserRole.DATA_ENTRY_OPERATOR,
     ],
   ),
@@ -143,8 +143,8 @@ final _navTree = <_NavItem>[
     roles: [
       UserRole.HCM,
       UserRole.ADMIN,
-      UserRole.SAIDUL_OSD,
-      UserRole.APPROVER_JT_SECY,
+      UserRole.OSD,
+      UserRole.APPROVER,
       UserRole.CMO_OFFICER,
     ],
     children: [
@@ -155,8 +155,8 @@ final _navTree = <_NavItem>[
         roles: [
           UserRole.HCM,
           UserRole.ADMIN,
-          UserRole.SAIDUL_OSD,
-          UserRole.APPROVER_JT_SECY,
+          UserRole.OSD,
+          UserRole.APPROVER,
           UserRole.CMO_OFFICER,
         ],
       ),
@@ -167,8 +167,8 @@ final _navTree = <_NavItem>[
         roles: [
           UserRole.HCM,
           UserRole.ADMIN,
-          UserRole.SAIDUL_OSD,
-          UserRole.APPROVER_JT_SECY,
+          UserRole.OSD,
+          UserRole.APPROVER,
           UserRole.CMO_OFFICER,
         ],
       ),
@@ -507,9 +507,9 @@ class _RoleBadge extends StatelessWidget {
         return const Color(0xFF1A237E);
       case UserRole.ADMIN:
         return const Color(0xFF1565C0);
-      case UserRole.SAIDUL_OSD:
+      case UserRole.OSD:
         return const Color(0xFF0288D1);
-      case UserRole.APPROVER_JT_SECY:
+      case UserRole.APPROVER:
         return const Color(0xFF00838F);
       case UserRole.CMO_OFFICER:
         return const Color(0xFF2E7D32);

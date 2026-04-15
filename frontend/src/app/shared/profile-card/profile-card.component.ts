@@ -1,6 +1,6 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Person } from '../../models';
+import { Visitor } from '../../models';
 import { Tag } from 'primeng/tag';
 import { Divider } from 'primeng/divider';
 
@@ -26,5 +26,5 @@ import { Divider } from 'primeng/divider';
   `
 })
 export class ProfileCardComponent {
-  @Input() person: Person | null = null;
+  @Input() person: Visitor | null = null;
 }

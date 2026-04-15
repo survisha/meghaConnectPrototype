@@ -23,7 +23,7 @@ public class Appointment extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "applicant_id", nullable = false)
-    private Person applicant;
+    private Visitor applicant;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

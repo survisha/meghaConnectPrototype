@@ -1,15 +1,19 @@
 import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { AuthService } from '../services/auth.service';
 import { UserRole } from '../models';
-import { Button } from 'primeng/button';
-import { InputText } from 'primeng/inputtext';
-import { Password } from 'primeng/password';
-import { Select } from 'primeng/select';
-import { Tag } from 'primeng/tag';
-import { TableModule } from 'primeng/table';
-import { Dialog } from 'primeng/dialog';
+
+import { MatButtonModule } from '@angular/material/button';
+import { MatTableModule } from '@angular/material/table';
+import { MatDialogModule } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatIconModule } from '@angular/material/icon';
+import { MatPaginatorModule } from '@angular/material/paginator';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDialog } from '@angular/material/dialog';
 
 interface ManagedUser {
   username: string;
@@ -21,7 +25,11 @@ interface ManagedUser {
 @Component({
   selector: 'app-user-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, Button, InputText, Password, Select, Tag, TableModule, Dialog],
+  imports: [
+    CommonModule, FormsModule, ReactiveFormsModule,
+    MatButtonModule, MatTableModule, MatDialogModule, MatFormFieldModule, MatInputModule,
+    MatSelectModule, MatIconModule, MatPaginatorModule, MatTooltipModule,
+  ],
   templateUrl: './user-management.component.html',
   styleUrls: ['./user-management.component.scss'],
 })
@@ -32,31 +40,38 @@ export class UserManagementComponent {
   editTarget = '';
   successMsg = '';
   errorMsg = '';
+  showPassword = false;
 
   form: ManagedUser = { username: '', fullName: '', role: 'DATA_ENTRY_OPERATOR', password: '' };
+  displayedColumns: string[] = ['fullName', 'username', 'role', 'actions'];
+  pageSize = 10;
+  pageSizeOptions = [5, 10, 20];
 
   roleOptions: { label: string; value: UserRole }[] = [
     { label: 'HCM', value: 'HCM' },
     { label: 'Admin', value: 'ADMIN' },
-    { label: 'Saidul OSD', value: 'SAIDUL_OSD' },
-    { label: 'Jt. Secretary (Approver)', value: 'APPROVER_JT_SECY' },
+    { label: 'OSD', value: 'OSD' },
+    { label: 'Approver', value: 'APPROVER' },
     { label: 'CMO Officer', value: 'CMO_OFFICER' },
     { label: 'Data Entry Operator', value: 'DATA_ENTRY_OPERATOR' },
   ];
 
-  constructor(public auth: AuthService) {
+  constructor(public auth: AuthService, public dialog: MatDialog) {
     this.users = this.auth.DEMO_USERS
       .filter((u: any) => u.role !== 'PUBLIC')
       .map((u: any) => ({ username: u.username, fullName: u.fullName, role: u.role, password: u.password }));
   }
 
-  roleBadge(role: UserRole): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' | undefined {
-    const map: Record<string, 'success' | 'info' | 'warn' | 'danger' | 'secondary'> = {
-      HCM: 'danger', ADMIN: 'warn', SAIDUL_OSD: 'warn',
-      APPROVER_JT_SECY: 'info', CMO_OFFICER: 'info',
-      DATA_ENTRY_OPERATOR: 'secondary',
+  roleBadge(role: UserRole): { [klass: string]: any } {
+    const map: Record<string, { [klass: string]: any }> = {
+      HCM: { 'background': '#fee2e2', 'color': '#991b1b' },
+      ADMIN: { 'background': '#fef3c7', 'color': '#92400e' },
+      OSD: { 'background': '#fef3c7', 'color': '#92400e' },
+      APPROVER: { 'background': '#dbeafe', 'color': '#1e40af' },
+      CMO_OFFICER: { 'background': '#dbeafe', 'color': '#1e40af' },
+      DATA_ENTRY_OPERATOR: { 'background': '#f3f4f6', 'color': '#374151' },
     };
-    return map[role] ?? 'secondary';
+    return map[role] ?? { 'background': '#f3f4f6', 'color': '#374151' };
   }
 
   roleLabel(role: UserRole): string {

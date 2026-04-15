@@ -496,6 +496,32 @@ mat-checkbox {
   margin-bottom: 1rem;
 }
 
+:host ::ng-deep mat-checkbox.outside-state-checkbox {
+  display: inline-flex !important;
+  align-items: center !important;
+  width: 100% !important;
+  margin-bottom: 1rem;
+}
+
+:host ::ng-deep mat-checkbox.outside-state-checkbox .mat-checkbox-layout {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  vertical-align: middle !important;
+}
+
+:host ::ng-deep mat-checkbox.outside-state-checkbox .mat-checkbox-label {
+  margin: 0 !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+  vertical-align: middle !important;
+}
+
+:host ::ng-deep mat-checkbox.outside-state-checkbox .mat-checkbox-frame,
+:host ::ng-deep mat-checkbox.outside-state-checkbox .mat-checkbox-background {
+  vertical-align: middle !important;
+}
+
 .form-row.two-col {
   mat-form-field {
     margin-bottom: 0;

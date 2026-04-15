@@ -224,15 +224,15 @@ export class DashboardComponent implements OnInit {
     const role = this.auth.user()?.role;
     const all = [
       { label: "Today's Appointments", value: '–', icon: 'pi-calendar-plus', matIcon: 'event_available', color: '#1a237e', bg: '#e8eaf6',
-        roles: ['HCM','ADMIN','SAIDUL_OSD','APPROVER_JT_SECY','CMO_OFFICER','DATA_ENTRY_OPERATOR'] },
+        roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER','DATA_ENTRY_OPERATOR'] },
       { label: 'Pending Approvals', value: '–', icon: 'pi-clock', matIcon: 'schedule', color: '#b45309', bg: '#fef3c7',
-        roles: ['HCM','ADMIN','SAIDUL_OSD','APPROVER_JT_SECY'] },
+        roles: ['HCM','ADMIN','OSD','APPROVER'] },
       { label: 'Active Scheme Apps', value: '–', icon: 'pi-briefcase', matIcon: 'work', color: '#065f46', bg: '#d1fae5',
-        roles: ['HCM','ADMIN','SAIDUL_OSD','APPROVER_JT_SECY','CMO_OFFICER'] },
+        roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER'] },
       { label: 'Pending Follow-ups', value: '–', icon: 'pi-exclamation-triangle', matIcon: 'warning', color: '#991b1b', bg: '#fee2e2',
-        roles: ['HCM','ADMIN','SAIDUL_OSD'] },
+        roles: ['HCM','ADMIN','OSD'] },
       { label: 'Walk-ins Today', value: '–', icon: 'pi-sign-in', matIcon: 'directions_walk', color: '#0369a1', bg: '#e0f2fe',
-        roles: ['DATA_ENTRY_OPERATOR','ADMIN','SAIDUL_OSD'] },
+        roles: ['DATA_ENTRY_OPERATOR','ADMIN','OSD'] },
       { label: 'CMO Reviews Due', value: '–', icon: 'pi-file-edit', matIcon: 'rate_review', color: '#7c3aed', bg: '#ede9fe',
         roles: ['CMO_OFFICER'] },
     ];
@@ -243,21 +243,21 @@ export class DashboardComponent implements OnInit {
     const role = this.auth.user()?.role;
     const all: (QuickAction & { roles: string[], matIcon?: string })[] = [
       { label: 'New Appointment', icon: 'pi pi-plus', matIcon: 'add', route: '/appointments/new', severity: '',
-        roles: ['ADMIN','SAIDUL_OSD','DATA_ENTRY_OPERATOR'] },
+        roles: ['ADMIN','OSD','DATA_ENTRY_OPERATOR'] },
       { label: 'Walk-in Counter', icon: 'pi pi-sign-in', matIcon: 'login', route: '/appointments/walkin', severity: 'success',
-        roles: ['ADMIN','SAIDUL_OSD','DATA_ENTRY_OPERATOR'] },
+        roles: ['ADMIN','OSD','DATA_ENTRY_OPERATOR'] },
       { label: 'Register Visitor', icon: 'pi pi-user-plus', matIcon: 'person_add', route: '/deo/register-visitor', severity: 'success',
-        roles: ['DATA_ENTRY_OPERATOR','ADMIN','SAIDUL_OSD'] },
+        roles: ['DATA_ENTRY_OPERATOR','ADMIN','OSD'] },
       { label: 'Apply for Scheme', icon: 'pi pi-briefcase', matIcon: 'work', route: '/schemes/apply', severity: 'warning',
-        roles: ['ADMIN','SAIDUL_OSD'] },
+        roles: ['ADMIN','OSD'] },
       { label: 'Identify Person', icon: 'pi pi-id-card', matIcon: 'badge', route: '/identify', severity: 'info',
-        roles: ['HCM','ADMIN','SAIDUL_OSD','DATA_ENTRY_OPERATOR'] },
+        roles: ['HCM','ADMIN','OSD','DATA_ENTRY_OPERATOR'] },
       { label: 'Scheme Heatmap', icon: 'pi pi-map', matIcon: 'map', route: '/reports/heatmap', severity: 'secondary',
-        roles: ['HCM','ADMIN','SAIDUL_OSD','APPROVER_JT_SECY','CMO_OFFICER'] },
+        roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER'] },
       { label: 'View Reports', icon: 'pi pi-chart-bar', matIcon: 'bar_chart', route: '/reports', severity: 'info',
-        roles: ['HCM','ADMIN','SAIDUL_OSD','APPROVER_JT_SECY','CMO_OFFICER'] },
+        roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER'] },
       { label: 'Manage Users', icon: 'pi pi-shield', matIcon: 'admin_panel_settings', route: '/admin/users', severity: 'secondary',
-        roles: ['HCM','ADMIN','SAIDUL_OSD'] },
+        roles: ['HCM','ADMIN','OSD'] },
       { label: 'Audit Trail', icon: 'pi pi-history', matIcon: 'history', route: '/reports/audit', severity: 'secondary',
         roles: ['ADMIN'] },
     ];
@@ -270,10 +270,10 @@ export class DashboardComponent implements OnInit {
   }
 
   get showSchedule() {
-    return this.auth.hasRole('HCM','ADMIN','SAIDUL_OSD','APPROVER_JT_SECY','CMO_OFFICER');
+    return this.auth.hasRole('HCM','ADMIN','OSD','APPROVER','CMO_OFFICER');
   }
 
   get showCharts() {
-    return this.auth.hasRole('HCM','ADMIN','SAIDUL_OSD','APPROVER_JT_SECY','CMO_OFFICER');
+    return this.auth.hasRole('HCM','ADMIN','OSD','APPROVER','CMO_OFFICER');
   }
 }

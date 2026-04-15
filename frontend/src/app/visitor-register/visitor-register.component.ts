@@ -1,8 +1,9 @@
-import { Component, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnDestroy, ChangeDetectorRef, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../environments/environment';
 import { VisitorKycService } from '../services/visitor-kyc.service';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -55,7 +56,7 @@ interface VisitorRegistrationForm {
   templateUrl: './visitor-register.component.html',
   styleUrls: ['./visitor-register.component.scss'],
 })
-export class VisitorRegisterComponent implements OnDestroy {
+export class VisitorRegisterComponent implements OnInit, OnDestroy {
   // Multi-step KYC flow
   currentStep: KycStep = 'id-entry';
   
@@ -79,12 +80,7 @@ export class VisitorRegisterComponent implements OnDestroy {
   };
 
   // Reference data
-  designations = [
-    'Govt Servant', 'Retd Govt Servant', 'Teacher', 'Political Leader',
-    'Students', 'Religious Leader', 'Businessman', 'Media', 'General Public',
-    'Organisation – Village Authority', 'Teachers Body', 'Civil Society / NGO',
-    'Institute', 'Others'
-  ];
+  designations: { code: string; value: string }[] = [];
   districts = [
     'East Khasi Hills', 'West Khasi Hills', 'South West Khasi Hills', 'Ri Bhoi',
     'East Jaintia Hills', 'West Jaintia Hills', 'East Garo Hills', 'West Garo Hills',
@@ -134,8 +130,23 @@ export class VisitorRegisterComponent implements OnDestroy {
     this.isDeoMode = this.route.snapshot.url.some(segment => segment.path === 'register-visitor');
   }
 
+  ngOnInit() {
+    this.loadDesignations();
+  }
+
   ngOnDestroy() {
     this.stopCamera();
+  }
+
+  loadDesignations() {
+    this.kycService.getCitizenDesignations().subscribe({
+      next: res => {
+        this.designations = Array.isArray(res) ? res : [];
+      },
+      error: () => {
+        this.designations = [];
+      }
+    });
   }
 
   // ── STEP 1: ID VALIDATION ───────────────────────────────────────────────
@@ -187,6 +198,7 @@ export class VisitorRegisterComponent implements OnDestroy {
         if (res.success && res.otpSent) {
           this.idValidated = true;
           this.otpSent = true;  // Show OTP field
+          this.currentStep = 'otp-verification';
           this.maskedPhone = res.phoneNumber || '';
           this.actualPhoneNumber = res.actualPhoneNumber || this.manualPhone || '';  // Store actual phone
           this.manualVerification = res.manualVerification || false;
@@ -231,6 +243,8 @@ export class VisitorRegisterComponent implements OnDestroy {
     this.kycService.verifyOtp({
       idNumber: this.idNumber,
       otp: this.otpCode,
+      phoneNumber: this.actualPhoneNumber,
+      idType: this.form.idType,
     }).subscribe({
       next: res => {
         this.loading = false;
@@ -409,7 +423,7 @@ export class VisitorRegisterComponent implements OnDestroy {
       payload['manualVerification'] = true;
     }
 
-    this.http.post<{ success: boolean; message: string }>('/api/v1/visitor/auth/register', payload).subscribe({
+    this.http.post<{ success: boolean; message: string }>(`${environment.apiUrl}/visitor/auth/register`, payload).subscribe({
       next: res => {
         this.loading = false;
         if (res.success) {
@@ -435,6 +449,18 @@ export class VisitorRegisterComponent implements OnDestroy {
     } else {
       this.router.navigate(['/public-login']);
     }
+  }
+
+  goBackToIdEntry() {
+    this.currentStep = 'id-entry';
+    this.otpSent = false;
+    this.otpCode = '';
+    this.errorMsg = '';
+  }
+
+  goBackToOtpVerification() {
+    this.currentStep = 'otp-verification';
+    this.errorMsg = '';
   }
 
   // ── INPUT SANITIZATION ──────────────────────────────────────────────────

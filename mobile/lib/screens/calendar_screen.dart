@@ -115,9 +115,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final role = context.watch<AuthService>().user!.role;
     final canAdd = [
       UserRole.ADMIN,
-      UserRole.SAIDUL_OSD,
+      UserRole.OSD,
       UserRole.CMO_OFFICER,
-      UserRole.APPROVER_JT_SECY,
+      UserRole.APPROVER,
     ].contains(role);
 
     return Column(

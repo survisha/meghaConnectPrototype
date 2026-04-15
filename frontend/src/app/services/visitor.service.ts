@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Person } from '../models';
+import { Visitor } from '../models';
 
 export interface RegisterVisitorRequest {
   fullName: string;
@@ -38,16 +38,16 @@ export class VisitorService {
 
   constructor(private http: HttpClient) {}
 
-  register(request: RegisterVisitorRequest): Observable<Person> {
-    return this.http.post<Person>(`${this.baseUrl}/register`, request);
+  register(request: RegisterVisitorRequest): Observable<Visitor> {
+    return this.http.post<Visitor>(`${this.baseUrl}/register`, request);
   }
 
   loginWithOtp(request: OtpLoginRequest): Observable<OtpLoginResponse> {
     return this.http.post<OtpLoginResponse>(`${this.baseUrl}/login-otp`, request);
   }
 
-  getById(id: number): Observable<Person> {
-    return this.http.get<Person>(`${this.baseUrl}/${id}`);
+  getById(id: number): Observable<Visitor> {
+    return this.http.get<Visitor>(`${this.baseUrl}/${id}`);
   }
 
   getHistory(id: number): Observable<VisitorHistory> {

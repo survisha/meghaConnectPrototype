@@ -1,8 +1,8 @@
 enum UserRole {
   HCM,
   ADMIN,
-  SAIDUL_OSD,
-  APPROVER_JT_SECY,
+  OSD,
+  APPROVER,
   CMO_OFFICER,
   DATA_ENTRY_OPERATOR,
   PUBLIC,
@@ -15,10 +15,10 @@ extension UserRoleExtension on UserRole {
         return 'Hon. Chief Minister';
       case UserRole.ADMIN:
         return 'System Admin';
-      case UserRole.SAIDUL_OSD:
+      case UserRole.OSD:
         return 'OSD';
-      case UserRole.APPROVER_JT_SECY:
-        return 'Joint Secretary';
+      case UserRole.APPROVER:
+        return 'Approver';
       case UserRole.CMO_OFFICER:
         return 'CMO Officer';
       case UserRole.DATA_ENTRY_OPERATOR:
@@ -34,10 +34,10 @@ extension UserRoleExtension on UserRole {
         return 'HCM';
       case UserRole.ADMIN:
         return 'ADMIN';
-      case UserRole.SAIDUL_OSD:
+      case UserRole.OSD:
         return 'OSD';
-      case UserRole.APPROVER_JT_SECY:
-        return 'JT. SECY';
+      case UserRole.APPROVER:
+        return 'APPROVER';
       case UserRole.CMO_OFFICER:
         return 'CMO';
       case UserRole.DATA_ENTRY_OPERATOR:
@@ -50,7 +50,7 @@ extension UserRoleExtension on UserRole {
   bool get isFullControl =>
       this == UserRole.HCM ||
       this == UserRole.ADMIN ||
-      this == UserRole.SAIDUL_OSD;
+      this == UserRole.OSD;
 
   bool get isStaff => this != UserRole.PUBLIC;
 }

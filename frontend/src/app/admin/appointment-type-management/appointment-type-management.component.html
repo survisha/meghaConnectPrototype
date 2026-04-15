@@ -1,0 +1,227 @@
+<div style="padding: 2rem">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;gap:1rem">
+    <h2 class="page-title" style="margin:0">Admin Appointment Type Configuration</h2>
+    <button mat-raised-button color="primary" (click)="loadAppointmentTypes()" [disabled]="loading" style="min-width:150px">
+      <mat-icon>refresh</mat-icon> Reload
+    </button>
+  </div>
+
+  <!-- Loading Spinner -->
+  <div *ngIf="loading" style="display:flex;justify-content:center;align-items:center;height:200px">
+    <mat-spinner diameter="50"></mat-spinner>
+  </div>
+
+  <!-- Appointment Types Table -->
+  <div class="section-card" *ngIf="!loading">
+    <div class="section-card-header"><i class="pi pi-calendar"></i> All Appointment Types</div>
+    <div class="section-card-body" style="overflow-x:auto">
+      <table mat-table [dataSource]="appointmentTypes" class="full-width">
+
+        <!-- Type Code Column -->
+        <ng-container matColumnDef="typeCode">
+          <th mat-header-cell *matHeaderCellDef>Type Code</th>
+          <td mat-cell *matCellDef="let type" style="font-weight:600">{{ type.typeCode }}</td>
+        </ng-container>
+
+        <!-- Type Name Column -->
+        <ng-container matColumnDef="typeName">
+          <th mat-header-cell *matHeaderCellDef>Type Name</th>
+          <td mat-cell *matCellDef="let type">{{ type.typeName }}</td>
+        </ng-container>
+
+        <!-- Category Column -->
+        <ng-container matColumnDef="typeCategory">
+          <th mat-header-cell *matHeaderCellDef>Category</th>
+          <td mat-cell *matCellDef="let type">
+            <span style="padding:0.25rem 0.75rem;border-radius:4px;font-size:0.85rem;font-weight:600"
+              [ngClass]="{'background:#e0f2fe;color:#0369a1': type.typeCategory === 'INDIVIDUAL', 'background:#fef3c7;color:#92400e': type.typeCategory === 'BATCH'}">
+              {{ type.typeCategory }}
+            </span>
+          </td>
+        </ng-container>
+
+        <!-- Travel Required Column -->
+        <ng-container matColumnDef="requiresTravel">
+          <th mat-header-cell *matHeaderCellDef>Travel Time</th>
+          <td mat-cell *matCellDef="let type" style="font-size:0.9rem">
+            {{ getTravelTimeDisplay(type) }}
+          </td>
+        </ng-container>
+
+        <!-- Appointment Limit Column -->
+        <ng-container matColumnDef="hasLimit">
+          <th mat-header-cell *matHeaderCellDef>Limit Config</th>
+          <td mat-cell *matCellDef="let type" style="font-size:0.9rem">
+            {{ getLimitDisplay(type) }}
+          </td>
+        </ng-container>
+
+        <!-- Active Status Column -->
+        <ng-container matColumnDef="isActive">
+          <th mat-header-cell *matHeaderCellDef>Status</th>
+          <td mat-cell *matCellDef="let type">
+            <mat-slide-toggle 
+              [checked]="type.isActive" 
+              (change)="toggleStatus(type)"
+              [disabled]="loading"
+              style="margin:0">
+            </mat-slide-toggle>
+            <span style="margin-left:0.5rem;font-size:0.85rem;color:#6b7280">
+              {{ type.isActive ? 'Active' : 'Inactive' }}
+            </span>
+          </td>
+        </ng-container>
+
+        <!-- Actions Column -->
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef>Actions</th>
+          <td mat-cell *matCellDef="let type" style="text-align:center">
+            <button mat-icon-button color="primary" (click)="editType(type)" [disabled]="loading" 
+              matTooltip="Edit Configuration">
+              <mat-icon>edit</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns" style="background:#f9fafb;font-weight:600"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;" style="border-bottom:1px solid #e5e7eb"></tr>
+      </table>
+
+      <!-- No Types Message -->
+      <div *ngIf="appointmentTypes.length === 0" style="padding:2rem;text-align:center;color:#6b7280">
+        <p>No appointment types found.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Form Panel -->
+  <div class="section-card" *ngIf="showEditForm && editFormData && selectedType" style="margin-top:2rem">
+    <div class="section-card-header">
+      <i class="pi pi-pencil"></i> Edit Configuration - {{ selectedType.typeCode }}
+    </div>
+    <div class="section-card-body">
+      
+      <!-- Basic Info Section -->
+      <mat-expansion-panel defaultExpanded>
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            <mat-icon>info</mat-icon> Basic Information
+          </mat-panel-title>
+        </mat-expansion-panel-header>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;padding:1remrem">
+          <mat-form-field appearance="outline" style="width:100%">
+            <mat-label>Type Code</mat-label>
+            <input matInput [(ngModel)]="editFormData.typeCode" disabled/>
+          </mat-form-field>
+          <mat-form-field appearance="outline" style="width:100%">
+            <mat-label>Type Name</mat-label>
+            <input matInput [(ngModel)]="editFormData.typeName" placeholder="Cabinet Meetings"/>
+          </mat-form-field>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;padding:1rem">
+          <mat-form-field appearance="outline" style="width:100%">
+            <mat-label>Category</mat-label>
+            <mat-select [(ngModel)]="editFormData.typeCategory">
+              <mat-option *ngFor="let cat of categoryOptions" [value]="cat">{{ cat }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <div></div>
+        </div>
+
+        <mat-form-field appearance="outline" style="width:100%;padding:1rem">
+          <mat-label>Description</mat-label>
+          <textarea matInput [(ngModel)]="editFormData.description" rows="3"></textarea>
+        </mat-form-field>
+      </mat-expansion-panel>
+
+      <!-- Travel Time Configuration -->
+      <mat-expansion-panel style="margin-top:1rem">
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            <mat-icon>flight</mat-icon> Travel Time Configuration
+          </mat-panel-title>
+        </mat-expansion-panel-header>
+
+        <div style="padding:1rem">
+          <mat-checkbox [(ngModel)]="editFormData.requiresTravel" style="display:block;margin-bottom:1rem">
+            Requires Travel Time
+          </mat-checkbox>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem" [ngClass]="{'opacity:0.5;pointer-events:none': !editFormData.requiresTravel}">
+            <mat-form-field appearance="outline" style="width:100%">
+              <mat-label>Travel Before (minutes)</mat-label>
+              <input matInput type="number" [(ngModel)]="editFormData.travelTimeBefore" [disabled]="!editFormData.requiresTravel"/>
+            </mat-form-field>
+            <mat-form-field appearance="outline" style="width:100%">
+              <mat-label>Travel After (minutes)</mat-label>
+              <input matInput type="number" [(ngModel)]="editFormData.travelTimeAfter" [disabled]="!editFormData.requiresTravel"/>
+            </mat-form-field>
+          </div>
+
+          <mat-checkbox [(ngModel)]="editFormData.blockTimeIncludes" [disabled]="!editFormData.requiresTravel" style="display:block">
+            Block Calendar Time Includes Travel Duration
+          </mat-checkbox>
+        </div>
+      </mat-expansion-panel>
+
+      <!-- Appointment Limit Configuration -->
+      <mat-expansion-panel style="margin-top:1rem">
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            <mat-icon>schedule</mat-icon> Appointment Limit Configuration
+          </mat-panel-title>
+        </mat-expansion-panel-header>
+
+        <div style="padding:1rem">
+          <mat-checkbox [(ngModel)]="editFormData.hasAppointmentLimit" style="display:block;margin-bottom:1rem">
+            Configuration Has Appointment Limit
+          </mat-checkbox>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem" [ngClass]="{'opacity:0.5;pointer-events:none': !editFormData.hasAppointmentLimit}">
+            <mat-form-field appearance="outline" style="width:100%">
+              <mat-label>Max Appointment Limit</mat-label>
+              <input matInput type="number" [(ngModel)]="editFormData.maxAppointmentLimit" [disabled]="!editFormData.hasAppointmentLimit"/>
+            </mat-form-field>
+            <div></div>
+          </div>
+
+          <mat-checkbox [(ngModel)]="editFormData.limitIsSacrosanct" [disabled]="!editFormData.hasAppointmentLimit" style="display:block;margin-bottom:0.5rem">
+            Limit is Strictly Sacrosanct (Cannot be exceeded)
+          </mat-checkbox>
+
+          <mat-checkbox [(ngModel)]="editFormData.generateAlerts" [disabled]="!editFormData.hasAppointmentLimit" style="display:block">
+            Generate Alerts When CMO/Approver Crosses Limit
+          </mat-checkbox>
+        </div>
+      </mat-expansion-panel>
+
+      <!-- Special Characteristics -->
+      <mat-expansion-panel style="margin-top:1rem">
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            <mat-icon>info_outline</mat-icon> Special Characteristics (Type A3)
+          </mat-panel-title>
+        </mat-expansion-panel-header>
+
+        <div style="padding:1rem">
+          <mat-checkbox [(ngModel)]="editFormData.noTravelTime" style="display:block">
+            No Travel Time Involved (Backend Activities Only)
+          </mat-checkbox>
+        </div>
+      </mat-expansion-panel>
+
+      <!-- Save/Cancel Buttons -->
+      <mat-divider style="margin:2rem 0"></mat-divider>
+      <div style="display:flex;gap:0.5rem">
+        <button mat-raised-button color="primary" (click)="saveChanges()" [disabled]="loading">
+          <mat-icon>save</mat-icon> Save Changes
+        </button>
+        <button mat-stroked-button (click)="cancelEdit()" [disabled]="loading">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

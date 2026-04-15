@@ -1,0 +1,89 @@
+.page-title {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: #1a237e;
+  margin: 0;
+}
+
+.section-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1.5rem;
+}
+
+.section-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  font-weight: 600;
+  color: #1a237e;
+  font-size: 1rem;
+}
+
+.section-card-body {
+  padding: 1.5rem;
+}
+
+.full-width {
+  width: 100%;
+}
+
+mat-form-field {
+  background: white !important;
+}
+
+mat-form-field .mat-form-field-outline {
+  color: #d1d5db !important;
+}
+
+mat-form-field.mat-focused .mat-form-field-outline-thick {
+  color: #1a237e !important;
+}
+
+::ng-deep .mat-mdc-table {
+  background: white;
+}
+
+::ng-deep .mat-mdc-table-cell {
+  padding: 0.75rem;
+  color: #1f2937;
+}
+
+::ng-deep .mat-mdc-header-cell {
+  background: #f9fafb;
+  font-weight: 600;
+  color: #374151;
+}
+
+::ng-deep .mat-mdc-row:hover {
+  background: #f8fafc;
+}
+
+button:disabled {
+  opacity: 0.6;
+}
+
+button {
+  text-transform: none !important;
+  font-weight: 500;
+}
+
+::ng-deep .mat-icon-button {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+}
+
+::ng-deep .mat-mdc-slide-toggle {
+  margin: 0;
+}
+
+mat-spinner {
+  margin: 0 auto;
+}

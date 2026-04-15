@@ -125,8 +125,7 @@ export class PublicLoginComponent {
         this.loading = false;
         if (res.success) {
           // Store visitor session using AuthService helper
-          this.auth.setVisitorSession(this.phoneNumber, res.fullName, res.token);
-          sessionStorage.setItem('megha_visitor_id', String(res.visitorId));
+          this.auth.setVisitorSession(this.phoneNumber, res.fullName, res.token, res.visitorId);
           this.router.navigate(['/visitor']);
         } else {
           this.errorMsg = res.message || 'OTP verification failed.';

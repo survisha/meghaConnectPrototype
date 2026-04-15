@@ -22,7 +22,20 @@ public class JwtService {
 
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
-        claims.put("roles", userDetails.getAuthorities());
+        
+        // Extract the primary role/authority as a string
+        String role = userDetails.getAuthorities().stream()
+            .map(auth -> auth.getAuthority())
+            .findFirst()
+            .orElse("ROLE_PUBLIC");
+        
+        // Store role as a simple string (remove ROLE_ prefix for cleaner storage)
+        String cleanRole = role.replace("ROLE_", "");
+        claims.put("role", cleanRole);
+        
+        // Also store the full authority for backward compatibility
+        claims.put("authority", role);
+        
         return Jwts.builder()
             .setClaims(claims)
             .setSubject(userDetails.getUsername())

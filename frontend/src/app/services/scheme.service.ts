@@ -49,6 +49,10 @@ export class SchemeService {
     return this.http.get<ReferenceDataDto[]>(`${environment.apiUrl}/reference/CM_SCHEME`);
   }
 
+  getOrganizationTypes(): Observable<ReferenceDataDto[]> {
+    return this.http.get<ReferenceDataDto[]>(`${environment.apiUrl}/reference/ORGANIZATION_TYPE`);
+  }
+
   // Scheme catalog
   getSchemes(): Observable<Scheme[]> {
     return this.http.get<Scheme[]>(this.schemesUrl);

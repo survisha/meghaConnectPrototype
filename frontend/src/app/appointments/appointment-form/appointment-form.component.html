@@ -112,10 +112,19 @@
           </mat-form-field>
           
           <div class="form-group" style="grid-column:1/-1">
-            <mat-checkbox [(ngModel)]="form.isOrganisation">
+            <mat-checkbox [(ngModel)]="form.isOrganisation" (change)="updateDocumentVisibility()">
               I represent an Organisation
             </mat-checkbox>
           </div>
+
+          <ng-container *ngIf="form.isOrganisation">
+            <mat-form-field appearance="outline" class="form-group">
+              <mat-label>Organisation Type *</mat-label>
+              <mat-select [(ngModel)]="form.organizationSubType" placeholder="Select organisation type">
+                <mat-option *ngFor="let org of organizationTypes" [value]="org.value">{{ org.label }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+          </ng-container>
         </div>
       </div>
     </div>
@@ -127,7 +136,7 @@
         <div class="form-grid">
           <mat-form-field appearance="outline" class="form-group">
             <mat-label>Agenda Type *</mat-label>
-            <mat-select [(ngModel)]="form.agendaType" placeholder="Select agenda">
+            <mat-select [(ngModel)]="form.agendaType" (change)="updateDocumentVisibility()" placeholder="Select agenda">
               <mat-option *ngFor="let a of agendaTypes" [value]="a">{{ a }}</mat-option>
             </mat-select>
           </mat-form-field>
@@ -159,7 +168,7 @@
         <div *ngIf="isScheme" class="form-grid">
           <mat-form-field appearance="outline" class="form-group">
             <mat-label>Scheme Type *</mat-label>
-            <mat-select [(ngModel)]="form.schemeType" placeholder="Select scheme">
+            <mat-select [(ngModel)]="form.schemeType" (change)="updateDocumentVisibility()" placeholder="Select scheme">
               <mat-option *ngFor="let s of schemeTypes" [value]="s">{{ s }}</mat-option>
             </mat-select>
           </mat-form-field>
@@ -214,7 +223,7 @@
           
           <div class="form-group" style="grid-column:1/-1">
             <label style="display:block;margin-bottom:0.5rem;font-weight:600">MLA / MDC / Community Leader Approval</label>
-            <mat-radio-group [(ngModel)]="form.mlaMdcApproved">
+            <mat-radio-group [(ngModel)]="form.mlaMdcApproved" (change)="updateDocumentVisibility()">
               <mat-radio-button [value]="true" style="margin-right:1.5rem">Yes</mat-radio-button>
               <mat-radio-button [value]="false">No</mat-radio-button>
             </mat-radio-group>
@@ -360,74 +369,51 @@
           </div>
         </div>
 
-        <div class="doc-row">
-          <div class="doc-label">EPIC / Voter ID Scan <span class="req">*</span></div>
-          <button mat-stroked-button type="button">
-            <mat-icon>upload_file</mat-icon> Upload EPIC
-            <input type="file" accept=".pdf,.jpg,.png" style="position:absolute;opacity:0;width:100%;height:100%;cursor:pointer"/>
-          </button>
-        </div>
-        <div class="doc-row">
+        <div class="doc-row" *ngFor="let doc of documents" [hidden]="!doc.isVisible">
           <div class="doc-label">
-            Application Letter / Project Proposal <span class="req">*</span>
-            <small style="color:#1a237e;font-size:0.75rem;display:block">AI will auto-extract project details from this document</small>
+            {{ doc.label }} <span *ngIf="doc.isRequired" class="req">*</span>
+            <small *ngIf="doc.fileName" style="color:#059669;font-size:0.75rem;display:block">✓ Uploaded: {{ doc.fileName }}</small>
           </div>
-          <button mat-stroked-button type="button" (click)="fileInput.click()">
-            <mat-icon>upload_file</mat-icon> Upload &amp; Analyse
-            <input #fileInput type="file" accept=".pdf,.doc,.docx,.jpg,.png" (change)="onDocumentUpload($event)" style="display:none"/>
+          <button mat-stroked-button type="button" (click)="docFileInput.click()">
+            <mat-icon>upload_file</mat-icon> 
+            {{ doc.fileName ? 'Replace' : 'Upload' }}
+            <input #docFileInput type="file" 
+              [accept]="doc.type === 'PLANS_ESTIMATES' ? '.pdf' : '.pdf,.doc,.docx,.jpg,.png'" 
+              (change)="onDocumentChange($event, doc)" 
+              style="display:none"/>
           </button>
         </div>
-        <div class="doc-row">
-          <div class="doc-label">Plans &amp; Estimates (up to 3) <span style="color:#6b7280;font-size:0.8rem">(for schemes)</span></div>
-          <button mat-stroked-button type="button">
-            <mat-icon>upload_file</mat-icon> Upload Plans
-            <input type="file" accept=".pdf" style="position:absolute;opacity:0;width:100%;height:100%;cursor:pointer"/>
-          </button>
-        </div>
-        <div class="doc-row">
-          <div class="doc-label">Bank Account Details <span class="req">*</span></div>
-          <button mat-stroked-button type="button">
-            <mat-icon>upload_file</mat-icon> Upload Bank Details
-            <input type="file" accept=".pdf,.jpg,.png" style="position:absolute;opacity:0;width:100%;height:100%;cursor:pointer"/>
-          </button>
-        </div>
-        <div class="doc-row" *ngIf="form.mlaMdcApproved">
-          <div class="doc-label">MLA/MDC/Community Leader Approval Letter <span class="req">*</span></div>
-          <button mat-stroked-button type="button">
-            <mat-icon>upload_file</mat-icon> Upload Letter
-            <input type="file" accept=".pdf" style="position:absolute;opacity:0;width:100%;height:100%;cursor:pointer"/>
-          </button>
-        </div>
-        <ng-container *ngIf="isCmCare">
-          <div style="font-weight:600;font-size:0.85rem;color:#374151;margin:1rem 0 0.5rem">CM Care – Additional Documents</div>
-          <div class="doc-row">
-            <div class="doc-label">Eligibility Proof <span class="req">*</span></div>
-            <button mat-stroked-button type="button">
-              <mat-icon>upload_file</mat-icon> Upload
-              <input type="file" accept=".pdf,.jpg,.png" style="position:absolute;opacity:0;width:100%;height:100%;cursor:pointer"/>
-            </button>
-          </div>
-          <div class="doc-row">
-            <div class="doc-label">Hospital Documents <span class="req">*</span></div>
-            <button mat-stroked-button type="button">
-              <mat-icon>upload_file</mat-icon> Upload
-              <input type="file" accept=".pdf,.jpg,.png" style="position:absolute;opacity:0;width:100%;height:100%;cursor:pointer"/>
-            </button>
-          </div>
-          <div class="doc-row">
-            <div class="doc-label">Supporting Documents</div>
-            <button mat-stroked-button type="button">
-              <mat-icon>upload_file</mat-icon> Upload
-              <input type="file" accept=".pdf,.jpg,.png" style="position:absolute;opacity:0;width:100%;height:100%;cursor:pointer"/>
-            </button>
-          </div>
-        </ng-container>
-        <div class="doc-row" *ngIf="form.isOrganisation">
-          <div class="doc-label">Organisation Registration Certificate <span class="req">*</span></div>
-          <button mat-stroked-button type="button">
-            <mat-icon>upload_file</mat-icon> Upload Certificate
-            <input type="file" accept=".pdf,.jpg,.png" style="position:absolute;opacity:0;width:100%;height:100%;cursor:pointer"/>
-          </button>
+
+        <!-- Document Requirements Summary Table -->
+        <div style="margin-top:1.5rem;padding:1rem;background:#f3f4f6;border-radius:8px;border:1px solid #e5e7eb">
+          <div style="font-weight:600;font-size:0.9rem;color:#1f2937;margin-bottom:0.75rem">Document Requirements Summary</div>
+          <table style="width:100%;font-size:0.85rem;border-collapse:collapse">
+            <thead>
+              <tr style="border-bottom:2px solid #d1d5db">
+                <th style="padding:0.5rem;text-align:left;color:#374151">Document Type</th>
+                <th style="padding:0.5rem;text-align:center;color:#374151">Required</th>
+                <th style="padding:0.5rem;text-align:center;color:#374151">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let doc of documents; let odd = odd" [style.background]="odd ? '#ffffff' : '#f9fafb'" style="border-bottom:1px solid #e5e7eb">
+                <td style="padding:0.5rem;color:#1f2937">{{ doc.label }}</td>
+                <td style="padding:0.5rem;text-align:center">
+                  <span *ngIf="doc.isVisible">
+                    <span *ngIf="doc.isRequired" style="color:#dc2626;font-weight:600">●</span>
+                    <span *ngIf="!doc.isRequired" style="color:#6b7280">○</span>
+                  </span>
+                  <span *ngIf="!doc.isVisible" style="color:#d1d5db">-</span>
+                </td>
+                <td style="padding:0.5rem;text-align:center">
+                  <span *ngIf="doc.fileName" style="color:#059669;font-weight:600">✓ Uploaded</span>
+                  <span *ngIf="!doc.fileName && doc.isVisible && doc.isRequired" style="color:#dc2626">Pending</span>
+                  <span *ngIf="!doc.fileName && doc.isVisible && !doc.isRequired" style="color:#6b7280">Optional</span>
+                  <span *ngIf="!doc.isVisible" style="color:#d1d5db">Not Required</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -494,6 +480,7 @@
           <div><strong>EPIC:</strong> {{ form.epicNumber || '–' }}</div>
           <div><strong>Designation:</strong> {{ form.designation || '–' }}</div>
           <div><strong>Constituency:</strong> {{ form.constituency || '–' }}</div>
+          <div *ngIf="form.isOrganisation"><strong>Organisation Type:</strong> {{ getOrganizationTypeLabel() }}</div>
           <div><strong>Agenda:</strong> {{ form.agendaType || '–' }}</div>
           <div><strong>Location:</strong> {{ form.requestedLocation || '–' }}</div>
           <div *ngIf="isScheme"><strong>Scheme:</strong> {{ form.schemeType || '–' }}</div>

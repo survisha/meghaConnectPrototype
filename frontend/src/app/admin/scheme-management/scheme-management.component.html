@@ -1,0 +1,179 @@
+<div style="padding: 2rem">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;gap:1rem">
+    <h2 class="page-title" style="margin:0">Admin Scheme Management</h2>
+    <button mat-raised-button color="primary" (click)="toggleNewSchemeForm()" style="min-width:150px">
+      <mat-icon>add</mat-icon> New Scheme
+    </button>
+  </div>
+
+  <!-- Loading Spinner -->
+  <div *ngIf="loading" style="display:flex;justify-content:center;align-items:center;height:200px">
+    <mat-spinner diameter="50"></mat-spinner>
+  </div>
+
+  <!-- New Scheme Form Section -->
+  <div class="section-card" *ngIf="showNewSchemeForm" style="margin-bottom:2rem">
+    <div class="section-card-header"><i class="pi pi-plus"></i> Add New Scheme</div>
+    <div class="section-card-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+        <mat-form-field appearance="outline" style="width:100%">
+          <mat-label>Scheme Code *</mat-label>
+          <input matInput [(ngModel)]="newSchemeForm.schemeCode" placeholder="E.g., CMSDF"/>
+        </mat-form-field>
+        <mat-form-field appearance="outline" style="width:100%">
+          <mat-label>Scheme Name *</mat-label>
+          <input matInput [(ngModel)]="newSchemeForm.schemeName" placeholder="E.g., CM Special Development Fund"/>
+        </mat-form-field>
+      </div>
+      <mat-form-field appearance="outline" style="width:100%;margin-bottom:1rem">
+        <mat-label>Description (Optional)</mat-label>
+        <textarea matInput [(ngModel)]="newSchemeForm.description" rows="3" placeholder="Scheme description"></textarea>
+      </mat-form-field>
+      <div style="display:flex;gap:0.5rem">
+        <button mat-raised-button color="primary" (click)="createScheme()" [disabled]="loading">
+          <mat-icon>check</mat-icon> Create Scheme
+        </button>
+        <button mat-stroked-button (click)="toggleNewSchemeForm()" [disabled]="loading">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Schemes Table -->
+  <div class="section-card" *ngIf="!loading">
+    <div class="section-card-header"><i class="pi pi-list"></i> All Schemes</div>
+    <div class="section-card-body" style="overflow-x:auto">
+      <table mat-table [dataSource]="schemes" class="full-width">
+
+        <!-- Scheme Code Column -->
+        <ng-container matColumnDef="schemeCode">
+          <th mat-header-cell *matHeaderCellDef>Scheme Code</th>
+          <td mat-cell *matCellDef="let scheme" style="font-weight:600">{{ scheme.schemeCode }}</td>
+        </ng-container>
+
+        <!-- Scheme Name Column -->
+        <ng-container matColumnDef="schemeName">
+          <th mat-header-cell *matHeaderCellDef>Scheme Name</th>
+          <td mat-cell *matCellDef="let scheme">{{ scheme.schemeName }}</td>
+        </ng-container>
+
+        <!-- Active Status Column -->
+        <ng-container matColumnDef="isActive">
+          <th mat-header-cell *matHeaderCellDef>Status</th>
+          <td mat-cell *matCellDef="let scheme">
+            <mat-slide-toggle 
+              [checked]="scheme.isActive" 
+              (change)="toggleSchemeActive(scheme, $event)"
+              [disabled]="loading"
+              style="margin:0">
+            </mat-slide-toggle>
+            <span style="margin-left:0.5rem;font-size:0.85rem;color:#6b7280">
+              {{ scheme.isActive ? 'Active' : 'Inactive' }}
+            </span>
+          </td>
+        </ng-container>
+
+        <!-- Actions Column -->
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef>Actions</th>
+          <td mat-cell *matCellDef="let scheme" style="text-align:center">
+            <button mat-icon-button color="primary" (click)="editScheme(scheme)" [disabled]="loading" 
+              matTooltip="Configure Documents">
+              <mat-icon>settings</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns" style="background:#f9fafb;font-weight:600"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;" style="border-bottom:1px solid #e5e7eb"></tr>
+      </table>
+
+      <!-- No Schemes Message -->
+      <div *ngIf="schemes.length === 0" style="padding:2rem;text-align:center;color:#6b7280">
+        <p>No schemes found. Create a new scheme to get started.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Document Configuration Panel -->
+  <div class="section-card" *ngIf="showDocumentConfig && selectedScheme" style="margin-top:2rem">
+    <div class="section-card-header">
+      <i class="pi pi-file"></i> Configure Documents for {{ selectedScheme.schemeCode }}
+    </div>
+    <div class="section-card-body">
+      <div style="overflow-x:auto;margin-bottom:1.5rem">
+        <table style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb">
+              <th style="padding:0.75rem;text-align:left;font-weight:600;width:15%">Document Type</th>
+              <th style="padding:0.75rem;text-align:left;font-weight:600;width:25%">Label</th>
+              <th style="padding:0.75rem;text-align:center;font-weight:600;width:10%">Required?</th>
+              <th style="padding:0.75rem;text-align:left;font-weight:600;width:20%">File Format</th>
+              <th style="padding:0.75rem;text-align:center;font-weight:600;width:10%">Order</th>
+              <th style="padding:0.75rem;text-align:center;font-weight:600;width:10%">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let doc of documentForm; let i = index" style="border-bottom:1px solid #f0f0f0">
+              <td style="padding:0.75rem">
+                <mat-form-field appearance="outline" style="width:100%;font-size:0.85rem">
+                  <mat-select [(ngModel)]="doc.documentType">
+                    <mat-option *ngFor="let type of documentTypeOptions" [value]="type">
+                      {{ type }}
+                    </mat-option>
+                  </mat-select>
+                </mat-form-field>
+              </td>
+              <td style="padding:0.75rem">
+                <mat-form-field appearance="outline" style="width:100%;font-size:0.85rem">
+                  <input matInput [(ngModel)]="doc.documentLabel" placeholder="E.g., Plans & Estimates"/>
+                </mat-form-field>
+              </td>
+              <td style="padding:0.75rem;text-align:center">
+                <mat-checkbox [(ngModel)]="doc.isRequired" style="margin:0"></mat-checkbox>
+              </td>
+              <td style="padding:0.75rem">
+                <mat-form-field appearance="outline" style="width:100%;font-size:0.85rem">
+                  <mat-select [(ngModel)]="doc.fileFormatAllowed">
+                    <mat-option *ngFor="let fmt of fileFormatOptions" [value]="fmt.value">
+                      {{ fmt.label }}
+                    </mat-option>
+                  </mat-select>
+                </mat-form-field>
+              </td>
+              <td style="padding:0.75rem;text-align:center">
+                <mat-form-field appearance="outline" style="width:100%;font-size:0.85rem">
+                  <input matInput type="number" [(ngModel)]="doc.displayOrder" min="0"/>
+                </mat-form-field>
+              </td>
+              <td style="padding:0.75rem;text-align:center">
+                <button mat-icon-button color="warn" (click)="removeDocumentRow(i)" [disabled]="loading">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Add Row Button -->
+        <div style="margin-top:1rem">
+          <button mat-stroked-button (click)="addDocumentRow()" [disabled]="loading">
+            <mat-icon>add</mat-icon> Add Document
+          </button>
+        </div>
+      </div>
+
+      <!-- Save/Cancel Buttons -->
+      <mat-divider style="margin-bottom:1rem"></mat-divider>
+      <div style="display:flex;gap:0.5rem">
+        <button mat-raised-button color="primary" (click)="saveSchemeDocuments()" [disabled]="loading">
+          <mat-icon>save</mat-icon> Save Documents
+        </button>
+        <button mat-stroked-button (click)="closeDocumentConfig()" [disabled]="loading">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -5,6 +5,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { VisitorKycService } from '../services/visitor-kyc.service';
+import { AuthService } from '../services/auth.service';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
@@ -119,15 +120,25 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   // DEO mode (R011) – true when accessed from /deo/register-visitor
   isDeoMode = false;
 
+  // Hide left panel for staff members entering visitor data
+  hideLeftPanel = false;
+
   constructor(
     private http: HttpClient, 
     private router: Router,
     private route: ActivatedRoute,
     private kycService: VisitorKycService,
+    private auth: AuthService,
     private cdr: ChangeDetectorRef
   ) {
     // Detect DEO mode from route snapshot URL segments
     this.isDeoMode = this.route.snapshot.url.some(segment => segment.path === 'register-visitor');
+    
+    // Hide left panel if staff member (non-PUBLIC) is logged in and accessing through DEO route
+    if (this.isDeoMode && this.auth.isLoggedIn()) {
+      const userRole = this.auth.user()?.role;
+      this.hideLeftPanel = userRole !== 'PUBLIC' && userRole !== undefined;
+    }
   }
 
   ngOnInit() {

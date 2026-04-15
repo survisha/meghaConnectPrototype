@@ -9,8 +9,8 @@
 -- ├──────────┼─────────────┼─────────────────────────┤
 -- │ hcm      │ hcm123      │ HCM                     │
 -- │ admin    │ admin123    │ ADMIN                   │
--- │ saidul   │ osd123      │ SAIDUL_OSD              │
--- │ jtsecy   │ jts123      │ APPROVER_JT_SECY        │
+-- │ saidul   │ osd123      │ OSD                     │
+-- │ jtsecy   │ jts123      │ APPROVER                │
 -- │ cmo      │ cmo123      │ CMO_OFFICER             │
 -- │ deo1     │ deo123      │ DATA_ENTRY_OPERATOR     │
 -- └──────────┴─────────────┴─────────────────────────┘
@@ -20,8 +20,8 @@ INSERT INTO users (username, password_hash, full_name, role, active, offline_acc
 VALUES
   ('hcm',    '$2a$12$dHwFV1lqTmXpWtQUvkfGfOMGk7oIPfvMT0X5H/EDM4vS.5bIAhzXG', 'Hon. Chief Minister',    'HCM',                  1, 1, NOW()),
   ('admin',  '$2a$12$q1B3Z4Y9pKjH6cz7rR7hq.lG5.Ncp8d8C0g6K6lz7a7J3X4/BWEO.', 'System Admin',           'ADMIN',                1, 0, NOW()),
-  ('saidul', '$2a$12$pUz3mhWM2n6pQ3KyN0W7fuQfqgN7VRyL/.RKumRgKQ5h1oqFd6TuC', 'Saidul OSD',             'SAIDUL_OSD',           1, 0, NOW()),
-  ('jtsecy', '$2a$12$Q7f4YcV9XJhBUiD0L5N3RuHm.4Oi9jKnY2vq6TT8sn6wTU7m0aMua', 'Joint Secretary',        'APPROVER_JT_SECY',     1, 0, NOW()),
+  ('saidul', '$2a$12$pUz3mhWM2n6pQ3KyN0W7fuQfqgN7VRyL/.RKumRgKQ5h1oqFd6TuC', 'Saidul OSD',             'OSD',                  1, 0, NOW()),
+  ('jtsecy', '$2a$12$Q7f4YcV9XJhBUiD0L5N3RuHm.4Oi9jKnY2vq6TT8sn6wTU7m0aMua', 'Joint Secretary',        'APPROVER',             1, 0, NOW()),
   ('cmo',    '$2a$12$aQ5HYKb7C3jvTqZ6G0W9WuHaM5jb9Y6X9bViKEy9lUXm1CK.nRzFa', 'CMO Officer',            'CMO_OFFICER',          1, 0, NOW()),
   ('deo1',   '$2a$12$0Y6h3m7W2K4v9P5H6Rx/L.jBe3N7GW8cQ.vbWn8M3b0aXK7Y5k/Ji', 'Data Entry Operator 1',  'DATA_ENTRY_OPERATOR',  1, 0, NOW());
 

@@ -548,6 +548,18 @@ mat-radio-group {
   font-size: 0.95rem;
 }
 
+/* Hide left panel for staff members */
+.register-left.hidden {
+  display: none;
+}
+
+.register-page {
+  &:has(.register-left.hidden) .register-right {
+    flex: 1;
+    width: 100%;
+  }
+}
+
 // Form group styling
 .form-group {
   margin-bottom: 1rem;

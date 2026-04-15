@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -14,6 +14,9 @@ import { environment } from '../../../environments/environment';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AiDocumentService, AiExtractedFields, AiDocumentAnalysisResponse, DuplicateCheckResponse } from '../../services/ai-document.service';
+import { SchemeService } from '../../services/scheme.service';
+import { VisitorService } from '../../services/visitor.service';
+import { AuthService } from '../../services/auth.service';
 
 interface Associate {
   name: string;
@@ -21,6 +24,15 @@ interface Associate {
   epicNumber: string;
   designation: string;
   address: string;
+}
+
+interface DocumentUpload {
+  type: 'EPIC_SCAN' | 'APPLICATION_LETTER' | 'PLANS_ESTIMATES' | 'BANK_DETAILS' | 'MLA_APPROVAL_LETTER' | 'ORG_REGISTRATION_CERTIFICATE' | 'CM_CARE_ELIGIBILITY' | 'CM_CARE_HOSPITAL' | 'CM_CARE_SUPPORTING';
+  label: string;
+  isRequired: boolean;
+  isVisible: boolean;
+  file?: File;
+  fileName?: string;
 }
 
 @Component({
@@ -43,7 +55,7 @@ interface Associate {
   templateUrl: './appointment-form.component.html',
   styleUrls: ['./appointment-form.component.scss'],
 })
-export class AppointmentFormComponent {
+export class AppointmentFormComponent implements OnInit {
   step = 0;
   submitted = false;
   loading = false;
@@ -65,6 +77,7 @@ export class AppointmentFormComponent {
     mlaMdcApproved: false,
     applicationType: 'NEW_APPLICATION',
     isOrganisation: false,
+    organizationSubType: '',
     schemeHistoryList: [] as string[],
   };
 
@@ -83,6 +96,21 @@ export class AppointmentFormComponent {
   overriddenPriority: 'HIGH' | 'MEDIUM' | 'LOW' | '' = '';
   duplicateWarning: { previousApplicationId: string; schemeName: string; dateSubmitted: string } | null = null;
   suggestedSlots: string[] = [];
+
+  // Document tracking
+  visitorKycStatus: 'PENDING' | 'VERIFIED' | 'REJECTED' | null = null;
+  documents: DocumentUpload[] = [
+    { type: 'EPIC_SCAN', label: 'EPIC / Voter ID Scan', isRequired: true, isVisible: false },
+    { type: 'APPLICATION_LETTER', label: 'Application Letter / Project Proposal', isRequired: true, isVisible: true },
+    { type: 'PLANS_ESTIMATES', label: 'Plans & Estimates (up to 3)', isRequired: false, isVisible: false },
+    { type: 'BANK_DETAILS', label: 'Bank Account Details', isRequired: true, isVisible: true },
+    { type: 'MLA_APPROVAL_LETTER', label: 'MLA/MDC/Community Leader Approval Letter', isRequired: false, isVisible: false },
+    { type: 'ORG_REGISTRATION_CERTIFICATE', label: 'Organisation Registration Certificate', isRequired: false, isVisible: false },
+    { type: 'CM_CARE_ELIGIBILITY', label: 'CM Care – Eligibility Proof', isRequired: false, isVisible: false },
+    { type: 'CM_CARE_HOSPITAL', label: 'CM Care – Hospital Documents', isRequired: false, isVisible: false },
+    { type: 'CM_CARE_SUPPORTING', label: 'CM Care – Supporting Documents', isRequired: false, isVisible: false },
+  ];
+
 
   designations = [
     'Govt Servant', 'Retd Govt Servant', 'Teacher', 'Political Leader',
@@ -110,6 +138,7 @@ export class AppointmentFormComponent {
   ];
   beneficiaryTypes = ['Individual', 'Community/Society', 'School/Youth Organisation', 'All of the Above', 'Others'];
   beneficiaryCounts = ['1 to 100', '101 to 500', '501 to 1000', 'Above 1000'];
+  organizationTypes: Array<{ value: string; label: string }> = [];
   priorityOptions: Array<'HIGH' | 'MEDIUM' | 'LOW'> = ['HIGH', 'MEDIUM', 'LOW'];
 
   get isScheme() { return this.form.agendaType === 'Scheme availment (CM)'; }
@@ -140,6 +169,46 @@ export class AppointmentFormComponent {
 
   removeAssociate(index: number) {
     this.associates = this.associates.filter((_, i) => i !== index);
+  }
+
+  getOrganizationTypeLabel(): string {
+    if (!this.form.organizationSubType) return '–';
+    const orgType = this.organizationTypes.find(o => o.value === this.form.organizationSubType);
+    return orgType ? orgType.label : '–';
+  }
+
+  updateDocumentVisibility() {
+    // EPIC scan: visible if KYC is pending
+    const epicDoc = this.documents.find(d => d.type === 'EPIC_SCAN');
+    if (epicDoc) epicDoc.isVisible = this.visitorKycStatus === 'PENDING';
+
+    // Plans & Estimates: visible for scheme applications
+    const plansDoc = this.documents.find(d => d.type === 'PLANS_ESTIMATES');
+    if (plansDoc) plansDoc.isVisible = this.isScheme;
+
+    // MLA Approval Letter: visible if MLA approval selected
+    const mlaDoc = this.documents.find(d => d.type === 'MLA_APPROVAL_LETTER');
+    if (mlaDoc) mlaDoc.isVisible = this.form.mlaMdcApproved;
+
+    // Organisation Registration Certificate: visible if organisation selected
+    const orgDoc = this.documents.find(d => d.type === 'ORG_REGISTRATION_CERTIFICATE');
+    if (orgDoc) orgDoc.isVisible = this.form.isOrganisation;
+
+    // CM Care documents: visible if CM Care scheme selected
+    const cmCareEligibility = this.documents.find(d => d.type === 'CM_CARE_ELIGIBILITY');
+    const cmCareHospital = this.documents.find(d => d.type === 'CM_CARE_HOSPITAL');
+    const cmCareSupporting = this.documents.find(d => d.type === 'CM_CARE_SUPPORTING');
+    if (cmCareEligibility) cmCareEligibility.isVisible = this.isCmCare;
+    if (cmCareHospital) cmCareHospital.isVisible = this.isCmCare;
+    if (cmCareSupporting) cmCareSupporting.isVisible = this.isCmCare;
+  }
+
+  onDocumentChange(event: any, docType: DocumentUpload) {
+    const file = event.target.files?.[0];
+    if (file) {
+      docType.file = file;
+      docType.fileName = file.name;
+    }
   }
 
   nextStep() {
@@ -231,40 +300,123 @@ export class AppointmentFormComponent {
     this.overriddenPriority = '';
   }
 
-  constructor(private http: HttpClient, private aiDocumentService: AiDocumentService) {}
+  constructor(private http: HttpClient, private aiDocumentService: AiDocumentService, private schemeService: SchemeService, private visitorService: VisitorService, private auth: AuthService) {}
+
+  ngOnInit() {
+    this.loadOrganizationTypes();
+    this.loadVisitorDataIfPublic();
+    // Initial visibility update based on default form values
+    this.updateDocumentVisibility();
+  }
+
+  private loadVisitorDataIfPublic() {
+    // Only auto-populate for PUBLIC users
+    if (!this.auth.hasRole('PUBLIC')) return;
+
+    const visitorId = sessionStorage.getItem('megha_visitor_id');
+    if (!visitorId) return;
+
+    this.visitorService.getById(parseInt(visitorId, 10)).subscribe({
+      next: (visitor) => {
+        // Auto-populate form fields from visitor data
+        this.form.fullName = visitor.fullName || '';
+        this.form.phoneNumber = visitor.phoneNumber || '';
+        this.form.epicNumber = visitor.epicNumber || '';
+        this.form.designation = visitor.designation || '';
+        this.form.district = visitor.district || '';
+        this.form.constituency = visitor.constituency || '';
+        this.form.booth = visitor.booth || '';
+        
+        // Set KYC status and update document visibility
+        this.visitorKycStatus = visitor.kycStatus as any || 'PENDING';
+        this.updateDocumentVisibility();
+      },
+      error: (err) => {
+        console.error('Failed to load visitor data:', err);
+        // Default to PENDING status if API fails
+        this.visitorKycStatus = 'PENDING';
+        this.updateDocumentVisibility();
+      }
+    });
+  }
+
+  private loadOrganizationTypes() {
+    this.schemeService.getOrganizationTypes().subscribe({
+      next: (data) => {
+        this.organizationTypes = data.map(d => ({
+          value: d.code,
+          label: d.value
+        }));
+      },
+      error: (err) => {
+        console.error('Failed to load organization types:', err);
+        // Fallback to hardcoded values if API fails
+        this.organizationTypes = [
+          { value: 'VILLAGE_AUTHORITY', label: 'Village Authority' },
+          { value: 'TEACHERS_BODY', label: 'Teachers Body' },
+          { value: 'NGO', label: 'Civil Society / NGO' },
+          { value: 'INSTITUTE', label: 'Institute' },
+          { value: 'OTHER_ORG', label: 'Other' }
+        ];
+      }
+    });
+  }
 
   submit() {
     this.errorMsg = '';
+
+    // Validate required documents are uploaded
+    const requiredDocs = this.documents.filter(d => d.isVisible && d.isRequired);
+    const missingDocs = requiredDocs.filter(d => !d.fileName);
+    if (missingDocs.length > 0) {
+      this.errorMsg = `Please upload all required documents: ${missingDocs.map(d => d.label).join(', ')}`;
+      return;
+    }
+
     this.loading = true;
 
+    // Create FormData to handle file uploads
+    const formData = new FormData();
     const visitorId = sessionStorage.getItem('megha_visitor_id');
-    const payload = {
-      applicantId: visitorId ? parseInt(visitorId, 10) : null,
-      applicantName: this.form.fullName,
-      applicantPhone: this.form.phoneNumber,
-      epicNumber: this.form.epicNumber,
-      agendaType: this.form.agendaType,
-      agendaBrief: this.form.agendaBrief,
-      requestedLocation: this.form.requestedLocation?.toUpperCase() || 'OTHERS',
-      eventType: 'A1',
-      mlaMdcApproved: this.form.mlaMdcApproved,
-      schemeType: this.isScheme ? this.form.schemeType : null,
-      projectName: this.isScheme ? this.form.projectName : null,
-      projectCategory: this.isScheme ? this.form.projectCategory : null,
-      beneficiaryType: this.isScheme ? this.form.beneficiaryType : null,
-      beneficiaryCount: this.isScheme ? this.form.beneficiaryCount : null,
-      estimatedCost: this.isScheme && this.form.estimatedCost ? parseFloat(this.form.estimatedCost) : null,
-      communityContribution: this.isScheme && this.form.communityContribution ? parseFloat(this.form.communityContribution) : null,
-      justification: this.form.justification,
-      applicationType: this.form.applicationType,
-      associates: this.includeAssociates ? this.associates : [],
-      schemeHistoryList: this.form.schemeHistoryList,
-      aiPriorityLevel: this.effectivePriority || null,
-      aiSummary: this.aiSummary || null,
-    };
+
+    // Add form fields
+    formData.append('applicantId', visitorId ? visitorId : '');
+    formData.append('applicantName', this.form.fullName);
+    formData.append('applicantPhone', this.form.phoneNumber);
+    formData.append('epicNumber', this.form.epicNumber);
+    formData.append('agendaType', this.form.agendaType);
+    formData.append('agendaBrief', this.form.agendaBrief);
+    formData.append('requestedLocation', this.form.requestedLocation?.toUpperCase() || 'OTHERS');
+    formData.append('eventType', 'A1');
+    formData.append('mlaMdcApproved', this.form.mlaMdcApproved ? 'true' : 'false');
+    formData.append('schemeType', this.isScheme ? this.form.schemeType : '');
+    formData.append('projectName', this.isScheme ? this.form.projectName : '');
+    formData.append('projectCategory', this.isScheme ? this.form.projectCategory : '');
+    formData.append('beneficiaryType', this.isScheme ? this.form.beneficiaryType : '');
+    formData.append('beneficiaryCount', this.isScheme ? this.form.beneficiaryCount : '');
+    formData.append('estimatedCost', this.isScheme && this.form.estimatedCost ? this.form.estimatedCost : '');
+    formData.append('communityContribution', this.isScheme && this.form.communityContribution ? this.form.communityContribution : '');
+    formData.append('justification', this.form.justification);
+    formData.append('applicationType', this.form.applicationType);
+    formData.append('organizationSubType', this.form.isOrganisation ? this.form.organizationSubType : '');
+    formData.append('schemeHistoryList', JSON.stringify(this.form.schemeHistoryList));
+    formData.append('aiPriorityLevel', this.effectivePriority || '');
+    formData.append('aiSummary', this.aiSummary || '');
+
+    // Add associates
+    if (this.includeAssociates) {
+      formData.append('associates', JSON.stringify(this.associates));
+    }
+
+    // Add document files
+    this.documents.forEach(doc => {
+      if (doc.file) {
+        formData.append(`documents_${doc.type}`, doc.file, doc.fileName);
+      }
+    });
 
     this.http.post<{ success: boolean; applicationId?: string; message?: string; id?: number }>(
-      `${environment.apiUrl}/visitor/appointments`, payload
+      `${environment.apiUrl}/visitor/appointments`, formData
     ).subscribe({
       next: res => {
         this.loading = false;

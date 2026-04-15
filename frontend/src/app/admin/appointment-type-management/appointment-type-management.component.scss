@@ -1,0 +1,117 @@
+.page-title {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.section-card {
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1.5rem;
+}
+
+.section-card-header {
+  padding: 1.25rem;
+  border-bottom: 1px solid #f0f0f0;
+  background: #f9fafb;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #1f2937;
+  border-radius: 8px 8px 0 0;
+
+  i {
+    color: #3b82f6;
+    font-size: 1.1rem;
+  }
+}
+
+.section-card-body {
+  padding: 1.5rem;
+  background: white;
+  border-radius: 0 0 8px 8px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+table {
+  background: white;
+  
+  th {
+    background: #f9fafb;
+    color: #1f2937;
+    font-weight: 600;
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 2px solid #e5e7eb;
+  }
+
+  td {
+    padding: 1rem;
+    border-bottom: 1px solid #f0f0f0;
+    color: #374151;
+  }
+
+  tr:hover {
+    background: #f9fafb;
+  }
+}
+
+:host ::ng-deep {
+  .mat-mdc-form-field {
+    width: 100%;
+  }
+
+  .mat-mdc-form-field-appearance-outline .mat-mdc-notched-outline__leading {
+    border-color: #d1d5db;
+  }
+
+  .mat-mdc-form-field-appearance-outline .mat-mdc-text-field-wrapper {
+    background: white !important;
+  }
+
+  .mat-mdc-form-field input:hover {
+    background: white;
+  }
+
+  mat-expansion-panel {
+    background: #f9fafb !important;
+    border: 1px solid #e5e7eb;
+    margin-bottom: 0.5rem;
+  }
+
+  .mat-expansion-panel-header {
+    background: white !important;
+    padding: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .mat-expansion-panel-header-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    color: #1f2937;
+
+    mat-icon {
+      color: #3b82f6;
+      font-size: 1.2rem;
+      width: 1.2rem;
+      height: 1.2rem;
+    }
+  }
+
+  .mat-mdc-checkbox-label {
+    color: #374151;
+    font-size: 0.95rem;
+  }
+
+  .mat-slide-toggle {
+    margin-bottom: 1rem;
+  }
+}

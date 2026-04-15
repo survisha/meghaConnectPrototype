@@ -13,6 +13,13 @@ export type AppointmentStatus =
   | 'HCM_ACCEPTED' | 'HCM_SNOOZED' | 'HCM_REJECTED'
   | 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
 
+export type KycStatus = 'PENDING' | 'VERIFIED' | 'REJECTED';
+
+export type DocumentType = 
+  | 'EPIC_SCAN' | 'APPLICATION_LETTER' | 'PLANS_ESTIMATES' 
+  | 'BANK_DETAILS' | 'MLA_APPROVAL_LETTER' | 'ORG_REGISTRATION_CERTIFICATE'
+  | 'CM_CARE_ELIGIBILITY' | 'CM_CARE_HOSPITAL' | 'CM_CARE_SUPPORTING';
+
 export interface Visitor {
   id: number;
   fullName: string;
@@ -25,6 +32,19 @@ export interface Visitor {
   booth: string;
   village?: string;
   briefProfile?: string;
+  kycStatus?: KycStatus;
+}
+
+export interface AppointmentDocument {
+  id?: number;
+  appointmentId?: number;
+  documentType: DocumentType;
+  fileName: string;
+  filePath: string;
+  fileSize: number;
+  uploadedAt?: string;
+  isRequired: boolean;
+  status: 'UPLOADED' | 'PENDING' | 'VERIFIED';
 }
 
 export interface Appointment {

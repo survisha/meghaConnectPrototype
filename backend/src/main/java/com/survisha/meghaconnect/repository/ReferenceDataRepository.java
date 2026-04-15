@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ReferenceDataRepository extends JpaRepository<ReferenceData, Long> {
@@ -20,4 +21,13 @@ public interface ReferenceDataRepository extends JpaRepository<ReferenceData, Lo
     List<ReferenceData> findActiveByTypeCode(@Param("typeCode") String typeCode);
 
     boolean existsByTypeAndCode(ReferenceType type, String code);
+
+    @Query("SELECT rd FROM ReferenceData rd WHERE rd.type = :type ORDER BY rd.displayOrder")
+    List<ReferenceData> findByTypeOrderByDisplayOrder(@Param("type") ReferenceType type);
+
+    @Query("SELECT rd FROM ReferenceData rd WHERE rd.type = :type AND rd.code = :code")
+    Optional<ReferenceData> findByTypeAndCode(@Param("type") ReferenceType type, @Param("code") String code);
+
+    @Query("SELECT MAX(rd.displayOrder) FROM ReferenceData rd WHERE rd.type = :type")
+    Optional<Integer> findMaxDisplayOrder(@Param("type") ReferenceType type);
 }

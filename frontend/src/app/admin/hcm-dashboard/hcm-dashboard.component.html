@@ -1,0 +1,284 @@
+<div class="hcm-dashboard-container">
+  <!-- Header with pending work badge -->
+  <div class="dashboard-header">
+    <h1>HCM Dashboard</h1>
+    <button mat-icon-button [matBadge]="pendingWorkCount" matBadgeColor="warn">
+      <mat-icon>notifications</mat-icon>
+    </button>
+  </div>
+
+  <!-- Tabs: Appointments and Pending Work -->
+  <mat-tab-group class="dashboard-tabs">
+    
+    <!-- Tab 1: Appointments with Gesture Support -->
+    <mat-tab label="Appointments">
+      <div class="tab-content">
+        
+        <!-- Loading indicator -->
+        <mat-spinner *ngIf="loading" diameter="40" class="spinner"></mat-spinner>
+
+        <!-- Instructions -->
+        <div class="gesture-instructions">
+          <p>
+            <mat-icon>touch_app</mat-icon>
+            <strong>Swipe Cards:</strong> 
+            Swipe <strong>Right</strong> to Accept/Modify or <strong>Left</strong> to Reject/Delay
+          </p>
+        </div>
+
+        <!-- Appointments cards with swipe support -->
+        <div class="appointments-container">
+          <mat-card 
+            *ngFor="let apt of appointments" 
+            class="appointment-card"
+            (touchstart)="onTouchStart($event, apt.id)"
+            (touchend)="onTouchEnd($event, apt.id)"
+            [class.swiped]="swipedAppointmentId === apt.id"
+          >
+            <!-- Card content -->
+            <mat-card-header>
+              <div mat-card-avatar class="card-avatar" [style.background-color]="'#1a237e'">
+                <mat-icon>event</mat-icon>
+              </div>
+              <mat-card-title>{{ apt.subject }}</mat-card-title>
+              <mat-card-subtitle>
+                <mat-icon class="small-icon">access_time</mat-icon>
+                {{ formatDateTime(apt.dateTime) }}
+              </mat-card-subtitle>
+            </mat-card-header>
+
+            <mat-card-content>
+              <div class="appointment-details">
+                <div class="detail-row">
+                  <strong>Location:</strong> {{ apt.location }}
+                </div>
+                <div class="detail-row">
+                  <strong>Type:</strong> {{ apt.type }}
+                </div>
+                <div class="detail-row">
+                  <strong>Category:</strong> {{ apt.category }}
+                </div>
+                <div class="detail-row" *ngIf="apt.description">
+                  <strong>Description:</strong> {{ apt.description }}
+                </div>
+              </div>
+            </mat-card-content>
+
+            <!-- Gesture hint overlay -->
+            <div class="gesture-hint">
+              <div class="hint-arrow left-arrow">
+                <mat-icon>arrow_back</mat-icon>
+                <span>Reject/Delay</span>
+              </div>
+              <div class="hint-arrow right-arrow">
+                <mat-icon>arrow_forward</mat-icon>
+                <span>Accept/Modify</span>
+              </div>
+            </div>
+
+            <!-- Action buttons (visible on tap) -->
+            <mat-card-actions>
+              <button mat-button (click)="showRightSwipeOptions(apt.id)">
+                <mat-icon>check_circle</mat-icon> Accept/Modify
+              </button>
+              <button mat-button (click)="showLeftSwipeOptions(apt.id)">
+                <mat-icon>block</mat-icon> Reject/Delay
+              </button>
+            </mat-card-actions>
+          </mat-card>
+
+          <!-- Empty state -->
+          <div *ngIf="appointments.length === 0 && !loading" class="empty-state">
+            <mat-icon>inbox</mat-icon>
+            <p>No appointments to review</p>
+          </div>
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- Tab 2: Pending Work -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <span>Pending Work</span>
+        <span *ngIf="pendingWorkCount > 0" class="tab-badge">{{ pendingWorkCount }}</span>
+      </ng-template>
+      <div class="tab-content">
+        
+        <div class="pending-work-list" *ngIf="pendingWorkItems.length > 0; else noPending">
+          <mat-card *ngFor="let item of pendingWorkItems" class="pending-item-card">
+            <mat-card-header>
+              <mat-card-title>{{ item.appointmentSubject }}</mat-card-title>
+              <mat-card-subtitle>
+                <span class="action-badge" [style.background-color]="getStatusColor(item.actionStatus)">
+                  {{ item.actionType }}
+                </span>
+              </mat-card-subtitle>
+            </mat-card-header>
+
+            <mat-card-content>
+              <div class="pending-details">
+                <div class="detail-row">
+                  <strong>Original Date:</strong> {{ formatDateTime(item.originalDateTime) }}
+                </div>
+                <div class="detail-row">
+                  <strong>Location:</strong> {{ item.originalLocation }}
+                </div>
+
+                <!-- Action-specific details -->
+                <div class="detail-row" *ngIf="item.actionType === 'MARK_IMPORTANT'">
+                  <strong>Requested Earlier:</strong> {{ formatDateTime(item.requestedEarlierDateTime) }}
+                </div>
+
+                <div class="detail-row" *ngIf="item.actionType === 'ACCEPT_WITH_CHANGES'">
+                  <strong>Modified Date:</strong> {{ formatDateTime(item.acceptedDateTime) }}
+                </div>
+
+                <div class="detail-row" *ngIf="item.actionType === 'SNOOZE'">
+                  <strong>Snoozed Until:</strong> {{ formatDateTime(item.snoozedUntil) }}
+                </div>
+
+                <div class="detail-row" *ngIf="item.actionType === 'REJECT'">
+                  <strong>Clarification Requested:</strong> 
+                  <p class="remarks">{{ item.clarificationRequested }}</p>
+                </div>
+
+                <div class="detail-row" *ngIf="item.hcmRemarks">
+                  <strong>HCM Remarks:</strong>
+                  <p class="remarks">{{ item.hcmRemarks }}</p>
+                </div>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </div>
+
+        <ng-template #noPending>
+          <div class="empty-state">
+            <mat-icon>checklist</mat-icon>
+            <p>No pending work items</p>
+          </div>
+        </ng-template>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+
+  <!-- Action Modal (shown after swipe or button click) -->
+  <div *ngIf="showActionMenu" class="action-modal-overlay" (click)="closeActionMenu()">
+    <div class="action-modal" (click)="$event.stopPropagation()">
+      
+      <!-- Modal header -->
+      <div class="modal-header">
+        <h2>{{ selectedActionType === 'RIGHT_SWIPE' ? 'Accept or Modify' : 'Reject or Delay' }}</h2>
+        <button mat-icon-button (click)="closeActionMenu()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      <!-- Modal body -->
+      <div class="modal-body">
+        
+        <!-- RIGHT SWIPE OPTIONS -->
+        <div *ngIf="selectedActionType === 'RIGHT_SWIPE'" class="action-options">
+          
+          <!-- Option 1: Accept (with suggested date) -->
+          <div class="option-section">
+            <h3><mat-icon>done_all</mat-icon> Option 1: Accept</h3>
+            <p>Accept the date and time suggested by CMO</p>
+            <div *ngIf="selectedAppointment" class="appointment-info">
+              <p><strong>{{ selectedAppointment.subject }}</strong></p>
+              <p>{{ formatDateTime(selectedAppointment.dateTime) }}</p>
+            </div>
+          </div>
+
+          <!-- Option 2: Mark Important -->
+          <div class="option-section">
+            <h3><mat-icon>star</mat-icon> Option 2: Mark as Important</h3>
+            <p>Mark as Important Meeting and schedule earlier</p>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Requested Earlier Date & Time</mat-label>
+              <input matInput [matDatepicker]="picker1" [(ngModel)]="actionFormData.modifiedDateTime">
+              <mat-datepicker-toggle matSuffix [for]="picker1"></mat-datepicker-toggle>
+              <mat-datepicker #picker1></mat-datepicker>
+            </mat-form-field>
+          </div>
+
+          <!-- Option 3: Modify -->
+          <div class="option-section">
+            <h3><mat-icon>edit</mat-icon> Option 3: Modify Date & Time</h3>
+            <p>Change date and time with comments</p>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>New Date & Time</mat-label>
+              <input matInput [matDatepicker]="picker2" [(ngModel)]="actionFormData.modifiedDateTime">
+              <mat-datepicker-toggle matSuffix [for]="picker2"></mat-datepicker-toggle>
+              <mat-datepicker #picker2></mat-datepicker>
+            </mat-form-field>
+          </div>
+        </div>
+
+        <!-- LEFT SWIPE OPTIONS -->
+        <div *ngIf="selectedActionType === 'LEFT_SWIPE'" class="action-options">
+          
+          <!-- Option 1: Snooze -->
+          <div class="option-section">
+            <h3><mat-icon>schedule</mat-icon> Option 1: Snooze Request</h3>
+            <p>Snooze this appointment for:</p>
+            <div class="snooze-options">
+              <label *ngFor="let option of [{value: 'DAYS_7', label: '7 days'}, 
+                                           {value: 'DAYS_15', label: '15 days'}, 
+                                           {value: 'DAYS_30', label: '30 days'},
+                                           {value: 'CUSTOM', label: 'Custom'}]">
+                <input type="radio" [value]="option.value" [(ngModel)]="actionFormData.snoozeType">
+                {{ option.label }}
+              </label>
+            </div>
+          </div>
+
+          <!-- Option 2: Reject -->
+          <div class="option-section">
+            <h3><mat-icon>cancel</mat-icon> Option 2: Reject & Request Clarification</h3>
+            <p>Reject meeting and request clarification from CMO</p>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Clarification Needed</mat-label>
+              <textarea matInput [(ngModel)]="actionFormData.clarification" rows="3"></textarea>
+            </mat-form-field>
+          </div>
+        </div>
+
+        <!-- Remarks section (common to all actions) -->
+        <div class="remarks-section">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Add Remarks (Optional)</mat-label>
+            <textarea matInput [(ngModel)]="actionFormData.remarks" rows="2"></textarea>
+          </mat-form-field>
+        </div>
+      </div>
+
+      <!-- Modal footer with action buttons -->
+      <div class="modal-footer">
+        <button mat-button (click)="closeActionMenu()">Cancel</button>
+        
+        <!-- RIGHT SWIPE ACTIONS -->
+        <ng-container *ngIf="selectedActionType === 'RIGHT_SWIPE'">
+          <button mat-raised-button color="primary" (click)="acceptAppointment()">
+            <mat-icon>done_all</mat-icon> Accept
+          </button>
+          <button mat-raised-button color="accent" (click)="markImportantAndReschedule()">
+            <mat-icon>star</mat-icon> Mark Important
+          </button>
+          <button mat-raised-button (click)="modifyAppointmentDateTime()">
+            <mat-icon>edit</mat-icon> Modify
+          </button>
+        </ng-container>
+        
+        <!-- LEFT SWIPE ACTIONS -->
+        <ng-container *ngIf="selectedActionType === 'LEFT_SWIPE'">
+          <button mat-raised-button color="warn" (click)="snoozeAppointment()">
+            <mat-icon>schedule</mat-icon> Snooze
+          </button>
+          <button mat-raised-button color="warn" (click)="rejectAndRequestClarification()">
+            <mat-icon>cancel</mat-icon> Reject
+          </button>
+        </ng-container>
+      </div>
+    </div>
+  </div>
+</div>

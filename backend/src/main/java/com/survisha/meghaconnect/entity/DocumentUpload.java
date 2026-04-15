@@ -1,0 +1,69 @@
+package com.survisha.meghaconnect.entity;
+
+import javax.persistence.*;
+import lombok.*;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "document_uploads",
+    indexes = {
+        @Index(name = "idx_appointment_id_doc", columnList = "appointment_id"),
+        @Index(name = "idx_visitor_id_doc", columnList = "visitor_id"),
+    })
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+public class DocumentUpload extends BaseEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "visitor_id")
+    private Visitor visitor;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "appointment_id")
+    private Appointment appointment;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "scheme_app_id")
+    private SchemeApplication schemeApplication;
+
+    @Column(nullable = false, length = 100)
+    private String documentType;  // e.g., EPIC_SCAN, APPLICATION_LETTER, etc.
+
+    @Column(length = 300)
+    private String originalFilename;
+
+    @Column(nullable = false, length = 500)
+    private String filePath;  // Relative path for storage service
+
+    private Long fileSizeBytes;
+
+    @Column(length = 100)
+    private String mimeType;
+
+    @Column(length = 100)
+    private String uploadedBy;
+
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(nullable = false)
+    private LocalDateTime updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+        if (updatedAt == null) {
+            updatedAt = LocalDateTime.now();
+        }
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
+}

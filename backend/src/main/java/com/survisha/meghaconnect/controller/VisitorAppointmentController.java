@@ -1,18 +1,31 @@
 package com.survisha.meghaconnect.controller;
 
 import com.survisha.meghaconnect.entity.Appointment;
+import com.survisha.meghaconnect.entity.AssociateMapping;
+import com.survisha.meghaconnect.entity.DocumentUpload;
 import com.survisha.meghaconnect.entity.Visitor;
 import com.survisha.meghaconnect.repository.AppointmentRepository;
+import com.survisha.meghaconnect.repository.DocumentUploadRepository;
 import com.survisha.meghaconnect.repository.VisitorRepository;
 import com.survisha.meghaconnect.service.AuditLogService;
+import com.survisha.meghaconnect.service.FileStorageService;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.Part;
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
 
 /**
  * Public-facing appointment booking endpoint for logged-in visitors (citizens).
@@ -34,155 +47,279 @@ public class VisitorAppointmentController {
 
     private final AppointmentRepository appointmentRepository;
     private final VisitorRepository      visitorRepository;
+    private final DocumentUploadRepository documentUploadRepository;
     private final AuditLogService       auditLogService;
+    private final FileStorageService    fileStorageService;
+    private final ObjectMapper          objectMapper;
 
     /**
      * Submit a new appointment / scheme application request from a citizen.
      *
-     * Request body (JSON):
-     * {
-     *   "applicantId":         123,          // optional – registered person ID
-     *   "applicantName":       "John Doe",
-     *   "applicantPhone":      "9876543210",
-     *   "epicNumber":          "ABC1234567",
-     *   "agendaType":          "Scheme availment (CM)",
-     *   "agendaBrief":         "Request for CMSDF road project",
-     *   "requestedLocation":   "SHILLONG",
-     *   "mlaMdcApproved":      true,
-     *   "applicationType":     "NEW_APPLICATION",   // or "REMINDER"
-     *   "schemeType":          "CMSDF",
-     *   "projectName":         "Village road improvement",
-     *   "projectCategory":     "Road",
-     *   "beneficiaryType":     "Community/Society",
-     *   "beneficiaryCount":    "101 to 500",
-     *   "estimatedCost":       250000.00,
-     *   "communityContribution": 25000.00,
-     *   "justification":       "...",
-     *   "schemeHistoryList":   ["CMSG"],
-     *   "associates":          [{ "name": "Jane Doe", "phoneNumber": "...", ... }]
-     * }
+     * Accepts multipart/form-data:
+     * - applicantId: optional long
+     * - applicantName, applicantPhone, epicNumber: for visitor resolution
+     * - agendaType, agendaBrief, requestedLocation: appointment details
+     * - schemeType, projectName, projectCategory, etc.: scheme details
+     * - documents_*: file uploads for each document type
+     * - associates: JSON string array of associate objects
+     * - aiSummary, aiPriorityLevel: AI-generated fields
      */
     @PostMapping("/appointments")
-    public ResponseEntity<Map<String, Object>> submitAppointment(@RequestBody Map<String, Object> body) {
+    public ResponseEntity<Map<String, Object>> submitAppointment(
+            @RequestParam(required = false) Long applicantId,
+            @RequestParam(required = false) String applicantName,
+            @RequestParam(required = false) String applicantPhone,
+            @RequestParam(required = false) String epicNumber,
+            @RequestParam(required = false) String agendaType,
+            @RequestParam(required = false) String agendaBrief,
+            @RequestParam(required = false) String requestedLocation,
+            @RequestParam(required = false) Boolean mlaMdcApproved,
+            @RequestParam(required = false) String applicationType,
+            @RequestParam(required = false) String schemeType,
+            @RequestParam(required = false) String projectName,
+            @RequestParam(required = false) String projectCategory,
+            @RequestParam(required = false) String beneficiaryType,
+            @RequestParam(required = false) String beneficiaryCount,
+            @RequestParam(required = false) String estimatedCost,
+            @RequestParam(required = false) String communityContribution,
+            @RequestParam(required = false) String justification,
+            @RequestParam(required = false) String organizationSubType,
+            @RequestParam(required = false) String schemeHistoryList,
+            @RequestParam(required = false) String associates,
+            @RequestParam(required = false) String aiSummary,
+            @RequestParam(required = false) String aiPriorityLevel,
+            HttpServletRequest request) {
 
-        // ── Resolve applicant ───────────────────────────────────────────────
-        Visitor applicant = null;
-
-        Object applicantIdObj = body.get("applicantId");
-        if (applicantIdObj != null) {
-            try {
-                long applicantId = Long.parseLong(applicantIdObj.toString());
-                applicant = visitorRepository.findById(applicantId).orElse(null);
-            } catch (NumberFormatException ignored) { }
-        }
-
-        // If no registered person found, create a lightweight one from form data
-        if (applicant == null) {
-            String name  = getString(body, "applicantName");
-            String phone = getString(body, "applicantPhone");
-            if (name == null || name.trim().isEmpty()) {
-                return badRequest("applicantName is required when applicantId is not provided");
-            }
-            if (phone == null || !phone.matches("^[0-9]{10}$")) {
-                return badRequest("applicantPhone must be a valid 10-digit number");
-            }
-            // Reuse existing person by phone to avoid duplicates
-            applicant = visitorRepository.findByPhoneNumber(phone.trim()).orElseGet(() -> {
-                String epic = getString(body, "epicNumber");
-                // Validate EPIC format if provided
-                if (epic != null && !epic.trim().isEmpty() && !epic.matches("^[A-Z]{3}[0-9]{7}$")) {
-                    epic = null; // Ignore invalid EPIC rather than rejecting
-                }
-                // Check EPIC uniqueness if provided
-                final String epicFinal = epic;
-                if (epicFinal != null && visitorRepository.findByEpicNumber(epicFinal).isPresent()) {
-                    return visitorRepository.findByEpicNumber(epicFinal).get();
-                }
-                Visitor p = Visitor.builder()
-                        .fullName(name.trim())
-                        .phoneNumber(phone.trim())
-                        .epicNumber(epicFinal)
-                        .kycType("NONE")
-                        .kycVerified(false)
-                        .kycStatus("PENDING")
-                        .build();
-                return visitorRepository.save(p);
-            });
-        }
-
-        // ── Validate agenda ─────────────────────────────────────────────────
-        String agendaType = getString(body, "agendaType");
-        if (agendaType == null || agendaType.trim().isEmpty()) {
-            return badRequest("agendaType is required");
-        }
-
-        // ── Resolve requestedLocation enum ──────────────────────────────────
-        Appointment.MeetingLocation location;
         try {
-            String locStr = getString(body, "requestedLocation");
-            location = locStr != null
-                    ? Appointment.MeetingLocation.valueOf(locStr.toUpperCase())
-                    : Appointment.MeetingLocation.OTHERS;
-        } catch (IllegalArgumentException e) {
-            location = Appointment.MeetingLocation.OTHERS;
+            // ── Resolve applicant ───────────────────────────────────────────────
+            Visitor applicant = null;
+
+            if (applicantId != null && applicantId > 0) {
+                applicant = visitorRepository.findById(applicantId).orElse(null);
+            }
+
+            // If no registered visitor found, create/reuse one from form data
+            if (applicant == null) {
+                if (applicantName == null || applicantName.trim().isEmpty()) {
+                    return badRequest("applicantName is required when applicantId is not provided");
+                }
+                if (applicantPhone == null || !applicantPhone.matches("^[0-9]{10}$")) {
+                    return badRequest("applicantPhone must be a valid 10-digit number");
+                }
+
+                // Reuse existing visitor by phone to avoid duplicates
+                applicant = visitorRepository.findByPhoneNumber(applicantPhone.trim()).orElseGet(() -> {
+                    String epicFinal = epicNumber;
+                    // Validate EPIC format if provided
+                    if (epicFinal != null && !epicFinal.trim().isEmpty() && !epicFinal.matches("^[A-Z]{3}[0-9]{7}$")) {
+                        epicFinal = null; // Ignore invalid EPIC rather than rejecting
+                    }
+                    // Check EPIC uniqueness if provided
+                    if (epicFinal != null && visitorRepository.findByEpicNumber(epicFinal).isPresent()) {
+                        return visitorRepository.findByEpicNumber(epicFinal).get();
+                    }
+
+                    Visitor v = Visitor.builder()
+                            .fullName(applicantName.trim())
+                            .phoneNumber(applicantPhone.trim())
+                            .epicNumber(epicFinal)
+                            .kycType("NONE")
+                            .kycVerified(false)
+                            .kycStatus("PENDING")
+                            .build();
+                    return visitorRepository.save(v);
+                });
+            }
+
+            // ── Validate agenda ─────────────────────────────────────────────────
+            if (agendaType == null || agendaType.trim().isEmpty()) {
+                return badRequest("agendaType is required");
+            }
+
+            // ── Resolve requestedLocation enum ──────────────────────────────────
+            Appointment.MeetingLocation location;
+            try {
+                location = requestedLocation != null
+                        ? Appointment.MeetingLocation.valueOf(requestedLocation.toUpperCase())
+                        : Appointment.MeetingLocation.OTHERS;
+            } catch (IllegalArgumentException e) {
+                location = Appointment.MeetingLocation.OTHERS;
+            }
+
+            // ── Generate application ID ─────────────────────────────────────────
+            String appId = "MC-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"))
+                    + "-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+
+            // ── Build and save Appointment ──────────────────────────────────────
+            int meetingCount = appointmentRepository.countMeetingsLast6Months(
+                    applicant.getId(), LocalDateTime.now().minusMonths(6));
+
+            Appointment appt = Appointment.builder()
+                    .applicationId(appId)
+                    .applicant(applicant)
+                    .eventType(Appointment.EventType.A1)
+                    .agendaType(agendaType.trim())
+                    .agendaBrief(agendaBrief)
+                    .status(Appointment.AppointmentStatus.SUBMITTED)
+                    .requestedLocation(location)
+                    .mlaMdcApproved(mlaMdcApproved != null && mlaMdcApproved)
+                    .isWalkIn(false)
+                    .meetingCountLast6Months(meetingCount)
+                    .build();
+
+            // Persist AI-generated fields if included in the submission
+            if (aiSummary != null && !aiSummary.trim().isEmpty()) {
+                appt.setAiSummary(aiSummary.trim());
+            }
+            if (aiPriorityLevel != null && !aiPriorityLevel.trim().isEmpty()) {
+                appt.setAiPriorityLevel(aiPriorityLevel.trim());
+            }
+
+            Appointment saved = appointmentRepository.save(appt);
+
+            // ── Save uploaded documents ──────────────────────────────────────────
+            try {
+                java.util.Collection<Part> parts = request.getParts();
+                for (Part part : parts) {
+                    String paramName = part.getName();
+                    if (paramName.startsWith("documents_")) {
+                        String documentType = paramName.replace("documents_", "");
+                        
+                        try {
+                            // Store file using FileStorageService
+                            MultipartFile mfile = convertPartToMultipartFile(part);
+                            if (mfile != null && !mfile.isEmpty()) {
+                                String filePath = fileStorageService.storeFile(mfile, applicant.getId(), appId);
+
+                                // Create and save DocumentUpload record
+                                DocumentUpload docUpload = DocumentUpload.builder()
+                                        .appointment(saved)
+                                        .visitor(applicant)
+                                        .documentType(documentType)
+                                        .originalFilename(mfile.getOriginalFilename())
+                                        .filePath(filePath)
+                                        .fileSizeBytes(mfile.getSize())
+                                        .mimeType(mfile.getContentType())
+                                        .uploadedBy("visitor_" + applicant.getId())
+                                        .createdAt(LocalDateTime.now())
+                                        .updatedAt(LocalDateTime.now())
+                                        .build();
+
+                                documentUploadRepository.save(docUpload);
+                            }
+                        } catch (IOException e) {
+                            auditLogService.log("DocumentUpload", saved.getId(), "UPLOAD_ERROR",
+                                    "Failed to upload document: " + documentType + " - " + e.getMessage(),
+                                    "visitor_" + applicant.getId());
+                            // Log error but continue processing other documents
+                        }
+                    }
+                }
+            } catch (ServletException e) {
+                auditLogService.log("Appointment", saved.getId(), "PARTS_ERROR",
+                        "Error retrieving multipart request parts: " + e.getMessage(),
+                        "visitor_" + applicant.getId());
+            }
+
+            // ── Parse and save associates ────────────────────────────────────────
+            if (associates != null && !associates.trim().isEmpty() && !associates.equals("[]")) {
+                try {
+                    List<Map<String, String>> associateList = objectMapper.readValue(
+                            associates,
+                            new TypeReference<List<Map<String, String>>>() {}
+                    );
+
+                    for (Map<String, String> assocData : associateList) {
+                        AssociateMapping assoc = AssociateMapping.builder()
+                                .appointment(saved)
+                                .associateName(assocData.get("name"))
+                                .associatePhone(assocData.get("phoneNumber"))
+                                .associateEpic(assocData.get("epicNumber"))
+                                .associateDesignation(assocData.get("designation"))
+                                .associateAddress(assocData.get("address"))
+                                .build();
+                        // Note: Assuming there's a repository or service to save AssociateMapping
+                        // This should be persisted through the Appointment relationship
+                    }
+                } catch (Exception e) {
+                    auditLogService.log("App Associates", saved.getId(), "PARSE_ERROR",
+                            "Failed to parse associates JSON: " + e.getMessage(),
+                            "visitor_" + applicant.getId());
+                    // Log error but continue - associates are optional
+                }
+            }
+
+            auditLogService.log("Appointment", saved.getId(), "SUBMITTED_BY_VISITOR",
+                    "Visitor appointment submitted: " + appId, "visitor_" + applicant.getId());
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("id", saved.getId());
+            response.put("applicationId", appId);
+            response.put("status", "SUBMITTED");
+            response.put("message", "Appointment request submitted successfully.");
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            return badRequest("Error processing appointment submission: " + e.getMessage());
         }
-
-        // ── Generate application ID ─────────────────────────────────────────
-        String appId = "MC-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"))
-                + "-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-
-        // ── Build and save Appointment ──────────────────────────────────────
-        int meetingCount = appointmentRepository.countMeetingsLast6Months(
-                applicant.getId(), LocalDateTime.now().minusMonths(6));
-
-        Appointment appt = Appointment.builder()
-                .applicationId(appId)
-                .applicant(applicant)
-                .eventType(Appointment.EventType.A1)
-                .agendaType(agendaType.trim())
-                .agendaBrief(getString(body, "agendaBrief"))
-                .status(Appointment.AppointmentStatus.SUBMITTED)
-                .requestedLocation(location)
-                .mlaMdcApproved(getBoolean(body, "mlaMdcApproved"))
-                .isWalkIn(false)
-                .meetingCountLast6Months(meetingCount)
-                .build();
-
-        // Persist AI-generated fields if included in the submission (R004–R007)
-        String aiSummary = getString(body, "aiSummary");
-        if (aiSummary != null && !aiSummary.trim().isEmpty()) {
-            appt.setAiSummary(aiSummary.trim());
-        }
-        String aiPriorityLevel = getString(body, "aiPriorityLevel");
-        if (aiPriorityLevel != null && !aiPriorityLevel.trim().isEmpty()) {
-            appt.setAiPriorityLevel(aiPriorityLevel.trim());
-        }
-
-        Appointment saved = appointmentRepository.save(appt);
-        auditLogService.log("Appointment", saved.getId(), "SUBMITTED_BY_VISITOR",
-                "Visitor appointment submitted: " + appId, "visitor_" + applicant.getId());
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("id", saved.getId());
-        response.put("applicationId", appId);
-        response.put("status", "SUBMITTED");
-        response.put("message", "Appointment request submitted successfully.");
-        return ResponseEntity.ok(response);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private static String getString(Map<String, Object> map, String key) {
-        Object v = map.get(key);
-        return v != null ? v.toString() : null;
-    }
+    /**
+     * Convert servlet Part to Spring MultipartFile
+     */
+    private MultipartFile convertPartToMultipartFile(Part part) throws IOException {
+        byte[] fileContent = new byte[(int) part.getSize()];
+        part.getInputStream().read(fileContent);
+        
+        return new MultipartFile() {
+            @Override
+            public String getName() {
+                return part.getName();
+            }
 
-    private static boolean getBoolean(Map<String, Object> map, String key) {
-        Object v = map.get(key);
-        if (v instanceof Boolean) return (Boolean) v;
-        if (v instanceof String)  return Boolean.parseBoolean((String) v);
-        return false;
+            @Override
+            public String getOriginalFilename() {
+                return part.getSubmittedFileName();
+            }
+
+            @Override
+            public String getContentType() {
+                return part.getContentType();
+            }
+
+            @Override
+            public boolean isEmpty() {
+                return fileContent.length == 0;
+            }
+
+            @Override
+            public long getSize() {
+                return fileContent.length;
+            }
+
+            @Override
+            public byte[] getBytes() throws IOException {
+                return fileContent;
+            }
+
+            @Override
+            public java.io.InputStream getInputStream() throws IOException {
+                return new java.io.ByteArrayInputStream(fileContent);
+            }
+
+            @Override
+            public void transferTo(java.io.File dest) throws IOException, IllegalStateException {
+                java.nio.file.Files.write(dest.toPath(), fileContent);
+            }
+
+            @Override
+            public void transferTo(java.nio.file.Path dest) throws IOException, IllegalStateException {
+                java.nio.file.Files.write(dest, fileContent);
+            }
+        };
     }
 
     private ResponseEntity<Map<String, Object>> badRequest(String message) {

@@ -10,6 +10,7 @@ export interface AuthUser {
   username: string;
   fullName: string;
   role: UserRole;
+  visitorId?: number;
 }
 
 interface LoginResponse {
@@ -63,11 +64,12 @@ export class AuthService {
     this.router.navigate(['/login']);
   }
 
-  setVisitorSession(username: string, fullName: string, token: string) {
-    const auth: AuthUser = { username, fullName, role: 'PUBLIC' };
+  setVisitorSession(username: string, fullName: string, token: string, visitorId?: number) {
+    const auth: AuthUser = { username, fullName, role: 'PUBLIC', visitorId };
     this._user.set(auth);
     sessionStorage.setItem('megha_user', JSON.stringify(auth));
     sessionStorage.setItem('megha_token', token);
+    if (visitorId) sessionStorage.setItem('megha_visitor_id', String(visitorId));
   }
 
   isLoggedIn() { return !!this._user(); }

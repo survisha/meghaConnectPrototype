@@ -28,6 +28,8 @@ export class ShellComponent implements OnInit {
       roles: ['PUBLIC'] },
     { label: 'Calendar / Schedule', icon: 'pi-calendar', route: '/scheduling',
       roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER'] },
+    { label: 'HCM Actions', icon: 'pi-hand-open', route: '/hcm/appointments',
+      roles: ['HCM'] },
     {
       label: 'Appointments', icon: 'pi-users', expanded: false,
       roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER','DATA_ENTRY_OPERATOR','PUBLIC'],
@@ -57,7 +59,7 @@ export class ShellComponent implements OnInit {
     { label: 'Grievances', icon: 'pi-comments', route: '/grievances',
       roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER','DATA_ENTRY_OPERATOR','PUBLIC'] },
     { label: 'Register Visitor', icon: 'pi-user-plus', route: '/deo/register-visitor',
-      roles: ['DATA_ENTRY_OPERATOR','ADMIN','OSD'] },
+      roles: ['DATA_ENTRY_OPERATOR'] },
     { label: 'Public Identification', icon: 'pi-id-card', route: '/identify',
       roles: ['HCM','ADMIN','OSD','DATA_ENTRY_OPERATOR'] },
     {
@@ -76,6 +78,10 @@ export class ShellComponent implements OnInit {
     },
     { label: 'User Management', icon: 'pi-shield', route: '/admin/users',
       roles: ['HCM','ADMIN','OSD'] },
+    { label: 'Scheme Management', icon: 'pi-sliders-h', route: '/admin/schemes',
+      roles: ['ADMIN'] },
+    { label: 'Appointment Types', icon: 'pi-calendar', route: '/admin/appointment-types',
+      roles: ['ADMIN'] },
   ];
 
   constructor(public auth: AuthService, private router: Router) {}

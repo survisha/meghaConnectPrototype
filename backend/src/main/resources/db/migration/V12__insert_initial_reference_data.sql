@@ -4,7 +4,8 @@
 INSERT IGNORE INTO reference_type (code, name, description, status) VALUES
 ('CM_SCHEME', 'CM Schemes', 'Chief Minister Schemes', 'ACTIVE'),
 ('CITIZEN_DESIGNATION', 'Citizen Designations', 'Designations of Citizens', 'ACTIVE'),
-('CM_AGENDA_MEETING', 'Meeting Agendas', 'CM Agenda Meeting Types', 'ACTIVE');
+('CM_AGENDA_MEETING', 'Meeting Agendas', 'CM Agenda Meeting Types', 'ACTIVE'),
+('ORGANIZATION_TYPE', 'Organisation Types', 'Types of Organisations', 'ACTIVE');
 
 -- Insert CM Schemes
 INSERT IGNORE INTO reference_data (type_id, code, value, display_order, is_active) 
@@ -30,6 +31,15 @@ VALUES
 ((SELECT id FROM reference_type WHERE code = 'CITIZEN_DESIGNATION'), 'MEDIA', 'Media', 8, TRUE),
 ((SELECT id FROM reference_type WHERE code = 'CITIZEN_DESIGNATION'), 'GENERAL_PUBLIC', 'General Public', 9, TRUE),
 ((SELECT id FROM reference_type WHERE code = 'CITIZEN_DESIGNATION'), 'ORGANIZATION', 'Organization (Village Authority, NGO, Institute, etc.)', 10, TRUE);
+
+-- Insert Organisation Types
+INSERT IGNORE INTO reference_data (type_id, code, value, display_order, is_active)
+VALUES
+((SELECT id FROM reference_type WHERE code = 'ORGANIZATION_TYPE'), 'VILLAGE_AUTHORITY', 'Village Authority', 1, TRUE),
+((SELECT id FROM reference_type WHERE code = 'ORGANIZATION_TYPE'), 'TEACHERS_BODY', 'Teachers Body', 2, TRUE),
+((SELECT id FROM reference_type WHERE code = 'ORGANIZATION_TYPE'), 'NGO', 'Civil Society / NGO', 3, TRUE),
+((SELECT id FROM reference_type WHERE code = 'ORGANIZATION_TYPE'), 'INSTITUTE', 'Institute', 4, TRUE),
+((SELECT id FROM reference_type WHERE code = 'ORGANIZATION_TYPE'), 'OTHER_ORG', 'Other', 5, TRUE);
 
 -- Insert Meeting Agendas
 INSERT IGNORE INTO reference_data (type_id, code, value, display_order, is_active)

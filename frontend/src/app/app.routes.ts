@@ -17,6 +17,9 @@ import { HeatmapComponent } from './reports/heatmap/heatmap.component';
 import { PendingFollowupsComponent } from './reports/pending-followups/pending-followups.component';
 import { AuditTrailComponent } from './reports/audit-trail/audit-trail.component';
 import { UserManagementComponent } from './admin/user-management.component';
+import { SchemeManagementComponent } from './admin/scheme-management/scheme-management.component';
+import { AppointmentTypeManagementComponent } from './admin/appointment-type-management/appointment-type-management.component';
+import { HcmDashboardComponent } from './admin/hcm-dashboard/hcm-dashboard.component';
 import { GrievancesComponent } from './grievances/grievances.component';
 import { VisitorDashboardComponent } from './visitor-dashboard/visitor-dashboard.component';
 import { ApproverWorkflowComponent } from './approver-workflow/approver-workflow.component';
@@ -57,6 +60,9 @@ export const routes: Routes = [
       { path: 'reports/followups', component: PendingFollowupsComponent, canActivate: [roleGuard(...REPORTS_ROLES)] },
       { path: 'reports/audit', component: AuditTrailComponent, canActivate: [roleGuard('ADMIN')] },
       { path: 'admin/users', component: UserManagementComponent, canActivate: [roleGuard(...FULL_CONTROL)] },
+      { path: 'admin/schemes', component: SchemeManagementComponent, canActivate: [roleGuard('ADMIN')] },
+      { path: 'admin/appointment-types', component: AppointmentTypeManagementComponent, canActivate: [roleGuard('ADMIN')] },
+      { path: 'hcm/appointments', component: HcmDashboardComponent, canActivate: [roleGuard('HCM')] },
     ]
   },
   { path: '**', redirectTo: '' }

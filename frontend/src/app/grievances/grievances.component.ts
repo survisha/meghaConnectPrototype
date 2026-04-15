@@ -95,13 +95,29 @@ export class GrievancesComponent implements OnInit {
   ngOnInit() {
     this.loading = true;
     this.grievanceService.getAll(0, 100).subscribe({
-      next: page => { this.grievances = page.content; this.applyFilter(); this.loading = false; },
+      next: page => {
+        this.grievances = page.content;
+        this.applyFilter();
+        this.loading = false;
+      },
       error: () => { this.loading = false; }
     });
   }
 
   applyFilter() {
-    this.filtered = this.grievances.filter(g =>
+    let data = this.grievances;
+
+    // For PUBLIC users: filter to show only their grievances
+    if (this.isPublic) {
+      const currentUser = this.auth.user();
+      if (currentUser) {
+        // Filter by applicantName matching logged-in user's fullName
+        data = data.filter(g => g.applicantName.toLowerCase() === currentUser.fullName.toLowerCase());
+      }
+    }
+
+    // Apply search and filter criteria
+    this.filtered = data.filter(g =>
       (!this.search || g.applicantName.toLowerCase().includes(this.search.toLowerCase()) ||
         g.ticketId.includes(this.search) || g.subject.toLowerCase().includes(this.search.toLowerCase())) &&
       (!this.filterStatus || g.status === this.filterStatus) &&

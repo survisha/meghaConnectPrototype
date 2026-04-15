@@ -11,8 +11,8 @@
 -- ├──────────┼─────────────┼─────────────────────────┤
 -- │ hcm      │ hcm123      │ HCM                     │
 -- │ admin    │ admin123    │ ADMIN                   │
--- │ saidul   │ osd123      │ SAIDUL_OSD              │
--- │ jtsecy   │ jts123      │ APPROVER_JT_SECY        │
+-- │ saidul   │ osd123      │ OSD                     │
+-- │ jtsecy   │ jts123      │ APPROVER                │
 -- │ cmo      │ cmo123      │ CMO_OFFICER             │
 -- │ deo1     │ deo123      │ DATA_ENTRY_OPERATOR     │
 -- └──────────┴─────────────┴─────────────────────────┘

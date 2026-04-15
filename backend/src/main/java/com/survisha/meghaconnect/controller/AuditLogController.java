@@ -1,7 +1,7 @@
 package com.survisha.meghaconnect.controller;
 
 import com.survisha.meghaconnect.entity.AuditLog;
-import com.survisha.meghaconnect.repository.AuditLogRepository;
+import com.survisha.meghaconnect.service.AuditLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -15,11 +15,11 @@ import org.springframework.web.bind.annotation.*;
 @CrossOrigin(origins = "*")
 public class AuditLogController {
 
-    private final AuditLogRepository auditLogRepository;
+    private final AuditLogService auditLogService;
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','HCM','OSD')")
     public ResponseEntity<Page<AuditLog>> getAll(Pageable pageable) {
-        return ResponseEntity.ok(auditLogRepository.findAll(pageable));
+        return ResponseEntity.ok(auditLogService.getAllAuditLogs(pageable));
     }
 }

@@ -5,6 +5,10 @@ import com.survisha.meghaconnect.entity.Visitor;
 import com.survisha.meghaconnect.repository.VisitorRepository;
 import com.survisha.meghaconnect.service.VisitorOtpService;
 import com.survisha.meghaconnect.service.VisitorService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -29,6 +33,7 @@ import java.time.LocalDateTime;
 @RestController
 @RequestMapping("/api/v1/visitor/auth")
 @RequiredArgsConstructor
+@Tag(name = "Visitor Authentication", description = "Public visitor/citizen authentication endpoints - no JWT required")
 @CrossOrigin(origins = "*")
 public class VisitorAuthController {
 

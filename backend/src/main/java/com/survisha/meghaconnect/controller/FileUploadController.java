@@ -2,6 +2,11 @@ package com.survisha.meghaconnect.controller;
 
 import com.survisha.meghaconnect.service.AISummaryService;
 import com.survisha.meghaconnect.service.FileStorageService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -26,6 +31,8 @@ import java.util.Map;
 @RequestMapping("/api/files")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
+@Tag(name = "File Upload", description = "File upload and download operations")
+@SecurityRequirement(name = "bearerAuth")
 public class FileUploadController {
 
     private final FileStorageService fileStorageService;

@@ -2,6 +2,11 @@ package com.survisha.meghaconnect.controller;
 
 import com.survisha.meghaconnect.entity.ScheduleEvent;
 import com.survisha.meghaconnect.service.ScheduleEventService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -12,6 +17,8 @@ import java.util.List;
 @RequestMapping("/api/v1/schedule")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
+@Tag(name = "Schedule Events", description = "Schedule event management and calendar operations")
+@SecurityRequirement(name = "bearerAuth")
 public class ScheduleEventController {
 
     private final ScheduleEventService scheduleEventService;

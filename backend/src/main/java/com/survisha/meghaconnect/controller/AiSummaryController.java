@@ -2,6 +2,10 @@ package com.survisha.meghaconnect.controller;
 
 import com.survisha.meghaconnect.repository.AppointmentRepository;
 import com.survisha.meghaconnect.service.AISummaryService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +20,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/ai")
 @RequiredArgsConstructor
+@Tag(name = "AI Summary", description = "AI-powered document summarization endpoints")
 public class AiSummaryController {
 
     private final AppointmentRepository appointmentRepository;

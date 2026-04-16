@@ -2,10 +2,12 @@
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.75rem">
     <h2 class="page-title" style="margin:0">Appointments</h2>
     <div style="display:flex;gap:0.5rem">
-      <button mat-raised-button color="accent" routerLink="/appointments/walkin">
+      <button mat-raised-button color="accent" routerLink="/appointments/walkin" 
+              *ngIf="auth.hasRole('ADMIN') || auth.hasRole('DATA_ENTRY_OPERATOR')">
         <mat-icon>login</mat-icon> Walk-in
       </button>
-      <button mat-raised-button color="primary" routerLink="/appointments/new">
+      <button mat-raised-button color="primary" routerLink="/appointments/new"
+              *ngIf="auth.hasRole('ADMIN') || auth.hasRole('DATA_ENTRY_OPERATOR')">
         <mat-icon>add</mat-icon> New Appointment
       </button>
     </div>

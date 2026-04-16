@@ -4,15 +4,19 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { VisitorSearchService } from '../../services/visitor-search.service';
 import { Visitor } from '../../models';
-import { InputText } from 'primeng/inputtext';
-import { Tag } from 'primeng/tag';
-import { TableModule } from 'primeng/table';
-import { Select } from 'primeng/select';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatIconModule } from '@angular/material/icon';
+import { MatCardModule } from '@angular/material/card';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-walkin',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, InputText, Tag, TableModule, Select],
+  imports: [CommonModule, FormsModule, RouterLink, MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatChipsModule, MatIconModule, MatCardModule, MatTooltipModule],
   templateUrl: './walkin.component.html',
   styleUrls: ['./walkin.component.scss'],
 })
@@ -27,7 +31,13 @@ export class WalkinComponent {
   associates: Visitor[] = [];
   searching = false;
 
-  agendaTypes = ['Scheme availment (CM)','Governance','Trade & Commerce','Political Discussion','Public Grievance'];
+  agendaTypes = [
+    { label: 'Scheme availment (CM)', value: 'SCHEME_CM' },
+    { label: 'Governance', value: 'GOVERNANCE' },
+    { label: 'Trade & Commerce', value: 'TRADE_COMMERCE' },
+    { label: 'Political Discussion', value: 'POLITICAL' },
+    { label: 'Public Grievance', value: 'GRIEVANCE' }
+  ];
 
   constructor(private visitorSearchService: VisitorSearchService) {}
 

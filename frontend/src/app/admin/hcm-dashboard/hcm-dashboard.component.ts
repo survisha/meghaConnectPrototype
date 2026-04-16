@@ -89,7 +89,7 @@ export class HcmDashboardComponent implements OnInit {
    */
   loadAppointments() {
     this.loading = true;
-    this.http.get<any[]>(`${environment.apiUrl}/hcm/appointments`)
+    this.http.get<any[]>(`${environment.apiUrl}/hcm/actions/pending-work`)
       .subscribe({
         next: (data) => {
           this.appointments = data || [];

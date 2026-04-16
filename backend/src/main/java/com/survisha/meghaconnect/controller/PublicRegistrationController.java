@@ -1,6 +1,10 @@
 package com.survisha.meghaconnect.controller;
 
 import com.survisha.meghaconnect.dto.PublicRegistrationDto;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -31,6 +35,7 @@ import java.util.UUID;
 @RequestMapping("/api/v1/public")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
+@Tag(name = "Public Registration", description = "Public citizen registration and onboarding workflows")
 public class PublicRegistrationController {
 
     // ── OTP ──────────────────────────────────────────────────────

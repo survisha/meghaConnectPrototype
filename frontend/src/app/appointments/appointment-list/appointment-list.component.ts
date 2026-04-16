@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AppointmentService } from '../../services/appointment.service';
+import { AuthService } from '../../services/auth.service';
 import { Appointment, AppointmentStatus } from '../../models';
 import { MatTableModule } from '@angular/material/table';
 import { MatPaginatorModule } from '@angular/material/paginator';
@@ -50,7 +51,7 @@ export class AppointmentListComponent implements OnInit {
     { label: 'Completed', value: 'COMPLETED' },
   ];
 
-  constructor(private appointmentService: AppointmentService) {}
+  constructor(private appointmentService: AppointmentService, public auth: AuthService) {}
 
   ngOnInit() {
     // Initialize with dummy data for demo purposes

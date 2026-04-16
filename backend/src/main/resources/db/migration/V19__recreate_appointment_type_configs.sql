@@ -1,8 +1,9 @@
--- V17__create_appointment_type_configs.sql
--- Create table for appointment type configurations
--- Stores configuration for appointment types: A1, A2, A3, A4, B1, B2
+-- V19__recreate_appointment_type_configs.sql
+-- Drop and recreate appointment_type_configs table with all required columns
 
-CREATE TABLE IF NOT EXISTS appointment_type_configs (
+DROP TABLE IF EXISTS appointment_type_configs;
+
+CREATE TABLE appointment_type_configs (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     type_code VARCHAR(50) NOT NULL UNIQUE,
     type_name VARCHAR(200) NOT NULL,
@@ -84,7 +85,7 @@ CREATE TABLE IF NOT EXISTS appointment_type_configs (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Insert default appointment types
-INSERT IGNORE INTO appointment_type_configs 
+INSERT INTO appointment_type_configs 
 (type_code, type_name, description, type_category, requires_travel, travel_time_before, travel_time_after, block_time_includes, has_appointment_limit, limit_is_sacrosanct, no_travel_time, is_active, display_order, created_by, updated_by)
 VALUES
     ('A1', 'Cabinet Meetings / Union Minister Meetings / Media Interaction / Flights', 

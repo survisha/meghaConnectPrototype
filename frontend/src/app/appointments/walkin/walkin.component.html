@@ -1,27 +1,31 @@
 <div>
   <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem">
-    <button pButton icon="pi pi-arrow-left" class="p-button-text p-button-sm" routerLink="/appointments"></button>
-    <h2 class="page-title" style="margin:0">🚶 Walk-in Counter (Type B2)</h2>
+    <button mat-icon-button routerLink="/appointments" matTooltip="Back to Appointments">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <h2 class="page-title" style="margin:0">Walk-in Counter (Type B2)</h2>
   </div>
 
   <div *ngIf="!checkedIn">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
       <!-- Lookup Form -->
       <div class="section-card">
-        <div class="section-card-header"><i class="pi pi-search"></i> Citizen Lookup (DEO)</div>
+        <div class="section-card-header"><mat-icon>search</mat-icon> Citizen Lookup (DEO)</div>
         <div class="section-card-body">
-          <div style="margin-bottom:1rem">
-            <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:0.35rem">Phone Number</label>
-            <div style="display:flex;gap:0.5rem">
-              <input pInputText [(ngModel)]="phoneNumber" placeholder="10-digit mobile" style="flex:1"/>
-            </div>
-          </div>
-          <div style="text-align:center;color:#9ca3af;margin:0.5rem 0;font-size:0.85rem">— OR —</div>
-          <div style="margin-bottom:1rem">
-            <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:0.35rem">EPIC / Voter ID</label>
-            <input pInputText [(ngModel)]="epicNumber" placeholder="EPIC number" style="width:100%"/>
-          </div>
-          <button pButton label="Search" icon="pi pi-search" (click)="search()" style="width:100%"></button>
+          <mat-form-field appearance="outline" class="full-width" style="margin-bottom:1rem">
+            <mat-label>Phone Number</mat-label>
+            <input matInput [(ngModel)]="phoneNumber" placeholder="10-digit mobile"/>
+            <mat-icon matPrefix>phone</mat-icon>
+          </mat-form-field>
+          <div style="text-align:center;color:#9ca3af;margin:1rem 0;font-size:0.85rem">— OR —</div>
+          <mat-form-field appearance="outline" class="full-width" style="margin-bottom:1rem">
+            <mat-label>EPIC / Voter ID</mat-label>
+            <input matInput [(ngModel)]="epicNumber" placeholder="EPIC number"/>
+            <mat-icon matPrefix>id_card</mat-icon>
+          </mat-form-field>
+          <button mat-raised-button color="primary" (click)="search()" class="full-width" [disabled]="searching">
+            <mat-icon>search</mat-icon> Search
+          </button>
         </div>
       </div>
 
@@ -29,23 +33,28 @@
       <div>
         <!-- Not Found -->
         <div *ngIf="notFound" class="section-card">
-          <div class="section-card-header" style="background:linear-gradient(135deg,#b45309,#d97706)"><i class="pi pi-user-plus"></i> New Visitor</div>
+          <div class="section-card-header" style="background:linear-gradient(135deg,#b45309,#d97706)"><mat-icon>person_add</mat-icon> New Visitor</div>
           <div class="section-card-body">
             <p style="font-size:0.9rem;color:#374151">No existing record found. Please register as a new applicant.</p>
-            <button pButton label="Register New Applicant" icon="pi pi-plus" routerLink="/appointments/new" style="width:100%"></button>
+            <button mat-raised-button color="primary" routerLink="/appointments/new" class="full-width">
+              <mat-icon>add</mat-icon> Register New Applicant
+            </button>
           </div>
         </div>
 
         <!-- Found -->
         <div *ngIf="foundPerson" class="section-card">
-          <div class="section-card-header" style="background:linear-gradient(135deg,#065f46,#059669)"><i class="pi pi-check-circle"></i> Existing Applicant Found</div>
+          <div class="section-card-header" style="background:linear-gradient(135deg,#065f46,#059669)"><mat-icon>check_circle</mat-icon> Existing Applicant Found</div>
           <div class="section-card-body">
             <div class="person-card">
               <div class="person-avatar">{{ foundPerson.fullName[0] }}</div>
               <div style="flex:1">
                 <div style="font-weight:700;font-size:1rem">{{ foundPerson.fullName }}</div>
                 <div style="font-size:0.8rem;color:#6b7280">{{ foundPerson.designation }}</div>
-                <div style="font-size:0.8rem;color:#6b7280">📍 {{ foundPerson.constituency }}, {{ foundPerson.district }}</div>
+                <div style="font-size:0.8rem;color:#6b7280">
+                  <mat-icon style="font-size:0.8rem;width:0.8rem;height:0.8rem;display:inline">location_on</mat-icon>
+                  {{ foundPerson.constituency }}, {{ foundPerson.district }}
+                </div>
               </div>
             </div>
             <div class="detail-pairs">
@@ -53,11 +62,15 @@
               <div><span>Phone</span><strong>{{ foundPerson.phoneNumber }}</strong></div>
               <div><span>Booth</span><strong>{{ foundPerson.booth }}</strong></div>
             </div>
-            <div style="margin-top:1rem">
-              <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:0.35rem">Agenda for Today</label>
-              <p-select [options]="agendaTypes" [(ngModel)]="agendaType" placeholder="Select agenda" styleClass="w-full"></p-select>
-            </div>
-            <button pButton label="✅ Check In" icon="pi pi-check" class="p-button-success" style="width:100%;margin-top:1rem" (click)="checkIn()"></button>
+            <mat-form-field appearance="outline" class="full-width" style="margin-top:1rem">
+              <mat-label>Agenda for Today</mat-label>
+              <mat-select [(ngModel)]="agendaType">
+                <mat-option *ngFor="let agenda of agendaTypes" [value]="agenda.value">{{ agenda.label }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <button mat-raised-button color="accent" style="width:100%;margin-top:1rem" (click)="checkIn()" class="full-width">
+              <mat-icon>check_circle</mat-icon> Check In
+            </button>
           </div>
         </div>
       </div>
@@ -65,9 +78,11 @@
 
     <!-- Associates -->
     <div class="section-card" style="margin-top:1.5rem">
-      <div class="section-card-header">
-        <i class="pi pi-users"></i> Associates / Accompanying Persons
-        <button pButton label="+ Add Associate" icon="pi pi-plus" class="p-button-sm p-button-outlined" style="margin-left:auto;border-color:white;color:white" (click)="addAssociate()"></button>
+      <div class="section-card-header" style="display:flex;align-items:center">
+        <mat-icon>group</mat-icon> Associates / Accompanying Persons
+        <button mat-stroked-button style="margin-left:auto;color:white;border-color:white" (click)="addAssociate()">
+          <mat-icon>add</mat-icon> Add Associate
+        </button>
       </div>
       <div class="section-card-body">
         <p style="font-size:0.85rem;color:#6b7280;margin-bottom:1rem">Record all people accompanying the applicant (name, EPIC, photo, designation, address).</p>
@@ -78,7 +93,7 @@
             <div style="font-weight:600;font-size:0.88rem">{{ a.fullName }}</div>
             <div style="font-size:0.78rem;color:#6b7280">{{ a.designation }} | {{ a.constituency }}</div>
           </div>
-          <p-tag value="Associate" severity="info" styleClass="text-xs"></p-tag>
+          <mat-chip selected>Associate</mat-chip>
         </div>
       </div>
     </div>
@@ -86,7 +101,7 @@
 
   <!-- Check-in success -->
   <div *ngIf="checkedIn" class="checkin-success">
-    <i class="pi pi-check-circle" style="font-size:4rem;color:#16a34a;margin-bottom:1rem"></i>
+    <mat-icon style="font-size:4rem;width:4rem;height:4rem;color:#16a34a;margin-bottom:1rem">check_circle</mat-icon>
     <h2 style="color:#065f46;margin:0 0 0.5rem">Walk-in Checked In!</h2>
     <div class="ticket-box">
       <div style="font-size:0.85rem;color:#6b7280">Token Number</div>
@@ -96,6 +111,8 @@
     <div *ngIf="foundPerson" style="font-size:0.9rem;color:#374151;margin-top:1rem">
       Applicant: <strong>{{ foundPerson.fullName }}</strong>
     </div>
-    <button pButton label="Register Another" icon="pi pi-plus" class="p-button-outlined" style="margin-top:1.5rem" (click)="checkedIn=false;foundPerson=null;phoneNumber='';epicNumber=''"></button>
+    <button mat-stroked-button style="margin-top:1.5rem" (click)="checkedIn=false;foundPerson=null;phoneNumber='';epicNumber=''">
+      <mat-icon>add</mat-icon> Register Another
+    </button>
   </div>
 </div>

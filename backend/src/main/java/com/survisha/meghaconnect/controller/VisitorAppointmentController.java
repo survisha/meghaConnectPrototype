@@ -11,6 +11,10 @@ import com.survisha.meghaconnect.service.AuditLogService;
 import com.survisha.meghaconnect.service.FileStorageService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -43,6 +47,7 @@ import java.util.ArrayList;
 @RequestMapping("/api/v1/visitor")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
+@Tag(name = "Visitor Appointments", description = "Public visitor appointment booking and workflow operations")
 public class VisitorAppointmentController {
 
     private final AppointmentRepository appointmentRepository;

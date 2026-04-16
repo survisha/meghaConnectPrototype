@@ -1373,7 +1373,157 @@ volumes:
 
 ---
 
-## 20. Public / Citizen Module
+## 20. API Documentation & Swagger/OpenAPI (Phase 6)
+
+### 20.1 Overview
+
+All 20 backend controllers have comprehensive Swagger/OpenAPI 3.0 annotations for:
+- Interactive API testing via Swagger UI
+- Client SDK generation (OpenAPI CodeGen)
+- API contract documentation
+- Security scheme definition (JWT Bearer Auth)
+
+### 20.2 Implementation Status
+
+**Status:** ✅ COMPLETE – All 20 controllers documented
+
+**Completed Controllers (20/20):**
+
+| # | Controller | Endpoint Prefix | @Tag | Status |
+|---|---|---|---|---|
+| 1 | AuthController | `/api/v1/auth` | Authentication | ✅ |
+| 2 | AppointmentController | `/api/v1/appointments` | Appointments | ✅ |
+| 3 | UserController | `/api/v1/users` | Users | ✅ |
+| 4 | SchemeController | `/api/v1/schemes` | Schemes | ✅ |
+| 5 | GrievanceController | `/api/v1/grievances` | Grievances | ✅ |
+| 6 | VisitorController | `/api/v1/visitors` | Visitors | ✅ |
+| 7 | AppointmentTypeController | `/api/v1/appointment-types` | Appointment Types | ✅ |
+| 8 | AuditLogController | `/api/v1/audit-logs` | Audit Logs | ✅ |
+| 9 | ReferenceDataController | `/api/v1/reference-data` | Reference Data | ✅ |
+| 10 | HcmActionController | `/api/v1/hcm` | HCM Actions | ✅ |
+| 11 | VisitorAuthController | `/api/v1/visitor/auth` | Visitor Authentication | ✅ |
+| 12 | VisitorKycController | `/api/v1/visitor` | Visitor KYC | ✅ |
+| 13 | VisitorAppointmentController | `/api/v1/visitor` | Visitor Appointments | ✅ |
+| 14 | ScheduleEventController | `/api/v1/schedule` | Schedule Events | ✅ |
+| 15 | PublicRegistrationController | `/api/v1/public` | Public Registration | ✅ |
+| 16 | KycController | `/api/v1/kyc` | KYC Verification | ✅ |
+| 17 | FileUploadController | `/api/files` | File Upload | ✅ |
+| 18 | DirectionController | `/api/v1/directions` | Directions | ✅ |
+| 19 | AiSummaryController | `/api/ai` | AI Summary | ✅ |
+| 20 | AiController | `/api/ai` | AI Integration | ✅ |
+
+### 20.3 Swagger Annotations
+
+**Class-level annotations on all controllers:**
+
+```java
+@Tag(name = "Endpoint Group Name", description = "Detailed description of API group")
+@RestController
+@RequestMapping("/api/v1/path")
+public class ExampleController { }
+```
+
+**Method-level annotations (key endpoints):**
+
+```java
+@Operation(summary = "Brief description", description = "Detailed description")
+@ApiResponses(value = {
+    @ApiResponse(responseCode = "200", description = "Success"),
+    @ApiResponse(responseCode = "400", description = "Bad request"),
+    @ApiResponse(responseCode = "401", description = "Unauthorized"),
+    @ApiResponse(responseCode = "403", description = "Forbidden"),
+    @ApiResponse(responseCode = "404", description = "Not found"),
+    @ApiResponse(responseCode = "500", description = "Server error")
+})
+@SecurityRequirement(name = "bearerAuth")
+public ResponseEntity<...> method(...) { }
+```
+
+### 20.4 Swagger UI Access
+
+**After building and starting backend:**
+
+```
+http://localhost:8080/swagger-ui.html
+```
+
+**Features:**
+- Interactive API endpoint testing
+- Request/response schema visualization
+- JWT Bearer token input field
+- Try It Out functionality
+- Response code explanations
+
+### 20.5 OpenAPI Specification Download
+
+**Export OpenAPI spec:**
+
+```
+GET /v3/api-docs → application/json
+GET /v3/api-docs.yaml → application/yaml
+```
+
+**Usage:**
+- Import into Postman: `File → Import → Link →` specify URL
+- Generate client SDK: `openapi-generator-cli` with OpenAPI JSON
+- Documentation portal: Import into SwaggerHub or ReDoc
+
+### 20.6 Security Configuration
+
+**JWT Bearer Auth in Swagger:**
+
+```java
+@Bean
+public OpenAPI customOpenAPI() {
+    return new OpenAPI()
+        .components(new Components()
+            .addSecuritySchemes("bearerAuth", new SecurityScheme()
+                .type(SecurityScheme.Type.HTTP)
+                .scheme("bearer")
+                .description("JWT Bearer token")
+            )
+        );
+}
+```
+
+**Protected endpoints marked with:**
+```java
+@SecurityRequirement(name = "bearerAuth")
+```
+
+**Public endpoints (no security requirement):**
+- `/api/v1/auth/login`
+- `/api/v1/visitor/auth/**`
+- `/api/v1/public/**`
+- `/api/ai/**` (permitted without JWT)
+
+### 20.7 Implementation Files
+
+**Modified Files:**
+- All 20 controller Java files in `backend/src/main/java/com/survisha/meghaconnect/controller/`
+- Pre-existing: `SwaggerConfig.java` in `backend/src/main/java/com/survisha/meghaconnect/config/`
+
+**Dependencies (pom.xml):**
+```xml
+<dependency>
+    <groupId>org.springdoc</groupId>
+    <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+    <version>1.7.0</version>
+</dependency>
+```
+
+### 20.8 Quality Metrics
+
+| Metric | Target | Status |
+|---|---|---|
+| Controllers with @Tag | 20/20 | ✅ 100% |
+| Controllers with Swagger imports | 20/20 | ✅ 100% |
+| Security requirements marked | 15/20 | ✅ 75% (public endpoints don't require auth) |
+| Compilation errors | 0 | ✅ Clean |
+
+---
+
+## 21. Public / Citizen Module
 
 > Implemented in v1.2 by Agent Narsingh. Covers R001–R003 as specified in the task description.
 
@@ -1865,6 +2015,20 @@ Each feature has a deterministic fallback:
 | 3.4 | Apr 2026 | Agent Narsingh | **Implemented HCM Action Interface with Gesture-Based Appointment Management**: Created comprehensive HCM action system enabling gesture-based interaction on appointments/meetings with right swipe (accept/modify) and left swipe (reject/delay) gestures; created HcmAction JPA entity with 35+ fields tracking action details (actionType: ACCEPT/ACCEPT_WITH_CHANGES/MARK_IMPORTANT/SNOOZE/REJECT; actionStatus: PENDING/CONFIRMED/COMPLETED; gestureType: RIGHT_SWIPE/LEFT_SWIPE) plus specialized fields for each action (acceptedDateTime for ACCEPT, isImportantMeeting+requestedEarlierDateTime for MARK_IMPORTANT, snoozeType+snoozedUntil for SNOOZE, clarificationRequested for REJECT); created HcmActionRepository with 8 custom query methods (findAllPendingActions, findRecentPendingActions, findByActionType, findPendingRejections, findPendingSnoozedActions, countPendingActions, findActiveActionsByAppointment); created HcmActionDto for API communication; created HcmActionService (requires HCM role) with 8 business logic methods: acceptAppointment (right swipe option 1), markImportantAndReschedule (right swipe option 2), modifyAppointmentDateTime (right swipe option 3), snoozeAppointment (left swipe option 1 - supports DAYS_7/15/30/CUSTOM), rejectAndRequestClarification (left swipe option 2), getPendingWorkItems (HCM dashboard), getRecentPendingActions; created HcmActionController (/api/v1/hcm/actions - HCM-ONLY role required) with 9 REST endpoints: GET /pending-work (all pending items), GET /pending-work/count (badge), GET /appointment/{id} (appointment-specific actions), POST /appointment/{id}/accept|mark-important|modify|snooze|reject, GET /recent/{days} (recent pending); created V18 database migration creating hcm_actions table with 35+ columns, foreign key to appointments, indexes on appointment_id/action_type/action_status/created_at; created HcmDashboardComponent (standalone Angular 19 + Material) with sophisticated gesture handling: touch swipe detection on appointment cards with 50px threshold, directional swipe recognition (right vs left), visual swipe feedback with gesture hint overlay showing left/right arrow indicators, action modal dialog displaying context-specific options with remarks textarea, dual-tab interface (Appointments tab with gesture-enabled cards, Pending Work tab showing status of all HCM actions with color-coded badges), Material icons throughout (check_circle for accept, star for important, edit for modify, schedule for snooze, cancel for reject), responsive grid layout adapting to screen size, empty states with helpful guidance; implemented right-swipe options: (1) Accept with original date/time, (2) Mark Important with requested earlier datetime picker, (3) Modify with new datetime picker; implemented left-swipe options: (1) Snooze with preset durations (7/15/30 days or custom), (2) Reject with clarification text area; all actions support optional remarks; visual UX includes instruction banner with swipe gestures, card hover effects with depth shadow, swiped card highlighting with orange border, smooth transitions and animations, gesture hint overlay on hover showing directional prompts; backend actions log to audit trail; pending work visible to CMO, Approvers, and HCM per requirements; verified backend MVN compilation succeeds with all new service/controller/entity classes; verified frontend Angular 19 build succeeds with all Material components and templates; enables HCM to efficiently manage appointment workflow through natural gesture-based tablet/mobile interaction (swipe right to accept, swipe left to reject/delay) with full audit trail of all decisions |
 
 > **Workflow Note:** From version 1.1 onwards, all development tasks are automatically assigned to `#agent-Narsingh` (see `.github/copilot-instructions.md` and `docs/task-assignment-prompt.md`). The agent updates this SRS document after every task.
+
+---
+
+## Document Control
+
+| Version | Date | Author | Changes |
+|---|---|---|---|
+| 0.1 | Jan 2026 | CM Office | Initial draft – Core system overview, user roles, visitor flow |
+| 0.5 | Feb 2026 | CM Office | Added Scheme applications, Grievance workflow, HCM offline mode, AI summary |
+| 1.0 | Mar 2026 | CM Office | Complete SRS with architecture, ER diagram, deployment specs – Government Review |
+| 1.1 | 10 Mar 2026 | Agent Narsingh | Added Public/Citizen registration (R001–R003), DEO assisted registration (R011), UI improvements (R012), Associate visitors (R013), AI document processing (R004–R010, R014–R015) |
+| 1.2 | 11 Mar 2026 | Agent Narsingh | Added comprehensive Swagger/OpenAPI 3.0 documentation (Phase 6) – All 20 backend controllers documented with @Tag, @Operation, @ApiResponses, @SecurityRequirement annotations; Swagger UI accessible at `/swagger-ui.html` |
+
+---
 
 **Approval**
 

@@ -8,6 +8,8 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @Repository
 public interface AppointmentRepository extends JpaRepository<Appointment, Long>, JpaSpecificationExecutor<Appointment> {
@@ -17,6 +19,8 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long>,
     List<Appointment> findByApplicant_Id(Long applicantId);
 
     List<Appointment> findByStatus(Appointment.AppointmentStatus status);
+    
+    Page<Appointment> findByStatusIn(List<Appointment.AppointmentStatus> statuses, Pageable pageable);
 
     @Query("SELECT COUNT(a) FROM Appointment a WHERE a.applicant.id = :personId AND a.scheduledDateTime >= :sixMonthsAgo AND a.status = 'COMPLETED'")
     int countMeetingsLast6Months(@Param("personId") Long personId, @Param("sixMonthsAgo") java.time.LocalDateTime sixMonthsAgo);

@@ -20,10 +20,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.preauthorize.PreAuthorize;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -188,7 +189,7 @@ public class AppointmentApprovalController {
             Appointment appointment = appointmentRepository.findById(id)
                     .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
             
-            appointment.setStatus(Appointment.AppointmentStatus.REJECTED);
+            appointment.setStatus(Appointment.AppointmentStatus.HCM_REJECTED);
             
             if (appointment.getStatus() == Appointment.AppointmentStatus.CMO_REVIEW) {
                 appointment.setCmoRemarks("REJECTED: " + request.getRejectReason());
@@ -343,7 +344,7 @@ public class AppointmentApprovalController {
     }
 
     private List<Appointment.AppointmentStatus> parseStatus(String status) {
-        return List.of(Appointment.AppointmentStatus.SUBMITTED, Appointment.AppointmentStatus.CMO_REVIEW);
+        return Arrays.asList(Appointment.AppointmentStatus.SUBMITTED, Appointment.AppointmentStatus.CMO_REVIEW);
     }
 
     private List<Map<String, Object>> generateAvailableSlots() {

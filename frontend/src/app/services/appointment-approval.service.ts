@@ -58,7 +58,7 @@ export class AppointmentApprovalService {
    * Get appointment details for approval view
    */
   getAppointmentDetails(appointmentId: number): Observable<AppointmentApproval> {
-    return this.http.get<AppointmentApproval>(`${this.apiUrl}/${appointmentId}`);
+    return this.http.get<AppointmentApproval>(`${this.apiUrl}/${appointmentId}/approval-details`);
   }
 
   /**

@@ -14,8 +14,8 @@ VALUES
 ((SELECT id FROM reference_type WHERE code = 'CM_SCHEME'), 'CMSG', 'CMSG – CM Special Grant', 2, TRUE),
 ((SELECT id FROM reference_type WHERE code = 'CM_SCHEME'), 'CM_CARE', 'CM Care – Medical Assistance', 3, TRUE),
 ((SELECT id FROM reference_type WHERE code = 'CM_SCHEME'), 'CM_CONNECT', 'CM Connect – Connectivity', 4, TRUE),
-((SELECT id FROM reference_type WHERE code = 'CM_SCHEME'), 'CM_ELEVATE', 'CM Elevate – Youth Employment', 5, TRUE);
-((SELECT id FROM reference_type WHERE code = 'CM_SCHEME'), 'FOCUS_PLUS', 'Focus+ – Focused Development', 6, TRUE);
+((SELECT id FROM reference_type WHERE code = 'CM_SCHEME'), 'CM_ELEVATE', 'CM Elevate – Youth Employment', 5, TRUE),
+((SELECT id FROM reference_type WHERE code = 'CM_SCHEME'), 'FOCUS_PLUS', 'FocusPlus – Focused Development', 6, TRUE),
 ((SELECT id FROM reference_type WHERE code = 'CM_SCHEME'), 'OTHERS', 'OTHERS', 7, TRUE);
 
 -- Insert Project Categories

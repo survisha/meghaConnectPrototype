@@ -84,9 +84,9 @@ public class AppointmentApprovalController {
      * Get full appointment details for review
      * R003: Returns all appointment information for detailed review
      */
-    @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('CMO_OFFICER', 'APPROVER_JT_SECY', 'ADMIN', 'HCM', 'PUBLIC')")
-    @Operation(summary = "Get appointment details")
+    @GetMapping("/{id}/approval-details")
+    @PreAuthorize("hasAnyRole('CMO_OFFICER', 'APPROVER', 'ADMIN', 'HCM', 'PUBLIC')")
+    @Operation(summary = "Get appointment details for approval review")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Successfully retrieved appointment"),
         @ApiResponse(responseCode = "404", description = "Appointment not found"),

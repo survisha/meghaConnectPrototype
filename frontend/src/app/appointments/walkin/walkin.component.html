@@ -12,20 +12,22 @@
       <div class="section-card">
         <div class="section-card-header"><mat-icon>search</mat-icon> Citizen Lookup (DEO)</div>
         <div class="section-card-body">
-          <mat-form-field appearance="outline" class="full-width" style="margin-bottom:1rem">
-            <mat-label>Phone Number</mat-label>
-            <input matInput [(ngModel)]="phoneNumber" placeholder="10-digit mobile"/>
-            <mat-icon matPrefix>phone</mat-icon>
-          </mat-form-field>
-          <div style="text-align:center;color:#9ca3af;margin:1rem 0;font-size:0.85rem">— OR —</div>
-          <mat-form-field appearance="outline" class="full-width" style="margin-bottom:1rem">
-            <mat-label>EPIC / Voter ID</mat-label>
-            <input matInput [(ngModel)]="epicNumber" placeholder="EPIC number"/>
-            <mat-icon matPrefix>id_card</mat-icon>
-          </mat-form-field>
-          <button mat-raised-button color="primary" (click)="search()" class="full-width" [disabled]="searching">
-            <mat-icon>search</mat-icon> Search
-          </button>
+          <div style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:nowrap">
+            <mat-form-field appearance="outline" style="flex:1;min-width:180px">
+              <mat-label style="color:#6b7280">Phone Number</mat-label>
+              <mat-icon matPrefix style="color:#6b7280;margin-right:0.5rem">phone</mat-icon>
+              <input matInput [(ngModel)]="phoneNumber" placeholder="10-digit mobile" style="color:#1f2937"/>
+            </mat-form-field>
+            <div style="color:#9ca3af;font-size:0.85rem;padding-bottom:0.5rem;white-space:nowrap">OR</div>
+            <mat-form-field appearance="outline" style="flex:1;min-width:180px">
+              <mat-label style="color:#6b7280">EPIC / Voter ID</mat-label>
+              <mat-icon matPrefix style="color:#6b7280;margin-right:0.5rem">id_card</mat-icon>
+              <input matInput [(ngModel)]="epicNumber" placeholder="EPIC number" style="color:#1f2937"/>
+            </mat-form-field>
+            <button mat-raised-button color="primary" (click)="search()" [disabled]="searching" style="height:56px;min-width:120px;white-space:nowrap">
+              <mat-icon>search</mat-icon> Search
+            </button>
+          </div>
         </div>
       </div>
 
@@ -62,9 +64,9 @@
               <div><span>Phone</span><strong>{{ foundPerson.phoneNumber }}</strong></div>
               <div><span>Booth</span><strong>{{ foundPerson.booth }}</strong></div>
             </div>
-            <mat-form-field appearance="outline" class="full-width" style="margin-top:1rem">
-              <mat-label>Agenda for Today</mat-label>
-              <mat-select [(ngModel)]="agendaType">
+            <mat-form-field appearance="outline" class="full-width" style="margin-top:1.5rem">
+              <mat-label style="color:#6b7280">Agenda for Today</mat-label>
+              <mat-select [(ngModel)]="agendaType" style="color:#1f2937">
                 <mat-option *ngFor="let agenda of agendaTypes" [value]="agenda.value">{{ agenda.label }}</mat-option>
               </mat-select>
             </mat-form-field>

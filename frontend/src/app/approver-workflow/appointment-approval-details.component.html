@@ -1,0 +1,242 @@
+<div class="approval-details-container">
+  <!-- Header -->
+  <div class="details-header">
+    <button mat-icon-button (click)="goBack()">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <h1>Appointment Review Details</h1>
+    <button mat-icon-button>
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-container">
+    <mat-spinner></mat-spinner>
+    <p>Loading appointment details...</p>
+  </div>
+
+  <!-- Content -->
+  <div *ngIf="!loading && appointment" class="details-content">
+    <!-- Status Banner -->
+    <mat-card class="status-banner">
+      <div class="status-info">
+        <div class="status-badge" [style.background]="getStatusColor(appointment.status)">
+          {{ appointment.status }}
+        </div>
+        <div class="appointment-title">
+          <h2>{{ appointment.applicantName }}</h2>
+          <p>{{ appointment.applicantPhone }}</p>
+        </div>
+      </div>
+      <div class="submitted-info">
+        <p><strong>Submitted:</strong> {{ appointment.submittedDate | date: 'medium' }}</p>
+      </div>
+    </mat-card>
+
+    <!-- Main Content Tabs -->
+    <mat-tab-group [selectedIndex]="activeTab" class="details-tabs">
+      <!-- Personal Information Tab -->
+      <mat-tab label="Personal Information">
+
+        <mat-card class="tab-content">
+          <div class="info-grid">
+            <div class="info-row">
+              <div class="info-field">
+                <label>Full Name:</label>
+                <p>{{ appointment.applicantName }}</p>
+              </div>
+              <div class="info-field">
+                <label>Phone Number:</label>
+                <p>{{ appointment.applicantPhone }}</p>
+              </div>
+            </div>
+            <div class="info-row">
+              <div class="info-field">
+                <label>Requested Location:</label>
+                <p>{{ appointment.requestedLocation }}</p>
+              </div>
+              <div class="info-field">
+                <label>Agenda Type:</label>
+                <p>{{ appointment.agendaType }}</p>
+              </div>
+            </div>
+            <div class="full-width">
+              <label>Agenda Brief:</label>
+              <p class="description">{{ appointment.agendaBrief }}</p>
+            </div>
+          </div>
+
+          <mat-divider class="section-divider"></mat-divider>
+
+          <div class="action-buttons">
+            <button mat-raised-button color="primary" (click)="editAppointmentDetails()">
+              <mat-icon>edit</mat-icon>
+              Edit Details
+            </button>
+          </div>
+        </mat-card>
+      </mat-tab>
+
+      <!-- Scheme Details Tab (if applicable) -->
+      <mat-tab label="Scheme Details" *ngIf="appointment.schemeType">
+
+        <mat-card class="tab-content">
+          <div class="info-grid">
+            <div class="info-row">
+              <div class="info-field">
+                <label>Scheme Type:</label>
+                <p>{{ appointment.schemeType }}</p>
+              </div>
+              <div class="info-field">
+                <label>Project Name:</label>
+                <p>{{ appointment.projectName || 'N/A' }}</p>
+              </div>
+            </div>
+            <div class="info-row">
+              <div class="info-field">
+                <label>Estimated Cost:</label>
+                <p>₹{{ appointment.estimatedCost?.toLocaleString('en-IN') || '0' }}</p>
+              </div>
+              <div class="info-field">
+                <label>MLA/MDC Approved:</label>
+                <p>
+                  <mat-chip *ngIf="appointment.mlaMdcApproved" class="chip-success">
+                    <mat-icon>check_circle</mat-icon> Yes
+                  </mat-chip>
+                  <mat-chip *ngIf="!appointment.mlaMdcApproved" class="chip-warning">
+                    <mat-icon>cancel</mat-icon> No
+                  </mat-chip>
+                </p>
+              </div>
+            </div>
+          </div>
+        </mat-card>
+      </mat-tab>
+
+      <!-- Associate Visitors Tab -->
+      <mat-tab label="Associate Visitors" *ngIf="appointment.associates && appointment.associates.length > 0">
+
+        <mat-card class="tab-content">
+          <mat-list>
+            <mat-list-item *ngFor="let associate of appointment.associates">
+              <mat-icon matListItemIcon>person</mat-icon>
+              <div matListItemTitle>{{ associate.name }}</div>
+              <div matListItemLine>{{ associate.phone }}</div>
+            </mat-list-item>
+          </mat-list>
+        </mat-card>
+      </mat-tab>
+
+      <!-- Documents Tab -->
+      <mat-tab label="Documents" *ngIf="appointment.documents && appointment.documents.length > 0">
+
+        <mat-card class="tab-content">
+          <div class="documents-list">
+            <mat-list>
+              <mat-list-item *ngFor="let doc of appointment.documents; let i = index">
+                <mat-icon matListItemIcon>
+                  {{ doc.fileType === 'pdf' ? 'picture_as_pdf' : 'image' }}
+                </mat-icon>
+                <div matListItemTitle>{{ doc.fileName }}</div>
+                <div matListItemLine>
+                  {{ doc.fileSize | number: '1.2-2' }} KB • {{ doc.uploadedDate | date: 'short' }}
+                </div>
+                <button mat-icon-button matListItemMeta (click)="downloadDocument(doc.id)">
+                  <mat-icon>download</mat-icon>
+                </button>
+              </mat-list-item>
+            </mat-list>
+          </div>
+        </mat-card>
+      </mat-tab>
+
+      <!-- AI Analysis Tab -->
+      <mat-tab label="AI Analysis">
+
+        <mat-card class="tab-content ai-analysis">
+          <div class="analysis-section">
+            <h3>
+              <mat-icon>summary</mat-icon>
+              Summary
+            </h3>
+            <p class="analysis-text">
+              {{ 'AI-generated appointment summary would appear here' }}
+            </p>
+          </div>
+
+          <mat-divider class="section-divider"></mat-divider>
+
+          <div class="analysis-section">
+            <h3>
+              <mat-icon>warning</mat-icon>
+              Warnings & Recommendations
+            </h3>
+            <mat-list>
+              <mat-list-item>
+                <mat-icon matListItemIcon>flag</mat-icon>
+                <div matListItemTitle>Potential Duplicate Request</div>
+                <div matListItemLine>Similar request found in records from 3 months ago</div>
+              </mat-list-item>
+              <mat-list-item>
+                <mat-icon matListItemIcon>trending_up</mat-icon>
+                <div matListItemTitle>Priority Level: HIGH</div>
+                <div matListItemLine>Based on scheme type and location demand</div>
+              </mat-list-item>
+            </mat-list>
+          </div>
+        </mat-card>
+      </mat-tab>
+
+      <!-- Approval Tab -->
+      <mat-tab label="Approval Action">
+
+        <mat-card class="tab-content approval-section">
+          <h3>Approval Decision</h3>
+
+          <!-- Approval Form -->
+          <form [formGroup]="approvalForm" class="approval-form">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Remarks (Required)</mat-label>
+              <textarea matInput formControlName="remarks" rows="4" 
+                        placeholder="Enter your remarks for approving this appointment"></textarea>
+            </mat-form-field>
+
+            <div class="button-group">
+              <button mat-raised-button color="primary" (click)="approveAndForward()" 
+                      [disabled]="approvalForm.invalid || submitting">
+                <mat-icon *ngIf="!submitting">check</mat-icon>
+                <mat-spinner *ngIf="submitting" diameter="20"></mat-spinner>
+                {{ submitting ? 'Processing...' : 'Approve & Forward' }}
+              </button>
+
+              <button mat-raised-button (click)="scheduleAppointment()">
+                <mat-icon>calendar_month</mat-icon>
+                Schedule Now
+              </button>
+            </div>
+          </form>
+
+          <mat-divider class="section-divider"></mat-divider>
+
+          <h3>Rejection Option</h3>
+
+          <!-- Rejection Form -->
+          <form [formGroup]="rejectForm" class="rejection-form">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Rejection Reason (Required)</mat-label>
+              <textarea matInput formControlName="rejectReason" rows="3" 
+                        placeholder="Explain why you are rejecting this appointment"></textarea>
+            </mat-form-field>
+
+            <button mat-raised-button color="warn" (click)="rejectAppointment()" 
+                    [disabled]="rejectForm.invalid || submitting">
+              <mat-icon>cancel</mat-icon>
+              Reject Appointment
+            </button>
+          </form>
+        </mat-card>
+      </mat-tab>
+    </mat-tab-group>
+  </div>
+</div>

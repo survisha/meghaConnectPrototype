@@ -23,6 +23,8 @@ import { HcmDashboardComponent } from './admin/hcm-dashboard/hcm-dashboard.compo
 import { GrievancesComponent } from './grievances/grievances.component';
 import { VisitorDashboardComponent } from './visitor-dashboard/visitor-dashboard.component';
 import { ApproverWorkflowComponent } from './approver-workflow/approver-workflow.component';
+import { ApproverInboxComponent } from './approver-workflow/approver-inbox.component';
+import { AppointmentApprovalDetailsComponent } from './approver-workflow/appointment-approval-details.component';
 import { CmoModerationComponent } from './cmo-moderation/cmo-moderation.component';
 import { authGuard } from './guards/auth.guard';
 import { roleGuard } from './guards/role.guard';
@@ -48,6 +50,9 @@ export const routes: Routes = [
       { path: 'appointments', component: AppointmentListComponent, canActivate: [roleGuard(...STAFF_ROLES)] },
       { path: 'appointments/new', component: AppointmentFormComponent },
       { path: 'appointments/walkin', component: WalkinComponent, canActivate: [roleGuard('ADMIN', 'OSD', 'DATA_ENTRY_OPERATOR')] },
+      { path: 'appointments/pending-approvals', component: ApproverInboxComponent, canActivate: [roleGuard('HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER')] },
+      { path: 'appointments/approval-details/:id', component: AppointmentApprovalDetailsComponent, canActivate: [roleGuard('HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER')] },
+      { path: 'scheduling', component: SchedulingComponent, canActivate: [roleGuard(...REPORTS_ROLES)] },
       { path: 'approver', component: ApproverWorkflowComponent, canActivate: [roleGuard('HCM', 'ADMIN', 'OSD', 'APPROVER')] },
       { path: 'cmo-moderation', component: CmoModerationComponent, canActivate: [roleGuard('HCM', 'ADMIN', 'OSD', 'CMO_OFFICER')] },
       { path: 'schemes', component: SchemeListComponent, canActivate: [roleGuard(...REPORTS_ROLES)] },

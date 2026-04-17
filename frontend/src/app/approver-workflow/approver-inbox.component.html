@@ -1,0 +1,174 @@
+<div class="approver-inbox-container">
+  <!-- Header Section -->
+  <div class="inbox-header">
+    <h1>Appointment Review Inbox</h1>
+    <div class="header-stats">
+      <mat-card class="stat-card">
+        <div class="stat-value" [matBadge]="getPendingCount()" matBadgeColor="warn" matBadgeSize="large">
+          <mat-icon>pending_actions</mat-icon>
+        </div>
+        <p class="stat-label">Pending Review</p>
+      </mat-card>
+      <mat-card class="stat-card">
+        <div class="stat-value">
+          <mat-icon>done_all</mat-icon>
+        </div>
+        <p class="stat-label">Total in Inbox</p>
+        <p class="stat-count">{{ totalCount }}</p>
+      </mat-card>
+    </div>
+  </div>
+
+  <!-- Filter Section -->
+  <mat-card class="filter-card">
+    <div class="filter-header">
+      <h3>Filter & Search</h3>
+      <button mat-icon-button (click)="clearFilters()" matTooltip="Clear all filters">
+        <mat-icon>clear_all</mat-icon>
+      </button>
+    </div>
+
+    <form [formGroup]="filterForm" class="filter-form">
+      <!-- Search by Name/Phone -->
+      <mat-form-field appearance="outline" class="filter-field">
+        <mat-label>Search by Name or Phone</mat-label>
+        <input matInput formControlName="searchText" placeholder="Enter applicant name or phone">
+        <mat-icon matSuffix>search</mat-icon>
+      </mat-form-field>
+
+      <!-- Status Filter -->
+      <mat-form-field appearance="outline" class="filter-field">
+        <mat-label>Status</mat-label>
+        <mat-select formControlName="statusFilter">
+          <mat-option value="">All Statuses</mat-option>
+          <mat-option *ngFor="let status of getUniqueStatuses()" [value]="status">
+            {{ getStatusDisplayText(status) }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <!-- Agenda Filter -->
+      <mat-form-field appearance="outline" class="filter-field">
+        <mat-label>Agenda Type</mat-label>
+        <mat-select formControlName="agendaFilter">
+          <mat-option value="">All Agendas</mat-option>
+          <mat-option *ngFor="let agenda of getAgendaTypeOptions()" [value]="agenda">
+            {{ agenda }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <!-- Date Range Filter -->
+      <mat-form-field appearance="outline" class="filter-field">
+        <mat-label>From Date</mat-label>
+        <input matInput [matDatepicker]="fromPicker" formControlName="dateFromFilter">
+        <mat-datepicker-toggle matSuffix [for]="fromPicker"></mat-datepicker-toggle>
+        <mat-datepicker #fromPicker></mat-datepicker>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="filter-field">
+        <mat-label>To Date</mat-label>
+        <input matInput [matDatepicker]="toPicker" formControlName="dateToFilter">
+        <mat-datepicker-toggle matSuffix [for]="toPicker"></mat-datepicker-toggle>
+        <mat-datepicker #toPicker></mat-datepicker>
+      </mat-form-field>
+    </form>
+  </mat-card>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-container">
+    <mat-spinner></mat-spinner>
+    <p>Loading appointments...</p>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!loading && filteredAppointments.length === 0" class="empty-state">
+    <mat-icon>inbox</mat-icon>
+    <p>No appointments found matching your criteria</p>
+    <button mat-raised-button color="primary" (click)="clearFilters()">Clear Filters</button>
+  </div>
+
+  <!-- Appointments Table -->
+  <div *ngIf="!loading && filteredAppointments.length > 0" class="table-container">
+    <mat-card>
+      <table mat-table [dataSource]="getPaginatedData()" class="appointments-table">
+        <!-- Applicant Name Column -->
+        <ng-container matColumnDef="applicantName">
+          <th mat-header-cell *matHeaderCellDef>Applicant Name</th>
+          <td mat-cell *matCellDef="let element">
+            <div class="cell-content">
+              <div class="applicant-info">
+                <p class="name">{{ element.applicantName }}</p>
+                <p class="phone">{{ element.applicantPhone }}</p>
+              </div>
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Agenda Type Column -->
+        <ng-container matColumnDef="agendaType">
+          <th mat-header-cell *matHeaderCellDef>Agenda</th>
+          <td mat-cell *matCellDef="let element">
+            <span class="agenda-badge">{{ element.agendaType }}</span>
+          </td>
+        </ng-container>
+
+        <!-- Location Column -->
+        <ng-container matColumnDef="location">
+          <th mat-header-cell *matHeaderCellDef>Location</th>
+          <td mat-cell *matCellDef="let element">{{ element.requestedLocation }}</td>
+        </ng-container>
+
+        <!-- Submitted Date Column -->
+        <ng-container matColumnDef="submittedDate">
+          <th mat-header-cell *matHeaderCellDef>Submitted</th>
+          <td mat-cell *matCellDef="let element">
+            {{ element.submittedDate | date: 'short' }}
+          </td>
+        </ng-container>
+
+        <!-- Status Column -->
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Status</th>
+          <td mat-cell *matCellDef="let element">
+            <span class="status-badge" [style.background]="getStatusBadgeColor(element.status)">
+              {{ getStatusDisplayText(element.status) }}
+            </span>
+          </td>
+        </ng-container>
+
+        <!-- Actions Column -->
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef>Actions</th>
+          <td mat-cell *matCellDef="let element">
+            <div class="action-buttons">
+              <button mat-icon-button color="primary" 
+                      (click)="reviewAppointment(element.appointmentId)"
+                      matTooltip="Review Details">
+                <mat-icon>visibility</mat-icon>
+              </button>
+              <button *ngIf="element.status === 'CMO_REVIEW' || element.status === 'APPROVER_REVIEW'"
+                      mat-icon-button color="accent"
+                      (click)="scheduleAppointment(element.appointmentId)"
+                      matTooltip="Schedule Appointment">
+                <mat-icon>calendar_month</mat-icon>
+              </button>
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Table Rows -->
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="table-row"></tr>
+      </table>
+
+      <!-- Paginator -->
+      <mat-paginator
+        [length]="totalCount"
+        [pageSize]="pageSize"
+        [pageSizeOptions]="[5, 10, 20, 50]"
+        (page)="onPageChange($event)">
+      </mat-paginator>
+    </mat-card>
+  </div>
+</div>

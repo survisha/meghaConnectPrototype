@@ -21,7 +21,7 @@ public class SwaggerConfig {
                 .title("MeghaConnect API")
                 .description("MeghaConnect – Meghalaya Entry & Governance System API")
                 .version("1.0.0")
-                .contact(new Contact().name("Survisha Technologies").email("info@survisha.com"))
+                .contact(new Contact().name("NITCON").email("info@nitcon.com"))
                 .license(new License().name("Government of Meghalaya")))
             .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
             .components(new Components()

@@ -33,6 +33,8 @@
             class="appointment-card"
             (touchstart)="onTouchStart($event, apt.id)"
             (touchend)="onTouchEnd($event, apt.id)"
+            (mousedown)="onMouseDown($event, apt.id)"
+            (mouseup)="onMouseUp($event, apt.id)"
             [class.swiped]="swipedAppointmentId === apt.id"
           >
             <!-- Card content -->

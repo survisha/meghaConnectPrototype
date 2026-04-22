@@ -1,0 +1,191 @@
+<div class="cmo-review-modal">
+  <!-- Modal Header -->
+  <div class="modal-header">
+    <h2><mat-icon>rate_review</mat-icon> CMO Review</h2>
+    <button mat-icon-button (click)="closeModal()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <mat-divider></mat-divider>
+
+  <!-- Modal Content -->
+  <div class="modal-body">
+    <!-- Applicant Details Tab -->
+    <mat-tab-group>
+      <!-- Tab 1: Applicant Information -->
+      <mat-tab label="Applicant Details">
+        <div class="tab-content">
+          <mat-card class="info-card">
+            <mat-card-header>
+              <h3>Personal Information</h3>
+            </mat-card-header>
+            <mat-card-content>
+              <div class="info-row">
+                <strong>Full Name:</strong>
+                <span>{{ appointment.applicant.fullName }}</span>
+              </div>
+              <div class="info-row">
+                <strong>Phone:</strong>
+                <span>{{ appointment.applicant.phoneNumber }}</span>
+              </div>
+              <div class="info-row">
+                <strong>EPIC Number:</strong>
+                <span>{{ appointment.applicant.epicNumber }}</span>
+              </div>
+              <div class="info-row">
+                <strong>Designation:</strong>
+                <span>{{ appointment.applicant.designation }}</span>
+              </div>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card class="info-card">
+            <mat-card-header>
+              <h3>Location Details</h3>
+            </mat-card-header>
+            <mat-card-content>
+              <div class="info-row">
+                <strong>District:</strong>
+                <span>{{ appointment.applicant.district }}</span>
+              </div>
+              <div class="info-row">
+                <strong>Constituency:</strong>
+                <span>{{ appointment.applicant.constituency }}</span>
+              </div>
+              <div class="info-row">
+                <strong>Village:</strong>
+                <span>{{ appointment.applicant.village }}</span>
+              </div>
+              <div class="info-row">
+                <strong>Booth:</strong>
+                <span>{{ appointment.applicant.booth }}</span>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </div>
+      </mat-tab>
+
+      <!-- Tab 2: Application Details -->
+      <mat-tab label="Application Details">
+        <div class="tab-content">
+          <mat-card class="info-card">
+            <mat-card-header>
+              <h3>Application Information</h3>
+            </mat-card-header>
+            <mat-card-content>
+              <div class="info-row">
+                <strong>Application ID:</strong>
+                <span>{{ appointment.applicationId }}</span>
+              </div>
+              <div class="info-row">
+                <strong>Status:</strong>
+                <span [style.color]="'#1a237e'">{{ appointment.status }}</span>
+              </div>
+              <div class="info-row">
+                <strong>Requested Location:</strong>
+                <span>{{ appointment.requestedLocation }}</span>
+              </div>
+              <div class="info-row">
+                <strong>Event Type:</strong>
+                <span>{{ appointment.eventType }}</span>
+              </div>
+              <div class="info-row">
+                <strong>Submitted At:</strong>
+                <span>{{ appointment.submittedAt | date: 'short' }}</span>
+              </div>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card class="info-card">
+            <mat-card-header>
+              <h3>Agenda Information</h3>
+            </mat-card-header>
+            <mat-card-content>
+              <div class="info-row">
+                <strong>Agenda Type:</strong>
+                <span>{{ appointment.agendaType }}</span>
+              </div>
+              <div class="info-row full-width">
+                <strong>Agenda Brief:</strong>
+              </div>
+              <p class="brief-text">{{ appointment.agendaBrief }}</p>
+            </mat-card-content>
+          </mat-card>
+        </div>
+      </mat-tab>
+
+      <!-- Tab 3: CMO Review -->
+      <mat-tab label="CMO Review & Remarks">
+        <div class="tab-content">
+          <!-- Existing CMO Remarks -->
+          <mat-card class="info-card" *ngIf="cmoRemarks">
+            <mat-card-header>
+              <h3>Previous CMO Remarks</h3>
+            </mat-card-header>
+            <mat-card-content>
+              <p class="remarks-text">{{ cmoRemarks }}</p>
+            </mat-card-content>
+          </mat-card>
+
+          <!-- Add New Remarks -->
+          <mat-card class="info-card">
+            <mat-card-header>
+              <h3>Pending Information & Remarks</h3>
+            </mat-card-header>
+            <mat-card-content>
+              <div class="remarks-section">
+                <p class="help-text">
+                  <mat-icon>info</mat-icon>
+                  List any missing information or remarks that need to be addressed by the applicant or DEO before approval.
+                  The applicant and DEO will be notified and can update the information.
+                </p>
+
+                <!-- Quick Templates -->
+                <div class="quick-templates">
+                  <label>Quick Add:</label>
+                  <div class="template-buttons">
+                    <button mat-stroked-button (click)="addMissingInfoTemplate('Missing MLA approval letter')">
+                      <mat-icon>add</mat-icon> MLA Letter
+                    </button>
+                    <button mat-stroked-button (click)="addMissingInfoTemplate('Identity proof documents needed')">
+                      <mat-icon>add</mat-icon> Identity Proof
+                    </button>
+                    <button mat-stroked-button (click)="addMissingInfoTemplate('Project cost estimate required')">
+                      <mat-icon>add</mat-icon> Cost Estimate
+                    </button>
+                    <button mat-stroked-button (click)="addMissingInfoTemplate('All information complete - Ready for approval')">
+                      <mat-icon>add</mat-icon> Complete
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Remarks Text Area -->
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Pending Information & Remarks</mat-label>
+                  <textarea matInput 
+                            [(ngModel)]="pendingInformation" 
+                            rows="6"
+                            placeholder="Enter any missing information or remarks..."></textarea>
+                </mat-form-field>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </div>
+      </mat-tab>
+    </mat-tab-group>
+  </div>
+
+  <mat-divider></mat-divider>
+
+  <!-- Modal Footer -->
+  <div class="modal-footer">
+    <button mat-button (click)="closeModal()">
+      <mat-icon>close</mat-icon> Cancel
+    </button>
+    <button mat-raised-button color="primary" (click)="submitCmoReview()" [disabled]="isSubmitting">
+      <mat-icon>send</mat-icon> 
+      {{ isSubmitting ? 'Submitting...' : 'Submit Review & Notify' }}
+    </button>
+  </div>
+</div>

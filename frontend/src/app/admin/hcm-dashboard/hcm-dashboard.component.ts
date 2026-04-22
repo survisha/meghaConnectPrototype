@@ -79,6 +79,12 @@ export class HcmDashboardComponent implements OnInit {
   ) {}
   
   ngOnInit() {
+    // Initialize with dummy data first
+    this.appointments = this.getDummyAppointments();
+    this.pendingWorkItems = this.getDummyPendingWorkItems();
+    this.pendingWorkCount = this.getDummyPendingWorkItems().length;
+    
+    // Try to fetch from API (optional)
     this.loadAppointments();
     this.loadPendingWorkItems();
     this.getPendingWorkCount();
@@ -92,12 +98,15 @@ export class HcmDashboardComponent implements OnInit {
     this.http.get<any[]>(`${environment.apiUrl}/hcm/actions/pending-work`)
       .subscribe({
         next: (data) => {
-          this.appointments = data || [];
+          // Only use API data if it has items, otherwise keep dummy data
+          if (data && data.length > 0) {
+            this.appointments = data;
+          }
           this.loading = false;
         },
         error: (err) => {
           console.error('Error loading appointments', err);
-          this.appointments = [];
+          // Keep the dummy data already loaded
           this.loading = false;
         }
       });
@@ -110,11 +119,15 @@ export class HcmDashboardComponent implements OnInit {
     this.http.get<any[]>(`${environment.apiUrl}/hcm/actions/pending-work`)
       .subscribe({
         next: (data) => {
-          this.pendingWorkItems = data || [];
+          // Only use API data if it has items, otherwise keep dummy data
+          if (data && data.length > 0) {
+            this.pendingWorkItems = data;
+            this.pendingWorkCount = data.length;
+          }
         },
         error: (err) => {
           console.error('Error loading pending work items', err);
-          this.pendingWorkItems = [];
+          // Keep the dummy data already loaded
         }
       });
   }
@@ -126,10 +139,11 @@ export class HcmDashboardComponent implements OnInit {
     this.http.get<number>(`${environment.apiUrl}/hcm/actions/pending-work/count`)
       .subscribe({
         next: (count) => {
-          this.pendingWorkCount = count || 0;
+          this.pendingWorkCount = count || this.getDummyPendingWorkItems().length;
         },
         error: (err) => {
           console.error('Error getting pending work count', err);
+          this.pendingWorkCount = this.getDummyPendingWorkItems().length;
         }
       });
   }
@@ -143,7 +157,16 @@ export class HcmDashboardComponent implements OnInit {
     this.touchStartY = touch.clientY;
     this.swipedAppointmentId = appointmentId;
   }
-  
+
+  /**
+   * Handle mouse down (for desktop testing)
+   */
+  onMouseDown(event: MouseEvent, appointmentId: number) {
+    this.touchStartX = event.clientX;
+    this.touchStartY = event.clientY;
+    this.swipedAppointmentId = appointmentId;
+  }
+
   /**
    * Handle card swipe end
    */
@@ -151,6 +174,16 @@ export class HcmDashboardComponent implements OnInit {
     const touch = event.changedTouches[0];
     this.touchEndX = touch.clientX;
     this.touchEndY = touch.clientY;
+    
+    this.handleSwipe(appointmentId);
+  }
+
+  /**
+   * Handle mouse up (for desktop testing)
+   */
+  onMouseUp(event: MouseEvent, appointmentId: number) {
+    this.touchEndX = event.clientX;
+    this.touchEndY = event.clientY;
     
     this.handleSwipe(appointmentId);
   }
@@ -362,5 +395,116 @@ export class HcmDashboardComponent implements OnInit {
     } catch {
       return date;
     }
+  }
+
+  /**
+   * Get dummy appointments for demo
+   */
+  getDummyAppointments(): any[] {
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const nextWeek = new Date(today);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+
+    return [
+      {
+        id: 1,
+        subject: 'Budget Review Meeting',
+        dateTime: tomorrow.toISOString(),
+        location: 'Conference Room A, State Secretariat',
+        type: 'Meeting',
+        category: 'Finance',
+        description: 'Quarterly budget review and allocation discussion'
+      },
+      {
+        id: 2,
+        subject: 'Cabinet Meeting',
+        dateTime: new Date(tomorrow.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+        location: 'Main Assembly Hall',
+        type: 'Meeting',
+        category: 'Administrative',
+        description: 'Weekly cabinet meeting for policy decisions'
+      },
+      {
+        id: 3,
+        subject: 'Public Health Initiative Discussion',
+        dateTime: nextWeek.toISOString(),
+        location: 'Health Ministry Office',
+        type: 'Discussion',
+        category: 'Health',
+        description: 'Discussion on new public health initiatives for the state'
+      },
+      {
+        id: 4,
+        subject: 'Education Sector Review',
+        dateTime: new Date(nextWeek.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+        location: 'Education Ministry',
+        type: 'Meeting',
+        category: 'Education',
+        description: 'Review of education sector performance and improvements'
+      },
+      {
+        id: 5,
+        subject: 'Tourism Development Committee',
+        dateTime: new Date(nextWeek.getTime() + 4 * 24 * 60 * 60 * 1000).toISOString(),
+        location: 'Tourism Board Office',
+        type: 'Committee',
+        category: 'Development',
+        description: 'Discussion on tourism development projects in Meghalaya'
+      }
+    ];
+  }
+
+  /**
+   * Get dummy pending work items for demo
+   */
+  getDummyPendingWorkItems(): any[] {
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const nextWeek = new Date(today);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    const twoWeeks = new Date(today);
+    twoWeeks.setDate(twoWeeks.getDate() + 14);
+
+    return [
+      {
+        appointmentSubject: 'Budget Review Meeting',
+        actionType: 'MARK_IMPORTANT',
+        actionStatus: 'PENDING',
+        originalDateTime: tomorrow.toISOString(),
+        originalLocation: 'Conference Room A, State Secretariat',
+        requestedEarlierDateTime: new Date(today.getTime() + 6 * 60 * 60 * 1000).toISOString(),
+        hcmRemarks: 'Marked as important - requires earlier scheduling'
+      },
+      {
+        appointmentSubject: 'Cabinet Meeting',
+        actionType: 'ACCEPT_WITH_CHANGES',
+        actionStatus: 'CONFIRMED',
+        originalDateTime: new Date(tomorrow.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+        originalLocation: 'Main Assembly Hall',
+        acceptedDateTime: new Date(tomorrow.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+        hcmRemarks: 'Accepted with date modification as per convenience'
+      },
+      {
+        appointmentSubject: 'Public Health Initiative Discussion',
+        actionType: 'SNOOZE',
+        actionStatus: 'PENDING',
+        originalDateTime: nextWeek.toISOString(),
+        originalLocation: 'Health Ministry Office',
+        snoozedUntil: new Date(nextWeek.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        hcmRemarks: 'Snoozed for 7 days - to be revisited later'
+      },
+      {
+        appointmentSubject: 'Education Sector Review',
+        actionType: 'REJECT',
+        actionStatus: 'PENDING',
+        originalDateTime: new Date(nextWeek.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+        originalLocation: 'Education Ministry',
+        clarificationRequested: 'Please provide more details on the expected outcomes and participants. Also, need confirmation on time slot.',
+        hcmRemarks: 'Clarification requested - awaiting response from CMO'
+      }
+    ];
   }
 }

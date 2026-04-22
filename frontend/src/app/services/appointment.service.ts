@@ -80,4 +80,25 @@ export class AppointmentService {
   updateStatus(id: number, status: string, remarks?: string): Observable<Appointment> {
     return this.http.patch<Appointment>(`${this.baseUrl}/${id}/status`, { status, remarks });
   }
+
+  /**
+   * Submit CMO review with remarks about pending information
+   * Notifies applicant and DEO of any missing information
+   */
+  submitCmoReview(payload: {
+    appointmentId: number;
+    cmoRemarks: string;
+    pendingInformation: string;
+    status: string;
+    notifyApplicant: boolean;
+    notifyDeo: boolean;
+  }): Observable<Appointment> {
+    return this.http.post<Appointment>(`${this.baseUrl}/${payload.appointmentId}/cmo-review`, {
+      cmoRemarks: payload.cmoRemarks,
+      pendingInformation: payload.pendingInformation,
+      status: payload.status,
+      notifyApplicant: payload.notifyApplicant,
+      notifyDeo: payload.notifyDeo
+    });
+  }
 }

@@ -13,6 +13,10 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatCardModule } from '@angular/material/card';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { CmoReviewModalComponent } from '../cmo-review-modal/cmo-review-modal.component';
 
 @Component({
   selector: 'app-appointment-list',
@@ -28,7 +32,10 @@ import { MatChipsModule } from '@angular/material/chips';
     MatFormFieldModule, 
     MatInputModule, 
     MatSelectModule,
-    MatChipsModule
+    MatChipsModule,
+    MatDialogModule,
+    MatCardModule,
+    MatTooltipModule
   ],
   templateUrl: './appointment-list.component.html',
   styleUrls: ['./appointment-list.component.scss'],
@@ -39,7 +46,7 @@ export class AppointmentListComponent implements OnInit {
   search = '';
   filterStatus = '';
   loading = false;
-  displayedColumns: string[] = ['applicationId', 'applicant', 'designation', 'constituency', 'agenda', 'eventType', 'location', 'status', 'actions'];
+  displayedColumns: string[] = ['applicant', 'designation', 'constituency', 'agenda', 'eventType', 'location', 'status', 'actions'];
 
   statusOptions = [
     { label: 'All Statuses', value: '' },
@@ -51,7 +58,7 @@ export class AppointmentListComponent implements OnInit {
     { label: 'Completed', value: 'COMPLETED' },
   ];
 
-  constructor(private appointmentService: AppointmentService, public auth: AuthService) {}
+  constructor(private appointmentService: AppointmentService, public auth: AuthService, private dialog: MatDialog) {}
 
   ngOnInit() {
     // Initialize with dummy data for demo purposes
@@ -255,5 +262,25 @@ export class AppointmentListComponent implements OnInit {
 
   getStatusLabel(s: AppointmentStatus) {
     return s.replace(/_/g, ' ');
+  }
+
+  /**
+   * Open CMO review modal to view applicant details and add remarks
+   */
+  openCmoReview(appointment: Appointment) {
+    this.dialog.open(CmoReviewModalComponent, {
+      width: '1200px',
+      height: '90vh',
+      maxHeight: '90vh',
+      maxWidth: '95vw',
+      data: { appointment },
+      disableClose: false,
+      panelClass: 'cmo-review-dialog'
+    }).afterClosed().subscribe((result) => {
+      if (result && result.submitted) {
+        // Reload appointments after CMO submission
+        this.ngOnInit();
+      }
+    });
   }
 }

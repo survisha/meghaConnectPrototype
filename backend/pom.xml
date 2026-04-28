@@ -17,9 +17,9 @@
     <description>CM Office Scheduling &amp; Scheme Management System</description>
 
     <properties>
-        <java.version>1.8</java.version>
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
+        <java.version>17</java.version>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
         <jjwt.version>0.11.5</jjwt.version>
     </properties>
 
@@ -136,6 +136,24 @@
             <version>5.2.5</version>
         </dependency>
 
+        <!-- ── Aadhaar OVSE SDK (Online Verification of Self-Employed) ── -->
+        <!-- UIDAI SDK for generating QR codes and processing KYC responses -->
+        <!-- JAR must be placed at: backend/libs/OvseClientSDK20260422a.jar -->
+        <dependency>
+            <groupId>com.ecs.ovse</groupId>
+            <artifactId>aadhaar-ovse-sdk</artifactId>
+            <version>1.0.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/libs/OvseClientSDK20260422a.jar</systemPath>
+        </dependency>
+
+        <!-- GSON Library for JSON parsing (used by OVSE SDK) -->
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.10.1</version>
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -156,9 +174,32 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.8.1</version>
                 <configuration>
-                    <source>1.8</source>
-                    <target>1.8</target>
+                    <source>17</source>
+                    <target>17</target>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <phase>prepare-package</phase>
+                        <configuration>
+                            <target>
+                                <!-- Copy libs directory to target/libs so OVSE SDK JAR is available at runtime -->
+                                <copy todir="${project.build.directory}/libs" failonerror="false">
+                                    <fileset dir="${project.basedir}/libs">
+                                        <include name="*.jar"/>
+                                    </fileset>
+                                </copy>
+                            </target>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
@@ -170,6 +211,8 @@
                             <artifactId>lombok</artifactId>
                         </exclude>
                     </excludes>
+                    <!-- Include system-scoped dependencies (e.g., OVSE SDK JAR) -->
+                    <includeSystemScope>true</includeSystemScope>
                 </configuration>
             </plugin>
             <plugin>

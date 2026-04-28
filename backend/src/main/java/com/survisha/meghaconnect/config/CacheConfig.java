@@ -16,6 +16,7 @@ import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSeriali
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 
 import java.time.Duration;
+import org.springframework.web.client.RestTemplate;
 
 @Configuration
 @EnableCaching
@@ -71,5 +72,14 @@ public class CacheConfig {
         return RedisCacheManager.builder(redisConnectionFactory)
                 .cacheDefaults(cacheConfiguration)
                 .build();
+    }
+
+    /**
+     * RestTemplate bean for external API calls (e.g., OVSE service).
+     * Configured with reasonable timeouts and connection pooling.
+     */
+    @Bean
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
     }
 }

@@ -57,6 +57,37 @@ export interface ReferenceDataDto {
   value: string;
 }
 
+
+
+export interface AadhaarQrResponse {
+  success: boolean;
+  txnId: string;
+  qrDataUri: string;
+  maskedMobile?: string;
+  errorMessage?: string;
+}
+
+export interface KycDataResponse {
+  error: boolean;
+  errorCode?: string;
+  errorMessage?: string;
+  txnId: string;
+  claims?: {
+    residentName?: string;
+    localResidentName?: string;
+    dob?: string;
+    gender?: string;
+    mobile?: string;
+    maskedMobile?: string;
+    email?: string;
+    maskedEmail?: string;
+    residentImage?: string;  // Base64 JPEG
+    address?: string;
+    regionalAddress?: string;
+  };
+  receivedAtMillis?: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class VisitorKycService {
   
@@ -90,6 +121,24 @@ export class VisitorKycService {
 
   getCitizenDesignations(): Observable<ReferenceDataDto[]> {
     return this.http.get<ReferenceDataDto[]>(`${environment.apiUrl}/reference/CITIZEN_DESIGNATION`);
+  }
+
+  /**
+   * Generate OVSE QR code for Aadhaar verification.
+   * User scans the QR with their Aadhaar app on mobile.
+   * Returns transaction ID and QR image (base64 data URI).
+   */
+  generateAadhaarQr(): Observable<AadhaarQrResponse> {
+    return this.http.post<AadhaarQrResponse>(`${environment.apiUrl}/kyc/aadhaar/generate-qr`, {});
+  }
+
+  /**
+   * Poll for Aadhaar KYC verification result.
+   * Called after QR generation to wait for user to scan and verify.
+   * Returns null/404 while waiting, returns KycData when ready.
+   */
+  getAadhaarKycResult(txnId: string): Observable<KycDataResponse> {
+    return this.http.get<KycDataResponse>(`${environment.apiUrl}/kyc/aadhaar/result/${txnId}`);
   }
 
   /**

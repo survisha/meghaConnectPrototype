@@ -123,6 +123,15 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   // Hide left panel for staff members entering visitor data
   hideLeftPanel = false;
 
+  // OVSE QR state
+  showQrCode = false;
+  qrDataUri = '';
+  currentTxnId = '';
+  pollingInterval: any = null;
+  maxPollingAttempts = 60;  // 60 attempts × 2 seconds = 120 seconds (2 minutes)
+  pollingAttempts = 0;
+  pollingCountdown = 0;  // Display countdown timer
+
   constructor(
     private http: HttpClient, 
     private router: Router,
@@ -191,6 +200,12 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.errorMsg = '';
     this.loading = true;
 
+    // Check if Aadhaar OVSE flow should be used
+    if (this.form.idType === 'AADHAAR') {
+      this.generateAadhaarQr();
+      return;
+    }
+
     // Build request with optional phoneNumber
     const request: any = {
       idType: this.form.idType as 'EPIC' | 'AADHAAR',
@@ -234,6 +249,152 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.otpCode = '';
     this.otpSent = false;
     this.validateId();
+  }
+
+  // ── OVSE AADHAAR QR FLOW ────────────────────────────────────────────────
+
+  /**
+   * Generate OVSE QR code for Aadhaar verification.
+   * QR is generic and can be scanned by any user with the Aadhaar app.
+   * No Aadhaar or mobile number required for QR generation.
+   */
+  generateAadhaarQr() {
+    this.errorMsg = '';
+    this.successMsg = '';
+    this.loading = true;
+
+    // Generate QR code (backend will use OVSE SDK with appId + txnId configuration)
+    this.kycService.generateAadhaarQr().subscribe({
+      next: res => {
+        this.loading = false;
+        if (res.success && res.qrDataUri) {
+          this.qrDataUri = res.qrDataUri;
+          this.currentTxnId = res.txnId;
+          this.maskedPhone = res.maskedMobile || '';
+          this.showQrCode = true;
+          this.idValidated = true;
+          this.successMsg = 'QR code generated! Scan with your Aadhaar app to verify your identity.';
+          
+          // Start polling for KYC result
+          this.startPollingKycResult();
+        } else {
+          this.errorMsg = res.errorMessage || 'Failed to generate QR code. Please try again.';
+        }
+      },
+      error: err => {
+        this.loading = false;
+        this.errorMsg = err?.error?.errorMessage || 'QR code generation failed. OVSE service may be unavailable.';
+      },
+    });
+  }
+
+  /**
+   * Poll for Aadhaar KYC verification result.
+   * Called repeatedly until result is available or max attempts reached.
+   * Waits for user to scan QR with Aadhaar app and complete verification.
+   */
+  startPollingKycResult() {
+    this.pollingAttempts = 0;
+    this.successMsg = 'QR code ready! Please scan with your Aadhaar app...';
+    this.errorMsg = '';
+
+    this.pollingInterval = setInterval(() => {
+      this.pollingAttempts++;
+      this.pollingCountdown = (this.maxPollingAttempts - this.pollingAttempts) * 2;  // Remaining seconds
+
+      if (this.pollingAttempts > this.maxPollingAttempts) {
+        clearInterval(this.pollingInterval);
+        this.errorMsg = 'QR scan timeout (2 minutes). Please try again or use manual verification.';
+        this.showQrCode = false;
+        return;
+      }
+
+      // Poll for result from OVSE callback
+      this.kycService.getAadhaarKycResult(this.currentTxnId).subscribe({
+        next: res => {
+          if (res && !res.error && res.claims) {
+            // ✓ KYC verification successful!
+            clearInterval(this.pollingInterval);
+            this.successMsg = '✓ Aadhaar verification successful! Loading your details...';
+            this.handleAadhaarKycSuccess(res);
+          } else if (res && res.error) {
+            // ✗ User rejected or error occurred
+            clearInterval(this.pollingInterval);
+            this.errorMsg = `KYC verification failed: ${res.errorMessage || res.errorCode}`;
+            this.showQrCode = false;
+          }
+          // If no result yet (404 or null), keep polling
+        },
+        error: err => {
+          // Continue polling on 404 (result not yet available)
+          // Only stop on max attempts
+          if (this.pollingAttempts >= this.maxPollingAttempts) {
+            clearInterval(this.pollingInterval);
+            this.errorMsg = 'Verification timeout. Please try again or contact support.';
+            this.showQrCode = false;
+          }
+        },
+      });
+    }, 2000);  // Poll every 2 seconds for faster feedback
+  }
+
+  /**
+   * Handle successful Aadhaar KYC verification.
+   * Populate form with disclosed claims from Aadhaar app.
+   */
+  handleAadhaarKycSuccess(kycData: any) {
+    clearInterval(this.pollingInterval);
+
+    // Extract claims from KYC data
+    const claims = kycData.claims || {};
+
+    // Populate form with verified data
+    Object.assign(this.form, {
+      fullName: claims.residentName || claims.localResidentName || '',
+      phoneNumber: claims.mobile || claims.maskedMobile || this.maskedPhone || '',
+      email: claims.email || claims.maskedEmail || '',
+      address: claims.address || claims.regionalAddress || '',
+      kycStatus: 'PHOTO_MATCHED',
+      livePhoto: claims.residentImage ? `data:image/jpeg;base64,${claims.residentImage}` : '',
+    });
+
+    // Set captured photo URL for display
+    if (claims.residentImage) {
+      this.capturedPhotoUrl = `data:image/jpeg;base64,${claims.residentImage}`;
+      this.photoCaptured = true;
+    }
+
+    // Set KYC status
+    this.kycStatus = 'PHOTO_MATCHED';
+    this.kycConfidenceScore = 90;
+    this.kycConfidenceLabel = 'Verified';
+    this.form.kycStatus = 'PHOTO_MATCHED';
+
+    // Clear QR display
+    this.showQrCode = false;
+    this.successMsg = 'Aadhaar KYC verified successfully! Your details have been pre-filled.';
+    this.errorMsg = '';
+
+    // Move to next step
+    this.cdr.detectChanges();
+    setTimeout(() => {
+      this.currentStep = 'additional-details';
+      this.cdr.detectChanges();
+    }, 500);
+  }
+
+  /**
+   * Cancel Aadhaar QR verification and go back.
+   */
+  cancelAadhaarQr() {
+    if (this.pollingInterval) {
+      clearInterval(this.pollingInterval);
+    }
+    this.showQrCode = false;
+    this.qrDataUri = '';
+    this.currentTxnId = '';
+    this.currentStep = 'id-entry';
+    this.errorMsg = '';
   }
 
   // ── STEP 2: OTP VERIFICATION ────────────────────────────────────────────

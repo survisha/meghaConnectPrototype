@@ -236,7 +236,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
         this.loading = false;
         
         if (res.code === '200' && res.data) {
-          // EPIC verification successful
+          // EPIC verification successful with name match
           this.errorMsg = '';
           this.successMsg = '✓ EPIC verified successfully';
           
@@ -268,10 +268,22 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
             this.idValidated = true;
             this.currentStep = 'photo-capture';  // Skip OTP if registered phone is available
           }
+        } else if (res.code === '400') {
+          // Name mismatch or validation error
+          this.errorMsg = '✗ Name Verification Failed: ' + (res.message || 'Name does not match EPIC card');
+          this.successMsg = '';
+          // Show verified details for user reference (if available)
+          if (res.data) {
+            const verifiedName = res.data.borrowernameonvoteridcard || '';
+            const verificationStatus = res.data.voteridverificationstatus || '';
+            const matchScore = res.data.namematchscore || 0;
+            this.errorMsg += `\n\nVerified Name: ${verifiedName}\nMatch Score: ${matchScore}%\nEPIC Status: ${verificationStatus}`;
+          }
         } else {
-          // EPIC verification failed
+          // EPIC verification failed or other error
           const errorMsg = res.message || 'EPIC verification failed';
           this.errorMsg = '✗ ' + errorMsg;
+          this.successMsg = '';
           this.loading = false;
         }
       },

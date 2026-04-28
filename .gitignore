@@ -13,6 +13,9 @@ backend/target/
 backend/src/main/resources/static/
 automation/target/
 
+# Log files
+*.log
+
 # IDE
 .idea/
 *.iml

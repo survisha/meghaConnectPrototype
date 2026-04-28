@@ -11,6 +11,7 @@ frontend/.angular/
 # Java build artifacts
 backend/target/
 backend/src/main/resources/static/
+automation/target/
 
 # IDE
 .idea/

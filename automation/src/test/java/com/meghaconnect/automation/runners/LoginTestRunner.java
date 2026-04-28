@@ -32,13 +32,7 @@ import org.junit.runner.RunWith;
         
         // Execution options
         dryRun = false,                    // Set to true to validate features without execution
-        monochrome = false,                 // Set to true for monochrome output
-        strict = true,                      // Fail if undefined steps exist
-        stepNotifications = true,           // Show step notifications in console
-        
-        // Publish results (requires plugin dependency)
-        publish = false,                    // Set to true to publish to Cucumber cloud
-        publishQuietly = false
+        monochrome = false                 // Set to true for monochrome output
 )
 public class LoginTestRunner {
     /**

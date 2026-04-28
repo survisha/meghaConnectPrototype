@@ -1,0 +1,99 @@
+{
+  "login": {
+    "validCredentials": {
+      "username": "testuser",
+      "password": "Test@123",
+      "email": "testuser@meghaconnect.com",
+      "role": "CITIZEN"
+    },
+    "adminCredentials": {
+      "username": "admin",
+      "password": "Admin@123",
+      "email": "admin@meghaconnect.com",
+      "role": "ADMIN"
+    },
+    "moderatorCredentials": {
+      "username": "moderator",
+      "password": "Mod@123",
+      "email": "moderator@meghaconnect.com",
+      "role": "MODERATOR"
+    },
+    "deoCredentials": {
+      "username": "deo",
+      "password": "DEO@123",
+      "email": "deo@meghaconnect.com",
+      "role": "DEO"
+    },
+    "cmoCredentials": {
+      "username": "cmo",
+      "password": "CMO@123",
+      "email": "cmo@meghaconnect.com",
+      "role": "CMO"
+    },
+    "invalidCredentials": {
+      "username": "invaliduser",
+      "password": "InvalidPassword@123"
+    },
+    "emptyCredentials": {
+      "username": "",
+      "password": ""
+    },
+    "missingUsername": {
+      "password": "Test@123"
+    },
+    "missingPassword": {
+      "username": "testuser"
+    },
+    "sqlInjectionAttempt": {
+      "username": "' OR '1'='1",
+      "password": "' OR '1'='1"
+    },
+    "xssAttempt": {
+      "username": "<script>alert('XSS')</script>",
+      "password": "<img src=x onerror=alert('XSS')>"
+    },
+    "specialCharacters": {
+      "username": "user@domain.com",
+      "password": "P@ssw0rd!#$%^&*()"
+    }
+  },
+  "loginValidation": {
+    "successMessage": "Login successful",
+    "errorMessages": {
+      "invalidCredentials": "Invalid username or password",
+      "userNotFound": "User not found",
+      "accountLocked": "Account is locked",
+      "invalidEmail": "Invalid email format",
+      "passwordExpired": "Password has expired",
+      "missingField": "Required field is missing"
+    },
+    "expectedStatusCodes": {
+      "success": 200,
+      "unauthorized": 401,
+      "badRequest": 400,
+      "forbidden": 403,
+      "notFound": 404,
+      "serverError": 500
+    }
+  },
+  "tokenValidation": {
+    "tokenExpireTime": 3600000,
+    "tokenType": "Bearer",
+    "requiredClaims": ["sub", "iat", "exp", "role", "userId"],
+    "minimumTokenLength": 100
+  },
+  "browserConfig": {
+    "browsers": ["chrome", "firefox", "edge"],
+    "headless": false,
+    "maximize": true,
+    "timeout": 30
+  },
+  "apiConfig": {
+    "baseUrl": "http://localhost:8080",
+    "loginEndpoint": "/api/v1/auth/login",
+    "profileEndpoint": "/api/v1/auth/profile",
+    "logoutEndpoint": "/api/v1/auth/logout",
+    "timeout": 30000,
+    "retryAttempts": 2
+  }
+}

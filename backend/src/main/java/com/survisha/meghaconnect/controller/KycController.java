@@ -2,6 +2,7 @@ package com.survisha.meghaconnect.controller;
 
 import com.survisha.meghaconnect.dto.*;
 import com.survisha.meghaconnect.service.OvseKycService;
+import com.survisha.meghaconnect.service.EpicVerificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -39,25 +40,87 @@ import java.util.Map;
 public class KycController {
 
     private final OvseKycService ovseKycService;
+    private final EpicVerificationService epicVerificationService;
 
     /**
      * Verify an EPIC number against the Election Commission API.
      *
      * EPIC is the primary KYC document for citizens of Meghalaya.
-     * Returns the name, date-of-birth, constituency, and
+     * Returns the name, date-of-birth, constituency, district, and
      * verification status from the election roll.
      *
-     * @param epic  The voter ID number (e.g. "MH/01/001/234567")
-     * @param name  Applicant's stated name (for fuzzy-match scoring)
+     * Request:
+     *   {
+     *     "epicNumber": "BCV0259184",
+     *     "visitorName": "MAREIAM MOSSANG",
+     *     "phoneNumber": "9876543210"  (optional)
+     *   }
+     *
+     * Response (Success):
+     *   {
+     *     "code": "200",
+     *     "message": "Success",
+     *     "data": {
+     *       "voteridnumber": "BCV0259184",
+     *       "borrowernameonvoteridcard": "MAREIAM MOSSANG",
+     *       "borroweraddressdistrict": "CHANGLANG",
+     *       "borroweraddressstate": "Arunachal Pradesh",
+     *       "namematchscore": 95,
+     *       "voteridverificationstatus": "id_found",
+     *       ...
+     *     }
+     *   }
+     */
+    @PostMapping("/verify/epic")
+    @Operation(summary = "Verify EPIC against Election Commission API",
+            description = "Verify voter ID (EPIC) number and name against Election Commission database")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Verification completed (check status in response)"),
+        @ApiResponse(responseCode = "400", description = "Invalid request"),
+        @ApiResponse(responseCode = "503", description = "Election Commission API unavailable")
+    })
+    public ResponseEntity<EpicVerificationResponse> verifyEpic(
+            @RequestBody EpicVerificationRequest request) {
+
+        // Validate request
+        if (request.getEpicNumber() == null || request.getEpicNumber().isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(EpicVerificationResponse.builder()
+                            .code("400")
+                            .message("epicNumber is required")
+                            .build());
+        }
+
+        if (request.getVisitorName() == null || request.getVisitorName().isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(EpicVerificationResponse.builder()
+                            .code("400")
+                            .message("visitorName is required")
+                            .build());
+        }
+
+        // Call EPIC verification service
+        EpicVerificationResponse response = epicVerificationService.verifyEpic(request);
+
+        // Return based on API response code
+        if ("200".equals(response.getCode())) {
+            return ResponseEntity.ok(response);
+        } else if ("503".equals(response.getCode())) {
+            return ResponseEntity.status(503).body(response);
+        } else {
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    /**
+     * Legacy EPIC verification endpoint (GET-based).
+     * Kept for backward compatibility; new implementations should use POST /verify/epic
      */
     @GetMapping("/verify/epic/{epic}")
-    public ResponseEntity<Map<String, Object>> verifyEpic(
+    @Deprecated
+    public ResponseEntity<Map<String, Object>> verifyEpicLegacy(
             @PathVariable String epic,
             @RequestParam(required = false) String name) {
-
-        // TODO: Replace with call to Election Commission API adapter
-        // KycProvider provider = kycProviderFactory.getProvider("ELECTION_COMMISSION_API");
-        // KycResult result = provider.verify(epic, name);
 
         Map<String, Object> response = new HashMap<>();
         response.put("kycType", "EPIC");

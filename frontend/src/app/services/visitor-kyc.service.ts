@@ -67,6 +67,42 @@ export interface AadhaarQrResponse {
   errorMessage?: string;
 }
 
+export interface EpicVerificationRequest {
+  epicNumber: string;           // EPIC voter ID (e.g., BCV0259184)
+  visitorName: string;          // Name as on voter card (for matching)
+  phoneNumber?: string;         // Optional: mobile for OTP
+}
+
+export interface PollingDetailsResponse {
+  pollingpartno?: string;
+  pollingstationaddress?: string;
+}
+
+export interface EpicVerificationData {
+  voteridnumber?: string;
+  borrowernameonvoteridcard?: string;
+  relativenameonvoterid?: string;
+  borrowergender?: string;
+  borrowerdateofbirth?: string;
+  borroweraddressstate?: string;
+  borroweraddressdistrict?: string;
+  borroweraddresshousenumber?: string;
+  borroweraddresssectionnumber?: string;
+  accountnumber?: string;
+  namematchscore?: number;
+  voteridverificationstatus?: string;
+  sourceinformation?: string;
+  pollingdetails?: PollingDetailsResponse;
+  voteridverificationrequestid?: string;
+  voteridverificationcompletiontimestamp?: string;
+}
+
+export interface EpicVerificationResponse {
+  code: string;                 // HTTP status code (200, 400, 503)
+  message: string;              // "Success" or error message
+  data?: EpicVerificationData;  // Strongly-typed response data
+}
+
 export interface KycDataResponse {
   error: boolean;
   errorCode?: string;
@@ -121,6 +157,15 @@ export class VisitorKycService {
 
   getCitizenDesignations(): Observable<ReferenceDataDto[]> {
     return this.http.get<ReferenceDataDto[]>(`${environment.apiUrl}/reference/CITIZEN_DESIGNATION`);
+  }
+
+  /**
+   * Verify EPIC (Voter ID) against Election Commission API.
+   * Called when user enters EPIC number and name on voter card.
+   * Returns verification status, district, state, and name match score.
+   */
+  verifyEpic(request: EpicVerificationRequest): Observable<EpicVerificationResponse> {
+    return this.http.post<EpicVerificationResponse>(`${environment.apiUrl}/kyc/verify/epic`, request);
   }
 
   /**

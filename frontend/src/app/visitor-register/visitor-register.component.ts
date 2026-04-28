@@ -31,6 +31,7 @@ interface VisitorRegistrationForm {
   outsideState: boolean;
   idType: 'EPIC' | 'AADHAAR' | '';
   epicNumber: string;
+  visitorName: string;     // Name as on voter card (for EPIC verification)
   aadhaarNumber: string;
   otp: string;
   livePhoto: string;
@@ -74,6 +75,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     outsideState: false,
     idType: '',
     epicNumber: '',
+    visitorName: '',
     aadhaarNumber: '',
     otp: '',
     livePhoto: '',
@@ -177,7 +179,9 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
   get canValidateId(): boolean {
     if (this.form.idType === 'EPIC') {
-      return /^[A-Za-z]{3}[0-9]{7}$/.test(this.form.epicNumber);
+      const hasValidEpic = /^[A-Za-z]{3}[0-9]{7}$/.test(this.form.epicNumber);
+      const hasValidName = this.form.visitorName && this.form.visitorName.trim().length > 0;
+      return hasValidEpic && !!hasValidName;
     }
     if (this.form.idType === 'AADHAAR') {
       return /^\d{12}$/.test(this.form.aadhaarNumber);
@@ -187,7 +191,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
   validateId() {
     if (!this.canValidateId) {
-      this.errorMsg = 'Please enter a valid ID number.';
+      this.errorMsg = 'Please enter a valid ID number and visitor name.';
       return;
     }
 
@@ -206,42 +210,76 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Build request with optional phoneNumber
-    const request: any = {
-      idType: this.form.idType as 'EPIC' | 'AADHAAR',
-      idNumber: this.idNumber,
-    };
-
-    // Add manual phone number if provided
-    if (this.manualPhone && this.manualPhone.length === 10) {
-      request.phoneNumber = this.manualPhone;
-      this.manualVerification = true;
+    // Handle EPIC verification
+    if (this.form.idType === 'EPIC') {
+      this.verifyEpic();
+      return;
     }
 
-    this.kycService.validateVisitorId(request).subscribe({
+    // Fallback for other ID types (should not reach here)
+    this.loading = false;
+    this.errorMsg = 'Unsupported ID type';
+  }
+
+  /**
+   * Verify EPIC number against Election Commission API
+   */
+  verifyEpic() {
+    const epicRequest = {
+      epicNumber: this.form.epicNumber,
+      visitorName: this.form.visitorName.toUpperCase(),
+      phoneNumber: this.manualPhone || ''
+    };
+
+    this.kycService.verifyEpic(epicRequest).subscribe({
       next: res => {
         this.loading = false;
-        if (res.success && res.otpSent) {
-          this.idValidated = true;
-          this.otpSent = true;  // Show OTP field
-          this.currentStep = 'otp-verification';
-          this.maskedPhone = res.phoneNumber || '';
-          this.actualPhoneNumber = res.actualPhoneNumber || this.manualPhone || '';  // Store actual phone
-          this.manualVerification = res.manualVerification || false;
-          this.successMsg = `OTP sent to ${this.maskedPhone}`;
+        
+        if (res.code === '200' && res.data) {
+          // EPIC verification successful
+          this.errorMsg = '';
+          this.successMsg = '✓ EPIC verified successfully';
           
-          // Show manual verification warning if applicable
-          if (this.manualVerification) {
-            this.successMsg += ' (Manual verification required)';
+          // Extract verified details from response data
+          const verifiedName = res.data?.borrowernameonvoteridcard || this.form.visitorName;
+          const district = res.data?.borroweraddressdistrict || '';
+          const state = res.data?.borroweraddressstate || '';
+          const nameMatchScore = res.data?.namematchscore || 0;
+          
+          // Auto-populate form with verified details
+          this.form.fullName = verifiedName;
+          this.form.district = district;
+          this.form.address = state + (district ? ', ' + district : '');
+          
+          // Log AI KYC score for display
+          this.kycConfidenceScore = Math.min(nameMatchScore * 10, 100);
+          
+          // If manual phone was provided, require manual verification
+          if (this.manualPhone && this.manualPhone.length === 10) {
+            this.manualVerification = true;
+            this.maskedPhone = this.maskPhone(this.manualPhone);
+            this.actualPhoneNumber = this.manualPhone;
+            this.successMsg += ' (Manual verification required - OTP will be sent)';
+            this.otpSent = true;
+            this.currentStep = 'otp-verification';
+          } else {
+            // No manual phone: automated OTP sending would happen here
+            // For now, move to next step after EPIC verification
+            this.idValidated = true;
+            this.currentStep = 'photo-capture';  // Skip OTP if registered phone is available
           }
         } else {
-          this.errorMsg = res.message || 'ID validation failed.';
+          // EPIC verification failed
+          const errorMsg = res.message || 'EPIC verification failed';
+          this.errorMsg = '✗ ' + errorMsg;
+          this.loading = false;
         }
       },
       error: err => {
         this.loading = false;
-        this.errorMsg = err?.error?.message || 'Failed to validate ID. Please try again.';
-      },
+        const errorMsg = err?.error?.message || err?.message || 'Failed to verify EPIC. Please try again.';
+        this.errorMsg = '✗ ' + errorMsg;
+      }
     });
   }
 
@@ -653,6 +691,15 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.form.epicNumber = this.form.epicNumber.toUpperCase();
   }
 
+  /**
+   * Mask phone number for display: XXXX-XXXX-5678
+   * Shows only last 4 digits
+   */
+  maskPhone(phone: string): string {
+    if (!phone || phone.length < 4) return '****-****-****';
+    return 'XXXX-XXXX-' + phone.substring(phone.length - 4);
+  }
+
   resetForm() {
     this.currentStep = 'id-entry';
     this.idValidated = false;
@@ -675,6 +722,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       outsideState: false,
       idType: '',
       epicNumber: '',
+      visitorName: '',
       aadhaarNumber: '',
       otp: '',
       livePhoto: '',

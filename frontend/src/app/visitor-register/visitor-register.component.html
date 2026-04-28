@@ -117,6 +117,19 @@
             <mat-hint><i class="pi pi-info-circle"></i> Format: 3 uppercase letters + 7 digits (e.g., ABC1234567)</mat-hint>
           </mat-form-field>
 
+          <!-- Visitor Name Field (for EPIC verification) -->
+          <mat-form-field appearance="outline" class="full-width" *ngIf="form.idType === 'EPIC'">
+            <mat-label>Visitor Name (as on Voter Card) *</mat-label>
+            <input
+              matInput
+              type="text"
+              [(ngModel)]="form.visitorName"
+              placeholder="e.g. MAREIAM MOSSANG"
+              (input)="form.visitorName = form.visitorName.toUpperCase()"
+            />
+            <mat-hint><i class="pi pi-info-circle"></i> Enter the name exactly as it appears on your voter card for verification</mat-hint>
+          </mat-form-field>
+
           
 
           <!-- OTP Field (shown after ID validation for EPIC) -->

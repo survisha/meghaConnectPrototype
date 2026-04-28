@@ -2027,6 +2027,7 @@ Each feature has a deterministic fallback:
 | 1.0 | Mar 2026 | CM Office | Complete SRS with architecture, ER diagram, deployment specs – Government Review |
 | 1.1 | 10 Mar 2026 | Agent Narsingh | Added Public/Citizen registration (R001–R003), DEO assisted registration (R011), UI improvements (R012), Associate visitors (R013), AI document processing (R004–R010, R014–R015) |
 | 1.2 | 11 Mar 2026 | Agent Narsingh | Added comprehensive Swagger/OpenAPI 3.0 documentation (Phase 6) – All 20 backend controllers documented with @Tag, @Operation, @ApiResponses, @SecurityRequirement annotations; Swagger UI accessible at `/swagger-ui.html` |
+| 1.3 | 28 Apr 2026 | Agent Narsingh | Added EPIC (Voter ID) verification via Election Commission API – New service `EpicVerificationService` calls external API endpoint `https://devuat.offlinekyc.com/ECSOVDServiceV2/api/ovd/verify`; Frontend adds "Visitor Name" field (line 108 in visitor-register.component.html); Backend POST `/api/v1/kyc/verify/epic` endpoint with name matching score and district/state extraction; Application properties configured with `epic.api.*` settings (api key to be provided by Election Commission); Mock responses enabled for development when API key unavailable |
 
 ---
 

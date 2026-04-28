@@ -1,0 +1,5 @@
+# Created at 2026-04-28T14:02:57.929
+Boot Manifest-JAR contains absolute paths in classpath 'E:\survisha\NITCON\MeghalayaGovt\Prototype\meghaConnectPrototype\automation\target\test-classes'
+Hint: <argLine>-Djdk.net.URLClassPath.disableClassPathURLCheck=true</argLine>
+'other' has different root
+

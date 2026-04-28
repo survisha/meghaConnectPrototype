@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.meghaconnect.automation.runners.LoginTestRunner
+-------------------------------------------------------------------------------
+Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.036 s -- in com.meghaconnect.automation.runners.LoginTestRunner

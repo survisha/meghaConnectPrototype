@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="warn" name="MeghaConnectAutomation">
+    <Properties>
+        <Property name="basePath">logs</Property>
+        <Property name="logPattern">%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5p %c{1} - %m%n</Property>
+    </Properties>
+
+    <Appenders>
+        <!-- Console Appender -->
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="${logPattern}"/>
+        </Console>
+
+        <!-- File Appender for all logs -->
+        <File name="FileAppender" fileName="${basePath}/automation.log">
+            <PatternLayout pattern="${logPattern}"/>
+        </File>
+
+        <!-- File Appender for errors only -->
+        <File name="ErrorFileAppender" fileName="${basePath}/error.log">
+            <PatternLayout pattern="${logPattern}"/>
+            <Filters>
+                <ThresholdFilter level="ERROR" onMatch="ACCEPT" onMismatch="DENY"/>
+            </Filters>
+        </File>
+
+        <!-- Rolling File Appender for daily logs -->
+        <RollingFile name="RollingFileAppender" fileName="${basePath}/automation-rolling.log"
+                     filePattern="${basePath}/automation-%d{yyyy-MM-dd}-%i.log">
+            <PatternLayout pattern="${logPattern}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="10MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="5"/>
+        </RollingFile>
+
+        <!-- Async Appender for better performance -->
+        <Async name="AsyncFileAppender">
+            <AppenderRef ref="FileAppender"/>
+        </Async>
+    </Appenders>
+
+    <Loggers>
+        <!-- Root Logger -->
+        <Root level="info">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="AsyncFileAppender"/>
+            <AppenderRef ref="ErrorFileAppender"/>
+            <AppenderRef ref="RollingFileAppender"/>
+        </Root>
+
+        <!-- Selenium WebDriver Logger -->
+        <Logger name="org.openqa.selenium" level="warn"/>
+        <Logger name="org.openqa.selenium.remote" level="warn"/>
+
+        <!-- REST Assured Logger -->
+        <Logger name="io.restassured" level="debug"/>
+
+        <!-- Application Loggers -->
+        <Logger name="com.meghaconnect.automation" level="debug"/>
+        <Logger name="com.meghaconnect.automation.config" level="info"/>
+        <Logger name="com.meghaconnect.automation.pageobjects" level="debug"/>
+        <Logger name="com.meghaconnect.automation.stepdefinitions" level="info"/>
+        <Logger name="com.meghaconnect.automation.flows" level="info"/>
+        <Logger name="com.meghaconnect.automation.utils" level="debug"/>
+
+        <!-- Cucumber Logger -->
+        <Logger name="io.cucumber" level="info"/>
+    </Loggers>
+</Configuration>

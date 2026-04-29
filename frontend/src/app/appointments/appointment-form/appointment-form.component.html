@@ -13,7 +13,7 @@
         </div>
       </div>
       <a routerLink="/visitor" style="text-decoration:none">
-        <button mat-raised-button color="primary">
+        <button id="appointment_backToDashboardBtn" mat-raised-button color="primary">
           <i class="pi pi-home"></i> Back to Dashboard
         </button>
       </a>
@@ -28,7 +28,7 @@
       <h2 class="page-title" style="margin:0">New Appointment Request</h2>
     </div>
 
-    <div *ngIf="errorMsg" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.9rem">
+    <div *ngIf="errorMsg" id="appointment_errorMsg" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.9rem">
       <i class="pi pi-exclamation-circle"></i> {{ errorMsg }}
     </div>
 
@@ -63,56 +63,56 @@
         <div class="form-grid">
           <mat-form-field appearance="outline" class="form-group">
             <mat-label>Full Name *</mat-label>
-            <input matInput [(ngModel)]="form.fullName" placeholder="Full name" />
+            <input id="appointment_fullNameInput" matInput [(ngModel)]="form.fullName" placeholder="Full name" />
           </mat-form-field>
           
           <mat-form-field appearance="outline" class="form-group">
             <mat-label>Phone Number *</mat-label>
-            <input matInput [(ngModel)]="form.phoneNumber" placeholder="10-digit mobile number" />
+            <input id="appointment_phoneNumberInput" matInput [(ngModel)]="form.phoneNumber" placeholder="10-digit mobile number" />
             <mat-hint>Unique ID</mat-hint>
           </mat-form-field>
           
           <mat-form-field appearance="outline" class="form-group">
             <mat-label>EPIC / Voter ID *</mat-label>
-            <input matInput [(ngModel)]="form.epicNumber" placeholder="Election ID Card number" />
+            <input id="appointment_epicNumberInput" matInput [(ngModel)]="form.epicNumber" placeholder="Election ID Card number" />
           </mat-form-field>
           
           <mat-form-field appearance="outline" class="form-group">
             <mat-label>Designation *</mat-label>
-            <mat-select [(ngModel)]="form.designation" placeholder="Select designation">
+            <mat-select id="appointment_designationSelect" [(ngModel)]="form.designation" placeholder="Select designation">
               <mat-option *ngFor="let d of designations" [value]="d">{{ d }}</mat-option>
             </mat-select>
           </mat-form-field>
           
           <mat-form-field appearance="outline" class="form-group">
             <mat-label>District</mat-label>
-            <mat-select [(ngModel)]="form.district" placeholder="Select district">
+            <mat-select id="appointment_districtSelect" [(ngModel)]="form.district" placeholder="Select district">
               <mat-option *ngFor="let d of districts" [value]="d">{{ d }}</mat-option>
             </mat-select>
           </mat-form-field>
           
           <mat-form-field appearance="outline" class="form-group">
             <mat-label>Constituency</mat-label>
-            <input matInput [(ngModel)]="form.constituency" placeholder="Constituency name" />
+            <input id="appointment_constituencyInput" matInput [(ngModel)]="form.constituency" placeholder="Constituency name" />
           </mat-form-field>
           
           <mat-form-field appearance="outline" class="form-group">
             <mat-label>Booth / Village</mat-label>
-            <input matInput [(ngModel)]="form.booth" placeholder="Booth or village" />
+            <input id="appointment_boothInput" matInput [(ngModel)]="form.booth" placeholder="Booth or village" />
           </mat-form-field>
           
           <mat-form-field appearance="outline" class="form-group">
             <mat-label>Last Appointment Date with HCM</mat-label>
-            <input matInput [(ngModel)]="form.lastMeetingDate" placeholder="DD/MM/YYYY (if known)" />
+            <input id="appointment_lastMeetingDateInput" matInput [(ngModel)]="form.lastMeetingDate" placeholder="DD/MM/YYYY (if known)" />
           </mat-form-field>
           
           <mat-form-field appearance="outline" class="form-group" style="grid-column:1/-1">
             <mat-label>Full Address</mat-label>
-            <textarea matInput [(ngModel)]="form.address" rows="2" placeholder="Complete address"></textarea>
+            <textarea id="appointment_addressInput" matInput [(ngModel)]="form.address" rows="2" placeholder="Complete address"></textarea>
           </mat-form-field>
           
           <div class="form-group" style="grid-column:1/-1">
-            <mat-checkbox [(ngModel)]="form.isOrganisation" (change)="updateDocumentVisibility()">
+            <mat-checkbox id="appointment_isOrganisationCheckbox" [(ngModel)]="form.isOrganisation" (change)="updateDocumentVisibility()">
               I represent an Organisation
             </mat-checkbox>
           </div>
@@ -120,7 +120,7 @@
           <ng-container *ngIf="form.isOrganisation">
             <mat-form-field appearance="outline" class="form-group">
               <mat-label>Organisation Type *</mat-label>
-              <mat-select [(ngModel)]="form.organizationSubType" placeholder="Select organisation type">
+              <mat-select id="appointment_organizationSubTypeSelect" [(ngModel)]="form.organizationSubType" placeholder="Select organisation type">
                 <mat-option *ngFor="let org of organizationTypes" [value]="org.value">{{ org.label }}</mat-option>
               </mat-select>
             </mat-form-field>
@@ -136,21 +136,21 @@
         <div class="form-grid">
           <mat-form-field appearance="outline" class="form-group">
             <mat-label>Agenda Type *</mat-label>
-            <mat-select [(ngModel)]="form.agendaType" (change)="updateDocumentVisibility()" placeholder="Select agenda">
+            <mat-select id="appointment_agendaTypeSelect" [(ngModel)]="form.agendaType" (change)="updateDocumentVisibility()" placeholder="Select agenda">
               <mat-option *ngFor="let a of agendaTypes" [value]="a">{{ a }}</mat-option>
             </mat-select>
           </mat-form-field>
           
           <mat-form-field appearance="outline" class="form-group">
             <mat-label>Requested Location *</mat-label>
-            <mat-select [(ngModel)]="form.requestedLocation" placeholder="Meeting location">
+            <mat-select id="appointment_requestedLocationSelect" [(ngModel)]="form.requestedLocation" placeholder="Meeting location">
               <mat-option *ngFor="let l of locations" [value]="l">{{ l }}</mat-option>
             </mat-select>
           </mat-form-field>
           
           <mat-form-field appearance="outline" class="form-group" style="grid-column:1/-1">
             <mat-label>Brief Description of Agenda *</mat-label>
-            <textarea matInput [(ngModel)]="form.agendaBrief" rows="4" placeholder="Describe your purpose of visit in detail..."></textarea>
+            <textarea id="appointment_agendaBriefInput" matInput [(ngModel)]="form.agendaBrief" rows="4" placeholder="Describe your purpose of visit in detail..."></textarea>
           </mat-form-field>
         </div>
       </div>
@@ -168,62 +168,62 @@
         <div *ngIf="isScheme" class="form-grid">
           <mat-form-field appearance="outline" class="form-group">
             <mat-label>Scheme Type *</mat-label>
-            <mat-select [(ngModel)]="form.schemeType" (change)="updateDocumentVisibility()" placeholder="Select scheme">
+            <mat-select id="appointment_schemeTypeSelect" [(ngModel)]="form.schemeType" (change)="updateDocumentVisibility()" placeholder="Select scheme">
               <mat-option *ngFor="let s of schemeTypes" [value]="s">{{ s }}</mat-option>
             </mat-select>
           </mat-form-field>
           
           <mat-form-field appearance="outline" class="form-group">
             <mat-label>Application Type *</mat-label>
-            <mat-select [(ngModel)]="form.applicationType" placeholder="New or Reminder">
+            <mat-select id="appointment_applicationTypeSelect" [(ngModel)]="form.applicationType" placeholder="New or Reminder">
               <mat-option *ngFor="let at of applicationTypes" [value]="at.value">{{ at.label }}</mat-option>
             </mat-select>
           </mat-form-field>
           
           <mat-form-field appearance="outline" class="form-group">
             <mat-label>Project Category *</mat-label>
-            <mat-select [(ngModel)]="form.projectCategory" placeholder="Category">
+            <mat-select id="appointment_projectCategorySelect" [(ngModel)]="form.projectCategory" placeholder="Category">
               <mat-option *ngFor="let pc of projectCategories" [value]="pc">{{ pc }}</mat-option>
             </mat-select>
           </mat-form-field>
           
           <mat-form-field appearance="outline" class="form-group" style="grid-column:1/-1">
             <mat-label>Project Name *</mat-label>
-            <input matInput [(ngModel)]="form.projectName" placeholder="Name of the project" />
+            <input id="appointment_projectNameInput" matInput [(ngModel)]="form.projectName" placeholder="Name of the project" />
           </mat-form-field>
           
           <mat-form-field appearance="outline" class="form-group">
             <mat-label>Who will benefit from this project</mat-label>
-            <mat-select [(ngModel)]="form.beneficiaryType" placeholder="Who benefits?">
+            <mat-select id="appointment_beneficiaryTypeSelect" [(ngModel)]="form.beneficiaryType" placeholder="Who benefits?">
               <mat-option *ngFor="let bt of beneficiaryTypes" [value]="bt">{{ bt }}</mat-option>
             </mat-select>
           </mat-form-field>
           
           <mat-form-field appearance="outline" class="form-group">
             <mat-label>Total People Benefiting</mat-label>
-            <mat-select [(ngModel)]="form.beneficiaryCount" placeholder="Count">
+            <mat-select id="appointment_beneficiaryCountSelect" [(ngModel)]="form.beneficiaryCount" placeholder="Count">
               <mat-option *ngFor="let bc of beneficiaryCounts" [value]="bc">{{ bc }}</mat-option>
             </mat-select>
           </mat-form-field>
           
           <mat-form-field appearance="outline" class="form-group">
             <mat-label>Estimated Cost of Project (₹)</mat-label>
-            <input matInput [(ngModel)]="form.estimatedCost" placeholder="Total project cost" />
+            <input id="appointment_estimatedCostInput" matInput [(ngModel)]="form.estimatedCost" placeholder="Total project cost" />
           </mat-form-field>
           
           <mat-form-field appearance="outline" class="form-group">
             <mat-label>Community Contribution (₹)</mat-label>
-            <input matInput [(ngModel)]="form.communityContribution" placeholder="Amount from community" />
+            <input id="appointment_communityContributionInput" matInput [(ngModel)]="form.communityContribution" placeholder="Amount from community" />
           </mat-form-field>
           
           <mat-form-field appearance="outline" class="form-group" style="grid-column:1/-1">
             <mat-label>Justification of Project</mat-label>
-            <textarea matInput [(ngModel)]="form.justification" rows="3" placeholder="Why is this project needed?"></textarea>
+            <textarea id="appointment_justificationInput" matInput [(ngModel)]="form.justification" rows="3" placeholder="Why is this project needed?"></textarea>
           </mat-form-field>
           
           <div class="form-group" style="grid-column:1/-1">
             <label style="display:block;margin-bottom:0.5rem;font-weight:600">MLA / MDC / Community Leader Approval</label>
-            <mat-radio-group [(ngModel)]="form.mlaMdcApproved" (change)="updateDocumentVisibility()">
+            <mat-radio-group id="appointment_mlaMdcApprovedGroup" [(ngModel)]="form.mlaMdcApproved" (change)="updateDocumentVisibility()">
               <mat-radio-button [value]="true" style="margin-right:1.5rem">Yes</mat-radio-button>
               <mat-radio-button [value]="false">No</mat-radio-button>
             </mat-radio-group>
@@ -250,7 +250,7 @@
       <div class="section-card-body">
         <!-- R013: Toggle for associate visitors -->
         <div class="associate-toggle">
-          <mat-checkbox id="includeAssociates" [(ngModel)]="includeAssociates">
+          <mat-checkbox id="appointment_includeAssociatesCheckbox" [(ngModel)]="includeAssociates">
             Add Associate Visitors
           </mat-checkbox>
           <span style="margin-left:auto;font-size:0.8rem;color:#6b7280">Check to include colleagues or family members visiting with you</span>
@@ -505,13 +505,13 @@
 
     <!-- Navigation Buttons (R012) -->
     <div class="nav-buttons">
-      <button mat-stroked-button (click)="prevStep()" [disabled]="step===0">
+      <button id="appointment_backBtn" mat-stroked-button (click)="prevStep()" [disabled]="step===0">
         <i class="pi pi-arrow-left"></i> Previous
       </button>
-      <button *ngIf="step < steps.length-1" mat-raised-button color="primary" (click)="nextStep()">
+      <button id="appointment_nextBtn" *ngIf="step < steps.length-1" mat-raised-button color="primary" (click)="nextStep()">
         Next <i class="pi pi-arrow-right"></i>
       </button>
-      <button *ngIf="step === steps.length-1" mat-raised-button color="primary" [disabled]="loading" (click)="submit()">
+      <button id="appointment_submitBtn" *ngIf="step === steps.length-1" mat-raised-button color="primary" [disabled]="loading" (click)="submit()">
         <i class="pi pi-check"></i>
         <span *ngIf="!loading">Submit Application</span>
         <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Submitting…</span>

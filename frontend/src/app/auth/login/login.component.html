@@ -51,11 +51,11 @@
       </div>
 
       <div class="mode-tabs">
-         <button [class.active]="isPublicMode" (click)="isPublicMode=true">
+         <button id="login_citizenModeTab" [class.active]="isPublicMode" (click)="isPublicMode=true">
           <i class="pi pi-users"></i>
           <span>Public/Citizen</span>
         </button>
-        <button [class.active]="!isPublicMode" (click)="isPublicMode=false">
+        <button id="login_staffModeTab" [class.active]="!isPublicMode" (click)="isPublicMode=false">
           <i class="pi pi-id-card"></i>
           <span>Staff Login</span>
         </button>
@@ -66,7 +66,7 @@
         <div class="form-group">
           <label>Quick Demo Access</label>
           <div class="demo-chips">
-            <button *ngFor="let d of demoCredentials" class="demo-chip" (click)="selectDemo(d.value)">
+            <button id="login_demoChip_{{d.value}}" *ngFor="let d of demoCredentials" class="demo-chip" (click)="selectDemo(d.value)">
               {{ d.label.split('(')[0].trim() }}
             </button>
           </div>
@@ -76,7 +76,7 @@
             <i class="pi pi-user"></i>
             <span> Username</span>
           </mat-label>
-          <input matInput id="username" [(ngModel)]="username" placeholder="Enter username" />
+          <input matInput id="login_usernameInput" [(ngModel)]="username" placeholder="Enter username" />
         </mat-form-field>
         
         <mat-form-field appearance="outline" class="full-width">
@@ -84,12 +84,12 @@
             <i class="pi pi-lock"></i>
             <span> Password</span>
           </mat-label>
-          <input matInput type="password" id="password" [(ngModel)]="password" placeholder="Enter password" (keyup.enter)="login()" />
+          <input matInput type="password" id="login_passwordInput" [(ngModel)]="password" placeholder="Enter password" (keyup.enter)="login()" />
         </mat-form-field>
-        <div *ngIf="errorMsg" style="color:#dc2626;font-size:0.85rem;margin-bottom:0.75rem">
+        <div id="login_errorMsg" *ngIf="errorMsg" style="color:#dc2626;font-size:0.85rem;margin-bottom:0.75rem">
           <i class="pi pi-exclamation-circle"></i> {{ errorMsg }}
         </div>
-        <button mat-raised-button color="primary" class="full-width" [disabled]="loading" (click)="login()">
+        <button id="login_submitBtn" mat-raised-button color="primary" class="full-width" [disabled]="loading" (click)="login()">
           <span *ngIf="!loading"><i class="pi pi-sign-in"></i> Sign In</span>
           <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Signing in...</span>
         </button>
@@ -100,12 +100,12 @@
           <p><i class="pi pi-info-circle"></i> Citizens can log in using their registered mobile number and OTP.</p>
         </div>
         <a routerLink="/public-login" style="text-decoration:none;display:block">
-          <button mat-raised-button color="accent" class="full-width">
+          <button id="login_citizenOtpBtn" mat-raised-button color="accent" class="full-width">
             <i class="pi pi-users"></i> Citizen OTP Login
           </button>
         </a>
         <div style="text-align:center;margin-top:0.75rem;font-size:0.85rem;color:#6b7280">
-          New visitor? <a routerLink="/register-visitor" style="color:#1a237e;font-weight:600">Register here</a>
+          New visitor? <a id="login_registerLink" routerLink="/register-visitor" style="color:#1a237e;font-weight:600">Register here</a>
         </div>
       </ng-container>
     </div>

@@ -13,7 +13,7 @@
         </div>
       </div>
       <a routerLink="/visitor" style="text-decoration:none">
-        <button mat-raised-button color="primary">
+        <button id="appointment_backToDashboardBtn" mat-raised-button color="primary">
           <i class="pi pi-home"></i> Back to Dashboard
         </button>
       </a>
@@ -22,13 +22,13 @@
 
   <ng-container *ngIf="!submitted">
     <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem">
-      <button mat-icon-button routerLink="/visitor">
+      <button id="appointment_backBtn" mat-icon-button routerLink="/visitor">
         <i class="pi pi-arrow-left"></i>
       </button>
       <h2 class="page-title" style="margin:0">New Appointment Request</h2>
     </div>
 
-    <div *ngIf="errorMsg" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.9rem">
+    <div id="appointment_errorMsg" *ngIf="errorMsg" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.9rem">
       <i class="pi pi-exclamation-circle"></i> {{ errorMsg }}
     </div>
 
@@ -63,56 +63,56 @@
         <div class="form-grid">
           <mat-form-field appearance="outline" class="form-group">
             <mat-label>Full Name *</mat-label>
-            <input matInput [(ngModel)]="form.fullName" placeholder="Full name" />
+            <input id="appointment_fullNameInput" matInput [(ngModel)]="form.fullName" placeholder="Full name" />
           </mat-form-field>
           
           <mat-form-field appearance="outline" class="form-group">
             <mat-label>Phone Number *</mat-label>
-            <input matInput [(ngModel)]="form.phoneNumber" placeholder="10-digit mobile number" />
+            <input id="appointment_phoneNumberInput" matInput [(ngModel)]="form.phoneNumber" placeholder="10-digit mobile number" />
             <mat-hint>Unique ID</mat-hint>
           </mat-form-field>
           
           <mat-form-field appearance="outline" class="form-group">
             <mat-label>EPIC / Voter ID *</mat-label>
-            <input matInput [(ngModel)]="form.epicNumber" placeholder="Election ID Card number" />
+            <input id="appointment_epicNumberInput" matInput [(ngModel)]="form.epicNumber" placeholder="Election ID Card number" />
           </mat-form-field>
           
           <mat-form-field appearance="outline" class="form-group">
             <mat-label>Designation *</mat-label>
-            <mat-select [(ngModel)]="form.designation" placeholder="Select designation">
+            <mat-select id="appointment_designationSelect" [(ngModel)]="form.designation" placeholder="Select designation">
               <mat-option *ngFor="let d of designations" [value]="d">{{ d }}</mat-option>
             </mat-select>
           </mat-form-field>
           
           <mat-form-field appearance="outline" class="form-group">
             <mat-label>District</mat-label>
-            <mat-select [(ngModel)]="form.district" placeholder="Select district">
+            <mat-select id="appointment_districtSelect" [(ngModel)]="form.district" placeholder="Select district">
               <mat-option *ngFor="let d of districts" [value]="d">{{ d }}</mat-option>
             </mat-select>
           </mat-form-field>
           
           <mat-form-field appearance="outline" class="form-group">
             <mat-label>Constituency</mat-label>
-            <input matInput [(ngModel)]="form.constituency" placeholder="Constituency name" />
+            <input id="appointment_constituencyInput" matInput [(ngModel)]="form.constituency" placeholder="Constituency name" />
           </mat-form-field>
           
           <mat-form-field appearance="outline" class="form-group">
             <mat-label>Booth / Village</mat-label>
-            <input matInput [(ngModel)]="form.booth" placeholder="Booth or village" />
+            <input id="appointment_boothInput" matInput [(ngModel)]="form.booth" placeholder="Booth or village" />
           </mat-form-field>
           
           <mat-form-field appearance="outline" class="form-group">
             <mat-label>Last Appointment Date with HCM</mat-label>
-            <input matInput [(ngModel)]="form.lastMeetingDate" placeholder="DD/MM/YYYY (if known)" />
+            <input id="appointment_lastMeetingDateInput" matInput [(ngModel)]="form.lastMeetingDate" placeholder="DD/MM/YYYY (if known)" />
           </mat-form-field>
           
           <mat-form-field appearance="outline" class="form-group" style="grid-column:1/-1">
             <mat-label>Full Address</mat-label>
-            <textarea matInput [(ngModel)]="form.address" rows="2" placeholder="Complete address"></textarea>
+            <textarea id="appointment_addressInput" matInput [(ngModel)]="form.address" rows="2" placeholder="Complete address"></textarea>
           </mat-form-field>
           
           <div class="form-group" style="grid-column:1/-1">
-            <mat-checkbox [(ngModel)]="form.isOrganisation" (change)="updateDocumentVisibility()">
+            <mat-checkbox id="appointment_isOrganisationCheckbox" [(ngModel)]="form.isOrganisation" (change)="updateDocumentVisibility()">
               I represent an Organisation
             </mat-checkbox>
           </div>
@@ -120,7 +120,7 @@
           <ng-container *ngIf="form.isOrganisation">
             <mat-form-field appearance="outline" class="form-group">
               <mat-label>Organisation Type *</mat-label>
-              <mat-select [(ngModel)]="form.organizationSubType" placeholder="Select organisation type">
+              <mat-select id="appointment_organizationSubTypeSelect" [(ngModel)]="form.organizationSubType" placeholder="Select organisation type">
                 <mat-option *ngFor="let org of organizationTypes" [value]="org.value">{{ org.label }}</mat-option>
               </mat-select>
             </mat-form-field>
@@ -136,21 +136,21 @@
         <div class="form-grid">
           <mat-form-field appearance="outline" class="form-group">
             <mat-label>Agenda Type *</mat-label>
-            <mat-select [(ngModel)]="form.agendaType" (change)="updateDocumentVisibility()" placeholder="Select agenda">
+            <mat-select id="appointment_agendaTypeSelect" [(ngModel)]="form.agendaType" (change)="updateDocumentVisibility()" placeholder="Select agenda">
               <mat-option *ngFor="let a of agendaTypes" [value]="a">{{ a }}</mat-option>
             </mat-select>
           </mat-form-field>
           
           <mat-form-field appearance="outline" class="form-group">
             <mat-label>Requested Location *</mat-label>
-            <mat-select [(ngModel)]="form.requestedLocation" placeholder="Meeting location">
+            <mat-select id="appointment_requestedLocationSelect" [(ngModel)]="form.requestedLocation" placeholder="Meeting location">
               <mat-option *ngFor="let l of locations" [value]="l">{{ l }}</mat-option>
             </mat-select>
           </mat-form-field>
           
           <mat-form-field appearance="outline" class="form-group" style="grid-column:1/-1">
             <mat-label>Brief Description of Agenda *</mat-label>
-            <textarea matInput [(ngModel)]="form.agendaBrief" rows="4" placeholder="Describe your purpose of visit in detail..."></textarea>
+            <textarea id="appointment_agendaBriefInput" matInput [(ngModel)]="form.agendaBrief" rows="4" placeholder="Describe your purpose of visit in detail..."></textarea>
           </mat-form-field>
         </div>
       </div>

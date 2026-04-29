@@ -1,9 +1,9 @@
 <div class="page-title-row">
-  <h2 class="page-title"><mat-icon style="margin-right:0.5rem">check_box</mat-icon>Approver Workflow – Jt. Secretary Review</h2>
+  <h2 class="page-title" id="approverWorkflow_title"><mat-icon style="margin-right:0.5rem">check_box</mat-icon>Approver Workflow – Jt. Secretary Review</h2>
   <span class="badge-count">{{ appointments.length }} pending</span>
 </div>
 
-<div class="section-card">
+<div class="section-card" id="approverWorkflow_appointmentsSection">
   <div class="section-card-header">
     <mat-icon>list</mat-icon> Appointment Requests
   </div>
@@ -82,9 +82,9 @@
         <!-- Actions Column -->
         <ng-container matColumnDef="actions">
           <th mat-header-cell *matHeaderCellDef style="width:150px">Actions</th>
-          <td mat-cell *matCellDef="let appt">
+          <td mat-cell *matCellDef="let appt; let i = index">
             <div class="action-btns">
-              <button mat-mini-fab
+              <button [id]="'approverWorkflow_approveBtn_' + i" mat-mini-fab
                       class="approve-btn"
                       [disabled]="appt.status === 'HCM_PENDING'"
                       (click)="openApprove(appt)"
@@ -92,7 +92,7 @@
                       matTooltipPosition="above">
                 <mat-icon>check</mat-icon>
               </button>
-              <button mat-mini-fab
+              <button [id]="'approverWorkflow_rejectBtn_' + i" mat-mini-fab
                       class="reject-btn"
                       [disabled]="appt.status === 'HCM_PENDING'"
                       (click)="openReject(appt)"

@@ -1,7 +1,7 @@
 <div class="app-wrapper">
   <!-- Header -->
-  <header class="megha-header">
-    <button class="icon-btn" (click)="sidebarOpen = !sidebarOpen">
+  <header class="megha-header" id="shell_header">
+    <button id="shell_toggleSidebarBtn" class="icon-btn" (click)="sidebarOpen = !sidebarOpen">
       <i class="pi pi-bars"></i>
     </button>
     <span style="font-size:1.5rem">🏛️</span>
@@ -10,39 +10,39 @@
       <div style="font-size:0.7rem;opacity:.8">CM Office – Scheduling &amp; Scheme Management | Government of Meghalaya</div>
     </div>
     <div class="header-right">
-      <span class="pi pi-bell" style="font-size:1.2rem;cursor:pointer;position:relative">
+      <span id="shell_notificationIcon" class="pi pi-bell" style="font-size:1.2rem;cursor:pointer;position:relative">
         <span class="notif-dot"></span>
       </span>
       <div class="user-info">
         <div style="font-size:0.85rem;font-weight:600">{{ auth.user()?.fullName }}</div>
         <div class="role-badge">{{ roleLabel }}</div>
       </div>
-      <button class="icon-btn" (click)="logout()" title="Logout">
+      <button id="shell_logoutBtn" class="icon-btn" (click)="logout()" title="Logout">
         <i class="pi pi-sign-out"></i>
       </button>
     </div>
   </header>
 
-  <div class="body-wrapper">
+  <div class="body-wrapper" id="shell_bodyWrapper">
     <!-- Sidebar -->
-    <nav class="megha-sidebar" [class.collapsed]="!sidebarOpen">
+    <nav class="megha-sidebar" [class.collapsed]="!sidebarOpen" id="shell_sidebar">
       <ul class="nav-menu">
-        <ng-container *ngFor="let item of menu">
+        <ng-container *ngFor="let item of menu; let i = index">
           <li *ngIf="!item.children" class="nav-item">
-            <a [routerLink]="item.route" class="nav-link">
+            <a [id]="'shell_navLink_' + i" [routerLink]="item.route" class="nav-link">
               <i class="pi {{ item.icon }}"></i>
               <span *ngIf="sidebarOpen">{{ item.label }}</span>
             </a>
           </li>
           <li *ngIf="item.children" class="nav-group">
-            <button class="nav-link nav-group-btn" (click)="toggle(item)">
+            <button [id]="'shell_navGroup_' + i" class="nav-link nav-group-btn" (click)="toggle(item)">
               <i class="pi {{ item.icon }}"></i>
               <span *ngIf="sidebarOpen" style="flex:1;text-align:left">{{ item.label }}</span>
               <i *ngIf="sidebarOpen" class="pi" [class.pi-chevron-down]="item.expanded" [class.pi-chevron-right]="!item.expanded"></i>
             </button>
             <ul *ngIf="item.expanded && sidebarOpen" class="nav-sub">
-              <li *ngFor="let child of item.children">
-                <a [routerLink]="child.route" class="nav-sub-link">
+              <li *ngFor="let child of item.children; let j = index">
+                <a [id]="'shell_navSubLink_' + i + '_' + j" [routerLink]="child.route" class="nav-sub-link">
                   <i class="pi {{ child.icon }}"></i> {{ child.label }}
                 </a>
               </li>
@@ -53,7 +53,7 @@
     </nav>
 
     <!-- Main -->
-    <main class="main-content">
+    <main class="main-content" id="shell_mainContent">
       <p-toast></p-toast>
       <p-confirmDialog></p-confirmDialog>
       <router-outlet></router-outlet>

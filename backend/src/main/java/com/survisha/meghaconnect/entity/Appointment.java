@@ -32,6 +32,15 @@ public class Appointment extends BaseEntity {
     @Column(length = 200)
     private String agendaType;
 
+    @Column(length = 300)
+    private String subject;
+
+    @Column(length = 150)
+    private String department;
+
+    @Column(length = 50)
+    private String appointmentType;
+
     @Column(columnDefinition = "TEXT")
     private String agendaBrief;
 
@@ -44,6 +53,26 @@ public class Appointment extends BaseEntity {
 
     private LocalDateTime scheduledDateTime;
     private Integer scheduledDurationMinutes;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "public_darbar_id")
+    private PublicDarbar publicDarbar;
+
+    private Integer publicDarbarTokenNumber;
+
+    @Column(length = 100)
+    private String approvedBy;
+
+    @Column(length = 100)
+    private String rejectedBy;
+
+    @Column(columnDefinition = "TEXT")
+    private String rejectionReason;
+
+    @Column(length = 100)
+    private String selectedForPublicDarbarBy;
+
+    private LocalDateTime selectedForPublicDarbarAt;
 
     private Boolean mlaMdcApproved;
 
@@ -100,6 +129,9 @@ public class Appointment extends BaseEntity {
     public enum MeetingLocation { SHILLONG, TURA, DELHI, OTHERS }
 
     public enum AppointmentStatus {
+        CREATED, PENDING_APPROVER_REVIEW, SELECTED_FOR_PUBLIC_DARBAR,
+        PUBLIC_DARBAR_DATE_CREATED, SCHEDULED_FOR_PUBLIC_DARBAR,
+        APPROVED_WITH_DATE_TIME, REJECTED,
         SUBMITTED, DEO_PROCESSED, CMO_REVIEW, APPROVER_REVIEW,
         HCM_PENDING, HCM_ACCEPTED, HCM_SNOOZED, HCM_REJECTED,
         SCHEDULED, COMPLETED, CANCELLED

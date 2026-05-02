@@ -2,6 +2,7 @@ package com.survisha.meghaconnect.config;
 
 import com.survisha.meghaconnect.entity.User;
 import com.survisha.meghaconnect.repository.UserRepository;
+import com.survisha.meghaconnect.repository.VisitorRepository;
 import com.survisha.meghaconnect.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +38,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final UserRepository userRepository;
+    private final VisitorRepository visitorRepository;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthFilter, CorsConfigurationSource corsConfigurationSource) throws Exception {
@@ -85,6 +87,19 @@ public class SecurityConfig {
     public UserDetailsService userDetailsService() {
         return (String username) -> {
             log.debug("[SECURITY] Loading user details for username: {}", username);
+
+            if (username != null && username.startsWith("visitor_")) {
+                Long visitorId = parseVisitorId(username);
+                if (visitorId != null && visitorRepository.existsById(visitorId)) {
+                    return org.springframework.security.core.userdetails.User.builder()
+                        .username(username)
+                        .password("VISITOR_JWT_AUTH")
+                        .authorities(Collections.singletonList(new SimpleGrantedAuthority("ROLE_PUBLIC")))
+                        .build();
+                }
+                log.warn("[SECURITY] Visitor principal not found: {}", username);
+                throw new UsernameNotFoundException("Visitor not found: " + username);
+            }
             
             User u = userRepository.findByUsername(username)
                 .orElseThrow(() -> {
@@ -104,6 +119,14 @@ public class SecurityConfig {
             log.debug("[SECURITY] UserDetails created - Authorities: {}", userDetails.getAuthorities());
             return userDetails;
         };
+    }
+
+    private Long parseVisitorId(String username) {
+        try {
+            return Long.parseLong(username.substring("visitor_".length()));
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     @Bean

@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import java.util.Collection;
 
 @Repository
 public interface AppointmentRepository extends JpaRepository<Appointment, Long>, JpaSpecificationExecutor<Appointment> {
@@ -18,7 +19,19 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long>,
 
     List<Appointment> findByApplicant_Id(Long applicantId);
 
+    List<Appointment> findByApplicant_IdOrderByCreatedAtDesc(Long applicantId);
+
+    Optional<Appointment> findByIdAndApplicant_Id(Long id, Long applicantId);
+
     List<Appointment> findByStatus(Appointment.AppointmentStatus status);
+
+    List<Appointment> findByStatusOrderByCreatedAtAsc(Appointment.AppointmentStatus status);
+
+    List<Appointment> findByStatusIn(Collection<Appointment.AppointmentStatus> statuses);
+
+    List<Appointment> findByPublicDarbar_IdOrderByPublicDarbarTokenNumberAsc(Long publicDarbarId);
+
+    boolean existsByPublicDarbar_IdAndStatusIn(Long publicDarbarId, Collection<Appointment.AppointmentStatus> statuses);
     
     Page<Appointment> findByStatusIn(List<Appointment.AppointmentStatus> statuses, Pageable pageable);
 

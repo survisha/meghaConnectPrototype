@@ -92,6 +92,31 @@ public class ErrorCodeConstants {
     public static final String DUPLICATE_ENTRY = "ERR_029";
     public static final String DUPLICATE_ENTRY_MSG = "Duplicate entry found: %s";
 
+    // ========== APPOINTMENT WORKFLOW ERRORS ==========
+    public static final String APPT_NOT_FOUND = "APPT_001";
+    public static final String APPT_NOT_FOUND_MSG = "Appointment not found";
+
+    public static final String APPT_INVALID_STATUS = "APPT_002";
+    public static final String APPT_INVALID_STATUS_MSG = "Invalid appointment status for this action";
+
+    public static final String APPT_UNAUTHORIZED_ACTION = "APPT_003";
+    public static final String APPT_UNAUTHORIZED_ACTION_MSG = "Unauthorized appointment action";
+
+    public static final String PUBLIC_DARBAR_NOT_FOUND = "APPT_004";
+    public static final String PUBLIC_DARBAR_NOT_FOUND_MSG = "Public Darbar date not found";
+
+    public static final String APPT_ALREADY_SCHEDULED = "APPT_005";
+    public static final String APPT_ALREADY_SCHEDULED_MSG = "Appointment already scheduled";
+
+    public static final String APPT_INVALID_SCHEDULE_DATE_TIME = "APPT_006";
+    public static final String APPT_INVALID_SCHEDULE_DATE_TIME_MSG = "Invalid schedule date/time";
+
+    public static final String APPT_REJECTION_REASON_REQUIRED = "APPT_007";
+    public static final String APPT_REJECTION_REASON_REQUIRED_MSG = "Rejection reason is required";
+
+    public static final String APPT_NO_APPOINTMENTS_FOR_SCHEDULING = "APPT_008";
+    public static final String APPT_NO_APPOINTMENTS_FOR_SCHEDULING_MSG = "No appointments found for scheduling";
+
     // ========== OTP & AUTHENTICATION ERRORS (ERR_030 - ERR_039) ==========
     public static final String OTP_RATE_LIMIT_EXCEEDED = "ERR_030";
     public static final String OTP_RATE_LIMIT_EXCEEDED_MSG = "Too many OTP requests. Please try again after %d minutes";

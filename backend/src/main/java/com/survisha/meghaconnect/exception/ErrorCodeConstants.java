@@ -145,6 +145,9 @@ public class ErrorCodeConstants {
     public static final String QR_GENERATION_FAILED = "ERR_046";
     public static final String QR_GENERATION_FAILED_MSG = "QR code generation failed: %s";
 
+    public static final String EPIC_NAME_MISMATCH = "ERR_047";
+    public static final String EPIC_NAME_MISMATCH_MSG = "Please enter a valid name as per Voter ID.";
+
     // ========== DATABASE & DATA ACCESS ERRORS (ERR_050 - ERR_059) ==========
     public static final String DATABASE_ERROR = "ERR_050";
     public static final String DATABASE_ERROR_MSG = "Database error occurred";
@@ -187,6 +190,18 @@ public class ErrorCodeConstants {
 
     public static final String KYC_STATUS_INVALID = "ERR_083";
     public static final String KYC_STATUS_INVALID_MSG = "Invalid KYC status: %s";
+
+    public static final String INVALID_FIELD_VALUE = "ERR_084";
+    public static final String INVALID_FIELD_VALUE_MSG = "Invalid field value: %s";
+
+    public static final String INVALID_FIELD_FORMAT = "ERR_085";
+    public static final String INVALID_FIELD_FORMAT_MSG = "Invalid field format: %s";
+
+    public static final String INVALID_DATE_TIME_FORMAT = "ERR_086";
+    public static final String INVALID_DATE_TIME_FORMAT_MSG = "Invalid date-time format: %s";
+
+    public static final String INVALID_IMAGE_FORMAT = "ERR_087";
+    public static final String INVALID_IMAGE_FORMAT_MSG = "Invalid image format";
 
     // ========== STREAM & CONTENT ERRORS (ERR_090 - ERR_099) ==========
     public static final String CONTENT_NOT_FOUND = "ERR_090";

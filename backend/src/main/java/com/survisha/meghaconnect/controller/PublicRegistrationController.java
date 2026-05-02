@@ -1,6 +1,8 @@
 package com.survisha.meghaconnect.controller;
 
 import com.survisha.meghaconnect.dto.PublicRegistrationDto;
+import com.survisha.meghaconnect.service.RequestValidationService;
+import com.survisha.meghaconnect.util.ValidationConstants;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -38,6 +40,8 @@ import java.util.UUID;
 @Tag(name = "Public Registration", description = "Public citizen registration and onboarding workflows")
 public class PublicRegistrationController {
 
+    private final RequestValidationService validationService;
+
     // ── OTP ──────────────────────────────────────────────────────
 
     /**
@@ -46,13 +50,9 @@ public class PublicRegistrationController {
      */
     @PostMapping("/otp/send")
     public ResponseEntity<Map<String, Object>> sendOtp(@RequestBody Map<String, String> body) {
-        String phone = body.get("phoneNumber");
-        if (phone == null || phone.length() != 10) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("success", false);
-            error.put("message", "Invalid phone number");
-            return ResponseEntity.badRequest().body(error);
-        }
+        String phone = validationService.requirePhone(
+                body != null ? body.get(ValidationConstants.FIELD_PHONE_NUMBER) : null
+        );
         // TODO: call OTP service
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
@@ -96,9 +96,9 @@ public class PublicRegistrationController {
         // Determine KYC type
         String kycType = "NONE";
         if (dto.getEpicNumber() != null && !dto.getEpicNumber().trim().isEmpty()) {
-            kycType = "EPIC";
+            kycType = ValidationConstants.ID_TYPE_EPIC;
         } else if (dto.getAadhaarNumber() != null && !dto.getAadhaarNumber().trim().isEmpty()) {
-            kycType = "AADHAAR";
+            kycType = ValidationConstants.ID_TYPE_AADHAAR;
         }
 
         // TODO: persist to public_registrations table
@@ -134,12 +134,7 @@ public class PublicRegistrationController {
             @RequestParam("documentType") String documentType,
             @RequestParam("file") MultipartFile file) {
 
-        if (file.isEmpty()) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("success", false);
-            error.put("message", "File is empty");
-            return ResponseEntity.badRequest().body(error);
-        }
+        validationService.requireNonEmptyFile(file);
 
         // TODO: validate file type / size
         // TODO: store to configured file storage (local / MinIO / S3)

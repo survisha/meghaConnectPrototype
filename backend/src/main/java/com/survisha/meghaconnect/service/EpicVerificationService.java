@@ -4,6 +4,9 @@ import com.survisha.meghaconnect.dto.EpicVerificationRequest;
 import com.survisha.meghaconnect.dto.EpicVerificationResponse;
 import com.survisha.meghaconnect.dto.EpicVerificationData;
 import com.survisha.meghaconnect.dto.PollingDetails;
+import com.survisha.meghaconnect.exception.EpicNameMismatchException;
+import com.survisha.meghaconnect.exception.ExternalServiceException;
+import com.survisha.meghaconnect.exception.MeghaConnectException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,11 +18,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.client.RestClientException;
 
+import java.text.Normalizer;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 /**
  * Service for EPIC (Voter ID) verification against Election Commission API.
@@ -32,7 +39,7 @@ import java.util.logging.Logger;
  * Flow:
  *   1. Frontend sends EPIC number + visitorName to POST /api/v1/kyc/verify/epic
  *   2. Service calls external Election Commission API with credentials
- *   3. API returns verification status, district, state, and name match score
+ *   3. API returns verification status, district, state, gender, and polling details
  *   4. Service returns matched claims or error
  *   5. Frontend displays matched details and sends OTP if applicable
  */
@@ -54,9 +61,9 @@ public class EpicVerificationService {
     @Value("${epic.api.enabled:false}")
     private boolean epicApiEnabled;
     
-    // Name match score threshold (0-100 scale)
-    // Scores below this are treated as name mismatch
-    private static final int NAME_MATCH_THRESHOLD = 60;
+    // Local name comparison threshold. The EPIC API currently returns a fixed
+    // low namematchscore, so validation must compare input and returned names.
+    private static final double LOCAL_NAME_SIMILARITY_THRESHOLD = 0.85;
 
     /**
      * Verify EPIC against Election Commission API.
@@ -108,15 +115,11 @@ public class EpicVerificationService {
                 LOG.info("  Status: " + (result.getData() != null ? result.getData().getVoterIdVerificationStatus() : "N/A"));
                 LOG.info("  Verified Name: " + result.getVerifiedName());
                 LOG.info("  District: " + result.getDistrict());
-                LOG.info("  Name Match Score: " + result.getNameMatchScore());
+                LOG.info("  State: " + result.getState());
                 
                 // Validate name match - voteridverificationstatus "id_found" only confirms EPIC exists,
                 // NOT that the name matches. We must validate the name separately.
-                EpicVerificationResponse nameValidationResult = validateNameMatch(request, result);
-                if (nameValidationResult != null) {
-                    // Name mismatch detected
-                    return nameValidationResult;
-                }
+                validateNameMatch(request, result);
                 
                 return result;
             } else {
@@ -128,6 +131,8 @@ public class EpicVerificationService {
                         .build();
             }
 
+        } catch (MeghaConnectException e) {
+            throw e;
         } catch (RestClientException e) {
             LOG.log(Level.SEVERE, "✗ EPIC API request failed", e);
             return EpicVerificationResponse.builder()
@@ -191,25 +196,22 @@ public class EpicVerificationService {
     /**
      * Validate that the input name matches the verified name from EPIC verification.
      * 
-     * Important: voteridverificationstatus "id_found" only means the EPIC number exists,
-     * it does NOT confirm the name matches. We must validate the name separately using:
-     * 1. namematchscore (0-100 scale) - must exceed threshold (60)
-     * 2. Fuzzy comparison of input name vs verified name
+     * Important: voteridverificationstatus "id_found" only means the EPIC number exists.
+     * The external API's namematchscore is not reliable for this integration,
+     * so the service compares the input name with borrowernameonvoteridcard locally.
      *
      * @param request Input request containing the name from UI
      * @param response Response from Election Commission API
-     * @return Error response if name doesn't match, or null if validation passes
      */
-    private EpicVerificationResponse validateNameMatch(EpicVerificationRequest request, EpicVerificationResponse response) {
+    private void validateNameMatch(EpicVerificationRequest request, EpicVerificationResponse response) {
         
         if (response.getData() == null) {
-            return EpicVerificationResponse.builder()
-                    .code("400")
-                    .message("Name validation failed: No data in response")
-                    .build();
+            throw new ExternalServiceException(
+                    "EPIC",
+                    "EPIC verification succeeded but response data was missing"
+            );
         }
         
-        Integer nameMatchScore = response.getNameMatchScore();
         String verifiedName = response.getVerifiedName();
         String inputName = request.getVisitorName();
         
@@ -217,62 +219,64 @@ public class EpicVerificationService {
         LOG.info("=== Name Validation ===");
         LOG.info("Input Name: " + inputName);
         LOG.info("Verified Name: " + verifiedName);
-        LOG.info("Name Match Score: " + nameMatchScore + " (Threshold: " + NAME_MATCH_THRESHOLD + ")");
-        
-        // Check 1: Name match score must be above threshold
-        // A score of 5 indicates very low match (almost no similarity)
-        if (nameMatchScore == null || nameMatchScore < NAME_MATCH_THRESHOLD) {
-            String errorMsg = String.format(
-                    "Name mismatch detected. Input name '%s' does not match verified name '%s'. " +
-                    "Match confidence: %d%% (minimum required: %d%%). " +
-                    "Please verify the name on your EPIC card matches exactly.",
-                    inputName, verifiedName,
-                    nameMatchScore != null ? nameMatchScore : 0,
-                    NAME_MATCH_THRESHOLD
-            );
-            LOG.warning("✗ " + errorMsg);
-            return EpicVerificationResponse.builder()
-                    .code("400")
-                    .message(errorMsg)
-                    .data(response.getData())  // Include data for UI reference
-                    .build();
+
+        if (isBlank(inputName) || isBlank(verifiedName)) {
+            LOG.warning("✗ Name validation failed: input or verified name is missing");
+            throw new EpicNameMismatchException(response.getData());
         }
         
-        // Check 2: Perform basic fuzzy matching (trim and normalize for comparison)
-        String normalizedInput = normalizeString(inputName);
-        String normalizedVerified = normalizeString(verifiedName);
+        String normalizedInput = normalizeName(inputName);
+        String normalizedVerified = normalizeName(verifiedName);
         
-        // Calculate similarity percentage
         double similarity = calculateSimilarity(normalizedInput, normalizedVerified);
+        boolean tokenMatch = hasSameNameTokens(normalizedInput, normalizedVerified);
         
-        LOG.info("✓ Normalized similarity: " + String.format("%.1f%%", similarity * 100));
+        LOG.info("Normalized Input Name: " + normalizedInput);
+        LOG.info("Normalized Verified Name: " + normalizedVerified);
+        LOG.info("Local Name Similarity: " + String.format("%.1f%%", similarity * 100));
+        LOG.info("Token Match: " + tokenMatch);
         
-        if (similarity < 0.70 && nameMatchScore < 80) {
-            // High mismatch in fuzzy match AND API score is moderate
-            String errorMsg = String.format(
-                    "Name verification failed. Your input '%s' is significantly different from " +
-                    "the verified name '%s'. Match confidence: %d%%. " +
-                    "Please ensure the name matches exactly as it appears on your EPIC card.",
-                    inputName, verifiedName, nameMatchScore
-            );
-            LOG.warning("✗ " + errorMsg);
-            return EpicVerificationResponse.builder()
-                    .code("400")
-                    .message(errorMsg)
-                    .data(response.getData())
-                    .build();
+        if (!tokenMatch && similarity < LOCAL_NAME_SIMILARITY_THRESHOLD) {
+            LOG.warning("✗ Name mismatch. Input name '" + inputName
+                    + "' does not match Voter ID name '" + verifiedName + "'");
+            throw new EpicNameMismatchException(response.getData());
         }
+
+        // Make downstream UI confidence meaningful without relying on the API's
+        // fixed namematchscore value.
+        response.getData().setNameMatchScore((int) Math.round(similarity * 100));
         
         LOG.info("✓ Name validation passed");
-        return null;  // Null indicates validation passed, proceed with success
     }
     
     /**
-     * Normalize a string for comparison: trim, lowercase, remove extra spaces
+     * Normalize a name for comparison: uppercase, remove accents/punctuation, collapse spaces.
      */
-    private String normalizeString(String str) {
+    private String normalizeName(String str) {
         if (str == null) return "";
-        return str.trim().toLowerCase().replaceAll("\\s+", " ");
+        String normalized = Normalizer.normalize(str, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "");
+        return normalized
+                .toUpperCase()
+                .replaceAll("[^A-Z0-9 ]", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
+    }
+
+    private boolean hasSameNameTokens(String inputName, String verifiedName) {
+        Set<String> inputTokens = nameTokens(inputName);
+        Set<String> verifiedTokens = nameTokens(verifiedName);
+        return !inputTokens.isEmpty() && inputTokens.equals(verifiedTokens);
+    }
+
+    private Set<String> nameTokens(String name) {
+        return Arrays.stream(name.split(" "))
+                .filter(token -> !token.isBlank())
+                .collect(Collectors.toSet());
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
     }
     
     /**

@@ -3,6 +3,8 @@ package com.survisha.meghaconnect.controller;
 import com.survisha.meghaconnect.dto.*;
 import com.survisha.meghaconnect.service.OvseKycService;
 import com.survisha.meghaconnect.service.EpicVerificationService;
+import com.survisha.meghaconnect.service.RequestValidationService;
+import com.survisha.meghaconnect.util.ValidationConstants;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -41,6 +43,7 @@ public class KycController {
 
     private final OvseKycService ovseKycService;
     private final EpicVerificationService epicVerificationService;
+    private final RequestValidationService validationService;
 
     /**
      * Verify an EPIC number against the Election Commission API.
@@ -82,22 +85,15 @@ public class KycController {
     public ResponseEntity<EpicVerificationResponse> verifyEpic(
             @RequestBody EpicVerificationRequest request) {
 
-        // Validate request
-        if (request.getEpicNumber() == null || request.getEpicNumber().isBlank()) {
-            return ResponseEntity.badRequest()
-                    .body(EpicVerificationResponse.builder()
-                            .code("400")
-                            .message("epicNumber is required")
-                            .build());
-        }
-
-        if (request.getVisitorName() == null || request.getVisitorName().isBlank()) {
-            return ResponseEntity.badRequest()
-                    .body(EpicVerificationResponse.builder()
-                            .code("400")
-                            .message("visitorName is required")
-                            .build());
-        }
+        String epicNumber = validationService.requireText(
+                request != null ? request.getEpicNumber() : null,
+                ValidationConstants.FIELD_EPIC_NUMBER
+        );
+        validationService.requireEpic(epicNumber);
+        validationService.requireText(
+                request != null ? request.getVisitorName() : null,
+                ValidationConstants.FIELD_VISITOR_NAME
+        );
 
         // Call EPIC verification service
         EpicVerificationResponse response = epicVerificationService.verifyEpic(request);
@@ -149,18 +145,14 @@ public class KycController {
             @PathVariable String aadhaar,
             @RequestParam(required = false) String name) {
 
-        if (aadhaar == null || aadhaar.replaceAll("\\D", "").length() != 12) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("verified", false);
-            error.put("message", "Invalid Aadhaar number – must be 12 digits");
-            return ResponseEntity.badRequest().body(error);
-        }
+        String aadhaarNumber = validationService.requireText(aadhaar, ValidationConstants.FIELD_AADHAAR);
+        validationService.requireAadhaar(aadhaarNumber);
 
         // TODO: Replace with call to UIDAI API adapter
         // KycProvider provider = kycProviderFactory.getProvider("UIDAI_API");
         // KycResult result = provider.verify(aadhaar, name);
 
-        String maskedAadhaar = "XXXX-XXXX-" + aadhaar.substring(aadhaar.length() - 4);
+        String maskedAadhaar = "XXXX-XXXX-" + aadhaarNumber.substring(aadhaarNumber.length() - 4);
         Map<String, Object> response = new HashMap<>();
         response.put("kycType", "AADHAAR");
         response.put("idValue", maskedAadhaar);  // full number is never echoed
@@ -311,15 +303,11 @@ public class KycController {
     public ResponseEntity<Map<String, Object>> kycCallback(
             @RequestBody Map<String, Object> body) {
 
-        String clientTxnId = (String) body.get("clientTxnId");
-        boolean isError = body.containsKey("error") && (boolean) body.get("error");
-
-        if (clientTxnId == null || clientTxnId.isBlank()) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("accepted", false);
-            response.put("reason", "missing-clientTxnId");
-            return ResponseEntity.badRequest().body(response);
-        }
+        String clientTxnId = validationService.requireText(
+                body != null ? (String) body.get(ValidationConstants.FIELD_CLIENT_TXN_ID) : null,
+                ValidationConstants.FIELD_CLIENT_TXN_ID
+        );
+        boolean isError = body != null && body.containsKey("error") && (boolean) body.get("error");
 
         KycData data;
         if (isError) {

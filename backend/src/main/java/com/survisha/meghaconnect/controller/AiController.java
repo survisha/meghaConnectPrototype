@@ -3,6 +3,7 @@ package com.survisha.meghaconnect.controller;
 import com.survisha.meghaconnect.entity.Appointment;
 import com.survisha.meghaconnect.repository.AppointmentRepository;
 import com.survisha.meghaconnect.service.AiDocumentIntelligenceService;
+import com.survisha.meghaconnect.service.RequestValidationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -45,6 +46,7 @@ public class AiController {
 
     private final AiDocumentIntelligenceService aiService;
     private final AppointmentRepository appointmentRepository;
+    private final RequestValidationService validationService;
 
     // ── R004 / R005: Document Analysis ───────────────────────────────────────
 
@@ -69,12 +71,7 @@ public class AiController {
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "appointmentId", required = false) Long appointmentId) {
 
-        if (file == null || file.isEmpty()) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("success", false);
-            error.put("error", "No file provided");
-            return ResponseEntity.badRequest().body(error);
-        }
+        validationService.requireNonEmptyFile(file);
 
         log.info("AI document analysis requested for file: {} ({} bytes)",
                 file.getOriginalFilename(), file.getSize());

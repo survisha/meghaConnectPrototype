@@ -2,6 +2,7 @@ package com.survisha.meghaconnect.controller;
 
 import com.survisha.meghaconnect.repository.AppointmentRepository;
 import com.survisha.meghaconnect.service.AISummaryService;
+import com.survisha.meghaconnect.service.RequestValidationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -25,19 +26,14 @@ public class AiSummaryController {
 
     private final AppointmentRepository appointmentRepository;
     private final AISummaryService aiSummaryService;
+    private final RequestValidationService validationService;
 
     @PostMapping("/generate-summary")
     public ResponseEntity<Map<String, Object>> generateSummary(@RequestBody Map<String, Object> request) {
-        Long appointmentId = null;
-        if (request.get("appointmentId") != null) {
-            try {
-                appointmentId = Long.parseLong(request.get("appointmentId").toString());
-            } catch (NumberFormatException e) {
-                Map<String, Object> error = new HashMap<>();
-                error.put("error", "Invalid appointmentId: must be a valid numeric identifier.");
-                return ResponseEntity.badRequest().body(error);
-            }
-        }
+        Long appointmentId = validationService.optionalLong(
+                request != null ? request.get("appointmentId") : null,
+                "appointmentId"
+        );
         String agendaBrief   = String.valueOf(request.getOrDefault("agendaBrief", ""));
         String agendaType    = String.valueOf(request.getOrDefault("agendaType", ""));
         String applicantName = String.valueOf(request.getOrDefault("applicantName", ""));

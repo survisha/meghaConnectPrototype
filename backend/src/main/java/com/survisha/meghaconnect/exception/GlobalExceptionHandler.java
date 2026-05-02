@@ -100,6 +100,22 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(error, HttpStatus.valueOf(ex.getHttpStatus()));
     }
 
+    /**
+     * Handle EPIC name mismatch while preserving provider response details.
+     */
+    @ExceptionHandler(EpicNameMismatchException.class)
+    public ResponseEntity<ErrorResponseDto> handleEpicNameMismatch(EpicNameMismatchException ex, WebRequest request) {
+        ErrorResponseDto error = new ErrorResponseDto(
+            ex.getErrorCode(),
+            ex.getMessage(),
+            ex.getErrorId(),
+            ex.getHttpStatus()
+        );
+        error.setDetails(ex.getVerificationData());
+        error.setPath(request.getDescription(false).replace("uri=", ""));
+        return new ResponseEntity<>(error, HttpStatus.valueOf(ex.getHttpStatus()));
+    }
+
     // ========== SPRING SECURITY EXCEPTIONS ==========
 
     @ExceptionHandler(BadCredentialsException.class)

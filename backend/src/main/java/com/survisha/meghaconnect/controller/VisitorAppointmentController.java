@@ -9,6 +9,9 @@ import com.survisha.meghaconnect.repository.DocumentUploadRepository;
 import com.survisha.meghaconnect.repository.VisitorRepository;
 import com.survisha.meghaconnect.service.AuditLogService;
 import com.survisha.meghaconnect.service.FileStorageService;
+import com.survisha.meghaconnect.service.RequestValidationService;
+import com.survisha.meghaconnect.exception.MeghaConnectException;
+import com.survisha.meghaconnect.util.ValidationConstants;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
@@ -56,6 +59,7 @@ public class VisitorAppointmentController {
     private final AuditLogService       auditLogService;
     private final FileStorageService    fileStorageService;
     private final ObjectMapper          objectMapper;
+    private final RequestValidationService validationService;
 
     /**
      * Submit a new appointment / scheme application request from a citizen.
@@ -105,18 +109,14 @@ public class VisitorAppointmentController {
 
             // If no registered visitor found, create/reuse one from form data
             if (applicant == null) {
-                if (applicantName == null || applicantName.trim().isEmpty()) {
-                    return badRequest("applicantName is required when applicantId is not provided");
-                }
-                if (applicantPhone == null || !applicantPhone.matches("^[0-9]{10}$")) {
-                    return badRequest("applicantPhone must be a valid 10-digit number");
-                }
+                final String applicantNameValue = validationService.requireText(applicantName, "applicantName");
+                final String applicantPhoneValue = validationService.requirePhone(applicantPhone);
 
                 // Reuse existing visitor by phone to avoid duplicates
-                applicant = visitorRepository.findByPhoneNumber(applicantPhone.trim()).orElseGet(() -> {
+                applicant = visitorRepository.findByPhoneNumber(applicantPhoneValue).orElseGet(() -> {
                     String epicFinal = epicNumber;
                     // Validate EPIC format if provided
-                    if (epicFinal != null && !epicFinal.trim().isEmpty() && !epicFinal.matches("^[A-Z]{3}[0-9]{7}$")) {
+                    if (epicFinal != null && !epicFinal.trim().isEmpty() && !epicFinal.matches(ValidationConstants.REGEX_EPIC)) {
                         epicFinal = null; // Ignore invalid EPIC rather than rejecting
                     }
                     // Check EPIC uniqueness if provided
@@ -125,8 +125,8 @@ public class VisitorAppointmentController {
                     }
 
                     Visitor v = Visitor.builder()
-                            .fullName(applicantName.trim())
-                            .phoneNumber(applicantPhone.trim())
+                            .fullName(applicantNameValue)
+                            .phoneNumber(applicantPhoneValue)
                             .epicNumber(epicFinal)
                             .kycType("NONE")
                             .kycVerified(false)
@@ -137,9 +137,7 @@ public class VisitorAppointmentController {
             }
 
             // ── Validate agenda ─────────────────────────────────────────────────
-            if (agendaType == null || agendaType.trim().isEmpty()) {
-                return badRequest("agendaType is required");
-            }
+            final String agendaTypeValue = validationService.requireText(agendaType, "agendaType");
 
             // ── Resolve requestedLocation enum ──────────────────────────────────
             Appointment.MeetingLocation location;
@@ -163,7 +161,7 @@ public class VisitorAppointmentController {
                     .applicationId(appId)
                     .applicant(applicant)
                     .eventType(Appointment.EventType.A1)
-                    .agendaType(agendaType.trim())
+                    .agendaType(agendaTypeValue)
                     .agendaBrief(agendaBrief)
                     .status(Appointment.AppointmentStatus.SUBMITTED)
                     .requestedLocation(location)
@@ -265,6 +263,8 @@ public class VisitorAppointmentController {
             response.put("message", "Appointment request submitted successfully.");
             return ResponseEntity.ok(response);
 
+        } catch (MeghaConnectException e) {
+            throw e;
         } catch (Exception e) {
             return badRequest("Error processing appointment submission: " + e.getMessage());
         }

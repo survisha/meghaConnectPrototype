@@ -20,8 +20,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
-import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -104,22 +102,7 @@ public class AppointmentController {
             @PathVariable Long id,
             @RequestBody Map<String, String> body,
             @AuthenticationPrincipal UserDetails user) {
-        String statusStr = body.get("status");
-        if (statusStr == null || statusStr.trim().isEmpty()) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("error", "'status' field is required");
-            return ResponseEntity.badRequest().body(error);
-        }
-        try {
-            Appointment.AppointmentStatus status = Appointment.AppointmentStatus.valueOf(statusStr);
-            return ResponseEntity.ok(
-                appointmentService.updateStatus(id, status, body.get("remarks"), user.getUsername())
-            );
-        } catch (IllegalArgumentException e) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("error", "Invalid status value: " + statusStr);
-            return ResponseEntity.badRequest().body(error);
-        }
+        return ResponseEntity.ok(appointmentService.updateStatus(id, body, user.getUsername()));
     }
 
     @Operation(summary = "Schedule appointment", description = "Schedule an appointment with date and duration")
@@ -137,34 +120,6 @@ public class AppointmentController {
             @PathVariable Long id,
             @RequestBody Map<String, Object> body,
             @AuthenticationPrincipal UserDetails user) {
-
-        Object dtObj = body.get("scheduledDateTime");
-        Object durObj = body.get("durationMinutes");
-
-        if (dtObj == null || durObj == null) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("error", "'scheduledDateTime' and 'durationMinutes' are required");
-            return ResponseEntity.badRequest().body(error);
-        }
-
-        if (!(durObj instanceof Integer)) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("error", "'durationMinutes' must be an integer");
-            return ResponseEntity.badRequest().body(error);
-        }
-
-        try {
-            LocalDateTime dt = LocalDateTime.parse(dtObj.toString());
-            int duration = (Integer) durObj;
-            return ResponseEntity.ok(appointmentService.schedule(id, dt, duration, user.getUsername()));
-        } catch (IllegalArgumentException e) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("error", "Invalid date-time format: " + dtObj);
-            return ResponseEntity.badRequest().body(error);
-        } catch (IllegalStateException e) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
-        }
+        return ResponseEntity.ok(appointmentService.schedule(id, body, user.getUsername()));
     }
 }

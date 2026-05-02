@@ -1,7 +1,6 @@
 package com.survisha.meghaconnect.controller;
 
 import com.survisha.meghaconnect.entity.Grievance;
-import com.survisha.meghaconnect.entity.Grievance.GrievanceStatus;
 import com.survisha.meghaconnect.service.GrievanceService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -18,7 +17,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
-import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -86,22 +84,7 @@ public class GrievanceController {
             @PathVariable Long id,
             @RequestBody Map<String, String> body,
             @AuthenticationPrincipal UserDetails user) {
-        String statusStr = body.get("status");
-        if (statusStr == null || statusStr.trim().isEmpty()) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("error", "'status' field is required");
-            return ResponseEntity.badRequest().body(error);
-        }
-        try {
-            GrievanceStatus status = GrievanceStatus.valueOf(statusStr);
-            String actor = user != null ? user.getUsername() : "anonymous";
-            return ResponseEntity.ok(
-                    grievanceService.updateStatus(id, status, body.get("remarks"), actor)
-            );
-        } catch (IllegalArgumentException e) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("error", "Invalid status: " + statusStr);
-            return ResponseEntity.badRequest().body(error);
-        }
+        String actor = user != null ? user.getUsername() : "anonymous";
+        return ResponseEntity.ok(grievanceService.updateStatus(id, body, actor));
     }
 }

@@ -1,6 +1,5 @@
 package com.survisha.meghaconnect.controller;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
@@ -10,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.survisha.meghaconnect.service.VisitorOtpService;
+import com.survisha.meghaconnect.service.VisitorKycService;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -45,7 +44,7 @@ import lombok.RequiredArgsConstructor;
 @Tag(name = "Visitor KYC", description = "Public visitor KYC validation endpoints - no JWT required")
 public class VisitorKycController {
 
-    private final VisitorOtpService visitorOtpService;
+    private final VisitorKycService visitorKycService;
 
     // ── 1. Validate ID (EPIC/Aadhaar) ────────────────────────────────────────
 
@@ -77,75 +76,7 @@ public class VisitorKycController {
      */
     @PostMapping("/validate-idType")
     public ResponseEntity<Map<String, Object>> validateIdType(@RequestBody Map<String, String> request) {
-        String idType = request.get("idType");
-        String idValue = request.get("idNumber");
-        String phoneNumber = request.get("phoneNumber");  // Optional - for manual verification fallback
-        boolean manualVerification = (phoneNumber != null && !phoneNumber.isEmpty());
-
-        // Validate required input
-        if (idType == null || idValue == null) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("success", false);
-            error.put("message", "idType and idValue are required");
-            return ResponseEntity.badRequest().body(error);
-        }
-
-        // Validate EPIC format
-        if ("EPIC".equals(idType)) {
-            if (!idValue.matches("^[A-Z]{3}[0-9]{7}$")) {
-                Map<String, Object> error = new HashMap<>();
-                error.put("success", false);
-                error.put("errorCode", "INVALID_EPIC_FORMAT");
-                error.put("message", "EPIC number must be 3 uppercase letters followed by 7 digits (e.g., ABC1234567)");
-                return ResponseEntity.badRequest().body(error);
-            }
-        }
-
-        // Validate Aadhaar format
-        if ("AADHAAR".equals(idType)) {
-            if (!idValue.matches("^[0-9]{12}$")) {
-                Map<String, Object> error = new HashMap<>();
-                error.put("success", false);
-                error.put("errorCode", "INVALID_AADHAAR_FORMAT");
-                error.put("message", "Aadhaar number must be exactly 12 digits");
-                return ResponseEntity.badRequest().body(error);
-            }
-        }
-
-        // If phone number is provided (manual fallback), validate format
-        if (manualVerification && !phoneNumber.matches("^[0-9]{10}$")) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("success", false);
-            error.put("errorCode", "INVALID_PHONE_FORMAT");
-            error.put("message", "Phone number must be exactly 10 digits");
-            return ResponseEntity.badRequest().body(error);
-        }
-
-
-        try {
-            // Generate OTP (mock: always returns "123456")
-            String otp = visitorOtpService.generateKycOtp(phoneNumber);
-            
-            // Mask phone number for display
-            String maskedPhone = "****" + phoneNumber.substring(6);
-
-            // TODO: Remove OTP from response once SMS gateway is integrated
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("otpSent", true);
-            response.put("otp", otp);  // DEMO ONLY: Remove in production
-            response.put("phoneNumber", maskedPhone);  // Return masked phone for UI display
-            response.put("actualPhoneNumber", phoneNumber);  // Return actual phone for storage
-            response.put("manualVerification", manualVerification);  // Flag for DEO review
-            response.put("message", "OTP sent to " + maskedPhone);
-            return ResponseEntity.ok(response);
-        } catch (IllegalStateException e) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("success", false);
-            error.put("errorCode", "TOO_MANY_REQUESTS");
-            error.put("message", "Too many OTP requests. Please try again later.");
-            return ResponseEntity.status(429).body(error);
-        }
+        return ResponseEntity.ok(visitorKycService.validateIdType(request));
     }
 
     // ── 2. Verify OTP ─────────────────────────────────────────────────────────
@@ -180,62 +111,7 @@ public class VisitorKycController {
      */
     @PostMapping("/verify-otp")
     public ResponseEntity<Map<String, Object>> verifyOtp(@RequestBody Map<String, String> request) {
-        String otp = request.get("otp");
-        String idValue = request.get("idNumber");
-        String phoneNumber = request.get("phoneNumber");
-        String idType = request.get("idType");
-        if (otp == null || idValue == null || phoneNumber == null || idType == null) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("success", false);
-            error.put("message", "otp, idNumber, phoneNumber, and idType are required");
-            return ResponseEntity.badRequest().body(error);
-        }
-
-        try {
-            // Validate OTP (mock: always "123456")
-            boolean isValid = visitorOtpService.validateKycOtp(phoneNumber, otp);
-            
-            if (!isValid) {
-                Map<String, Object> error = new HashMap<>();
-                error.put("success", false);
-                error.put("errorCode", "INVALID_OTP");
-                error.put("message", "Invalid OTP. Please try again.");
-                return ResponseEntity.status(401).body(error);
-            }
-
-            // TODO: In production, fetch actual demographics from EPIC/Aadhaar API
-            // For now, return mock data based on ID type
-            Map<String, String> demographics = new HashMap<>();
-            if ("EPIC".equals(idType)) {
-                demographics.put("fullName", "Rajesh Kumar Sharma");
-                demographics.put("address", "Laitumkhrah, Shillong");
-                demographics.put("district", "East Khasi Hills");
-                demographics.put("constituency", "Shillong North");
-            } else if ("AADHAAR".equals(idType)) {
-                demographics.put("fullName", "Priya Singh");
-                demographics.put("address", "Police Bazar, Shillong");
-                demographics.put("district", "East Khasi Hills");
-                demographics.put("constituency", "Shillong Central");
-            } else {
-                demographics.put("fullName", "Unknown");
-                demographics.put("address", "");
-                demographics.put("district", "");
-                demographics.put("constituency", "");
-            }
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("verified", true);
-            response.put("demographics", demographics);
-            response.put("message", "OTP verified successfully");
-            return ResponseEntity.ok(response);
-        } catch (IllegalStateException e) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("success", false);
-            error.put("errorCode", "OTP_EXPIRED");
-            error.put("message", "OTP has expired. Please generate a new OTP.");
-            return ResponseEntity.status(401).body(error);
-        }
+        return ResponseEntity.ok(visitorKycService.verifyOtp(request));
     }
 
     // ── 3. Validate Face Photo ───────────────────────────────────────────────
@@ -265,36 +141,6 @@ public class VisitorKycController {
      */
     @PostMapping("/validate-face")
     public ResponseEntity<Map<String, Object>> validateFace(@RequestBody Map<String, String> request) {
-        String idType = request.get("idType");
-        String idValue = request.get("idNumber");
-        String livePhotoBase64 = request.get("livePhoto");
-
-        if (idValue == null || livePhotoBase64 == null) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("success", false);
-            error.put("message", "idType, idValue, and livePhotoBase64 are required");
-            return ResponseEntity.badRequest().body(error);
-        }
-
-        // Validate base64 image format
-        if (!livePhotoBase64.startsWith("data:image/")) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("success", false);
-            error.put("errorCode", "INVALID_IMAGE_FORMAT");
-            error.put("message", "Live photo must be a valid base64 encoded image");
-            return ResponseEntity.badRequest().body(error);
-        }
-
-        // TODO: In production, call actual face recognition API
-        // For now, always return PHOTO_MATCHED for demo
-        
-        // Mock face recognition result (always successful)
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("matched", true);
-        response.put("kycStatus", "PHOTO_MATCHED");
-        response.put("confidence", 95.5);  // Mock confidence score
-        response.put("message", "Face matched successfully");
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(visitorKycService.validateFace(request));
     }
 }

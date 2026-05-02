@@ -6,6 +6,7 @@ import com.survisha.meghaconnect.entity.Visitor;
 import com.survisha.meghaconnect.repository.AppointmentRepository;
 import com.survisha.meghaconnect.repository.VisitorRepository;
 import com.survisha.meghaconnect.exception.*;
+import com.survisha.meghaconnect.util.ValidationConstants;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -24,6 +26,7 @@ public class AppointmentService {
     private final AppointmentRepository appointmentRepository;
     private final VisitorRepository visitorRepository;
     private final AuditLogService auditLogService;
+    private final RequestValidationService validationService;
 
     public Page<Appointment> findAll(Pageable pageable) {
         return appointmentRepository.findAll(pageable);
@@ -68,6 +71,17 @@ public class AppointmentService {
     }
 
     @Transactional
+    public Appointment updateStatus(Long id, Map<String, String> body, String updatedBy) {
+        Appointment.AppointmentStatus status = validationService.requireEnum(
+                body != null ? body.get(ValidationConstants.FIELD_STATUS) : null,
+                Appointment.AppointmentStatus.class,
+                ValidationConstants.FIELD_STATUS
+        );
+        String remarks = body != null ? body.get("remarks") : null;
+        return updateStatus(id, status, remarks, updatedBy);
+    }
+
+    @Transactional
     public Appointment updateStatus(Long id, Appointment.AppointmentStatus newStatus,
                                     String remarks, String updatedBy) {
         Appointment appt = appointmentRepository.findById(id)
@@ -81,6 +95,19 @@ public class AppointmentService {
         auditLogService.log("Appointment", saved.getId(), "STATUS_CHANGE",
             "Status: " + oldStatus + " → " + newStatus, updatedBy);
         return saved;
+    }
+
+    @Transactional
+    public Appointment schedule(Long id, Map<String, Object> body, String updatedBy) {
+        LocalDateTime dateTime = validationService.requireDateTime(
+                body != null ? body.get(ValidationConstants.FIELD_SCHEDULED_DATE_TIME) : null,
+                ValidationConstants.FIELD_SCHEDULED_DATE_TIME
+        );
+        int duration = validationService.requireInteger(
+                body != null ? body.get(ValidationConstants.FIELD_DURATION_MINUTES) : null,
+                ValidationConstants.FIELD_DURATION_MINUTES
+        );
+        return schedule(id, dateTime, duration, updatedBy);
     }
 
     @Transactional

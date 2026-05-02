@@ -4,6 +4,7 @@ import com.survisha.meghaconnect.entity.Visitor;
 import com.survisha.meghaconnect.repository.VisitorRepository;
 import com.survisha.meghaconnect.dto.PublicRegistrationDto;
 import com.survisha.meghaconnect.exception.*;
+import com.survisha.meghaconnect.util.ValidationConstants;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -65,7 +66,7 @@ public class VisitorService {
                 ErrorCodeConstants.PHONE_NUMBER_REQUIRED_MSG
             );
         }
-        if (dto.getPhoneNumber().length() != 10) {
+        if (!dto.getPhoneNumber().matches(ValidationConstants.REGEX_PHONE_NUMBER)) {
             throw new VisitorRegistrationValidationException(
                 ErrorCodeConstants.INVALID_PHONE_FORMAT,
                 ErrorCodeConstants.INVALID_PHONE_FORMAT_MSG
@@ -79,7 +80,7 @@ public class VisitorService {
 
         // Validate EPIC format if provided
         if (dto.getEpicNumber() != null && !dto.getEpicNumber().trim().isEmpty()) {
-            if (!dto.getEpicNumber().matches("^[A-Z]{3}[0-9]{7}$")) {
+            if (!dto.getEpicNumber().matches(ValidationConstants.REGEX_EPIC)) {
                 throw new VisitorRegistrationValidationException(
                     ErrorCodeConstants.INVALID_EPIC_FORMAT,
                     ErrorCodeConstants.INVALID_EPIC_FORMAT_MSG
@@ -89,7 +90,7 @@ public class VisitorService {
 
         // Validate Aadhaar format if provided
         if (dto.getAadhaarNumber() != null && !dto.getAadhaarNumber().trim().isEmpty()) {
-            if (!dto.getAadhaarNumber().matches("^[0-9]{12}$")) {
+            if (!dto.getAadhaarNumber().matches(ValidationConstants.REGEX_AADHAAR)) {
                 throw new VisitorRegistrationValidationException(
                     ErrorCodeConstants.INVALID_AADHAAR_FORMAT,
                     ErrorCodeConstants.INVALID_AADHAAR_FORMAT_MSG
@@ -100,9 +101,9 @@ public class VisitorService {
         // Determine KYC type
         String kycType = "NONE";
         if (dto.getEpicNumber() != null && !dto.getEpicNumber().trim().isEmpty()) {
-            kycType = "EPIC";
+            kycType = ValidationConstants.ID_TYPE_EPIC;
         } else if (dto.getAadhaarNumber() != null && !dto.getAadhaarNumber().trim().isEmpty()) {
-            kycType = "AADHAAR";
+            kycType = ValidationConstants.ID_TYPE_AADHAAR;
         }
 
         // Determine KYC status

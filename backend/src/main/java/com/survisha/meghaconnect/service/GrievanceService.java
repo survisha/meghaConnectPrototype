@@ -3,6 +3,7 @@ package com.survisha.meghaconnect.service;
 import com.survisha.meghaconnect.entity.Grievance;
 import com.survisha.meghaconnect.entity.Grievance.GrievanceStatus;
 import com.survisha.meghaconnect.repository.GrievanceRepository;
+import com.survisha.meghaconnect.util.ValidationConstants;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -11,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -20,6 +22,7 @@ public class GrievanceService {
 
     private final GrievanceRepository grievanceRepository;
     private final AuditLogService auditLogService;
+    private final RequestValidationService validationService;
 
     public Page<Grievance> findAll(Pageable pageable) {
         return grievanceRepository.findAll(pageable);
@@ -48,6 +51,17 @@ public class GrievanceService {
         auditLogService.log("Grievance", saved.getId(), "CREATED",
                 "New grievance submitted: " + ticketId, createdBy);
         return saved;
+    }
+
+    @Transactional
+    public Grievance updateStatus(Long id, Map<String, String> body, String updatedBy) {
+        GrievanceStatus status = validationService.requireEnum(
+                body != null ? body.get(ValidationConstants.FIELD_STATUS) : null,
+                GrievanceStatus.class,
+                ValidationConstants.FIELD_STATUS
+        );
+        String remarks = body != null ? body.get("remarks") : null;
+        return updateStatus(id, status, remarks, updatedBy);
     }
 
     @Transactional

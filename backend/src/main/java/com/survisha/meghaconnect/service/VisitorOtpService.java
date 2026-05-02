@@ -65,7 +65,7 @@ public class VisitorOtpService {
         if (!isMobileRegistered(phone)) {
             throw new VisitorRegistrationValidationException(
                 ErrorCodeConstants.MOBILE_NOT_FOUND,
-                ErrorCodeConstants.MOBILE_NOT_FOUND_MSG
+                ErrorCodeConstants.format(ErrorCodeConstants.MOBILE_NOT_FOUND_MSG, phone)
             );
         }
 
@@ -132,7 +132,7 @@ public class VisitorOtpService {
         Visitor visitor = visitorRepository.findByPhoneNumber(phone)
                 .orElseThrow(() -> new VisitorRegistrationValidationException(
                     ErrorCodeConstants.MOBILE_NOT_FOUND,
-                    ErrorCodeConstants.MOBILE_NOT_FOUND_MSG
+                    ErrorCodeConstants.format(ErrorCodeConstants.MOBILE_NOT_FOUND_MSG, phone)
                 ));
 
         UserDetails userDetails = User.builder()

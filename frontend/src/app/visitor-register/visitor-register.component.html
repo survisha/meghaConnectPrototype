@@ -94,7 +94,7 @@
 
           <div class="form-group">
             <label class="field-label">ID Type *</label>
-            <mat-radio-group [(ngModel)]="form.idType" class="full-width">
+            <mat-radio-group [ngModel]="form.idType" (ngModelChange)="onIdTypeChange($event)" class="full-width">
               <mat-radio-button value="EPIC">
                 <i class="pi pi-id-card"></i> EPIC (Voter ID)
               </mat-radio-button>
@@ -109,7 +109,6 @@
             <input
               id="register_epicNumberInput"
               matInput
-              id="register_epicNumberInput"
               type="text"
               [(ngModel)]="form.epicNumber"
               placeholder="e.g. ABC1234567"
@@ -122,8 +121,7 @@
           <!-- Visitor Name Field (for EPIC verification) -->
           <mat-form-field appearance="outline" class="full-width" *ngIf="form.idType === 'EPIC'">
             <mat-label>Visitor Name (as on Voter Card) *</mat-label>
-            <iid="register_visitorNameInput"
-              nput
+            <input
               matInput
               id="register_visitorNameInput"
               type="text"
@@ -157,8 +155,7 @@
 
           <!-- Mobile Number Field (only for EPIC) -->
           <mat-form-field appearance="outline" class="full-width" *ngIf="!otpSent && form.idType === 'EPIC'">
-            <mid="register_mobileNumberInput"
-              at-label>Mobile Number</mat-label>
+            <mat-label>Mobile Number</mat-label>
             <input
               matInput
               id="register_mobileNumberInput"
@@ -239,8 +236,7 @@
               (click)="validateId()">
               <span *ngIf="!loading"><i class="pi pi-send"></i> Send OTP</span>
               <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Loading...</span>
-            </id="register_generateQrBtn"
-              button>
+            </button>
             <button 
               id="register_generateQrBtn"
               *ngIf="!showQrCode && form.idType === 'AADHAAR'" 
@@ -289,7 +285,7 @@
             <small>Please enter the 6-digit code to continue</small>
           </div>
 
-          <divid="register_otpInputStep2"
+          <div
                class="form-group">
             <label>Enter OTP *</label>
             <input

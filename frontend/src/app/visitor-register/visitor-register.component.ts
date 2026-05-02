@@ -689,7 +689,9 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
    * Reset all KYC-related state when switching between EPIC and AADHAAR
    * This clears any previous errors, operations, and ongoing processes
    */
-  onIdTypeChange() {
+  onIdTypeChange(idType: VisitorRegistrationForm['idType']) {
+    this.form.idType = idType;
+
     // Clear error and success messages
     this.errorMsg = '';
     this.successMsg = '';

@@ -5,6 +5,7 @@ import com.survisha.meghaconnect.dto.EpicVerificationResponse;
 import com.survisha.meghaconnect.dto.EpicVerificationData;
 import com.survisha.meghaconnect.dto.PollingDetails;
 import com.survisha.meghaconnect.exception.EpicNameMismatchException;
+import com.survisha.meghaconnect.exception.ErrorCodeConstants;
 import com.survisha.meghaconnect.exception.ExternalServiceException;
 import com.survisha.meghaconnect.exception.MeghaConnectException;
 import lombok.RequiredArgsConstructor;
@@ -125,6 +126,9 @@ public class EpicVerificationService {
             } else {
                 String errorMsg = result != null ? result.getMessage() : "Unknown error";
                 LOG.warning("✗ EPIC verification failed: " + errorMsg);
+                if (isProviderNameMismatch(result)) {
+                    return buildGenericNameMismatchResponse();
+                }
                 return result != null ? result : EpicVerificationResponse.builder()
                         .code("500")
                         .message("Error parsing response from EPIC API")
@@ -277,6 +281,25 @@ public class EpicVerificationService {
 
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
+    }
+
+    private boolean isProviderNameMismatch(EpicVerificationResponse response) {
+        if (response == null || response.getMessage() == null) {
+            return false;
+        }
+        String message = response.getMessage().toLowerCase();
+        return message.contains("name mismatch")
+                || message.contains("match confidence")
+                || message.contains("verified name")
+                || message.contains("voter id name")
+                || message.contains("epic card matches");
+    }
+
+    private EpicVerificationResponse buildGenericNameMismatchResponse() {
+        return EpicVerificationResponse.builder()
+                .code("400")
+                .message(ErrorCodeConstants.EPIC_NAME_MISMATCH_MSG)
+                .build();
     }
     
     /**

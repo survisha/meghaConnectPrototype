@@ -111,7 +111,6 @@ public class GlobalExceptionHandler {
             ex.getErrorId(),
             ex.getHttpStatus()
         );
-        error.setDetails(ex.getVerificationData());
         error.setPath(request.getDescription(false).replace("uri=", ""));
         return new ResponseEntity<>(error, HttpStatus.valueOf(ex.getHttpStatus()));
     }

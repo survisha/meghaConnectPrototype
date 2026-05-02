@@ -146,7 +146,7 @@ public class ErrorCodeConstants {
     public static final String QR_GENERATION_FAILED_MSG = "QR code generation failed: %s";
 
     public static final String EPIC_NAME_MISMATCH = "ERR_047";
-    public static final String EPIC_NAME_MISMATCH_MSG = "Please enter a valid name as per Voter ID.";
+    public static final String EPIC_NAME_MISMATCH_MSG = "Name mismatch from Voter ID.";
 
     // ========== DATABASE & DATA ACCESS ERRORS (ERR_050 - ERR_059) ==========
     public static final String DATABASE_ERROR = "ERR_050";

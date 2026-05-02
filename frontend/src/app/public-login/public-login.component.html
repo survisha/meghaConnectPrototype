@@ -46,8 +46,10 @@
         </mat-form-field>
 
         <div id="publicLogin_errorMsg" *ngIf="errorMsg" class="error-msg">
-          <i class="pi pi-exclamation-circle"></i>
-          {{ errorMsg }}
+          <div class="status-line">
+            <mat-icon>error</mat-icon>
+            <span>{{ errorMsg }}</span>
+          </div>
           <div *ngIf="errorMsg.includes('register')" style="margin-top:0.75rem">
             
           </div>
@@ -75,7 +77,8 @@
       <!-- Step 2: Enter OTP -->
       <ng-container *ngIf="step === 'enter-otp'">
         <div *ngIf="successMsg" class="success-msg">
-          <i class="pi pi-check-circle"></i> {{ successMsg }}
+          <mat-icon>check_circle</mat-icon>
+          <span>{{ successMsg }}</span>
         </div>
 
         <div class="phone-display">
@@ -101,11 +104,14 @@
         </mat-form-field>
 
         <div *ngIf="errorMsg" class="error-msg">
-          <i class="pi pi-exclamation-circle"></i> {{ errorMsg }}
+          <div class="status-line">
+            <mat-icon>error</mat-icon>
+            <span>{{ errorMsg }}</span>
+          </div>
         </div>
 
         <button mat-raised-button color="primary" class="full-width" [disabled]="loading" (click)="validateOtp()">
-          <i class="pi pi-check"></i>
+          <mat-icon>check</mat-icon>
           <span *ngIf="!loading">Verify &amp; Login</span>
           <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Verifying…</span>
         </button>

@@ -130,7 +130,7 @@
            [style.font-weight]="'600'" [style.font-size]="'1rem'" [style.color]="'white'"
            [style.background]="i === step ? '#1a237e' : i < step ? '#16a34a' : '#e5e7eb'"
            [style.z-index]="2">
-        <span *ngIf="i < step" style="font-size:1.2rem">✓</span>
+        <mat-icon *ngIf="i < step" style="font-size:22px;width:22px;height:22px">check</mat-icon>
         <span *ngIf="i >= step">{{ i + 1 }}</span>
       </div>
       <div *ngIf="i < formSteps.length - 1" [style.position]="'absolute'" [style.top.px]="20" 
@@ -262,7 +262,7 @@
         <mat-divider></mat-divider>
         <div class="action-btns">
           <button mat-stroked-button color="primary" (click)="updateStatus(selectedGrievance, 'ACKNOWLEDGED')" *ngIf="selectedGrievance.status === 'SUBMITTED'">
-            <i class="pi pi-check"></i> Acknowledge
+            <mat-icon>check</mat-icon> Acknowledge
           </button>
           <button mat-stroked-button color="accent" (click)="updateStatus(selectedGrievance, 'UNDER_REVIEW')" *ngIf="selectedGrievance.status === 'ACKNOWLEDGED'">
             <i class="pi pi-search"></i> Mark Under Review
@@ -271,7 +271,7 @@
             <i class="pi pi-arrow-right"></i> Forward to Dept
           </button>
           <button mat-raised-button color="primary" (click)="updateStatus(selectedGrievance, 'RESOLVED')">
-            <i class="pi pi-check-circle"></i> Mark Resolved
+            <mat-icon>check_circle</mat-icon> Mark Resolved
           </button>
         </div>
       </div>

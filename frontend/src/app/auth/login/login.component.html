@@ -87,7 +87,8 @@
           <input matInput type="password" id="login_passwordInput" [(ngModel)]="password" placeholder="Enter password" (keyup.enter)="login()" />
         </mat-form-field>
         <div id="login_errorMsg" *ngIf="errorMsg" style="color:#dc2626;font-size:0.85rem;margin-bottom:0.75rem">
-          <i class="pi pi-exclamation-circle"></i> {{ errorMsg }}
+          <mat-icon style="font-size:1rem;width:1rem;height:1rem;vertical-align:text-bottom">error</mat-icon>
+          {{ errorMsg }}
         </div>
         <button id="login_submitBtn" mat-raised-button color="primary" class="full-width" [disabled]="loading" (click)="login()">
           <span *ngIf="!loading"><i class="pi pi-sign-in"></i> Sign In</span>

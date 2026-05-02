@@ -238,7 +238,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
         if (res.code === '200' && res.data) {
           // EPIC verification successful with name match
           this.errorMsg = '';
-          this.successMsg = '✓ EPIC verified successfully';
+          this.successMsg = 'EPIC verified successfully';
           
           // Extract verified details from response data
           const verifiedName = res.data?.borrowernameonvoteridcard || this.form.visitorName;
@@ -270,19 +270,12 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
           }
         } else if (res.code === '400') {
           // Name mismatch or validation error
-          this.errorMsg = '✗ Name Verification Failed: ' + (res.message || 'Name does not match EPIC card');
+          this.errorMsg = res.message || 'Name verification failed.';
           this.successMsg = '';
-          // Show verified details for user reference (if available)
-          if (res.data) {
-            const verifiedName = res.data.borrowernameonvoteridcard || '';
-            const verificationStatus = res.data.voteridverificationstatus || '';
-            const matchScore = res.data.namematchscore || 0;
-            this.errorMsg += `\n\nVerified Name: ${verifiedName}\nMatch Score: ${matchScore}%\nEPIC Status: ${verificationStatus}`;
-          }
         } else {
           // EPIC verification failed or other error
           const errorMsg = res.message || 'EPIC verification failed';
-          this.errorMsg = '✗ ' + errorMsg;
+          this.errorMsg = errorMsg;
           this.successMsg = '';
           this.loading = false;
         }
@@ -290,7 +283,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       error: err => {
         this.loading = false;
         const errorMsg = err?.error?.message || err?.message || 'Failed to verify EPIC. Please try again.';
-        this.errorMsg = '✗ ' + errorMsg;
+        this.errorMsg = errorMsg;
       }
     });
   }
@@ -363,12 +356,12 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       this.kycService.getAadhaarKycResult(this.currentTxnId).subscribe({
         next: res => {
           if (res && !res.error && res.claims) {
-            // ✓ KYC verification successful!
+            // KYC verification successful.
             clearInterval(this.pollingInterval);
-            this.successMsg = '✓ Aadhaar verification successful! Loading your details...';
+            this.successMsg = 'Aadhaar verification successful! Loading your details...';
             this.handleAadhaarKycSuccess(res);
           } else if (res && res.error) {
-            // ✗ User rejected or error occurred
+            // User rejected or error occurred.
             clearInterval(this.pollingInterval);
             this.errorMsg = `KYC verification failed: ${res.errorMessage || res.errorCode}`;
             this.showQrCode = false;

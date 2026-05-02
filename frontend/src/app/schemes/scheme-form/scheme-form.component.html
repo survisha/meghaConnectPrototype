@@ -14,7 +14,7 @@
                [style.font-weight]="'600'" [style.font-size]="'1rem'" [style.color]="'white'"
                [style.background]="i === step ? '#1a237e' : i < step ? '#16a34a' : '#e5e7eb'"
                [style.z-index]="2">
-            <span *ngIf="i < step" style="font-size:1.2rem">✓</span>
+            <mat-icon *ngIf="i < step" style="font-size:22px;width:22px;height:22px">check</mat-icon>
             <span *ngIf="i >= step">{{ i + 1 }}</span>
           </div>
           <div *ngIf="i < steps.length - 1" [style.position]="'absolute'" [style.top.px]="20" 
@@ -197,7 +197,7 @@
 
   <!-- Step 4 -->
   <div class="section-card" *ngIf="step===4">
-    <div class="section-card-header"><i class="pi pi-check-circle"></i> Review &amp; Submit</div>
+    <div class="section-card-header"><mat-icon>check_circle</mat-icon> Review &amp; Submit</div>
     <div class="section-card-body">
       <div class="review-grid">
         <div><span>Scheme Type</span><strong>{{ form.schemeType || '–' }}</strong></div>

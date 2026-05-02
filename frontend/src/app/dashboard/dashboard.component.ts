@@ -79,7 +79,6 @@ export class DashboardComponent implements OnInit {
     this.auditLogService.getAll(0, 5).subscribe(page => {
       if (page.content && page.content.length > 0) {
         this.recentActivity = page.content.map(log => ({
-          icon: this.getAuditIcon(log.action),
           matIcon: this.getAuditMatIcon(log.action),
           color: this.getAuditColor(log.action),
           text: `${log.action}: ${log.details ?? log.entityType + ' #' + log.entityId}`,
@@ -148,35 +147,30 @@ export class DashboardComponent implements OnInit {
     // Dummy recent activity
     this.recentActivity = [
       {
-        icon: 'pi-check-circle',
         matIcon: 'check_circle',
         color: '#16a34a',
         text: 'APPROVED: CM Care Fund Application #CM24-0845 - Medical Emergency Grant ₹50,000',
         time: '10 mins ago'
       },
       {
-        icon: 'pi-arrow-right-arrow-left',
         matIcon: 'swap_horiz',
         color: '#1a237e',
         text: 'STATUS CHANGE: Appointment #APT-2024-1234 rescheduled from March 28 to March 30',
         time: '25 mins ago'
       },
       {
-        icon: 'pi-check-circle',
         matIcon: 'check_circle',
         color: '#16a34a',
         text: 'CREATED: New scheme application CMSDF #SCH-2024-0567 - Rural Road Construction',
         time: '1 hour ago'
       },
       {
-        icon: 'pi-user-plus',
         matIcon: 'login',
         color: '#1a237e',
         text: 'LOGIN: DEO Officer Priya Sharma accessed visitor registration module',
         time: '2 hours ago'
       },
       {
-        icon: 'pi-bell',
         matIcon: 'notifications',
         color: '#b45309',
         text: 'REMINDER: 15 pending file approvals require attention by end of day',
@@ -197,13 +191,6 @@ export class DashboardComponent implements OnInit {
   private getEventBadge(type: string): string {
     const m: Record<string,string> = { A1:'danger', A2:'success', A3:'secondary', A4:'info', B1:'warn', B2:'info' };
     return m[type] ?? 'info';
-  }
-
-  private getAuditIcon(action: string): string {
-    if (action.includes('APPROVED') || action.includes('CREATED')) return 'pi-check-circle';
-    if (action.includes('CHANGE') || action.includes('UPDATE')) return 'pi-arrow-right-arrow-left';
-    if (action.includes('LOGIN')) return 'pi-user-plus';
-    return 'pi-bell';
   }
 
   private getAuditMatIcon(action: string): string {

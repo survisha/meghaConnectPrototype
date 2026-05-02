@@ -11,11 +11,12 @@ import { Steps } from 'primeng/steps';
 import { Dialog } from 'primeng/dialog';
 import { Textarea } from 'primeng/textarea';
 import { Divider } from 'primeng/divider';
+import { MatIconModule } from '@angular/material/icon';
 
 @Component({
   selector: 'app-appointment-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, Tag,  Timeline, Steps, Dialog, Textarea, Divider],
+  imports: [CommonModule, RouterLink, FormsModule, Tag,  Timeline, Steps, Dialog, Textarea, Divider, MatIconModule],
   templateUrl: './appointment-detail.component.html',
   styleUrls: ['./appointment-detail.component.scss'],
 })

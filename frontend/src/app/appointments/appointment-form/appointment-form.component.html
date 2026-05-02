@@ -2,7 +2,7 @@
   <!-- Success state -->
   <ng-container *ngIf="submitted">
     <div style="text-align:center;padding:3rem 1rem">
-      <i class="pi pi-check-circle" style="font-size:3.5rem;color:#16a34a;margin-bottom:1rem;display:block"></i>
+      <mat-icon style="font-size:3.5rem;width:3.5rem;height:3.5rem;color:#16a34a;margin-bottom:1rem">check_circle</mat-icon>
       <h2 style="color:#166534;margin:0.5rem 0">Application Submitted Successfully!</h2>
       <p style="color:#374151">Your appointment request has been received.</p>
       <div style="margin:1.5rem auto;max-width:400px;padding:1rem;background:#f0fdf4;border:1px solid #86efac;border-radius:8px">
@@ -29,7 +29,10 @@
     </div>
 
     <div id="appointment_errorMsg" *ngIf="errorMsg" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.9rem">
-      <i class="pi pi-exclamation-circle"></i> {{ errorMsg }}
+      <div style="display:flex;align-items:flex-start;gap:0.5rem">
+        <mat-icon style="font-size:1.1rem;width:1.1rem;height:1.1rem">error</mat-icon>
+        <span>{{ errorMsg }}</span>
+      </div>
     </div>
 
     <div class="section-card" style="margin-bottom:1.5rem">
@@ -40,7 +43,7 @@
             <div style="display:flex;align-items:center;width:100%">
               <div [style.background]="i === step ? '#1a237e' : i < step ? '#16a34a' : '#e5e7eb'"
                    style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:600;font-size:0.85rem">
-                <span *ngIf="i < step">✓</span>
+                <mat-icon *ngIf="i < step" style="font-size:18px;width:18px;height:18px">check</mat-icon>
                 <span *ngIf="i >= step">{{ i + 1 }}</span>
               </div>
               <div *ngIf="i < steps.length - 1" 
@@ -372,7 +375,10 @@
         <div class="doc-row" *ngFor="let doc of documents" [hidden]="!doc.isVisible">
           <div class="doc-label">
             {{ doc.label }} <span *ngIf="doc.isRequired" class="req">*</span>
-            <small *ngIf="doc.fileName" style="color:#059669;font-size:0.75rem;display:block">✓ Uploaded: {{ doc.fileName }}</small>
+            <small *ngIf="doc.fileName" style="color:#059669;font-size:0.75rem;display:flex;align-items:center;gap:0.25rem;margin-top:0.15rem">
+              <mat-icon style="font-size:14px;width:14px;height:14px">check_circle</mat-icon>
+              Uploaded: {{ doc.fileName }}
+            </small>
           </div>
           <button mat-stroked-button type="button" (click)="docFileInput.click()">
             <mat-icon>upload_file</mat-icon> 
@@ -406,7 +412,10 @@
                   <span *ngIf="!doc.isVisible" style="color:#d1d5db">-</span>
                 </td>
                 <td style="padding:0.5rem;text-align:center">
-                  <span *ngIf="doc.fileName" style="color:#059669;font-weight:600">✓ Uploaded</span>
+                  <span *ngIf="doc.fileName" style="color:#059669;font-weight:600;display:inline-flex;align-items:center;gap:0.25rem">
+                    <mat-icon style="font-size:15px;width:15px;height:15px">check_circle</mat-icon>
+                    Uploaded
+                  </span>
                   <span *ngIf="!doc.fileName && doc.isVisible && doc.isRequired" style="color:#dc2626">Pending</span>
                   <span *ngIf="!doc.fileName && doc.isVisible && !doc.isRequired" style="color:#6b7280">Optional</span>
                   <span *ngIf="!doc.isVisible" style="color:#d1d5db">Not Required</span>
@@ -420,7 +429,7 @@
 
     <!-- Step 5: Review (R005/R006/R007/R015) -->
     <div class="section-card" *ngIf="step===5">
-      <div class="section-card-header"><i class="pi pi-check-circle"></i> Review &amp; Submit</div>
+      <div class="section-card-header"><mat-icon>check_circle</mat-icon> Review &amp; Submit</div>
       <div class="section-card-body">
 
         <!-- R006: Duplicate Detection Warning -->
@@ -512,7 +521,7 @@
         Next <i class="pi pi-arrow-right"></i>
       </button>
       <button id="appointment_submitBtn" *ngIf="step === steps.length-1" mat-raised-button color="primary" [disabled]="loading" (click)="submit()">
-        <i class="pi pi-check"></i>
+        <mat-icon>check</mat-icon>
         <span *ngIf="!loading">Submit Application</span>
         <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Submitting…</span>
       </button>

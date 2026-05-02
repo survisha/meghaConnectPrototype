@@ -685,6 +685,65 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.errorMsg = '';
   }
 
+  /**
+   * Reset all KYC-related state when switching between EPIC and AADHAAR
+   * This clears any previous errors, operations, and ongoing processes
+   */
+  onIdTypeChange() {
+    // Clear error and success messages
+    this.errorMsg = '';
+    this.successMsg = '';
+
+    // Reset OTP-related state
+    this.otpSent = false;
+    this.otpCode = '';
+    this.otpVerified = false;
+    this.maskedPhone = '';
+    this.manualPhone = '';
+    this.manualVerification = false;
+    this.actualPhoneNumber = '';
+
+    // Stop camera and clear photo capture state
+    this.stopCamera();
+    this.isCameraActive = false;
+    this.capturedPhotoUrl = '';
+    this.photoCaptured = false;
+
+    // Clear AADHAAR QR-related state
+    if (this.pollingInterval) {
+      clearInterval(this.pollingInterval);
+      this.pollingInterval = null;
+    }
+    this.showQrCode = false;
+    this.qrDataUri = '';
+    this.currentTxnId = '';
+    this.pollingAttempts = 0;
+    this.pollingCountdown = 0;
+
+    // Reset ID validation and KYC state
+    this.idValidated = false;
+    this.kycStatus = '';
+    this.kycConfidenceScore = 0;
+    this.kycConfidenceLabel = '';
+    this.loading = false;
+
+    // Clear ID-specific form fields
+    this.form.epicNumber = '';
+    this.form.visitorName = '';
+    this.form.aadhaarNumber = '';
+    this.form.livePhoto = '';
+    this.form.photoFromId = '';
+
+    // Clear auto-populated fields so user can enter fresh data
+    // But preserve other form data like email, designation, etc.
+    // Only reset fields that are auto-populated during KYC
+    this.form.fullName = '';
+    this.form.address = '';
+
+    // Keep the current step at 'id-entry' to show the form again
+    this.currentStep = 'id-entry';
+  }
+
   // ── INPUT SANITIZATION ──────────────────────────────────────────────────
 
   sanitizeManualPhone() {

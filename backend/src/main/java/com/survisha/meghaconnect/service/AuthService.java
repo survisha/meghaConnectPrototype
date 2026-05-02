@@ -3,9 +3,11 @@ package com.survisha.meghaconnect.service;
 import com.survisha.meghaconnect.dto.AuthRequest;
 import com.survisha.meghaconnect.dto.AuthResponse;
 import com.survisha.meghaconnect.security.JwtService;
+import com.survisha.meghaconnect.exception.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -57,10 +59,21 @@ public class AuthService {
                 request.getUsername(), response.getRole(), fullName);
             
             return response;
+        } catch (BadCredentialsException e) {
+            log.error("[AUTH] Login failed for user: {} - Invalid credentials", request.getUsername());
+            throw new MeghaConnectException(
+                ErrorCodeConstants.INVALID_CREDENTIALS,
+                ErrorCodeConstants.INVALID_CREDENTIALS_MSG,
+                401
+            );
         } catch (Exception e) {
             log.error("[AUTH] Login failed for user: {} - Error: {} - Message: {}", 
                 request.getUsername(), e.getClass().getSimpleName(), e.getMessage());
-            throw e;
+            throw new MeghaConnectException(
+                ErrorCodeConstants.INVALID_CREDENTIALS,
+                ErrorCodeConstants.INVALID_CREDENTIALS_MSG,
+                401
+            );
         }
     }
 }

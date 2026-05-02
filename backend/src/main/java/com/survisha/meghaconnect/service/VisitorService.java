@@ -3,6 +3,7 @@ package com.survisha.meghaconnect.service;
 import com.survisha.meghaconnect.entity.Visitor;
 import com.survisha.meghaconnect.repository.VisitorRepository;
 import com.survisha.meghaconnect.dto.PublicRegistrationDto;
+import com.survisha.meghaconnect.exception.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -53,31 +54,46 @@ public class VisitorService {
     public Visitor registerVisitor(PublicRegistrationDto dto) {
         // Validate required fields
         if (dto.getFullName() == null || dto.getFullName().trim().isEmpty()) {
-            throw new IllegalArgumentException("Full name is required");
+            throw new VisitorRegistrationValidationException(
+                ErrorCodeConstants.FULL_NAME_REQUIRED,
+                ErrorCodeConstants.FULL_NAME_REQUIRED_MSG
+            );
         }
         if (dto.getPhoneNumber() == null || dto.getPhoneNumber().trim().isEmpty()) {
-            throw new IllegalArgumentException("Phone number is required");
+            throw new VisitorRegistrationValidationException(
+                ErrorCodeConstants.PHONE_NUMBER_REQUIRED,
+                ErrorCodeConstants.PHONE_NUMBER_REQUIRED_MSG
+            );
         }
         if (dto.getPhoneNumber().length() != 10) {
-            throw new IllegalArgumentException("Phone number must be 10 digits");
+            throw new VisitorRegistrationValidationException(
+                ErrorCodeConstants.INVALID_PHONE_FORMAT,
+                ErrorCodeConstants.INVALID_PHONE_FORMAT_MSG
+            );
         }
 
         // Check for duplicate mobile
         if (visitorRepository.findByPhoneNumber(dto.getPhoneNumber()).isPresent()) {
-            throw new IllegalArgumentException("MOBILE_ALREADY_REGISTERED");
+            throw new MobileAlreadyRegisteredException(dto.getPhoneNumber());
         }
 
         // Validate EPIC format if provided
         if (dto.getEpicNumber() != null && !dto.getEpicNumber().trim().isEmpty()) {
             if (!dto.getEpicNumber().matches("^[A-Z]{3}[0-9]{7}$")) {
-                throw new IllegalArgumentException("INVALID_EPIC_FORMAT");
+                throw new VisitorRegistrationValidationException(
+                    ErrorCodeConstants.INVALID_EPIC_FORMAT,
+                    ErrorCodeConstants.INVALID_EPIC_FORMAT_MSG
+                );
             }
         }
 
         // Validate Aadhaar format if provided
         if (dto.getAadhaarNumber() != null && !dto.getAadhaarNumber().trim().isEmpty()) {
             if (!dto.getAadhaarNumber().matches("^[0-9]{12}$")) {
-                throw new IllegalArgumentException("INVALID_AADHAAR_FORMAT");
+                throw new VisitorRegistrationValidationException(
+                    ErrorCodeConstants.INVALID_AADHAAR_FORMAT,
+                    ErrorCodeConstants.INVALID_AADHAAR_FORMAT_MSG
+                );
             }
         }
 

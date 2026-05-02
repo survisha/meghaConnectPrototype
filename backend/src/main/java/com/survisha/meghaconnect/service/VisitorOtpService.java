@@ -5,6 +5,7 @@ import com.survisha.meghaconnect.entity.Visitor;
 import com.survisha.meghaconnect.repository.OtpTempRepository;
 import com.survisha.meghaconnect.repository.VisitorRepository;
 import com.survisha.meghaconnect.security.JwtService;
+import com.survisha.meghaconnect.exception.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -56,20 +57,24 @@ public class VisitorOtpService {
      * Generates a 6-digit OTP for the given phone number, persists it, and
      * returns it (later this value is sent via SMS gateway).
      *
-     * @throws IllegalArgumentException  if mobile not registered
-     * @throws IllegalStateException     if rate limit exceeded
+     * @throws VisitorRegistrationValidationException  if mobile not registered
+     * @throws OtpRateLimitExceededException     if rate limit exceeded
      */
     @Transactional
     public String generateOtp(String phone) {
         if (!isMobileRegistered(phone)) {
-            throw new IllegalArgumentException("MOBILE_NOT_FOUND");
+            throw new VisitorRegistrationValidationException(
+                ErrorCodeConstants.MOBILE_NOT_FOUND,
+                ErrorCodeConstants.MOBILE_NOT_FOUND_MSG
+            );
         }
 
         // Rate-limit check
         LocalDateTime windowStart = LocalDateTime.now().minusMinutes(RATE_WINDOW_MINUTES);
         int recentRequests = otpTempRepository.sumAttemptCountSince(phone, windowStart);
         if (recentRequests >= MAX_OTP_REQUESTS) {
-            throw new IllegalStateException("OTP_RATE_LIMIT_EXCEEDED");
+            int waitTimeMinutes = RATE_WINDOW_MINUTES;
+            throw new OtpRateLimitExceededException(waitTimeMinutes);
         }
 
         String otpCode = generateSixDigitOtp();
@@ -92,8 +97,9 @@ public class VisitorOtpService {
     /**
      * Validates the submitted OTP and, if correct, returns a JWT token for the visitor.
      *
-     * @throws IllegalArgumentException  if mobile not found or OTP is wrong
-     * @throws IllegalStateException     if OTP expired, consumed, or max attempts exceeded
+     * @throws OtpExpiredException  if OTP expired or not found
+     * @throws OtpMaxAttemptsExceededException if max attempts exceeded
+     * @throws OtpValidationFailedException if OTP is wrong
      */
     @Transactional
     public String validateOtpAndLogin(String phone, String submittedOtp) {
@@ -102,20 +108,20 @@ public class VisitorOtpService {
                         phone, LocalDateTime.now());
 
         if (!optRecord.isPresent()) {
-            throw new IllegalStateException("OTP_EXPIRED_OR_NOT_FOUND");
+            throw new OtpExpiredException();
         }
 
         OtpTemp record = optRecord.get();
 
         if (record.getAttemptCount() >= MAX_OTP_ATTEMPTS) {
-            throw new IllegalStateException("OTP_MAX_ATTEMPTS_EXCEEDED");
+            throw new OtpMaxAttemptsExceededException();
         }
 
         if (!record.getOtpCode().equals(submittedOtp)) {
             record.setAttemptCount(record.getAttemptCount() + 1);
             otpTempRepository.save(record);
             int remaining = MAX_OTP_ATTEMPTS - record.getAttemptCount();
-            throw new IllegalArgumentException("OTP_INVALID:" + remaining);
+            throw new OtpValidationFailedException(remaining);
         }
 
         // Mark OTP consumed to prevent replay
@@ -124,7 +130,10 @@ public class VisitorOtpService {
 
         // Build a minimal UserDetails to feed into JwtService
         Visitor visitor = visitorRepository.findByPhoneNumber(phone)
-                .orElseThrow(() -> new IllegalArgumentException("MOBILE_NOT_FOUND"));
+                .orElseThrow(() -> new VisitorRegistrationValidationException(
+                    ErrorCodeConstants.MOBILE_NOT_FOUND,
+                    ErrorCodeConstants.MOBILE_NOT_FOUND_MSG
+                ));
 
         UserDetails userDetails = User.builder()
                 .username("visitor_" + visitor.getId())
@@ -153,7 +162,7 @@ public class VisitorOtpService {
      * Unlike generateOtp(), this does NOT require the phone number to be registered yet,
      * as the visitor is still in the registration KYC flow.
      *
-     * @throws IllegalStateException if rate limit exceeded
+     * @throws OtpRateLimitExceededException if rate limit exceeded
      */
     @Transactional
     public String generateKycOtp(String phone) {
@@ -161,7 +170,8 @@ public class VisitorOtpService {
         LocalDateTime windowStart = LocalDateTime.now().minusMinutes(RATE_WINDOW_MINUTES);
         int recentRequests = otpTempRepository.sumAttemptCountSince(phone, windowStart);
         if (recentRequests >= MAX_OTP_REQUESTS) {
-            throw new IllegalStateException("OTP_RATE_LIMIT_EXCEEDED");
+            int waitTimeMinutes = RATE_WINDOW_MINUTES;
+            throw new OtpRateLimitExceededException(waitTimeMinutes);
         }
 
         // MOCK: Always return "123456" for demo
@@ -186,7 +196,8 @@ public class VisitorOtpService {
      * MOCK BEHAVIOR: Accepts "123456" as valid OTP.
      * 
      * @return true if OTP is valid, false otherwise
-     * @throws IllegalStateException if OTP expired or max attempts exceeded
+     * @throws OtpExpiredException if OTP expired or not found
+     * @throws OtpMaxAttemptsExceededException if max attempts exceeded
      */
     @Transactional
     public boolean validateKycOtp(String phone, String submittedOtp) {
@@ -195,13 +206,13 @@ public class VisitorOtpService {
                         phone, LocalDateTime.now());
 
         if (!optRecord.isPresent()) {
-            throw new IllegalStateException("OTP_EXPIRED_OR_NOT_FOUND");
+            throw new OtpExpiredException();
         }
 
         OtpTemp record = optRecord.get();
 
         if (record.getAttemptCount() >= MAX_OTP_ATTEMPTS) {
-            throw new IllegalStateException("OTP_MAX_ATTEMPTS_EXCEEDED");
+            throw new OtpMaxAttemptsExceededException();
         }
 
         if (!record.getOtpCode().equals(submittedOtp)) {

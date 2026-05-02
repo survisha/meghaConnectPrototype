@@ -5,6 +5,7 @@ import com.survisha.meghaconnect.entity.Appointment;
 import com.survisha.meghaconnect.entity.Visitor;
 import com.survisha.meghaconnect.repository.AppointmentRepository;
 import com.survisha.meghaconnect.repository.VisitorRepository;
+import com.survisha.meghaconnect.exception.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -39,7 +40,7 @@ public class AppointmentService {
     @Transactional
     public Appointment create(AppointmentDto dto, String createdBy) {
         Visitor applicant = visitorRepository.findById(dto.getApplicantId())
-            .orElseThrow(() -> new IllegalArgumentException("Visitor not found: " + dto.getApplicantId()));
+            .orElseThrow(() -> new VisitorNotFoundException(dto.getApplicantId()));
 
         int meetingCount = appointmentRepository.countMeetingsLast6Months(
             applicant.getId(), LocalDateTime.now().minusMonths(6)
@@ -70,7 +71,7 @@ public class AppointmentService {
     public Appointment updateStatus(Long id, Appointment.AppointmentStatus newStatus,
                                     String remarks, String updatedBy) {
         Appointment appt = appointmentRepository.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("Appointment not found: " + id));
+            .orElseThrow(() -> new AppointmentNotFoundException(id));
 
         Appointment.AppointmentStatus oldStatus = appt.getStatus();
         appt.setStatus(newStatus);
@@ -86,7 +87,7 @@ public class AppointmentService {
     public Appointment schedule(Long id, LocalDateTime dateTime, int durationMinutes,
                                 String updatedBy) {
         Appointment appt = appointmentRepository.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("Appointment not found: " + id));
+            .orElseThrow(() -> new AppointmentNotFoundException(id));
 
         // Conflict check
         List<Appointment> conflicts = appointmentRepository.findByStatus(
@@ -100,7 +101,7 @@ public class AppointmentService {
             ))
         );
         if (hasConflict) {
-            throw new IllegalStateException("Scheduling conflict detected at: " + dateTime);
+            throw new SchedulingConflictException(dateTime);
         }
 
         appt.setScheduledDateTime(dateTime);

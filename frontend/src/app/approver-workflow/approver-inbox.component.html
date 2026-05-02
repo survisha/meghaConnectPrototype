@@ -1,15 +1,15 @@
 <div class="approver-inbox-container">
   <!-- Header Section -->
-  <div class="inbox-header">
+  <div class="inbox-header" id="approverInbox_header">
     <h1>Appointment Review Inbox</h1>
     <div class="header-stats">
-      <mat-card class="stat-card">
+      <mat-card class="stat-card" id="approverInbox_pendingStatCard">
         <div class="stat-value" [matBadge]="getPendingCount()" matBadgeColor="warn" matBadgeSize="large">
           <mat-icon>pending_actions</mat-icon>
         </div>
         <p class="stat-label">Pending Review</p>
       </mat-card>
-      <mat-card class="stat-card">
+      <mat-card class="stat-card" id="approverInbox_totalStatCard">
         <div class="stat-value">
           <mat-icon>done_all</mat-icon>
         </div>
@@ -20,10 +20,10 @@
   </div>
 
   <!-- Filter Section -->
-  <mat-card class="filter-card">
+  <mat-card class="filter-card" id="approverInbox_filterCard">
     <div class="filter-header">
       <h3>Filter & Search</h3>
-      <button mat-icon-button (click)="clearFilters()" matTooltip="Clear all filters">
+      <button id="approverInbox_clearFiltersBtn" mat-icon-button (click)="clearFilters()" matTooltip="Clear all filters">
         <mat-icon>clear_all</mat-icon>
       </button>
     </div>
@@ -32,14 +32,14 @@
       <!-- Search by Name/Phone -->
       <mat-form-field appearance="outline" class="filter-field">
         <mat-label>Search by Name or Phone</mat-label>
-        <input matInput formControlName="searchText" placeholder="Enter applicant name or phone">
+        <input id="approverInbox_searchInput" matInput formControlName="searchText" placeholder="Enter applicant name or phone">
         <mat-icon matSuffix>search</mat-icon>
       </mat-form-field>
 
       <!-- Status Filter -->
       <mat-form-field appearance="outline" class="filter-field">
         <mat-label>Status</mat-label>
-        <mat-select formControlName="statusFilter">
+        <mat-select id="approverInbox_statusFilter" formControlName="statusFilter">
           <mat-option value="">All Statuses</mat-option>
           <mat-option *ngFor="let status of getUniqueStatuses()" [value]="status">
             {{ getStatusDisplayText(status) }}
@@ -50,7 +50,7 @@
       <!-- Agenda Filter -->
       <mat-form-field appearance="outline" class="filter-field">
         <mat-label>Agenda Type</mat-label>
-        <mat-select formControlName="agendaFilter">
+        <mat-select id="approverInbox_agendaFilter" formControlName="agendaFilter">
           <mat-option value="">All Agendas</mat-option>
           <mat-option *ngFor="let agenda of getAgendaTypeOptions()" [value]="agenda">
             {{ agenda }}
@@ -61,14 +61,14 @@
       <!-- Date Range Filter -->
       <mat-form-field appearance="outline" class="filter-field">
         <mat-label>From Date</mat-label>
-        <input matInput [matDatepicker]="fromPicker" formControlName="dateFromFilter">
+        <input id="approverInbox_fromDateInput" matInput [matDatepicker]="fromPicker" formControlName="dateFromFilter">
         <mat-datepicker-toggle matSuffix [for]="fromPicker"></mat-datepicker-toggle>
         <mat-datepicker #fromPicker></mat-datepicker>
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="filter-field">
         <mat-label>To Date</mat-label>
-        <input matInput [matDatepicker]="toPicker" formControlName="dateToFilter">
+        <input id="approverInbox_toDateInput" matInput [matDatepicker]="toPicker" formControlName="dateToFilter">
         <mat-datepicker-toggle matSuffix [for]="toPicker"></mat-datepicker-toggle>
         <mat-datepicker #toPicker></mat-datepicker>
       </mat-form-field>

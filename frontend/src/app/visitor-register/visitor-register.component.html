@@ -94,11 +94,11 @@
 
           <div class="form-group">
             <label class="field-label">ID Type *</label>
-            <mat-radio-group id="register_idTypeGroup" [(ngModel)]="form.idType" (change)="onIdTypeChange()" class="full-width">
-              <mat-radio-button id="register_idType_epic" value="EPIC">
+            <mat-radio-group [(ngModel)]="form.idType" class="full-width">
+              <mat-radio-button value="EPIC">
                 <i class="pi pi-id-card"></i> EPIC (Voter ID)
               </mat-radio-button>
-              <mat-radio-button id="register_idType_aadhaar" value="AADHAAR">
+              <mat-radio-button value="AADHAAR">
                 <i class="pi pi-id-card"></i> Aadhaar Card
               </mat-radio-button>
             </mat-radio-group>
@@ -107,6 +107,7 @@
           <mat-form-field appearance="outline" class="full-width" *ngIf="form.idType === 'EPIC'">
             <mat-label>EPIC Number *</mat-label>
             <input
+              id="register_epicNumberInput"
               matInput
               id="register_epicNumberInput"
               type="text"
@@ -121,7 +122,8 @@
           <!-- Visitor Name Field (for EPIC verification) -->
           <mat-form-field appearance="outline" class="full-width" *ngIf="form.idType === 'EPIC'">
             <mat-label>Visitor Name (as on Voter Card) *</mat-label>
-            <input
+            <iid="register_visitorNameInput"
+              nput
               matInput
               id="register_visitorNameInput"
               type="text"
@@ -155,7 +157,8 @@
 
           <!-- Mobile Number Field (only for EPIC) -->
           <mat-form-field appearance="outline" class="full-width" *ngIf="!otpSent && form.idType === 'EPIC'">
-            <mat-label>Mobile Number</mat-label>
+            <mid="register_mobileNumberInput"
+              at-label>Mobile Number</mat-label>
             <input
               matInput
               id="register_mobileNumberInput"
@@ -224,11 +227,10 @@
           </div>
 
           <div style="display:flex;gap:1rem;margin-top:1.5rem">
-            <button id="register_backToLoginBtn" mat-stroked-button color="primary" (click)="goToLogin()">
+            <button mat-stroked-button color="primary" (click)="goToLogin()">
               <i class="pi pi-arrow-left"></i> Back to Login
             </button>
             <button 
-              id="register_sendOtpBtn"
               *ngIf="!otpSent && !showQrCode && form.idType === 'EPIC'" 
               mat-raised-button 
               color="primary" 
@@ -237,7 +239,8 @@
               (click)="validateId()">
               <span *ngIf="!loading"><i class="pi pi-send"></i> Send OTP</span>
               <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Loading...</span>
-            </button>
+            </id="register_generateQrBtn"
+              button>
             <button 
               id="register_generateQrBtn"
               *ngIf="!showQrCode && form.idType === 'AADHAAR'" 
@@ -258,7 +261,6 @@
               <i class="pi pi-times"></i> Cancel
             </button>
             <button 
-              id="register_verifyOtpBtn"
               *ngIf="otpSent && !otpVerified && form.idType === 'EPIC'" 
               mat-raised-button 
               color="primary" 
@@ -271,7 +273,7 @@
           </div>
 
           <div *ngIf="otpSent && !showQrCode && form.idType === 'EPIC'" style="text-align:center;margin-top:1rem">
-            <button id="register_resendOtpBtn" mat-button color="primary" (click)="resendOtp()" [disabled]="loading">
+            <button mat-button color="primary" (click)="resendOtp()" [disabled]="loading">
               <i class="pi pi-refresh"></i> Resend OTP
             </button>
           </div>
@@ -287,7 +289,8 @@
             <small>Please enter the 6-digit code to continue</small>
           </div>
 
-          <div class="form-group">
+          <divid="register_otpInputStep2"
+               class="form-group">
             <label>Enter OTP *</label>
             <input
               id="register_otpInputStep2"
@@ -302,13 +305,13 @@
           </div>
 
           <div style="text-align:center;margin-top:1rem">
-            <button id="register_resendOtpBtnStep2" mat-button color="primary" (click)="validateId()" [disabled]="loading">
+            <button mat-button color="primary" (click)="validateId()" [disabled]="loading">
               <mat-icon>refresh</mat-icon> Resend OTP
             </button>
           </div>
 
           <div style="display:flex;gap:1rem;margin-top:1.5rem">
-            <button id="register_previousBtnStep2" mat-stroked-button color="primary" (click)="goBackToIdEntry()">
+            <button mat-stroked-button color="primary" (click)="goBackToIdEntry()">
               <mat-icon>arrow_back</mat-icon> Previous
             </button>
             <button id="register_nextBtnStep2" mat-raised-button color="primary" class="flex-1" [disabled]="loading || otpCode.length !== 6" (click)="verifyOtp()">
@@ -363,23 +366,23 @@
           </div>
 
           <div style="display:flex;gap:1rem;margin-top:1rem;flex-wrap:wrap;align-items:center">
-            <button id="register_previousBtnStep3" mat-stroked-button color="primary" style="white-space:nowrap" (click)="goBackToOtpVerification()">
+            <button mat-stroked-button color="primary" style="white-space:nowrap" (click)="goBackToOtpVerification()">
               <mat-icon>arrow_back</mat-icon> Previous
             </button>
 
-            <button id="register_openCameraBtn" *ngIf="!isCameraActive && !capturedPhotoUrl" mat-raised-button color="primary" class="flex-1" (click)="openCamera()">
+            <button *ngIf="!isCameraActive && !capturedPhotoUrl" mat-raised-button color="primary" class="flex-1" (click)="openCamera()">
               <mat-icon>photo_camera</mat-icon> Open Camera
             </button>
 
-            <button id="register_capturePhotoBtn" *ngIf="isCameraActive" mat-raised-button color="primary" class="flex-1" (click)="capturePhoto()">
+            <button *ngIf="isCameraActive" mat-raised-button color="primary" class="flex-1" (click)="capturePhoto()">
               <mat-icon>photo_camera</mat-icon> Capture Photo
             </button>
 
-            <button id="register_retakePhotoBtn" *ngIf="capturedPhotoUrl && !isCameraActive" mat-stroked-button color="primary" style="white-space:nowrap" (click)="retakePhoto()">
+            <button *ngIf="capturedPhotoUrl && !isCameraActive" mat-stroked-button color="primary" style="white-space:nowrap" (click)="retakePhoto()">
               <mat-icon>refresh</mat-icon> Retake Photo
             </button>
 
-            <button id="register_validateFaceBtn" *ngIf="capturedPhotoUrl && !isCameraActive" mat-raised-button color="primary" class="flex-1" [disabled]="loading" style="white-space:nowrap" (click)="validateFace()">
+            <button *ngIf="capturedPhotoUrl && !isCameraActive" mat-raised-button color="primary" class="flex-1" [disabled]="loading" style="white-space:nowrap" (click)="validateFace()">
               <span *ngIf="!loading"><mat-icon>arrow_forward</mat-icon> Validate & Continue</span>
               <span *ngIf="loading"><mat-icon>autorenew</mat-icon> Validating...</span>
             </button>
@@ -423,7 +426,7 @@
 
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Designation *</mat-label>
-            <mat-select id="register_designationSelect" [(ngModel)]="form.designation">
+            <mat-select [(ngModel)]="form.designation">
               <mat-option value="">-- Select Designation --</mat-option>
               <mat-option *ngFor="let d of designations" [value]="d.value">{{ d.value }}</mat-option>
             </mat-select>
@@ -446,17 +449,17 @@
               </mat-form-field>
               <mat-form-field appearance="outline" style="flex:1">
                 <mat-label>Constituency</mat-label>
-                <input id="register_constituencyInput" matInput type="text" [(ngModel)]="form.constituency" placeholder="Constituency name" />
+                <input matInput type="text" [(ngModel)]="form.constituency" placeholder="Constituency name" />
               </mat-form-field>
             </div>
             <div class="form-row two-col">
               <mat-form-field appearance="outline" style="flex:1">
                 <mat-label>Booth / Village</mat-label>
-                <input id="register_boothInput" matInput type="text" [(ngModel)]="form.booth" placeholder="Booth or Village" />
+                <input matInput type="text" [(ngModel)]="form.booth" placeholder="Booth or Village" />
               </mat-form-field>
               <mat-form-field appearance="outline" style="flex:1">
                 <mat-label>Village (if different)</mat-label>
-                <input id="register_villageInput" matInput type="text" [(ngModel)]="form.village" placeholder="Village name" />
+                <input matInput type="text" [(ngModel)]="form.village" placeholder="Village name" />
               </mat-form-field>
             </div>
           </ng-container>
@@ -470,14 +473,14 @@
 
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Email (Optional)</mat-label>
-            <input id="register_emailInput" matInput type="email" [(ngModel)]="form.email" placeholder="Enter your email" />
+            <input matInput type="email" [(ngModel)]="form.email" placeholder="Enter your email" />
           </mat-form-field>
 
           <div style="display:flex;gap:1rem;margin-top:1.5rem">
-            <button id="register_previousBtnStep4" mat-stroked-button color="primary" (click)="currentStep = 'photo-capture'">
+            <button mat-stroked-button color="primary" (click)="currentStep = 'photo-capture'">
               <i class="pi pi-arrow-left"></i> Back
             </button>
-            <button id="register_completeRegistrationBtn" mat-raised-button color="primary" class="flex-1" [disabled]="loading || !form.designation" (click)="submitRegistration()">
+            <button mat-raised-button color="primary" class="flex-1" [disabled]="loading || !form.designation" (click)="submitRegistration()">
               <span *ngIf="!loading"><i class="pi pi-check"></i> Complete Registration</span>
               <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Registering...</span>
             </button>
@@ -509,7 +512,7 @@
                 </span>
               </p>
             </div>
-            <button id="register_goToLoginBtnSuccess" mat-raised-button color="primary" style="margin-top:1.5rem;width:auto;padding:0.7rem 2rem" (click)="goToLogin()">
+            <button mat-raised-button color="primary" style="margin-top:1.5rem;width:auto;padding:0.7rem 2rem" (click)="goToLogin()">
               <i class="pi pi-sign-in"></i> Go to Login
             </button>
           </div>

@@ -1,7 +1,7 @@
 <div style="padding: 2rem">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;gap:1rem">
-    <h2 class="page-title" style="margin:0">Admin Appointment Type Configuration</h2>
-    <button mat-raised-button color="primary" (click)="loadAppointmentTypes()" [disabled]="loading" style="min-width:150px">
+    <h2 class="page-title" style="margin:0" id="aptTypeMgmt_title">Admin Appointment Type Configuration</h2>
+    <button id="aptTypeMgmt_reloadBtn" mat-raised-button color="primary" (click)="loadAppointmentTypes()" [disabled]="loading" style="min-width:150px">
       <mat-icon>refresh</mat-icon> Reload
     </button>
   </div>
@@ -12,7 +12,7 @@
   </div>
 
   <!-- Appointment Types Table -->
-  <div class="section-card" *ngIf="!loading">
+  <div class="section-card" *ngIf="!loading" id="aptTypeMgmt_typesSection">
     <div class="section-card-header"><i class="pi pi-calendar"></i> All Appointment Types</div>
     <div class="section-card-body" style="overflow-x:auto">
       <table mat-table [dataSource]="appointmentTypes" class="full-width">
@@ -75,9 +75,12 @@
         <!-- Actions Column -->
         <ng-container matColumnDef="actions">
           <th mat-header-cell *matHeaderCellDef>Actions</th>
-          <td mat-cell *matCellDef="let type" style="text-align:center">
-            <button mat-icon-button color="primary" (click)="editType(type)" [disabled]="loading" 
+          <td mat-cell *matCellDef="let type; let i = index" style="text-align:center">
+            <button [id]="'aptTypeMgmt_editBtn_' + i" mat-icon-button color="primary" (click)="editType(type)" [disabled]="loading" 
               matTooltip="Edit Configuration">
+              <mat-icon>edit</mat-icon>
+            </button>
+          </td>
               <mat-icon>edit</mat-icon>
             </button>
           </td>

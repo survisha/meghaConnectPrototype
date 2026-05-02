@@ -3,7 +3,7 @@
     <h2 class="page-title" style="margin:0;display:flex;align-items:center;gap:0.5rem">
       <mat-icon>group</mat-icon> User Management
     </h2>
-    <button mat-raised-button color="primary" (click)="openNew()">
+    <button id="userMgmt_addUserBtn" mat-raised-button color="primary" (click)="openNew()">
       <mat-icon>add</mat-icon> Add User
     </button>
   </div>
@@ -47,11 +47,11 @@
         <!-- Actions Column -->
         <ng-container matColumnDef="actions">
           <th mat-header-cell *matHeaderCellDef style="text-align:center">Actions</th>
-          <td mat-cell *matCellDef="let u" style="text-align:center">
-            <button mat-icon-button color="primary" (click)="openEdit(u)" matTooltip="Edit">
+          <td mat-cell *matCellDef="let u; let i = index" style="text-align:center">
+            <button [id]="'userMgmt_editBtn_' + i" mat-icon-button color="primary" (click)="openEdit(u)" matTooltip="Edit">
               <mat-icon>edit</mat-icon>
             </button>
-            <button mat-icon-button color="warn" (click)="deleteUser(u)" [disabled]="u.username === auth.user()?.username" matTooltip="Delete">
+            <button [id]="'userMgmt_deleteBtn_' + i" mat-icon-button color="warn" (click)="deleteUser(u)" [disabled]="u.username === auth.user()?.username" matTooltip="Delete">
               <mat-icon>delete</mat-icon>
             </button>
           </td>
@@ -75,25 +75,25 @@
 
         <mat-form-field appearance="outline" style="width:100%">
           <mat-label>Full Name *</mat-label>
-          <input matInput [(ngModel)]="form.fullName" placeholder="Full Name" />
+          <input id="userMgmt_fullNameInput" matInput [(ngModel)]="form.fullName" placeholder="Full Name" />
         </mat-form-field>
 
         <mat-form-field appearance="outline" style="width:100%">
           <mat-label>Username *</mat-label>
-          <input matInput [(ngModel)]="form.username" placeholder="Username" [disabled]="isEdit" />
+          <input id="userMgmt_usernameInput" matInput [(ngModel)]="form.username" placeholder="Username" [disabled]="isEdit" />
         </mat-form-field>
 
         <mat-form-field appearance="outline" style="width:100%">
           <mat-label>Role *</mat-label>
-          <mat-select [(ngModel)]="form.role">
+          <mat-select id="userMgmt_roleSelect" [(ngModel)]="form.role">
             <mat-option *ngFor="let opt of roleOptions" [value]="opt.value">{{ opt.label }}</mat-option>
           </mat-select>
         </mat-form-field>
 
         <mat-form-field appearance="outline" style="width:100%">
           <mat-label>Password *</mat-label>
-          <input matInput [type]="showPassword ? 'text' : 'password'" [(ngModel)]="form.password" placeholder="Set password" />
-          <button mat-icon-button matSuffix (click)="showPassword = !showPassword" type="button">
+          <input id="userMgmt_passwordInput" matInput [type]="showPassword ? 'text' : 'password'" [(ngModel)]="form.password" placeholder="Set password" />
+          <button id="userMgmt_togglePasswordBtn" mat-icon-button matSuffix (click)="showPassword = !showPassword" type="button">
             <mat-icon>{{ showPassword ? 'visibility_off' : 'visibility' }}</mat-icon>
           </button>
         </mat-form-field>

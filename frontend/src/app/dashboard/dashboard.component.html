@@ -9,7 +9,7 @@
 
   <!-- KPI Cards -->
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-bottom:1.5rem">
-    <div class="kpi-card" *ngFor="let k of kpis">
+    <div class="kpi-card" *ngFor="let k of kpis; let i = index" [id]="'dashboard_kpiCard_' + i">
       <div class="kpi-icon" [style.background]="k.bg">
         <mat-icon [style.color]="k.color" style="font-size:1.6rem;width:1.6rem;height:1.6rem">{{k.matIcon}}</mat-icon>
       </div>
@@ -22,11 +22,11 @@
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
     <!-- Today's Schedule (staff only) -->
-    <div class="section-card" *ngIf="showSchedule">
+    <div class="section-card" *ngIf="showSchedule" id="dashboard_todayScheduleSection">
       <div class="section-card-header" style="display:flex;align-items:center;gap:0.5rem">
         <mat-icon style="font-size:1.2rem;width:1.2rem;height:1.2rem">calendar_today</mat-icon>
         <span>Today's Schedule</span>
-        <a routerLink="/scheduling" style="margin-left:auto;color:#90caf9;font-size:0.8rem">View Full Calendar →</a>
+        <a id="dashboard_viewFullCalendarLink" routerLink="/scheduling" style="margin-left:auto;color:#90caf9;font-size:0.8rem">View Full Calendar →</a>
       </div>
       <div class="section-card-body" style="padding:0.75rem">
         <div *ngFor="let evt of todaySchedule" class="cal-slot {{getEventClass(evt.type)}}" style="margin-bottom:6px">
@@ -50,7 +50,7 @@
     </div>
 
     <!-- Recent Activity -->
-    <div class="section-card">
+    <div class="section-card" id="dashboard_recentActivitySection">
       <div class="section-card-header" style="display:flex;align-items:center;gap:0.5rem">
         <mat-icon style="font-size:1.2rem;width:1.2rem;height:1.2rem">history</mat-icon>
         <span>Recent Activity</span>
@@ -69,7 +69,7 @@
     </div>
 
     <!-- Appointment Type Chart (staff only) -->
-    <div class="section-card" *ngIf="showCharts">
+    <div class="section-card" *ngIf="showCharts" id="dashboard_appointmentTypeChartSection">
       <div class="section-card-header" style="display:flex;align-items:center;gap:0.5rem">
         <mat-icon style="font-size:1.2rem;width:1.2rem;height:1.2rem">pie_chart</mat-icon>
         <span>Appointments by Type (This Month)</span>
@@ -80,7 +80,7 @@
     </div>
 
     <!-- Scheme Stats Chart (staff only) -->
-    <div class="section-card" *ngIf="showCharts">
+    <div class="section-card" *ngIf="showCharts" id="dashboard_schemeStatsChartSection">
       <div class="section-card-header" style="display:flex;align-items:center;gap:0.5rem">
         <mat-icon style="font-size:1.2rem;width:1.2rem;height:1.2rem">bar_chart</mat-icon>
         <span>Scheme Applications (This Month)</span>
@@ -92,13 +92,13 @@
   </div>
 
   <!-- Quick Actions (role-filtered) -->
-  <div class="section-card" style="margin-top:1.5rem" *ngIf="quickActions.length">
+  <div class="section-card" style="margin-top:1.5rem" *ngIf="quickActions.length" id="dashboard_quickActionsSection">
     <div class="section-card-header" style="display:flex;align-items:center;gap:0.5rem">
       <mat-icon style="font-size:1.2rem;width:1.2rem;height:1.2rem">bolt</mat-icon>
       <span>Quick Actions</span>
     </div>
     <div class="section-card-body" style="display:flex;gap:0.75rem;flex-wrap:wrap">
-      <button mat-raised-button *ngFor="let a of quickActions" [routerLink]="a.route"
+      <button mat-raised-button *ngFor="let a of quickActions; let i = index" [id]="'dashboard_quickAction_' + i" [routerLink]="a.route"
         [color]="a.severity === 'success' ? 'primary' : a.severity === 'warning' ? 'accent' : undefined"
         style="min-width: 180px;">
         <mat-icon style="margin-right: 0.5rem;">{{a.matIcon}}</mat-icon>

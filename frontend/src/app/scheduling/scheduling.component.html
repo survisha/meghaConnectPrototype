@@ -1,17 +1,17 @@
 <div>
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.75rem">
-    <h2 class="page-title" style="margin:0;display:flex;align-items:center;gap:0.5rem">
+    <h2 class="page-title" style="margin:0;display:flex;align-items:center;gap:0.5rem" id="scheduling_title">
       <mat-icon style="font-size:1.3rem">event</mat-icon>
       Calendar &amp; Schedule
     </h2>
     <div style="display:flex;gap:0.5rem;align-items:center">
-      <span style="color:#6b7280;font-size:0.85rem;margin-right:0.5rem">{{ formatDate(selectedDate) }}</span>
-      <div class="view-toggle">
+      <span style="color:#6b7280;font-size:0.85rem;margin-right:0.5rem" id="scheduling_dateDisplay">{{ formatDate(selectedDate) }}</span>
+      <div class="view-toggle" id="scheduling_viewToggle">
         <button [class.active]="viewMode==='day'" (click)="viewMode='day'">Day</button>
         <button [class.active]="viewMode==='week'" (click)="viewMode='week'">Week</button>
         <button [class.active]="viewMode==='month'" (click)="viewMode='month'">Month</button>
       </div>
-      <button mat-raised-button color="primary" (click)="showAddDialog=true"><mat-icon>add</mat-icon> Add Event</button>
+      <button id="scheduling_addEventBtn" mat-raised-button color="primary" (click)="showAddDialog=true"><mat-icon>add</mat-icon> Add Event</button>
     </div>
   </div>
 

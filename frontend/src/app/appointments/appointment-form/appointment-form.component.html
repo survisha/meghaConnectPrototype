@@ -22,13 +22,13 @@
 
   <ng-container *ngIf="!submitted">
     <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem">
-      <button mat-icon-button routerLink="/visitor">
+      <button id="appointment_backBtn" mat-icon-button routerLink="/visitor">
         <i class="pi pi-arrow-left"></i>
       </button>
       <h2 class="page-title" style="margin:0">New Appointment Request</h2>
     </div>
 
-    <div *ngIf="errorMsg" id="appointment_errorMsg" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.9rem">
+    <div id="appointment_errorMsg" *ngIf="errorMsg" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.9rem">
       <i class="pi pi-exclamation-circle"></i> {{ errorMsg }}
     </div>
 

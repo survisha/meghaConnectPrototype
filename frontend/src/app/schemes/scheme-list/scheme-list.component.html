@@ -1,14 +1,14 @@
 <div>
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.75rem">
     <h2 class="page-title" style="margin:0">CM Scheme Applications</h2>
-    <button mat-raised-button color="primary" routerLink="/schemes/apply">
+    <button id="schemeList_newApplicationBtn" mat-raised-button color="primary" routerLink="/schemes/apply">
       <mat-icon>add</mat-icon> New Application
     </button>
   </div>
 
   <!-- Scheme Statistics Cards -->
   <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:1rem;margin-bottom:1.5rem">
-    <div *ngFor="let stat of schemeStats" class="scheme-stat-card">
+    <div *ngFor="let stat of schemeStats; let i = index" [id]="'schemeList_statCard_' + i" class="scheme-stat-card">
       <div class="scheme-name">{{ stat.name }}</div>
       <div class="scheme-total">{{ stat.total }}</div>
       <div class="scheme-breakdown">
@@ -27,13 +27,13 @@
   </div>
 
   <!-- Table -->
-  <div class="section-card">
+  <div class="section-card" id="schemeList_applicationsSection">
     <div class="section-card-header">
       <mat-icon style="vertical-align: middle; margin-right: 0.5rem;">list</mat-icon> All Applications
       <div style="margin-left:auto">
         <mat-form-field appearance="outline" style="width: 200px;">
           <mat-label>Filter by Scheme</mat-label>
-          <mat-select [(ngModel)]="filterScheme">
+          <mat-select id="schemeList_filterSelect" [(ngModel)]="filterScheme">
             <mat-option *ngFor="let opt of schemeOptions" [value]="opt.value">
               {{ opt.label }}
             </mat-option>

@@ -7,7 +7,7 @@
       </h1>
       <p class="page-subtitle">{{ isPublic ? 'Submit and track your grievances' : 'Review and manage public grievances' }}</p>
     </div>
-    <button mat-raised-button color="primary" (click)="showForm = true" *ngIf="isPublic"><i class="pi pi-plus"></i> Raise Grievance</button>
+    <button id="grievances_raiseGrievanceBtn" mat-raised-button color="primary" (click)="showForm = true" *ngIf="isPublic"><i class="pi pi-plus"></i> Raise Grievance</button>
   </div>
 
   <!-- Filters and Table (Public and Staff) -->
@@ -16,18 +16,18 @@
     <div class="filter-bar">
       <mat-form-field appearance="outline" class="filter-search">
         <mat-label>Search</mat-label>
-        <input matInput placeholder="Search by name, ticket ID, subject…" [(ngModel)]="search" (ngModelChange)="applyFilter()" />
+        <input id="grievances_searchInput" matInput placeholder="Search by name, ticket ID, subject…" [(ngModel)]="search" (ngModelChange)="applyFilter()" />
         <mat-icon matPrefix>search</mat-icon>
       </mat-form-field>
       <mat-form-field appearance="outline" class="filter-select">
         <mat-label>Filter by Status</mat-label>
-        <mat-select [(ngModel)]="filterStatus" (ngModelChange)="applyFilter()">
+        <mat-select id="grievances_statusFilter" [(ngModel)]="filterStatus" (ngModelChange)="applyFilter()">
           <mat-option *ngFor="let opt of statusOptions" [value]="opt.value">{{ opt.label }}</mat-option>
         </mat-select>
       </mat-form-field>
       <mat-form-field appearance="outline" class="filter-select">
         <mat-label>Filter by Category</mat-label>
-        <mat-select [(ngModel)]="filterCategory" (ngModelChange)="applyFilter()">
+        <mat-select id="grievances_categoryFilter" [(ngModel)]="filterCategory" (ngModelChange)="applyFilter()">
           <mat-option *ngFor="let opt of categoryOptions" [value]="opt.value">{{ opt.label }}</mat-option>
         </mat-select>
       </mat-form-field>

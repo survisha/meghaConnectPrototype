@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import com.survisha.meghaconnect.util.RequestContextUtil;
 
 import java.util.Arrays;
 
@@ -32,7 +33,7 @@ public class CorsConfig {
         configuration.setAllowCredentials(true);
         
         // Expose headers that the frontend can read
-        configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type"));
+        configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type", RequestContextUtil.REQUEST_ID_HEADER));
         
         // Cache preflight response for 1 hour
         configuration.setMaxAge(3600L);

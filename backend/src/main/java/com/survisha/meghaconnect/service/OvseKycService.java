@@ -21,8 +21,6 @@ import com.ovse.client.model.OvseResponseJson;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Service for Aadhaar OVSE (Online Verification of Self-Employed) KYC workflow.
@@ -43,8 +41,6 @@ import java.util.logging.Logger;
 @Slf4j
 @RequiredArgsConstructor
 public class OvseKycService {
-
-    private static final Logger LOG = Logger.getLogger(OvseKycService.class.getName());
 
     @Value("${ovse.appId:100001}")
     private String appId;
@@ -74,13 +70,12 @@ public class OvseKycService {
      * @return QR code as base64 data URI with transaction ID
      */
     public AadhaarQrResponseDto generateQrCode() {
-        LOG.info("=== OVSE QR Generation Request ===");
-        LOG.info("Generating generic QR code");
+        log.info("OVSE QR generation requested");
 
         try {
             // Generate transaction ID with appId prefix
             String txnId = TxnIdGenerator.generate(appId);
-            LOG.info("Generated txnId: " + txnId);
+            log.info("Generated OVSE txnId={}", txnId);
 
             // Build OVSE request - following the sample code pattern
             OvseRequestDto qrRequest = OvseRequestDto.builder()
@@ -93,11 +88,7 @@ public class OvseKycService {
                     .faceAuth(faceAuth)  // Face authentication enabled
                     .build();
 
-            LOG.info("Sending OVSE request to: " + ovseEndpoint);
-            LOG.info("  appId: " + appId);
-            LOG.info("  txnId: " + txnId);
-            LOG.info("  online: " + online);
-            LOG.info("  faceAuth: " + faceAuth);
+            log.info("Sending OVSE request appId={} txnId={} online={} faceAuth={}", appId, txnId, online, faceAuth);
 
             // Call OVSE service to generate QR
             OvseResponseDto response = callOvseService(qrRequest);
@@ -112,9 +103,7 @@ public class OvseKycService {
                         .build();
                 kycResultStore.put(txnId, pendingKyc);
 
-                LOG.info(" QR code generated successfully");
-                LOG.info("  txnId: " + txnId);
-                LOG.info("  QR size: " + response.getQrCode().length() + " bytes (base64)");
+                log.info("OVSE QR code generated successfully txnId={} qrSizeBytes={}", txnId, response.getQrCode().length());
 
 
                 return AadhaarQrResponseDto.builder()
@@ -128,37 +117,36 @@ public class OvseKycService {
                                 response.getErrorCode(),
                                 response.getErrorDescription()) :
                         "OVSE returned null response";
-                LOG.warning("✗ OVSE QR request failed: " + errorMsg);
+                log.warn("OVSE QR request failed: {}", errorMsg);
                 return AadhaarQrResponseDto.builder()
                         .success(false)
                         .errorMessage(errorMsg)
                         .build();
             }
         } catch (IllegalArgumentException e) {
-            String errorMsg = "Invalid appId: " + e.getMessage();
-            LOG.warning("✗ " + errorMsg);
+            String errorMsg = "Invalid OVSE application configuration";
+            log.warn("Invalid OVSE appId configuration: {}", e.getMessage());
             return AadhaarQrResponseDto.builder()
                     .success(false)
                     .errorMessage(errorMsg)
                     .build();
         } catch (OvseClientException e) {
-            String errorMsg = "OVSE service error: " + e.getMessage() +
-                    (e.getHttpStatus() > 0 ? " (HTTP " + e.getHttpStatus() + ")" : "");
-            LOG.log(Level.SEVERE, "✗ " + errorMsg, e);
+            String errorMsg = "OVSE service is currently unavailable";
+            log.error("OVSE service error httpStatus={}", e.getHttpStatus(), e);
             return AadhaarQrResponseDto.builder()
                     .success(false)
                     .errorMessage(errorMsg)
                     .build();
         } catch (LinkageError e) {
-            String errorMsg = "OVSE SDK class loading error: " + e.getMessage();
-            LOG.log(Level.SEVERE, "✗ " + errorMsg, e);
+            String errorMsg = "OVSE SDK is not available";
+            log.error("OVSE SDK class loading error", e);
             return AadhaarQrResponseDto.builder()
                     .success(false)
                     .errorMessage(errorMsg)
                     .build();
         } catch (Exception e) {
-            String errorMsg = "Unexpected error: " + e.getClass().getSimpleName() + " - " + e.getMessage();
-            LOG.log(Level.SEVERE, "✗ " + errorMsg, e);
+            String errorMsg = "Unexpected OVSE QR generation error";
+            log.error("Unexpected error during OVSE QR generation", e);
             return AadhaarQrResponseDto.builder()
                     .success(false)
                     .errorMessage(errorMsg)
@@ -174,7 +162,7 @@ public class OvseKycService {
      */
     @Cacheable(value = "kycResults", key = "#txnId")
     public KycData getKycResult(String txnId) {
-        LOG.fine("Polling for KYC result: txnId=" + txnId);
+        log.debug("Polling for KYC result txnId={}", txnId);
         return kycResultStore.get(txnId);
     }
 
@@ -187,10 +175,10 @@ public class OvseKycService {
      */
     @CachePut(value = "kycResults", key = "#txnId")
     public KycData storeKycSuccess(String txnId, Map<String, String> claims) {
-        LOG.info("Storing SUCCESS KYC result for txnId=" + txnId);
+        log.info("Storing successful KYC result txnId={}", txnId);
         KycData data = KycData.success(txnId, claims);
         kycResultStore.put(txnId, data);
-        LOG.info(" KYC SUCCESS stored: " + claims.size() + " claims received");
+        log.info("KYC result stored txnId={} claimCount={}", txnId, claims.size());
         return data;
     }
 
@@ -204,7 +192,7 @@ public class OvseKycService {
      */
     @CachePut(value = "kycResults", key = "#txnId")
     public KycData storeKycError(String txnId, String errorCode, String errorMessage) {
-        LOG.warning("Storing ERROR KYC result for txnId=" + txnId + ", error=" + errorCode);
+        log.warn("Storing KYC error result txnId={} errorCode={}", txnId, errorCode);
         KycData data = KycData.error(txnId, errorCode, errorMessage);
         kycResultStore.put(txnId, data);
         return data;
@@ -222,7 +210,7 @@ public class OvseKycService {
      * @return OVSE response with QR code or error
      */
     private OvseResponseDto callOvseService(OvseRequestDto request) {
-        LOG.info("Calling OVSE service using SDK...");
+        log.info("Calling OVSE service using SDK");
         
         try {
             // Build OVSE client using SDK
@@ -232,7 +220,7 @@ public class OvseKycService {
                     .requestTimeout(Duration.ofSeconds(20))
                     .build();
 
-            LOG.info("✓ OvseClient created: " + client.getClass().getName());
+            log.debug("OvseClient created type={}", client.getClass().getName());
 
             // Build OVSE request
             OvseRequestJson qrRequest = OvseRequestJson.builder()
@@ -245,12 +233,12 @@ public class OvseKycService {
                     .faceAuth(request.isFaceAuth())
                     .build();
 
-            LOG.info("✓ OvseRequest built with txnId=" + request.getTxnId());
+            log.info("OVSE request built txnId={}", request.getTxnId());
 
             // Invoke SDK to get QR code
             OvseResponseJson ovseResponse = client.invoke(qrRequest);
 
-            LOG.info("✓ OVSE service responded: successful=" + ovseResponse.isSuccessful());
+            log.info("OVSE service responded successful={}", ovseResponse.isSuccessful());
 
             return OvseResponseDto.builder()
                     .successful(ovseResponse.isSuccessful())
@@ -261,8 +249,8 @@ public class OvseKycService {
                     .build();
 
         } catch (OvseClientException e) {
-            String errorMsg = "OVSE SDK OvseClientException: " + e.getMessage();
-            LOG.log(Level.SEVERE, errorMsg, e);
+            String errorMsg = "OVSE SDK client error";
+            log.error("OVSE SDK client error", e);
             return OvseResponseDto.builder()
                     .successful(false)
                     .errorCode("OVSE_CLIENT_ERROR")
@@ -271,7 +259,7 @@ public class OvseKycService {
         } catch (LinkageError e) {
             // Catches ClassNotFoundException, NoClassDefFoundError, UnsupportedClassVersionError, etc.
             String errorMsg = "OVSE SDK classes not found on classpath. Ensure OvseClientSDK20260422a.jar is in libs/";
-            LOG.log(Level.SEVERE, errorMsg, e);
+            log.error(errorMsg, e);
             return OvseResponseDto.builder()
                     .successful(false)
                     .errorCode("SDK_LOAD_ERROR")
@@ -279,11 +267,11 @@ public class OvseKycService {
                     .build();
         } catch (Exception e) {
             String errorMsg = "Unexpected error during OVSE SDK call: " + e.getClass().getSimpleName();
-            LOG.log(Level.SEVERE, errorMsg, e);
+            log.error(errorMsg, e);
             return OvseResponseDto.builder()
                     .successful(false)
                     .errorCode("UNEXPECTED_ERROR")
-                    .errorDescription(errorMsg + " - " + e.getMessage())
+                    .errorDescription(errorMsg)
                     .build();
         }
     }

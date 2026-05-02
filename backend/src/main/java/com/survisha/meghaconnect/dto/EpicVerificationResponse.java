@@ -1,5 +1,6 @@
 package com.survisha.meghaconnect.dto;
 
+import com.survisha.meghaconnect.util.RequestContextUtil;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -46,6 +47,8 @@ public class EpicVerificationResponse {
     private String code;                      // HTTP status code (200, 400, etc.)
     private String message;                   // "Success" or error message
     private EpicVerificationData data;        // Strongly-typed response data
+    @Builder.Default
+    private String requestId = RequestContextUtil.getRequestId();
     
     /**
      * Check if verification was successful

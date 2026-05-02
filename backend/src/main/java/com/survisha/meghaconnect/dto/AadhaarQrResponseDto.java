@@ -1,5 +1,6 @@
 package com.survisha.meghaconnect.dto;
 
+import com.survisha.meghaconnect.util.RequestContextUtil;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -19,4 +20,6 @@ public class AadhaarQrResponseDto {
     private String qrDataUri;           // data:image/png;base64,...
     private String errorMessage;
     private String maskedMobile;        // For user reference
+    @Builder.Default
+    private String requestId = RequestContextUtil.getRequestId();
 }

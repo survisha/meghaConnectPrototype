@@ -6,6 +6,7 @@ import com.survisha.meghaconnect.repository.OtpTempRepository;
 import com.survisha.meghaconnect.repository.VisitorRepository;
 import com.survisha.meghaconnect.security.JwtService;
 import com.survisha.meghaconnect.exception.*;
+import com.survisha.meghaconnect.util.RequestContextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -88,7 +89,7 @@ public class VisitorOtpService {
         otpTempRepository.save(record);
 
         // TODO: integrate SMS gateway (MSG91 / CDAC) to send `otpCode` to `phone`
-        log.info("OTP generated for {} (mock – SMS gateway pending): {}", phone, otpCode);
+        log.info("OTP generated for phone={} (mock SMS gateway pending)", RequestContextUtil.maskPhone(phone));
         return otpCode;
     }
 
@@ -186,7 +187,7 @@ public class VisitorOtpService {
                 .build();
         otpTempRepository.save(record);
 
-        log.info("KYC OTP generated for {} (MOCK): {}", phone, otpCode);
+        log.info("KYC OTP generated for phone={} (mock)", RequestContextUtil.maskPhone(phone));
         return otpCode;
     }
 

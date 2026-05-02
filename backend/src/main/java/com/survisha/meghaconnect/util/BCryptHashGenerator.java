@@ -26,8 +26,8 @@ public class BCryptHashGenerator {
         
         for (String[] cred : credentials) {
             String hash = encoder.encode(cred[1]);
-            System.out.println(String.format("UPDATE users SET password_hash = '%s' WHERE username = '%s';  -- %s", 
-                hash, cred[0], cred[1]));
+            System.out.println(String.format("UPDATE users SET password_hash = '%s' WHERE username = '%s';",
+                hash, cred[0]));
         }
         
         System.out.println("\n===============================================\n");

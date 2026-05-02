@@ -2,6 +2,7 @@ package com.survisha.meghaconnect.util;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -14,17 +15,13 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@ConditionalOnProperty(prefix = "meghaconnect.security.password-hash-generator", name = "enabled", havingValue = "true")
 public class PasswordHashGenerator {
     
     private final PasswordEncoder passwordEncoder;
     
     @EventListener(ApplicationReadyEvent.class)
     public void generateHashes() {
-        log.info("===============================================");
-        log.info("BCRYPT PASSWORD HASHES FOR DEMO USERS");
-        log.info("Copy these into V10__fix_user_passwords.sql");
-        log.info("===============================================");
-        
         String[][] credentials = {
             {"hcm", "hcm123"},
             {"admin", "admin123"},
@@ -34,14 +31,11 @@ public class PasswordHashGenerator {
             {"deo1", "deo123"},
             {"public1", "public123"}
         };
-        
+
         for (String[] cred : credentials) {
-            String username = cred[0];
-            String password = cred[1];
-            String hash = passwordEncoder.encode(password);
-            log.info("UPDATE users SET password_hash = '{}' WHERE username = '{}';  -- {}", hash, username, password);
+            passwordEncoder.encode(cred[1]);
         }
-        
-        log.info("===============================================");
+
+        log.info("Demo password hash generation completed for {} users. Hash values are intentionally not written to application logs.", credentials.length);
     }
 }

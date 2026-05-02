@@ -9,14 +9,17 @@ import org.springframework.cache.support.NoOpCacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
+import org.springframework.http.client.ClientHttpResponse;
 
 import java.time.Duration;
 import org.springframework.web.client.RestTemplate;
+import com.survisha.meghaconnect.util.RequestContextUtil;
 
 @Configuration
 @EnableCaching
@@ -79,7 +82,33 @@ public class CacheConfig {
      * Configured with reasonable timeouts and connection pooling.
      */
     @Bean
-    public RestTemplate restTemplate() {
-        return new RestTemplate();
+    public RestTemplate restTemplate(RestTemplateBuilder builder) {
+        return builder
+                .additionalInterceptors((request, body, execution) -> {
+                    String requestId = RequestContextUtil.getRequestId();
+                    request.getHeaders().set(RequestContextUtil.REQUEST_ID_HEADER, requestId);
+
+                    String safeUri = RequestContextUtil.safeUri(request.getURI());
+                    long startTime = System.currentTimeMillis();
+                    log.info("External API request started method={} uri={}", request.getMethod(), safeUri);
+
+                    try {
+                        ClientHttpResponse response = execution.execute(request, body);
+                        log.info("External API request completed method={} uri={} status={} durationMs={}",
+                                request.getMethod(),
+                                safeUri,
+                                response.getStatusCode().value(),
+                                System.currentTimeMillis() - startTime);
+                        return response;
+                    } catch (Exception e) {
+                        log.error("External API request failed method={} uri={} durationMs={}",
+                                request.getMethod(),
+                                safeUri,
+                                System.currentTimeMillis() - startTime,
+                                e);
+                        throw e;
+                    }
+                })
+                .build();
     }
 }

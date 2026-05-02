@@ -94,8 +94,6 @@ public class SecurityConfig {
             
             log.debug("[SECURITY] User found - Username: {}, Role: {}, Active: {}", 
                 u.getUsername(), u.getRole(), u.isActive());
-            log.debug("[SECURITY] Password hash (first 20 chars): {}...", 
-                u.getPasswordHash() != null ? u.getPasswordHash().substring(0, Math.min(20, u.getPasswordHash().length())) : "NULL");
             
             UserDetails userDetails = org.springframework.security.core.userdetails.User.builder()
                 .username(u.getUsername())

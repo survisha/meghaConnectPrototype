@@ -25,8 +25,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 /**
@@ -48,8 +46,6 @@ import java.util.stream.Collectors;
 @Slf4j
 @RequiredArgsConstructor
 public class EpicVerificationService {
-
-    private static final Logger LOG = Logger.getLogger(EpicVerificationService.class.getName());
 
     private final RestTemplate restTemplate;
 
@@ -74,16 +70,11 @@ public class EpicVerificationService {
      */
     public EpicVerificationResponse verifyEpic(EpicVerificationRequest request) {
 
-        LOG.info("=== EPIC Verification Request ===");
-        LOG.info("EPIC Number: " + maskEpic(request.getEpicNumber()));
-        LOG.info("Visitor Name: " + request.getVisitorName());
-        LOG.info("API Endpoint: " + epicApiEndpoint);
-        LOG.info("API Enabled: " + epicApiEnabled);
+        log.info("EPIC verification requested epic={} apiEnabled={}", maskEpic(request.getEpicNumber()), epicApiEnabled);
 
         // If API is disabled, return mock response for development
         if (!epicApiEnabled || epicApiKey.isBlank()) {
-            LOG.warning("⚠ EPIC API disabled or API key missing. Returning mock response.");
-            LOG.warning("  To enable real API, set epic.api.enabled=true and epic.api.key=<key> in application.properties or environment variables");
+            log.warn("EPIC API disabled or API key missing. Returning mock response.");
             return mockVerifyEpic(request);
         }
 
@@ -96,7 +87,7 @@ public class EpicVerificationService {
             apiRequest.put("nameOnVoterCard", request.getVisitorName().toUpperCase());
             apiRequest.put("consumerIdentifier", "ref-vid-" + UUID.randomUUID().toString().substring(0, 8));
 
-            LOG.info("✓ Calling LIVE Election Commission API: " + epicApiEndpoint + "/api/ovd/verify");
+            log.info("Calling live Election Commission API for EPIC verification");
 
             // Make HTTP request
             HttpHeaders headers = new HttpHeaders();
@@ -112,11 +103,8 @@ public class EpicVerificationService {
             EpicVerificationResponse result = response.getBody();
 
             if (result != null && result.isSuccess()) {
-                LOG.info("✓ EPIC verification successful");
-                LOG.info("  Status: " + (result.getData() != null ? result.getData().getVoterIdVerificationStatus() : "N/A"));
-                LOG.info("  Verified Name: " + result.getVerifiedName());
-                LOG.info("  District: " + result.getDistrict());
-                LOG.info("  State: " + result.getState());
+                log.info("EPIC verification successful status={}",
+                        result.getData() != null ? result.getData().getVoterIdVerificationStatus() : "N/A");
                 
                 // Validate name match - voteridverificationstatus "id_found" only confirms EPIC exists,
                 // NOT that the name matches. We must validate the name separately.
@@ -125,7 +113,7 @@ public class EpicVerificationService {
                 return result;
             } else {
                 String errorMsg = result != null ? result.getMessage() : "Unknown error";
-                LOG.warning("✗ EPIC verification failed: " + errorMsg);
+                log.warn("EPIC verification failed: {}", errorMsg);
                 if (isProviderNameMismatch(result)) {
                     return buildGenericNameMismatchResponse();
                 }
@@ -138,16 +126,16 @@ public class EpicVerificationService {
         } catch (MeghaConnectException e) {
             throw e;
         } catch (RestClientException e) {
-            LOG.log(Level.SEVERE, "✗ EPIC API request failed", e);
+            log.error("EPIC API request failed", e);
             return EpicVerificationResponse.builder()
                     .code("503")
-                    .message("Election Commission API unavailable: " + e.getMessage())
+                    .message("Election Commission API is currently unavailable")
                     .build();
         } catch (Exception e) {
-            LOG.log(Level.SEVERE, "✗ Unexpected error during EPIC verification", e);
+            log.error("Unexpected error during EPIC verification", e);
             return EpicVerificationResponse.builder()
                     .code("500")
-                    .message("Unexpected error: " + e.getMessage())
+                    .message(ErrorCodeConstants.GENERAL_ERROR_MSG)
                     .build();
         }
     }
@@ -156,7 +144,7 @@ public class EpicVerificationService {
      * Mock EPIC verification for development when API is unavailable.
      */
     private EpicVerificationResponse mockVerifyEpic(EpicVerificationRequest request) {
-        LOG.info("↻ Using mock EPIC verification response");
+        log.info("Using mock EPIC verification response");
 
         PollingDetails pollingDetails = PollingDetails.builder()
                 .pollingPartNo("14")
@@ -220,12 +208,10 @@ public class EpicVerificationService {
         String inputName = request.getVisitorName();
         
         // Log the name validation details
-        LOG.info("=== Name Validation ===");
-        LOG.info("Input Name: " + inputName);
-        LOG.info("Verified Name: " + verifiedName);
+        log.info("Validating EPIC voter name match");
 
         if (isBlank(inputName) || isBlank(verifiedName)) {
-            LOG.warning("✗ Name validation failed: input or verified name is missing");
+            log.warn("EPIC name validation failed: input or verified name is missing");
             throw new EpicNameMismatchException(response.getData());
         }
         
@@ -235,14 +221,11 @@ public class EpicVerificationService {
         double similarity = calculateSimilarity(normalizedInput, normalizedVerified);
         boolean tokenMatch = hasSameNameTokens(normalizedInput, normalizedVerified);
         
-        LOG.info("Normalized Input Name: " + normalizedInput);
-        LOG.info("Normalized Verified Name: " + normalizedVerified);
-        LOG.info("Local Name Similarity: " + String.format("%.1f%%", similarity * 100));
-        LOG.info("Token Match: " + tokenMatch);
+        log.info("EPIC local name comparison similarity={} tokenMatch={}",
+                String.format("%.1f%%", similarity * 100), tokenMatch);
         
         if (!tokenMatch && similarity < LOCAL_NAME_SIMILARITY_THRESHOLD) {
-            LOG.warning("✗ Name mismatch. Input name '" + inputName
-                    + "' does not match Voter ID name '" + verifiedName + "'");
+            log.warn("EPIC name mismatch detected");
             throw new EpicNameMismatchException(response.getData());
         }
 
@@ -250,7 +233,7 @@ public class EpicVerificationService {
         // fixed namematchscore value.
         response.getData().setNameMatchScore((int) Math.round(similarity * 100));
         
-        LOG.info("✓ Name validation passed");
+        log.info("EPIC name validation passed");
     }
     
     /**

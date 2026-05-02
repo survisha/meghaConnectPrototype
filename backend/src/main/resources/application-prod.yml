@@ -1,0 +1,23 @@
+logging:
+  level:
+    root: INFO
+    com.survisha.meghaconnect: INFO
+    org.springframework: WARN
+    org.hibernate.SQL: OFF
+    org.hibernate.type.descriptor.sql: OFF
+    org.hibernate.orm.jdbc.bind: OFF
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [requestId=%X{requestId:-}] [%thread] %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [requestId=%X{requestId:-}] [%thread] %logger{36} - %msg%n"
+  file:
+    name: ${LOG_FILE:logs/meghaconnect-prod.log}
+  logback:
+    rollingpolicy:
+      file-name-pattern: ${LOG_FILE_PATTERN:logs/meghaconnect-prod.%d{yyyy-MM-dd}.%i.log.gz}
+      max-file-size: ${LOG_FILE_MAX_SIZE:25MB}
+      max-history: ${LOG_FILE_MAX_HISTORY:30}
+      total-size-cap: ${LOG_FILE_TOTAL_SIZE_CAP:2GB}
+
+spring:
+  jpa:
+    show-sql: false

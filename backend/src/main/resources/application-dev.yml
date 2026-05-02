@@ -1,0 +1,14 @@
+logging:
+  level:
+    root: INFO
+    com.survisha.meghaconnect: DEBUG
+    org.springframework: INFO
+    org.hibernate.SQL: OFF
+    org.hibernate.type.descriptor.sql: OFF
+    org.hibernate.orm.jdbc.bind: OFF
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [requestId=%X{requestId:-}] [%thread] %logger{36} - %msg%n"
+
+spring:
+  jpa:
+    show-sql: false

@@ -292,7 +292,7 @@ public class KycController {
      *   100001 = http://meghaconnect-server/api/v1/kyc/aadhaar/callback
      *   This should be kycResults url pattern, once we deploy in environment, need to share that endpoint to prabu to integrate
      */
-    @PostMapping("/aadhaar/callback")
+    @PostMapping("/aadhaar/kycResults")
     @Operation(summary = "OVSE callback endpoint",
             description = "Receives KYC result from UIDAI Aadhaar app verification")
     @ApiResponses(value = {

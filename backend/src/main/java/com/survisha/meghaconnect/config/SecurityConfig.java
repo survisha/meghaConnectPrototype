@@ -57,14 +57,23 @@ public class SecurityConfig {
                 // Public API endpoints (authentication, registration, visitor auth)
                 .antMatchers(
                     "/api/v1/auth/**",
-                    "/actuator/health",
-                    "/api/actuator/health",
+                    "/error",
+                    "/actuator/health/**",
+                    "/actuator/info",
+                    "/actuator/metrics/**",
+                    "/actuator/prometheus",
+                    "/api/actuator/health/**",
+                    "/api/actuator/info",
+                    "/api/actuator/metrics/**",
+                    "/api/actuator/prometheus",
                     "/swagger-ui.html",
                     "/swagger-ui/**",
                     "/v3/api-docs/**",
+                    "/webjars/**",
                     "/api/swagger-ui.html",
                     "/api/swagger-ui/**",
-                    "/api/v3/api-docs/**"
+                    "/api/v3/api-docs/**",
+                    "/api/webjars/**"
                 ).permitAll()
                 .antMatchers("/api/v1/appointments").permitAll()   // Public can submit
                 .antMatchers("/api/v1/public/**").permitAll()       // Public registration

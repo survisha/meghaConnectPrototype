@@ -10,6 +10,10 @@ server:
     mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
 
 spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
   data:
     redis:
       repositories:
@@ -49,24 +53,39 @@ management:
   health:
     redis:
       enabled: false
+  info:
+    env:
+      enabled: true
+  metrics:
+    tags:
+      application: meghaconnect-api
+      environment: dev
   endpoints:
     enabled-by-default: true
     web:
       base-path: /api/actuator
       exposure:
-        include: health,info,metrics,loggers
+        include: health,info,metrics,prometheus
   endpoint:
     health:
       enabled: true
       probes:
         enabled: true
-      show-details: when_authorized
+      show-details: always
+      show-components: always
     info:
       enabled: true
     metrics:
       enabled: true
-    loggers:
+    prometheus:
       enabled: true
+
+info:
+  app:
+    name: MeghaConnect API
+    environment: dev
+    version: 1.0.0-SNAPSHOT
+    java: 17
 
 springdoc:
   api-docs:

@@ -333,7 +333,60 @@ restart_backend() {
 install_nginx_config() {
   require_command nginx
   log "Installing Nginx site ${NGINX_SITE_NAME}"
-  run_as_root tee "${NGINX_AVAILABLE}" >/dev/null <<EOF_NGINX
+  if [[ -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" && -f "/etc/letsencrypt/live/${DOMAIN}/privkey.pem" ]]; then
+    log "Existing SSL certificate found; installing HTTP redirect and HTTPS Nginx site"
+    run_as_root tee "${NGINX_AVAILABLE}" >/dev/null <<EOF_NGINX
+server {
+    listen 80;
+    server_name ${DOMAIN} ${WWW_DOMAIN};
+
+    return 301 https://\$host\$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name ${DOMAIN} ${WWW_DOMAIN};
+
+    ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    root ${WEB_ROOT};
+    index index.html;
+
+    client_max_body_size 25M;
+
+    location / {
+        try_files \$uri \$uri/ /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:${BACKEND_PORT}/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Request-Id \$http_x_request_id;
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 120s;
+    }
+
+    location = /health {
+        proxy_pass http://127.0.0.1:${BACKEND_PORT}/api/actuator/health;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+}
+EOF_NGINX
+  else
+    log "No SSL certificate found yet; installing HTTP Nginx site"
+    run_as_root tee "${NGINX_AVAILABLE}" >/dev/null <<EOF_NGINX
 server {
     listen 80;
     server_name ${DOMAIN} ${WWW_DOMAIN};
@@ -370,6 +423,7 @@ server {
     }
 }
 EOF_NGINX
+  fi
 
   run_as_root ln -sfn "${NGINX_AVAILABLE}" "${NGINX_ENABLED}"
   if [[ -e /etc/nginx/sites-enabled/default ]]; then

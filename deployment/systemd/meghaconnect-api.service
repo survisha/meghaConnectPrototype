@@ -1,0 +1,23 @@
+[Unit]
+Description=MeghaConnect Spring Boot API
+After=network.target mysql.service
+Wants=mysql.service
+
+[Service]
+Type=simple
+User=meghaconnect
+Group=meghaconnect
+WorkingDirectory=/opt/meghaconnect/backend
+EnvironmentFile=-/etc/meghaconnect/meghaconnect-api.env
+ExecStart=/usr/bin/java -jar /opt/meghaconnect/backend/app.jar
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=meghaconnect-api
+UMask=0027
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

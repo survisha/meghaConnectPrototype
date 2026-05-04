@@ -1,3 +1,108 @@
+# UAT/dev deployment profile.
+# Activate with SPRING_PROFILES_ACTIVE=dev from systemd or the shell.
+
+server:
+  address: ${SERVER_ADDRESS:127.0.0.1}
+  port: ${SERVER_PORT:8080}
+  forward-headers-strategy: framework
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
+
+spring:
+  data:
+    redis:
+      repositories:
+        enabled: false
+  cache:
+    type: none
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:meghaconnect_db}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME:meghaconnect_user}
+    password: ${DB_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:10}
+      minimum-idle: ${DB_POOL_MIN_IDLE:2}
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        dialect: org.hibernate.dialect.MySQL8Dialect
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    validate-on-migrate: false
+  servlet:
+    multipart:
+      max-file-size: 25MB
+      max-request-size: 25MB
+
+management:
+  health:
+    redis:
+      enabled: false
+  endpoints:
+    enabled-by-default: true
+    web:
+      base-path: /api/actuator
+      exposure:
+        include: health,info,metrics,loggers
+  endpoint:
+    health:
+      enabled: true
+      probes:
+        enabled: true
+      show-details: when_authorized
+    info:
+      enabled: true
+    metrics:
+      enabled: true
+    loggers:
+      enabled: true
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /api/v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /api/swagger-ui.html
+    config-url: /api/v3/api-docs/swagger-config
+    url: /api/v3/api-docs
+    display-request-duration: true
+    operations-sorter: method
+    tags-sorter: alpha
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:CHANGE_ME_MIN_256_BIT_SECRET_FOR_UAT_ONLY}
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+
+meghaconnect:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://meghaconnect.cloud}
+  storage:
+    base-path: ${FILE_UPLOAD_ROOT:/opt/meghaconnect/uploads/dev}
+    base-url: ${STORAGE_BASE_URL:https://meghaconnect.cloud/api/uploads}
+    allowed-types: ${STORAGE_ALLOWED_TYPES:pdf,jpg,jpeg,png,doc,docx}
+    max-file-size-mb: ${STORAGE_MAX_FILE_SIZE_MB:25}
+  public-darbar:
+    scheduler-delay-ms: ${PUBLIC_DARBAR_SCHEDULER_DELAY_MS:60000}
+    start-time: ${PUBLIC_DARBAR_START_TIME:10:00}
+    slot-duration-minutes: ${PUBLIC_DARBAR_SLOT_DURATION_MINUTES:10}
+
+cache:
+  redis:
+    enabled: ${REDIS_CACHE_ENABLED:false}
+
 logging:
   level:
     root: INFO
@@ -6,9 +111,14 @@ logging:
     org.hibernate.SQL: OFF
     org.hibernate.type.descriptor.sql: OFF
     org.hibernate.orm.jdbc.bind: OFF
+  file:
+    name: ${LOGGING_PATH:/opt/meghaconnect/logs}/meghaconnect-api.log
+  logback:
+    rollingpolicy:
+      file-name-pattern: ${LOGGING_PATH:/opt/meghaconnect/logs}/meghaconnect-api.%d{yyyy-MM-dd}.%i.log.gz
+      max-file-size: 25MB
+      max-history: 30
+      total-size-cap: 2GB
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [requestId=%X{requestId:-}] [%thread] %logger{36} - %msg%n"
-
-spring:
-  jpa:
-    show-sql: false
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [requestId=%X{requestId:-}] [%thread] %logger{36} - %msg%n"

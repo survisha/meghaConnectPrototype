@@ -1,8 +1,9 @@
-// Custom Dev environment configuration
-// TODO: Configure this for your dev server deployment
+// UAT/dev-server environment configuration.
+// Used by the Angular "uat" build configuration in angular.json.
+import { apiUrlConfig } from './environment.urls';
 export const environment = {
-  production: false,
-  apiUrl: 'http://your-dev-server.com/api/v1',
-  appName: 'MeghaConnect [DEV-SERVER]',
-  version: '1.0.0-dev'
+  production: true,
+  apiUrl: apiUrlConfig.dev,
+  appName: 'MeghaConnect [UAT]',
+  version: '1.0.0-uat'
 };

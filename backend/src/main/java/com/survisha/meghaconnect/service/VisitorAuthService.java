@@ -5,7 +5,9 @@ import com.survisha.meghaconnect.entity.Visitor;
 import com.survisha.meghaconnect.exception.ErrorCodeConstants;
 import com.survisha.meghaconnect.exception.VisitorNotFoundException;
 import com.survisha.meghaconnect.util.ValidationConstants;
+import com.survisha.meghaconnect.util.RequestContextUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -13,6 +15,7 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class VisitorAuthService {
 
     private final VisitorOtpService visitorOtpService;
@@ -21,7 +24,9 @@ public class VisitorAuthService {
 
     public Map<String, Object> checkMobile(Map<String, String> body) {
         String phone = validationService.requirePhone(body != null ? body.get(ValidationConstants.FIELD_PHONE_NUMBER) : null);
-        boolean found = visitorService.findByPhone(phone).isPresent();
+        boolean found = visitorService.existsByPhone(phone);
+        log.info("Visitor mobile availability checked mobileExists={} phone={}",
+                found, RequestContextUtil.maskPhone(phone));
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
@@ -30,21 +35,67 @@ public class VisitorAuthService {
         return response;
     }
 
-    public Map<String, Object> generateOtp(Map<String, String> body) {
+    public Map<String, Object> checkRegistration(Map<String, String> body) {
         String phone = validationService.requirePhone(body != null ? body.get(ValidationConstants.FIELD_PHONE_NUMBER) : null);
-        if (!visitorOtpService.isMobileRegistered(phone)) {
-            throw new VisitorNotFoundException(
-                    ErrorCodeConstants.format(ErrorCodeConstants.MOBILE_NOT_FOUND_MSG, phone)
-            );
+        String epic = null;
+        if (body != null && !validationService.isBlank(body.get(ValidationConstants.FIELD_EPIC_NUMBER))) {
+            epic = validationService.requireEpic(body.get(ValidationConstants.FIELD_EPIC_NUMBER));
         }
 
-        String otp = visitorOtpService.generateOtp(phone);
+        boolean mobileExists = visitorService.existsByPhone(phone);
+        boolean epicMobileExists = epic != null && visitorService.existsByEpicAndPhone(epic, phone);
+
+        log.info("Visitor registration duplicate check mobileExists={} epicMobileExists={} phone={}",
+                mobileExists, epicMobileExists, RequestContextUtil.maskPhone(phone));
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("mobileExists", mobileExists);
+        response.put("epicMobileExists", epicMobileExists);
+
+        if (epicMobileExists) {
+            response.put("message", ErrorCodeConstants.DUPLICATE_EPIC_MOBILE_REGISTRATION_MSG);
+        } else if (mobileExists) {
+            response.put("message", ErrorCodeConstants.MOBILE_ALREADY_REGISTERED_WARNING_MSG);
+        } else {
+            response.put("message", "Mobile number is available for registration.");
+        }
+        return response;
+    }
+
+    public Map<String, Object> generateOtp(Map<String, String> body) {
+        String phone = validationService.requirePhone(body != null ? body.get(ValidationConstants.FIELD_PHONE_NUMBER) : null);
+        boolean registrationFlow = isRegistrationOtpRequest(body);
+        String otp;
+        if (registrationFlow) {
+            otp = visitorOtpService.generateKycOtp(phone);
+        } else {
+            if (!visitorOtpService.isMobileRegistered(phone)) {
+                throw new VisitorNotFoundException(
+                        ErrorCodeConstants.format(ErrorCodeConstants.MOBILE_NOT_FOUND_MSG, phone)
+                );
+            }
+            otp = visitorOtpService.generateOtp(phone);
+        }
+        log.info("Visitor OTP generated purpose={} phone={}",
+                registrationFlow ? "REGISTRATION" : "LOGIN",
+                RequestContextUtil.maskPhone(phone));
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
         response.put("otp", otp);
         response.put("message", "OTP sent to " + phone + " (mock)");
         return response;
+    }
+
+    private boolean isRegistrationOtpRequest(Map<String, String> body) {
+        if (body == null) {
+            return false;
+        }
+        String purpose = body.get("purpose");
+        String registrationFlow = body.get("registrationFlow");
+        return "REGISTRATION".equalsIgnoreCase(purpose)
+                || "true".equalsIgnoreCase(registrationFlow);
     }
 
     public Map<String, Object> validateOtp(Map<String, String> body) {

@@ -17,6 +17,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatStepperModule } from '@angular/material/stepper';
 
 type KycStep = 'id-entry' | 'otp-verification' | 'photo-capture' | 'additional-details' | 'kyc-complete';
+type MobileValidationType = 'warning' | 'error' | 'success' | '';
 
 interface VisitorRegistrationForm {
   fullName: string;
@@ -37,6 +38,13 @@ interface VisitorRegistrationForm {
   livePhoto: string;
   photoFromId: string;
   kycStatus?: string;
+}
+
+interface RegistrationCheckResponse {
+  success: boolean;
+  mobileExists: boolean;
+  epicMobileExists: boolean;
+  message: string;
 }
 
 @Component({
@@ -95,6 +103,10 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   successMsg = '';
   loading = false;
   submitted = false;
+  mobileValidationMsg = '';
+  mobileValidationType: MobileValidationType = '';
+  mobileCheckLoading = false;
+  duplicateRegistrationBlocked = false;
   
   // KYC state
   idValidated = false;
@@ -189,15 +201,31 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     return false;
   }
 
+  get isManualPhoneValid(): boolean {
+    return /^\d{10}$/.test(this.manualPhone);
+  }
+
+  get canSendEpicOtp(): boolean {
+    return this.canValidateId && this.isManualPhoneValid && !this.duplicateRegistrationBlocked;
+  }
+
+  get mobileValidationIcon(): string {
+    if (this.mobileValidationType === 'error') return 'error';
+    if (this.mobileValidationType === 'warning') return 'warning';
+    if (this.mobileValidationType === 'success') return 'check_circle';
+    return 'info';
+  }
+
   validateId() {
     if (!this.canValidateId) {
       this.errorMsg = 'Please enter a valid ID number and visitor name.';
       return;
     }
 
-    // Check if manual phone number is provided and valid
-    if (this.manualPhone && this.manualPhone.length !== 10) {
-      this.errorMsg = 'Manual mobile number must be exactly 10 digits.';
+    if (this.form.idType === 'EPIC' && !this.isManualPhoneValid) {
+      this.mobileValidationType = 'error';
+      this.mobileValidationMsg = 'Please enter a valid 10-digit mobile number.';
+      this.errorMsg = 'Please enter a valid 10-digit mobile number before generating OTP.';
       return;
     }
 
@@ -212,7 +240,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
     // Handle EPIC verification
     if (this.form.idType === 'EPIC') {
-      this.verifyEpic();
+      this.checkRegistrationStatus(true);
       return;
     }
 
@@ -238,7 +266,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
         if (res.code === '200' && res.data) {
           // EPIC verification successful with name match
           this.errorMsg = '';
-          this.successMsg = 'EPIC verified successfully';
+          this.successMsg = 'EPIC verified successfully. Sending OTP...';
           
           // Extract verified details from response data
           const verifiedName = res.data?.borrowernameonvoteridcard || this.form.visitorName;
@@ -254,20 +282,12 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
           // Log AI KYC score for display
           this.kycConfidenceScore = Math.min(nameMatchScore * 10, 100);
           
-          // If manual phone was provided, require manual verification
-          if (this.manualPhone && this.manualPhone.length === 10) {
-            this.manualVerification = true;
-            this.maskedPhone = this.maskPhone(this.manualPhone);
-            this.actualPhoneNumber = this.manualPhone;
-            this.successMsg += ' (Manual verification required - OTP will be sent)';
-            this.otpSent = true;
-            this.currentStep = 'otp-verification';
-          } else {
-            // No manual phone: automated OTP sending would happen here
-            // For now, move to next step after EPIC verification
-            this.idValidated = true;
-            this.currentStep = 'photo-capture';  // Skip OTP if registered phone is available
-          }
+          this.idValidated = true;
+          this.maskedPhone = this.maskPhone(this.manualPhone);
+          this.actualPhoneNumber = this.manualPhone;
+          this.form.phoneNumber = this.manualPhone;
+          this.loading = true;
+          this.generateRegistrationOtp();
         } else if (res.code === '400') {
           // Name mismatch or validation error
           this.errorMsg = res.message || 'Name verification failed.';
@@ -291,7 +311,39 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   resendOtp() {
     this.otpCode = '';
     this.otpSent = false;
-    this.validateId();
+    if (this.form.idType === 'EPIC' && this.isManualPhoneValid) {
+      this.loading = true;
+      this.generateRegistrationOtp();
+    } else {
+      this.validateId();
+    }
+  }
+
+  private generateRegistrationOtp() {
+    this.http.post<{ success: boolean; otp?: string; message: string }>(
+      `${environment.apiUrl}/visitor/auth/generate-otp`,
+      {
+        phoneNumber: this.actualPhoneNumber || this.manualPhone,
+        purpose: 'REGISTRATION',
+        registrationFlow: 'true',
+      }
+    ).subscribe({
+      next: res => {
+        this.loading = false;
+        if (res.success) {
+          this.otpCode = '';
+          this.otpSent = true;
+          this.currentStep = 'otp-verification';
+          this.successMsg = `OTP sent to ${this.maskedPhone}` + (res.otp ? ` (demo OTP: ${res.otp})` : '');
+        } else {
+          this.errorMsg = res.message || 'Failed to generate OTP.';
+        }
+      },
+      error: err => {
+        this.loading = false;
+        this.errorMsg = err?.error?.message || 'Failed to generate OTP. Please try again.';
+      }
+    });
   }
 
   // ── OVSE AADHAAR QR FLOW ────────────────────────────────────────────────
@@ -610,6 +662,11 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   // ── FINAL SUBMISSION ────────────────────────────────────────────────────
 
   submitRegistration() {
+    if (this.duplicateRegistrationBlocked) {
+      this.errorMsg = 'User already registered with this EPIC and mobile number. Please login.';
+      return;
+    }
+
     this.loading = true;
     const payload: Record<string, string | boolean> = {
       fullName: this.form.fullName.trim(),
@@ -697,6 +754,10 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.manualPhone = '';
     this.manualVerification = false;
     this.actualPhoneNumber = '';
+    this.mobileValidationMsg = '';
+    this.mobileValidationType = '';
+    this.mobileCheckLoading = false;
+    this.duplicateRegistrationBlocked = false;
 
     // Stop camera and clear photo capture state
     this.stopCamera();
@@ -743,6 +804,89 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
   sanitizeManualPhone() {
     this.manualPhone = this.manualPhone.replace(/\D/g, '');
+    this.form.phoneNumber = this.manualPhone;
+    this.mobileValidationMsg = '';
+    this.mobileValidationType = '';
+    this.mobileCheckLoading = false;
+    this.duplicateRegistrationBlocked = false;
+  }
+
+  onMobileBlur() {
+    if (!this.manualPhone) {
+      this.mobileValidationMsg = '';
+      this.mobileValidationType = '';
+      this.duplicateRegistrationBlocked = false;
+      return;
+    }
+
+    if (!this.isManualPhoneValid) {
+      this.mobileValidationType = 'error';
+      this.mobileValidationMsg = 'Please enter a valid 10-digit mobile number.';
+      this.duplicateRegistrationBlocked = false;
+      return;
+    }
+
+    this.checkRegistrationStatus(false);
+  }
+
+  private checkRegistrationStatus(proceedAfterCheck: boolean) {
+    if (!this.isManualPhoneValid) {
+      this.mobileValidationType = 'error';
+      this.mobileValidationMsg = 'Please enter a valid 10-digit mobile number.';
+      this.loading = false;
+      return;
+    }
+
+    const payload: Record<string, string> = {
+      phoneNumber: this.manualPhone,
+    };
+
+    if (this.form.epicNumber && /^[A-Za-z]{3}[0-9]{7}$/.test(this.form.epicNumber)) {
+      payload['epicNumber'] = this.form.epicNumber.trim().toUpperCase();
+    }
+
+    this.mobileCheckLoading = true;
+    this.http.post<RegistrationCheckResponse>(`${environment.apiUrl}/visitor/auth/check-registration`, payload).subscribe({
+      next: res => {
+        this.mobileCheckLoading = false;
+        this.applyRegistrationCheck(res);
+
+        if (res.epicMobileExists) {
+          this.loading = false;
+          this.errorMsg = res.message || 'User already registered with this EPIC and mobile number. Please login.';
+          return;
+        }
+
+        if (proceedAfterCheck) {
+          this.verifyEpic();
+        }
+      },
+      error: err => {
+        this.mobileCheckLoading = false;
+        this.loading = false;
+        this.mobileValidationType = 'error';
+        this.mobileValidationMsg = err?.error?.message || 'Unable to validate mobile number. Please try again.';
+      }
+    });
+  }
+
+  private applyRegistrationCheck(res: RegistrationCheckResponse) {
+    this.duplicateRegistrationBlocked = !!res.epicMobileExists;
+
+    if (res.epicMobileExists) {
+      this.mobileValidationType = 'error';
+      this.mobileValidationMsg = res.message || 'User already registered with this EPIC and mobile number. Please login.';
+      return;
+    }
+
+    if (res.mobileExists) {
+      this.mobileValidationType = 'warning';
+      this.mobileValidationMsg = res.message || 'This mobile number is already registered. You can change the mobile number or continue if you want to register another visitor using the same number.';
+      return;
+    }
+
+    this.mobileValidationType = 'success';
+    this.mobileValidationMsg = 'Mobile number is available for OTP verification.';
   }
 
   sanitizeNumericInput(field: 'phoneNumber' | 'aadhaarNumber') {
@@ -755,6 +899,11 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
   sanitizeEpicInput() {
     this.form.epicNumber = this.form.epicNumber.toUpperCase();
+    this.duplicateRegistrationBlocked = false;
+    if (this.mobileValidationType === 'error') {
+      this.mobileValidationMsg = '';
+      this.mobileValidationType = '';
+    }
   }
 
   /**
@@ -775,6 +924,10 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.kycStatus = '';
     this.manualPhone = '';
     this.manualVerification = false;
+    this.mobileValidationMsg = '';
+    this.mobileValidationType = '';
+    this.mobileCheckLoading = false;
+    this.duplicateRegistrationBlocked = false;
     this.form = {
       fullName: '',
       phoneNumber: '',

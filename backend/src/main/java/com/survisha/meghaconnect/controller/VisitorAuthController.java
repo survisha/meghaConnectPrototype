@@ -16,6 +16,7 @@ import java.util.Map;
  *
  * Flow:
  *   1. POST /api/v1/visitor/auth/check-mobile   – check if mobile exists in persons table
+ *   1a.POST /api/v1/visitor/auth/check-registration – check mobile and EPIC+mobile duplicate status
  *   2. POST /api/v1/visitor/auth/generate-otp   – generate & deliver OTP (mock; SMS TBD)
  *   3. POST /api/v1/visitor/auth/validate-otp   – validate OTP, return JWT
  *   4. POST /api/v1/visitor/auth/register        – register new visitor
@@ -40,6 +41,17 @@ public class VisitorAuthController {
     @PostMapping("/check-mobile")
     public ResponseEntity<Map<String, Object>> checkMobile(@RequestBody Map<String, String> body) {
         return ResponseEntity.ok(visitorAuthService.checkMobile(body));
+    }
+
+    /**
+     * Checks registration duplicate status without exposing existing visitor data.
+     *
+     * Mobile duplicates are warnings only. An exact EPIC + mobile duplicate is
+     * blocked because it represents the same visitor registration.
+     */
+    @PostMapping("/check-registration")
+    public ResponseEntity<Map<String, Object>> checkRegistration(@RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(visitorAuthService.checkRegistration(body));
     }
 
     // ── 2. Generate OTP ───────────────────────────────────────────────────────

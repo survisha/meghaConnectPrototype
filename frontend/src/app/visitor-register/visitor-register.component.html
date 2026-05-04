@@ -161,7 +161,7 @@
 
           <!-- Mobile Number Field (only for EPIC) -->
           <mat-form-field appearance="outline" class="full-width" *ngIf="!otpSent && form.idType === 'EPIC'">
-            <mat-label>Mobile Number</mat-label>
+            <mat-label>Mobile Number *</mat-label>
             <input
               matInput
               id="register_mobileNumberInput"
@@ -170,9 +170,22 @@
               placeholder="10-digit mobile number"
               maxlength="10"
               (input)="sanitizeManualPhone()"
+              (blur)="onMobileBlur()"
             />
+            <mat-hint *ngIf="mobileCheckLoading">
+              <mat-icon class="inline-hint-icon">hourglass_empty</mat-icon>
+              Checking mobile number...
+            </mat-hint>
            
           </mat-form-field>
+
+          <div
+            *ngIf="mobileValidationMsg && !otpSent && form.idType === 'EPIC'"
+            class="mobile-validation-msg"
+            [ngClass]="mobileValidationType">
+            <mat-icon>{{ mobileValidationIcon }}</mat-icon>
+            <span>{{ mobileValidationMsg }}</span>
+          </div>
 
           <!-- OVSE QR Code Display (shown when idType === AADHAAR and Qr is generated) -->
           <div *ngIf="showQrCode && qrDataUri" class="qr-code-section" style="text-align:center;padding:1.5rem;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;margin:1rem 0">
@@ -238,7 +251,7 @@
               mat-raised-button 
               color="primary" 
               class="flex-1" 
-              [disabled]="loading || !canValidateId" 
+              [disabled]="loading || !canSendEpicOtp" 
               (click)="validateId()">
               <span *ngIf="!loading"><i class="pi pi-send"></i> Send OTP</span>
               <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Loading...</span>

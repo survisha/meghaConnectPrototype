@@ -22,6 +22,14 @@ public class VisitorController {
 
     private final VisitorService visitorService;
 
+    /*
+     * Backward compatibility:
+     * These /api/v1/visitors/** endpoints are retained for existing search and
+     * management integrations. New public visitor authentication and
+     * registration APIs should be added under VisitorAuthController
+     * (/api/v1/visitor/auth/**).
+     */
+
     @Operation(summary = "Find visitor by phone", description = "Search visitor by phone number")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Visitor found",

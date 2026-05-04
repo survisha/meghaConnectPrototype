@@ -14,6 +14,8 @@ public interface VisitorRepository extends JpaRepository<Visitor, Long>, JpaSpec
     Optional<Visitor> findByPhoneNumber(String phoneNumber);
     Optional<Visitor> findByEpicNumber(String epicNumber);
     Optional<Visitor> findByAadhaarNumber(String aadhaarNumber);
+    boolean existsByPhoneNumber(String phoneNumber);
+    boolean existsByEpicNumberAndPhoneNumber(String epicNumber, String phoneNumber);
 
     @Query("SELECT v FROM Visitor v WHERE LOWER(v.fullName) LIKE LOWER(CONCAT('%', :name, '%'))")
     List<Visitor> searchByName(@Param("name") String name);

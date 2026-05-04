@@ -30,6 +30,14 @@ public class VisitorService {
         return visitorRepository.findByAadhaarNumber(aadhaar);
     }
 
+    public boolean existsByPhone(String phone) {
+        return visitorRepository.existsByPhoneNumber(phone);
+    }
+
+    public boolean existsByEpicAndPhone(String epic, String phone) {
+        return visitorRepository.existsByEpicNumberAndPhoneNumber(epic, phone);
+    }
+
     public List<Visitor> searchByName(String name) {
         return visitorRepository.searchByName(name);
     }
@@ -73,19 +81,24 @@ public class VisitorService {
             );
         }
 
-        // Check for duplicate mobile
-        if (visitorRepository.findByPhoneNumber(dto.getPhoneNumber()).isPresent()) {
-            throw new MobileAlreadyRegisteredException(dto.getPhoneNumber());
-        }
-
         // Validate EPIC format if provided
+        String normalizedEpic = null;
         if (dto.getEpicNumber() != null && !dto.getEpicNumber().trim().isEmpty()) {
-            if (!dto.getEpicNumber().matches(ValidationConstants.REGEX_EPIC)) {
+            normalizedEpic = dto.getEpicNumber().trim().toUpperCase();
+            if (!normalizedEpic.matches(ValidationConstants.REGEX_EPIC)) {
                 throw new VisitorRegistrationValidationException(
                     ErrorCodeConstants.INVALID_EPIC_FORMAT,
                     ErrorCodeConstants.INVALID_EPIC_FORMAT_MSG
                 );
             }
+        }
+
+        String normalizedPhone = dto.getPhoneNumber().trim();
+        if (normalizedEpic != null && visitorRepository.existsByEpicNumberAndPhoneNumber(normalizedEpic, normalizedPhone)) {
+            throw new VisitorRegistrationValidationException(
+                ErrorCodeConstants.DUPLICATE_EPIC_MOBILE_REGISTRATION,
+                ErrorCodeConstants.DUPLICATE_EPIC_MOBILE_REGISTRATION_MSG
+            );
         }
 
         // Validate Aadhaar format if provided
@@ -100,7 +113,7 @@ public class VisitorService {
 
         // Determine KYC type
         String kycType = "NONE";
-        if (dto.getEpicNumber() != null && !dto.getEpicNumber().trim().isEmpty()) {
+        if (normalizedEpic != null) {
             kycType = ValidationConstants.ID_TYPE_EPIC;
         } else if (dto.getAadhaarNumber() != null && !dto.getAadhaarNumber().trim().isEmpty()) {
             kycType = ValidationConstants.ID_TYPE_AADHAAR;
@@ -121,9 +134,9 @@ public class VisitorService {
         // Create and save visitor
         Visitor visitor = Visitor.builder()
                 .fullName(dto.getFullName().trim())
-                .phoneNumber(dto.getPhoneNumber().trim())
+                .phoneNumber(normalizedPhone)
                 .email(dto.getEmail())
-                .epicNumber(dto.getEpicNumber())
+                .epicNumber(normalizedEpic)
                 .aadhaarNumber(dto.getAadhaarNumber())
                 .kycType(kycType)
                 .kycVerified(kycVerified)

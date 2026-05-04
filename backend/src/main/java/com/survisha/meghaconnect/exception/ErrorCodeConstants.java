@@ -64,6 +64,7 @@ public class ErrorCodeConstants {
     // ========== BUSINESS LOGIC ERRORS (ERR_020 - ERR_029) ==========
     public static final String MOBILE_ALREADY_REGISTERED = "ERR_020";
     public static final String MOBILE_ALREADY_REGISTERED_MSG = "Mobile number is already registered. Please use a different mobile or login.";
+    public static final String MOBILE_ALREADY_REGISTERED_WARNING_MSG = "This mobile number is already registered. You can change the mobile number or continue if you want to register another visitor using the same number.";
 
     public static final String SCHEDULING_CONFLICT = "ERR_021";
     public static final String SCHEDULING_CONFLICT_MSG = "Scheduling conflict detected. A schedule event already exists at: %s";
@@ -227,6 +228,9 @@ public class ErrorCodeConstants {
 
     public static final String INVALID_IMAGE_FORMAT = "ERR_087";
     public static final String INVALID_IMAGE_FORMAT_MSG = "Invalid image format";
+
+    public static final String DUPLICATE_EPIC_MOBILE_REGISTRATION = "ERR_088";
+    public static final String DUPLICATE_EPIC_MOBILE_REGISTRATION_MSG = "User already registered with this EPIC and mobile number. Please login.";
 
     // ========== STREAM & CONTENT ERRORS (ERR_090 - ERR_099) ==========
     public static final String CONTENT_NOT_FOUND = "ERR_090";

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../services/api_service.dart';
+import '../widgets/megha_ui.dart';
 
 class _Person {
   final int id;
@@ -27,13 +29,13 @@ class _Person {
 }
 
 const _schemeHistory = [
-  ('CMSDF', '2022', '₹2.5L', 'Completed'),
-  ('CM Care', '2023', '₹50K', 'Completed'),
+  ('CMSDF', '2022', 'Rs. 2.5L', 'Completed'),
+  ('CM Care', '2023', 'Rs. 50K', 'Completed'),
 ];
 
 const _meetingHistory = [
   ('15 Jan 2024', 'CMSDF Application', 'Approved'),
-  ('10 Nov 2023', 'Governance Issue', 'Forwarded to Dept'),
+  ('10 Nov 2023', 'Governance Issue', 'Forwarded'),
   ('05 Aug 2023', 'CMSG Application', 'Under Process'),
 ];
 
@@ -46,10 +48,7 @@ class PublicIdentificationScreen extends StatefulWidget {
 }
 
 class _PublicIdentificationScreenState
-    extends State<PublicIdentificationScreen>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabCtrl;
-
+    extends State<PublicIdentificationScreen> {
   final _phoneCtrl = TextEditingController();
   final _epicCtrl = TextEditingController();
   final _nameCtrl = TextEditingController();
@@ -76,14 +75,7 @@ class _PublicIdentificationScreenState
   ];
 
   @override
-  void initState() {
-    super.initState();
-    _tabCtrl = TabController(length: 3, vsync: this);
-  }
-
-  @override
   void dispose() {
-    _tabCtrl.dispose();
     _phoneCtrl.dispose();
     _epicCtrl.dispose();
     _nameCtrl.dispose();
@@ -92,7 +84,7 @@ class _PublicIdentificationScreenState
 
   static _Person _mapPerson(Map<String, dynamic> m) => _Person(
         id: (m['id'] as num?)?.toInt() ?? 0,
-        fullName: m['fullName'] as String? ?? '—',
+        fullName: m['fullName'] as String? ?? '-',
         phone: m['phoneNumber'] as String? ?? '',
         epic: m['epicNumber'] as String? ?? '',
         designation: m['designation'] as String? ?? '',
@@ -104,7 +96,7 @@ class _PublicIdentificationScreenState
 
   Future<void> _search() async {
     final phone = _phoneCtrl.text.trim();
-    final epic = _epicCtrl.text.trim();
+    final epic = _epicCtrl.text.trim().toUpperCase();
     final name = _nameCtrl.text.trim();
     final district = _district;
 
@@ -116,7 +108,6 @@ class _PublicIdentificationScreenState
     });
 
     List<_Person> results = [];
-
     if (phone.isNotEmpty) {
       final m = await ApiService.searchPersonByPhone(phone);
       if (m != null) results.add(_mapPerson(m));
@@ -154,242 +145,240 @@ class _PublicIdentificationScreenState
   @override
   Widget build(BuildContext context) {
     if (_selected != null) {
-      return _buildProfileView(context, _selected!);
+      return _buildProfileView(_selected!);
     }
-    return Column(
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
       children: [
-        _buildSearchHeader(),
-        TabBar(
-          controller: _tabCtrl,
-          labelColor: const Color(0xFF1A237E),
-          unselectedLabelColor: Colors.grey,
-          indicatorColor: const Color(0xFF1A237E),
-          tabs: const [
-            Tab(text: 'Phone'),
-            Tab(text: 'EPIC'),
-            Tab(text: 'Name'),
+        const Row(
+          children: [
+            Icon(Icons.person_search_outlined, color: MeghaColors.primary),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Public Identification',
+                style: TextStyle(
+                  color: MeghaColors.primary,
+                  fontSize: 21,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
           ],
         ),
-        SizedBox(
-          height: 120,
-          child: TabBarView(
-            controller: _tabCtrl,
-            children: [
-              _buildPhoneTab(),
-              _buildEpicTab(),
-              _buildNameTab(),
-            ],
-          ),
+        const SizedBox(height: 6),
+        const Text(
+          'Search for a person by phone, EPIC, name, or district. Facial recognition is ready for plug-and-play API support.',
+          style:
+              TextStyle(color: MeghaColors.muted, fontSize: 13, height: 1.35),
         ),
-        Expanded(child: _buildResults()),
+        const SizedBox(height: 16),
+        _buildSearchCard(),
+        const SizedBox(height: 16),
+        _buildResultsCard(),
       ],
     );
   }
 
-  Widget _buildSearchHeader() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      color: const Color(0xFF1A237E),
-      child: Row(
+  Widget _buildSearchCard() {
+    return MeghaSectionCard(
+      title: 'Search',
+      icon: Icons.search,
+      child: Column(
         children: [
-          const Icon(Icons.badge_outlined, color: Colors.white, size: 20),
-          const SizedBox(width: 10),
-          const Expanded(
-            child: Text(
-              'Identify by Phone, EPIC, or Name',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14),
+          TextField(
+            controller: _phoneCtrl,
+            keyboardType: TextInputType.phone,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(10),
+            ],
+            decoration: const InputDecoration(
+              labelText: 'Phone Number',
+              prefixIcon: Icon(Icons.phone_outlined),
+              hintText: 'Mobile number',
             ),
+            onSubmitted: (_) => _search(),
           ),
-          if (_searched)
-            TextButton(
-              onPressed: _clear,
-              child: const Text('Clear',
-                  style: TextStyle(color: Colors.white70, fontSize: 12)),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _epicCtrl,
+            textCapitalization: TextCapitalization.characters,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9]')),
+            ],
+            decoration: const InputDecoration(
+              labelText: 'EPIC / Voter ID',
+              prefixIcon: Icon(Icons.badge_outlined),
+              hintText: 'EPIC number',
             ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPhoneTab() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _phoneCtrl,
-              keyboardType: TextInputType.phone,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(10),
-              ],
-              decoration: const InputDecoration(
-                labelText: 'Mobile Number',
-                prefixIcon: Icon(Icons.phone_outlined),
-                prefixText: '+91 ',
-              ),
-              onSubmitted: (_) => _search(),
+            onSubmitted: (_) => _search(),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _nameCtrl,
+            textCapitalization: TextCapitalization.words,
+            decoration: const InputDecoration(
+              labelText: 'Name',
+              prefixIcon: Icon(Icons.person_outline),
+              hintText: 'Full or partial name',
             ),
+            onSubmitted: (_) => _search(),
           ),
-          const SizedBox(width: 10),
-          ElevatedButton(
-            onPressed: _search,
-            child: const Text('Search'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEpicTab() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _epicCtrl,
-              textCapitalization: TextCapitalization.characters,
-              decoration: const InputDecoration(
-                labelText: 'EPIC / Voter ID Number',
-                prefixIcon: Icon(Icons.credit_card_outlined),
-              ),
-              onSubmitted: (_) => _search(),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            value: _district,
+            decoration: const InputDecoration(
+              labelText: 'District',
+              prefixIcon: Icon(Icons.place_outlined),
             ),
+            items: [
+              const DropdownMenuItem(value: '', child: Text('-- Clear --')),
+              for (final d in _districts)
+                DropdownMenuItem(value: d, child: Text(d)),
+            ],
+            onChanged: (value) => setState(() => _district = value ?? ''),
           ),
-          const SizedBox(width: 10),
-          ElevatedButton(
-            onPressed: _search,
-            child: const Text('Search'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNameTab() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _nameCtrl,
-              textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(
-                labelText: 'Full Name',
-                prefixIcon: Icon(Icons.person_search_outlined),
-              ),
-              onSubmitted: (_) => _search(),
-            ),
-          ),
-          const SizedBox(width: 10),
-          ElevatedButton(
-            onPressed: _search,
-            child: const Text('Search'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildResults() {
-    if (_searching) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (!_searched) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+          const SizedBox(height: 14),
+          Row(
             children: [
-              Icon(Icons.search, size: 56, color: Colors.grey[400]),
-              const SizedBox(height: 12),
-              Text(
-                'Enter phone, EPIC, or name to identify a person',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey[500], fontSize: 14),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _searching ? null : _search,
+                  icon: _searching
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.search),
+                  label: const Text('Search'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _clear,
+                  icon: const Icon(Icons.close),
+                  label: const Text('Clear'),
+                ),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            onPressed: null,
+            icon: const Icon(Icons.camera_alt_outlined),
+            label: const Text('Identify by Face (API)'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResultsCard() {
+    return MeghaSectionCard(
+      title: 'Results (${_results.length})',
+      icon: Icons.list_alt_outlined,
+      child: _buildResultsBody(),
+    );
+  }
+
+  Widget _buildResultsBody() {
+    if (_searching) {
+      return const Padding(
+        padding: EdgeInsets.all(28),
+        child: Center(child: CircularProgressIndicator()),
       );
     }
-
+    if (!_searched) {
+      return _emptyState(
+          Icons.info_outline, 'Enter search criteria and click Search.');
+    }
     if (_results.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+      return _emptyState(Icons.search_off_outlined, 'No results found.');
+    }
+
+    return Column(
+      children: [
+        for (final person in _results)
+          _PersonResultTile(
+            person: person,
+            selected: _selected?.id == person.id,
+            onTap: () => setState(() => _selected = person),
+          ),
+      ],
+    );
+  }
+
+  Widget _emptyState(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 12),
+      child: Column(
+        children: [
+          Icon(icon, size: 52, color: const Color(0xFFD1D5DB)),
+          const SizedBox(height: 8),
+          Text(
+            text,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: MeghaColors.muted, fontSize: 13),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileView(_Person person) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Row(
           children: [
-            Icon(Icons.person_off_outlined, size: 56, color: Colors.grey[400]),
-            const SizedBox(height: 12),
-            Text(
-              'No records found',
-              style: TextStyle(color: Colors.grey[500], fontSize: 16),
+            IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () => setState(() => _selected = null),
+            ),
+            const Expanded(
+              child: Text(
+                'Person Profile',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: MeghaColors.primary,
+                ),
+              ),
             ),
           ],
         ),
-      );
-    }
-
-    return ListView.separated(
-      padding: const EdgeInsets.all(12),
-      itemCount: _results.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (_, i) => _PersonResultCard(
-        person: _results[i],
-        onTap: () => setState(() => _selected = _results[i]),
-      ),
-    );
-  }
-
-  Widget _buildProfileView(BuildContext context, _Person person) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+        const SizedBox(height: 8),
+        MeghaSectionCard(
+          title: 'Person Profile',
+          icon: Icons.badge_outlined,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () => setState(() => _selected = null),
-              ),
-              const Text(
-                'Person Profile',
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1A237E)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          // Profile Header
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   CircleAvatar(
-                    radius: 30,
-                    backgroundColor: const Color(0xFF1A237E),
+                    radius: 32,
+                    backgroundColor: MeghaColors.primary,
                     child: Text(
                       person.fullName.isNotEmpty
                           ? person.fullName[0].toUpperCase()
                           : '?',
                       style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold),
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -397,171 +386,183 @@ class _PublicIdentificationScreenState
                         Text(
                           person.fullName,
                           style: const TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold),
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: MeghaColors.text,
+                          ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          person.designation,
-                          style: TextStyle(
-                              color: Colors.grey[600], fontSize: 13),
-                        ),
-                        Text(
-                          '${person.constituency}, ${person.district}',
-                          style: TextStyle(
-                              color: Colors.grey[500], fontSize: 12),
+                        const SizedBox(height: 3),
+                        Text(person.designation,
+                            style: const TextStyle(color: MeghaColors.muted)),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: const [
+                            _StatusPill('Active Voter', Color(0xFF065F46)),
+                            _StatusPill('EPIC Verified', Color(0xFF1E40AF)),
+                          ],
                         ),
                       ],
                     ),
                   ),
                 ],
               ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          // Identity details
-          _buildSection(
-            '🪪 Identity',
-            [
-              _rowPair('Phone', person.phone),
-              _rowPair('EPIC', person.epic),
-              _rowPair('Booth', person.booth),
-            ],
-          ),
-          const SizedBox(height: 12),
-          // Profile
-          if (person.briefProfile != null)
-            _buildSection(
-              '📋 Brief Profile',
-              [Text(person.briefProfile!,
-                  style: TextStyle(color: Colors.grey[700], fontSize: 13))],
-            ),
-          const SizedBox(height: 12),
-          // Scheme History
-          _buildSection(
-            '🏆 Scheme History',
-            [
-              Table(
-                columnWidths: const {
-                  0: FlexColumnWidth(2),
-                  1: FlexColumnWidth(1),
-                  2: FlexColumnWidth(2),
-                  3: FlexColumnWidth(2),
-                },
-                children: [
-                  TableRow(
-                    decoration:
-                        BoxDecoration(color: Colors.grey[100]),
-                    children: ['Scheme', 'Year', 'Amount', 'Status']
-                        .map((h) => Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 6),
-                              child: Text(h,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12)),
-                            ))
-                        .toList(),
+              const Divider(height: 26),
+              _InfoRow('Phone', person.phone),
+              _InfoRow('EPIC', person.epic),
+              _InfoRow('District', person.district),
+              _InfoRow('Constituency', person.constituency),
+              _InfoRow('Booth', person.booth),
+              if (person.briefProfile?.trim().isNotEmpty == true) ...[
+                const SizedBox(height: 10),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: MeghaColors.panelBg,
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  ..._schemeHistory.map(
-                    (s) => TableRow(
-                      children: [s.$1, s.$2, s.$3, s.$4]
-                          .map((v) => Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 6),
-                                child: Text(v,
-                                    style: const TextStyle(fontSize: 12)),
-                              ))
-                          .toList(),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          // Meeting History
-          _buildSection(
-            '📅 Last 3 Meetings',
-            [
-              ..._meetingHistory.map(
-                (m) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.event,
-                          size: 14, color: Color(0xFF1A237E)),
-                      const SizedBox(width: 6),
-                      Text(m.$1,
-                          style: const TextStyle(
-                              fontSize: 12, fontWeight: FontWeight.w500)),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(m.$2,
-                            style: TextStyle(
-                                fontSize: 12, color: Colors.grey[600])),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE8EAF6),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(m.$3,
-                            style: const TextStyle(
-                                fontSize: 11,
-                                color: Color(0xFF1A237E))),
-                      ),
-                    ],
+                  child: Text(
+                    person.briefProfile!,
+                    style:
+                        const TextStyle(color: MeghaColors.text, fontSize: 13),
                   ),
                 ),
-              ),
+              ],
             ],
           ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 14),
+        MeghaSectionCard(
+          title: 'Scheme & Meeting History',
+          icon: Icons.history,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Scheme History',
+                  style: TextStyle(fontWeight: FontWeight.w800)),
+              const SizedBox(height: 8),
+              for (final item in _schemeHistory)
+                _HistoryRow(
+                  leading: item.$2,
+                  title: item.$1,
+                  trailing: item.$4,
+                  subtitle: item.$3,
+                ),
+              const Divider(height: 24),
+              const Text('Meeting History',
+                  style: TextStyle(fontWeight: FontWeight.w800)),
+              const SizedBox(height: 8),
+              for (final item in _meetingHistory)
+                _HistoryRow(
+                  leading: item.$1,
+                  title: item.$2,
+                  trailing: item.$3,
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
+}
 
-  Widget _buildSection(String title, List<Widget> children) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A237E)),
+class _PersonResultTile extends StatelessWidget {
+  final _Person person;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _PersonResultTile({
+    required this.person,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: const BorderSide(color: Color(0xFFF3F4F6)),
+            left: BorderSide(
+              color: selected ? MeghaColors.primary : Colors.transparent,
+              width: 3,
             ),
-            const SizedBox(height: 10),
-            ...children,
+          ),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: MeghaColors.primary,
+              child: Text(
+                person.fullName.isNotEmpty
+                    ? person.fullName[0].toUpperCase()
+                    : '?',
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.w800),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(person.fullName,
+                      style: const TextStyle(
+                          color: MeghaColors.text,
+                          fontWeight: FontWeight.w700)),
+                  Text(person.designation,
+                      style: const TextStyle(
+                          color: MeghaColors.muted, fontSize: 12)),
+                  Text('${person.constituency}, ${person.district}',
+                      style: const TextStyle(
+                          color: Color(0xFF9CA3AF), fontSize: 11)),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: Color(0xFF9CA3AF)),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _rowPair(String label, String value) {
+class _InfoRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _InfoRow(this.label, this.value);
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 60,
+            width: 104,
             child: Text(label,
-                style: TextStyle(
-                    color: Colors.grey[500],
+                style: const TextStyle(
+                    color: MeghaColors.muted,
                     fontSize: 12,
-                    fontWeight: FontWeight.w500)),
+                    fontWeight: FontWeight.w700)),
           ),
           Expanded(
-            child: Text(value,
-                style: const TextStyle(
-                    fontSize: 13, fontWeight: FontWeight.w600)),
+            child: Text(
+              value.trim().isEmpty ? '-' : value,
+              style: const TextStyle(
+                color: MeghaColors.text,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),
@@ -569,46 +570,78 @@ class _PublicIdentificationScreenState
   }
 }
 
-class _PersonResultCard extends StatelessWidget {
-  final _Person person;
-  final VoidCallback onTap;
-  const _PersonResultCard({required this.person, required this.onTap});
+class _StatusPill extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _StatusPill(this.label, this.color);
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: ListTile(
-        onTap: onTap,
-        leading: CircleAvatar(
-          backgroundColor: const Color(0xFF1A237E),
-          child: Text(
-            person.fullName.isNotEmpty ? person.fullName[0].toUpperCase() : '?',
-            style:
-                const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withAlpha(31),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style:
+            TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+}
+
+class _HistoryRow extends StatelessWidget {
+  final String leading;
+  final String title;
+  final String trailing;
+  final String? subtitle;
+
+  const _HistoryRow({
+    required this.leading,
+    required this.title,
+    required this.trailing,
+    this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 76,
+            child: Text(
+              leading,
+              style: const TextStyle(
+                color: MeghaColors.muted,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
-        ),
-        title: Text(person.fullName,
-            style:
-                const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(person.designation,
-                style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-            Text('${person.constituency} · ${person.district}',
-                style: TextStyle(fontSize: 11, color: Colors.grey[500])),
-          ],
-        ),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(person.phone,
-                style: const TextStyle(fontSize: 12, color: Color(0xFF1A237E))),
-            const Icon(Icons.chevron_right, size: 16, color: Colors.grey),
-          ],
-        ),
-        isThreeLine: true,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: const TextStyle(
+                        color: MeghaColors.text,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700)),
+                if (subtitle != null)
+                  Text(subtitle!,
+                      style: const TextStyle(
+                          color: MeghaColors.muted, fontSize: 12)),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          _StatusPill(trailing, const Color(0xFF065F46)),
+        ],
       ),
     );
   }

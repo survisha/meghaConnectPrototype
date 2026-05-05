@@ -5,13 +5,13 @@
 class AppConfig {
   /// Backend API base URL (UAT).
   ///
-  /// Angular uses: https://meghaconnect.cloud/api/v1
+  /// Keep the host/base segment here. Versioned endpoints append `/v1`.
   /// Do NOT use localhost in mobile builds.
   ///
   /// Future prod switch: change this value (or wire it via build flavors).
-  static const String apiBaseUrl = 'https://meghaconnect.cloud/api/v1';
+  static const String apiBaseUrl = 'https://meghaconnect.cloud/api';
+  static const String apiV1BaseUrl = '$apiBaseUrl/v1';
 
   /// Shared preference key for persisted language selection.
   static const String languageStorageKey = 'app_language';
 }
-

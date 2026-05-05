@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../services/auth_service.dart';
 import '../services/api_service.dart';
 
 class _SchemeApp {
@@ -129,7 +127,6 @@ class _SchemesScreenState extends State<SchemesScreen>
 
   @override
   Widget build(BuildContext context) {
-    final role = context.watch<AuthService>().user!.role;
     return Column(
       children: [
         _buildFilterBar(),

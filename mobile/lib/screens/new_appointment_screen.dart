@@ -40,7 +40,6 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
   bool _photoUploaded = false;
   bool _epicScanUploaded = false;
   bool _aadhaarScanUploaded = false;
-  String? _photoStoragePath;
 
   bool _submitted = false;
   bool _loading = false;
@@ -111,7 +110,6 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
       _photoUploaded = false;
       _epicScanUploaded = false;
       _aadhaarScanUploaded = false;
-      _photoStoragePath = null;
       _submitted = false;
     });
   }
@@ -432,7 +430,6 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
             // TODO: open camera via image_picker
             setState(() {
               _photoUploaded = true;
-              _photoStoragePath = 'registrations/temp/photo.jpg';
             });
           },
         ),

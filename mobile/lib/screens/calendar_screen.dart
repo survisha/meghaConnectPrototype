@@ -45,7 +45,6 @@ class CalendarScreen extends StatefulWidget {
 }
 
 class _CalendarScreenState extends State<CalendarScreen> {
-  _Event? _selectedEvent;
   final _formKey = GlobalKey<FormState>();
   List<_Event> _events = [];
   bool _loading = true;

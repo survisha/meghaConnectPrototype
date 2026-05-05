@@ -4,6 +4,7 @@ import '../services/auth_service.dart';
 import '../services/api_service.dart';
 import '../services/navigation_service.dart';
 import '../core/i18n/app_i18n.dart';
+import '../widgets/megha_ui.dart';
 
 class _SummaryCard {
   final String label;
@@ -146,7 +147,6 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
     setState(() {
       _appointments = ((apptPage['content'] as List<dynamic>?) ?? []).map((e) {
         final m = e as Map<String, dynamic>;
-        final applicant = m['applicant'] as Map<String, dynamic>? ?? {};
         return _MyAppointment(
           m['applicationId'] as String? ?? m['id']?.toString() ?? '',
           m['agendaBrief'] as String? ?? '',
@@ -207,21 +207,51 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
-        title: Text(i18n.t('MY_PORTAL')),
-        actions: [
-          PopupMenuButton<String>(
-            tooltip: 'Language',
-            icon: const Icon(Icons.language),
-            onSelected: (v) => context.read<AppI18n>().setLang(v),
-            itemBuilder: (ctx) => [
-              for (final e in AppI18n.supported.entries)
-                CheckedPopupMenuItem<String>(
-                  value: e.key,
-                  checked: e.key == i18n.lang,
-                  child: Text(e.value),
-                ),
-            ],
+        toolbarHeight: 72,
+        elevation: 2,
+        titleSpacing: 16,
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
+        flexibleSpace: const DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [MeghaColors.primary, MeghaColors.primary2],
+            ),
           ),
+        ),
+        title: Row(
+          children: [
+            Image.asset('assets/logo.png', width: 38, height: 38),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'MeghaConnect',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  Text(
+                    i18n.t('MY_PORTAL'),
+                    style: TextStyle(
+                      color: Colors.white.withAlpha(214),
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          const MeghaLanguageSelector(dark: true, compact: true),
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: i18n.t('LOGOUT'),

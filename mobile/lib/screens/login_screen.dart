@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
 import '../core/i18n/app_i18n.dart';
+import '../widgets/megha_ui.dart';
+import 'visitor_registration_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -102,7 +104,9 @@ class _LoginScreenState extends State<LoginScreen>
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(message?.isNotEmpty == true ? message! : i18n.t('OTP_SENT_SUCCESS')),
+          content: Text(message?.isNotEmpty == true
+              ? message!
+              : i18n.t('OTP_SENT_SUCCESS')),
           backgroundColor: Color(0xFF065F46),
         ),
       );
@@ -150,7 +154,9 @@ class _LoginScreenState extends State<LoginScreen>
       setState(() {
         _publicLoading = false;
         _requiresEpic = requiresEpic;
-        _publicNotice = message?.isNotEmpty == true ? message : i18n.t('ERROR_INVALID_OTP_TRY');
+        _publicNotice = message?.isNotEmpty == true
+            ? message
+            : i18n.t('ERROR_INVALID_OTP_TRY');
         _publicNoticeIsWarning = requiresEpic;
       });
       return;
@@ -274,35 +280,10 @@ class _LoginScreenState extends State<LoginScreen>
             ),
           ),
           // Language selector (top-right)
-          Positioned(
+          const Positioned(
             top: 0,
             right: 0,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.14),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.white.withOpacity(0.22)),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: i18n.lang,
-                  icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 18),
-                  dropdownColor: _primaryBlue,
-                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
-                  items: AppI18n.supported.entries
-                      .map((e) => DropdownMenuItem<String>(
-                            value: e.key,
-                            child: Text(e.value),
-                          ))
-                      .toList(),
-                  onChanged: (v) {
-                    if (v == null) return;
-                    context.read<AppI18n>().setLang(v);
-                  },
-                ),
-              ),
-            ),
+            child: MeghaLanguageSelector(dark: true, compact: true),
           ),
           // Content
           Column(
@@ -322,7 +303,6 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
               ),
               const SizedBox(height: 16),
-              // Title
               const Text(
                 'MeghaConnect',
                 style: TextStyle(
@@ -333,8 +313,35 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
               ),
               const SizedBox(height: 6),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF22C55E).withAlpha(46),
+                  borderRadius: BorderRadius.circular(999),
+                  border:
+                      Border.all(color: const Color(0xFF22C55E).withAlpha(77)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.verified_user_outlined,
+                        color: Color(0xFF86EFAC), size: 14),
+                    const SizedBox(width: 6),
+                    Text(
+                      i18n.t('OFFICIAL_GOVERNMENT_PORTAL'),
+                      style: const TextStyle(
+                        color: Color(0xFFDCFCE7),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
               Text(
-                "Chief Minister's Office\nScheduling & Scheme Management",
+                i18n.t('CM_OFFICE_SCHEDULING'),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 13,
@@ -422,8 +429,14 @@ class _LoginScreenState extends State<LoginScreen>
         unselectedLabelColor: Colors.grey[600],
         dividerColor: Colors.transparent,
         tabs: [
-          Tab(text: '🔐  ${i18n.t('STAFF_LOGIN')}'),
-          Tab(text: '📱  ${i18n.t('CITIZEN_OTP_LOGIN')}'),
+          Tab(
+            icon: const Icon(Icons.badge_outlined, size: 18),
+            text: i18n.t('STAFF_LOGIN'),
+          ),
+          Tab(
+            icon: const Icon(Icons.people_outline, size: 18),
+            text: i18n.t('PUBLIC_CITIZEN'),
+          ),
         ],
       ),
     );
@@ -486,7 +499,8 @@ class _LoginScreenState extends State<LoginScreen>
                           color: Colors.white,
                         ),
                       )
-                    : Text(i18n.t('SIGN_IN'), style: const TextStyle(fontSize: 16)),
+                    : Text(i18n.t('SIGN_IN'),
+                        style: const TextStyle(fontSize: 16)),
               ),
             ),
             const SizedBox(height: 24),
@@ -600,7 +614,8 @@ class _LoginScreenState extends State<LoginScreen>
                 }
               },
               validator: (v) {
-                if (v == null || v.isEmpty) return i18n.t('ENTER_MOBILE_NUMBER');
+                if (v == null || v.isEmpty)
+                  return i18n.t('ENTER_MOBILE_NUMBER');
                 if (v.length != 10) return i18n.t('ENTER_10_DIGIT_MOBILE');
                 return null;
               },
@@ -617,7 +632,8 @@ class _LoginScreenState extends State<LoginScreen>
                 textCapitalization: TextCapitalization.characters,
                 validator: (v) {
                   if (!_requiresEpic) return null;
-                  if (v == null || v.trim().isEmpty) return i18n.t('ENTER_EPIC_NUMBER');
+                  if (v == null || v.trim().isEmpty)
+                    return i18n.t('ENTER_EPIC_NUMBER');
                   return null;
                 },
               ),
@@ -627,22 +643,18 @@ class _LoginScreenState extends State<LoginScreen>
               _buildNotice(_publicNotice!, warning: _publicNoticeIsWarning),
             ],
             const SizedBox(height: 12),
-            OutlinedButton(
+            ElevatedButton.icon(
               onPressed: _publicLoading ? null : _sendOtp,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: _primaryBlue,
-                side: const BorderSide(color: _primaryBlue),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
-              ),
-              child: _publicLoading && !_otpSent
+              icon: _publicLoading && !_otpSent
                   ? const SizedBox(
                       height: 18,
                       width: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
                     )
-                  : Text(_otpSent ? i18n.t('RESEND_OTP') : i18n.t('GENERATE_OTP')),
+                  : Icon(_otpSent ? Icons.refresh : Icons.send_outlined),
+              label: Text(
+                  _otpSent ? i18n.t('RESEND_OTP') : i18n.t('GENERATE_OTP')),
             ),
             if (_otpSent) ...[
               const SizedBox(height: 16),
@@ -692,18 +704,34 @@ class _LoginScreenState extends State<LoginScreen>
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Text(
-                    i18n.t('QUICK_DEMO_ACCESS'),
+                    i18n.t('NEW_VISITOR'),
                     style: TextStyle(color: Colors.grey[500], fontSize: 12),
                   ),
                 ),
                 const Expanded(child: Divider()),
               ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Phone: 9876543210  ·  OTP: 123456',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _publicLoading
+                  ? null
+                  : () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const VisitorRegistrationScreen(),
+                        ),
+                      );
+                    },
+              icon: const Icon(Icons.person_add_alt_1_outlined),
+              label: Text(i18n.t('REGISTER_AS_NEW_VISITOR')),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: _primaryBlue,
+                side: const BorderSide(color: _primaryBlue),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
             ),
           ],
         ),
@@ -735,7 +763,8 @@ class _LoginScreenState extends State<LoginScreen>
   Widget _buildNotice(String msg, {required bool warning}) {
     final bg = warning ? const Color(0xFFFEF3C7) : const Color(0xFFFEE2E2);
     final border = warning ? const Color(0xFFFCD34D) : const Color(0xFFFCA5A5);
-    final iconColor = warning ? const Color(0xFFB45309) : const Color(0xFF991B1B);
+    final iconColor =
+        warning ? const Color(0xFFB45309) : const Color(0xFF991B1B);
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
@@ -745,7 +774,8 @@ class _LoginScreenState extends State<LoginScreen>
       ),
       child: Row(
         children: [
-          Icon(warning ? Icons.warning_amber_outlined : Icons.error_outline, color: iconColor, size: 18),
+          Icon(warning ? Icons.warning_amber_outlined : Icons.error_outline,
+              color: iconColor, size: 18),
           const SizedBox(width: 8),
           Expanded(
             child: Text(

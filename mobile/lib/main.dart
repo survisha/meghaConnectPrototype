@@ -17,7 +17,8 @@ void main() async {
       providers: [
         ChangeNotifierProvider<AuthService>.value(value: authService),
         ChangeNotifierProvider<AppI18n>.value(value: i18n),
-        ChangeNotifierProvider<NavigationService>(create: (_) => NavigationService()),
+        ChangeNotifierProvider<NavigationService>(
+            create: (_) => NavigationService()),
       ],
       child: const MeghaConnectApp(),
     ),
@@ -34,6 +35,7 @@ class MeghaConnectApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
+        scaffoldBackgroundColor: const Color(0xFFF0F2F5),
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF1A237E),
           primary: const Color(0xFF1A237E),
@@ -55,21 +57,35 @@ class MeghaConnectApp extends StatelessWidget {
         drawerTheme: const DrawerThemeData(
           backgroundColor: Colors.white,
         ),
-        cardTheme: CardTheme(
+        cardTheme: const CardTheme(
           elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          color: Colors.white,
+          surfaceTintColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(10)),
+          ),
         ),
         inputDecorationTheme: InputDecorationTheme(
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: Color(0xFF1A237E), width: 1.5),
+          ),
           filled: true,
-          fillColor: Colors.grey[50],
+          fillColor: Colors.white,
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF1A237E),
             foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            minimumSize: const Size(0, 44),
           ),
         ),
       ),

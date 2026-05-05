@@ -1,10 +1,12 @@
 .register-page {
   display: flex;
+  width: 100%;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 .register-left {
-  flex: 0 0 380px;
+  flex: 0 0 clamp(300px, 30vw, 420px);
   background: linear-gradient(135deg, #004d40 0%, #00695c 50%, #00897b 100%);
   display: flex;
   align-items: center;
@@ -30,6 +32,8 @@
   color: white;
   position: relative;
   z-index: 2;
+  width: 100%;
+  max-width: 360px;
 }
 
 .logo-section {
@@ -84,10 +88,11 @@
 
 .register-right {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
+  align-items: center;
+  justify-content: flex-start;
   padding: 2rem;
   background: #f8fafc;
   overflow-y: auto;
@@ -105,10 +110,10 @@
   background: white;
   border-radius: 16px;
   padding: 2rem 2.25rem;
-  width: 100%;
-  max-width: 600px;
+  width: min(100%, 640px);
+  max-width: 640px;
   box-shadow: 0 4px 24px rgba(0,0,0,0.08);
-  margin-top: 1rem;
+  margin: 1rem auto 0;
 }
 
 .card-header {
@@ -142,7 +147,7 @@
 
 .form-row.two-col {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
 }
 
@@ -431,6 +436,9 @@ textarea.input-field { resize: vertical; }
   padding: 1rem;
   background: #f8fafc;
   border-radius: 12px;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .step {

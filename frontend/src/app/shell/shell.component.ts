@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterOutlet } from '@angular/router';
 import { AuthService } from '../services/auth.service';
@@ -20,7 +20,7 @@ interface MenuItem { labelKey: string; icon: string; route?: string; children?: 
   styleUrls: ['./shell.component.scss'],
 })
 export class ShellComponent implements OnInit {
-  sidebarOpen = true;
+  sidebarOpen = window.innerWidth > 768;
   menu: MenuItem[] = [];
 
   private ALL_MENU: MenuItem[] = [
@@ -92,6 +92,13 @@ export class ShellComponent implements OnInit {
     this.buildMenu();
     if (this.auth.hasRole('PUBLIC')) {
       this.router.navigate(['/visitor']);
+    }
+  }
+
+  @HostListener('window:resize')
+  onWindowResize() {
+    if (window.innerWidth > 768) {
+      this.sidebarOpen = true;
     }
   }
 

@@ -1,12 +1,41 @@
 @import "primeicons/primeicons.css";
 @import "primeflex/primeflex.css";
 
-* { box-sizing: border-box; }
+:root {
+  --app-header-height: 64px;
+  --app-page-padding: 1.5rem;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+  overflow-x: hidden;
+}
 
 body {
-  margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background-color: #f0f2f5;
+}
+
+app-root {
+  display: block;
+  width: 100%;
+  min-height: 100vh;
+}
+
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
 }
 
 /* ======================================================================
@@ -50,16 +79,18 @@ select:hover {
   padding: 0.75rem 1.5rem;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 1rem;
   box-shadow: 0 2px 6px rgba(0,0,0,0.3);
   position: sticky;
   top: 0;
   z-index: 100;
+  min-height: var(--app-header-height);
 }
 
 .megha-sidebar {
   background: #1a237e;
-  min-height: calc(100vh - 56px);
+  min-height: calc(100vh - var(--app-header-height));
   width: 240px;
   flex-shrink: 0;
   overflow-y: auto;
@@ -67,9 +98,12 @@ select:hover {
 
 .main-content {
   flex: 1;
-  padding: 1.5rem;
+  width: 100%;
+  min-width: 0;
+  padding: var(--app-page-padding);
   overflow-y: auto;
-  min-height: calc(100vh - 56px);
+  overflow-x: hidden;
+  min-height: calc(100vh - var(--app-header-height));
 }
 
 .page-title {
@@ -122,7 +156,11 @@ select:hover {
   gap: 0.5rem;
 }
 
-.section-card-body { padding: 1.25rem; }
+.section-card-body {
+  padding: 1.25rem;
+  min-width: 0;
+  overflow-x: auto;
+}
 
 .dir-green  { color: #16a34a; font-weight: 600; }
 .dir-yellow { color: #ca8a04; font-weight: 600; }
@@ -1260,8 +1298,276 @@ button.full-width,
   }
 }
 
-html, body { height: 100%; }
-body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+html, body { min-height: 100%; }
+body { font-family: Roboto, "Helvetica Neue", sans-serif; }
+
+@media (max-width: 1200px) {
+  :root {
+    --app-page-padding: 1.25rem;
+  }
+
+  .register-left {
+    flex-basis: clamp(280px, 28vw, 360px) !important;
+    padding: 1.5rem !important;
+  }
+
+  .register-right {
+    padding: 1.5rem !important;
+  }
+}
+
+@media (max-width: 992px) {
+  :root {
+    --app-header-height: 72px;
+  }
+
+  .megha-header {
+    padding: 0.75rem 1rem;
+  }
+
+  .main-content {
+    min-height: calc(100vh - var(--app-header-height));
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-bar {
+    align-items: stretch;
+
+    mat-form-field,
+    .filter-search,
+    .filter-select,
+    button {
+      width: 100%;
+      min-width: 0 !important;
+    }
+
+    .result-count {
+      margin-left: 0;
+    }
+  }
+
+  .register-page {
+    flex-direction: column !important;
+  }
+
+  .register-left {
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    min-height: auto !important;
+    padding: 1.25rem !important;
+  }
+
+  .register-page .brand-box {
+    max-width: 760px !important;
+  }
+
+  .register-page .logo-section {
+    margin-bottom: 1rem !important;
+  }
+
+  .register-page .brand-desc {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) !important;
+    gap: 1rem !important;
+    align-items: start !important;
+
+    h3,
+    p {
+      margin-bottom: 0.5rem;
+    }
+  }
+
+  .register-page .feature-list {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 0.5rem !important;
+
+    li {
+      margin-bottom: 0;
+    }
+  }
+
+  .register-right {
+    width: 100% !important;
+    padding: 1.5rem !important;
+  }
+
+  .register-page .auth-language {
+    width: min(100%, 640px) !important;
+    align-self: center !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --app-header-height: 80px;
+    --app-page-padding: 1rem;
+  }
+
+  .page-title {
+    font-size: 1.2rem;
+  }
+
+  .section-card {
+    border-radius: 8px;
+  }
+
+  .section-card-header {
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    flex-wrap: wrap;
+  }
+
+  .section-card-body {
+    padding: 1rem;
+  }
+
+  .dialog-content .form-row {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .register-left {
+    padding: 1rem !important;
+  }
+
+  .register-page .brand-desc {
+    grid-template-columns: 1fr !important;
+    gap: 0.35rem !important;
+  }
+
+  .register-page .feature-list {
+    grid-template-columns: 1fr !important;
+  }
+
+  .register-right {
+    padding: 1rem !important;
+  }
+
+  .register-card {
+    border-radius: 12px !important;
+    padding: 1.5rem !important;
+  }
+
+  .register-card .card-header {
+    margin-bottom: 1rem !important;
+  }
+
+  .kyc-stepper {
+    justify-content: flex-start !important;
+    gap: 0.5rem !important;
+    padding: 0.75rem !important;
+    margin: 1rem -0.25rem 1.25rem !important;
+    scrollbar-width: thin;
+  }
+
+  .kyc-stepper .step {
+    min-width: 76px !important;
+  }
+
+  .kyc-stepper .step-line {
+    flex: 0 0 28px !important;
+    min-width: 28px !important;
+    margin: 0 !important;
+  }
+
+  .kyc-stepper .step-circle {
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 1rem !important;
+  }
+
+  .kyc-stepper .step-label {
+    font-size: 0.68rem !important;
+    line-height: 1.2 !important;
+  }
+
+  .register-card .form-row.two-col,
+  .register-card .verified-kyc-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .register-card mat-radio-group {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 0.75rem !important;
+  }
+}
+
+@media (max-width: 576px) {
+  :root {
+    --app-page-padding: 0.75rem;
+  }
+
+  .megha-header {
+    gap: 0.65rem;
+  }
+
+  .main-content {
+    padding: var(--app-page-padding);
+  }
+
+  .kpi-card {
+    padding: 1rem;
+  }
+
+  .register-left {
+    padding: 0.85rem !important;
+  }
+
+  .register-page .logo-section {
+    margin-bottom: 0.75rem !important;
+  }
+
+  .register-page .govt-logo {
+    width: 48px !important;
+    height: 48px !important;
+  }
+
+  .register-page .logo-text h1 {
+    font-size: 1.3rem !important;
+  }
+
+  .register-page .brand-desc p,
+  .register-page .feature-list {
+    display: none !important;
+  }
+
+  .register-right {
+    padding: 0.85rem !important;
+  }
+
+  .register-card {
+    padding: 1.1rem !important;
+    margin-top: 0.75rem !important;
+  }
+
+  .register-card .card-header h2 {
+    font-size: 1.15rem !important;
+  }
+
+  .register-card .section-title {
+    font-size: 0.74rem !important;
+  }
+
+  .register-card div[style*="display:flex"][style*="gap:1rem"] {
+    flex-direction: column !important;
+
+    button,
+    .flex-1 {
+      width: 100% !important;
+    }
+  }
+
+  .register-card .otp-input {
+    letter-spacing: 0.25rem !important;
+  }
+}
 
 /* ======================================================================
    CMO REVIEW DIALOG CUSTOM STYLING - Large Modal

@@ -19,7 +19,8 @@
   border: none;
   outline: none;
   color: inherit;
-  background: transparent;
+  background: transparent !important;
+  background-color: transparent !important;
   font: inherit;
   font-size: 0.82rem;
   cursor: pointer;
@@ -39,4 +40,16 @@
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+@media (max-width: 576px) {
+  .language-selector {
+    min-height: 34px;
+    padding: 0 0.45rem;
+  }
+
+  .language-selector select {
+    min-width: 88px;
+    font-size: 0.78rem;
+  }
 }

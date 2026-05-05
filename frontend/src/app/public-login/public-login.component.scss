@@ -1,10 +1,13 @@
 .public-login-page {
   display: flex;
+  width: 100%;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 .login-left {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;
   background: linear-gradient(135deg, #004d40 0%, #00695c 50%, #00897b 100%);
   display: flex;
   align-items: center;
@@ -64,7 +67,8 @@
 }
 
 .login-right {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -327,5 +331,115 @@
         }
       }
     }
+  }
+}
+
+@media (max-width: 1200px) {
+  .login-card {
+    max-width: 400px;
+  }
+}
+
+@media (max-width: 992px) {
+  .public-login-page {
+    flex-direction: column;
+  }
+
+  .login-left {
+    flex: 0 0 auto;
+    width: 100%;
+    min-height: auto;
+    padding: 1.25rem;
+  }
+
+  .brand-box {
+    max-width: 760px;
+  }
+
+  .logo-section {
+    margin-bottom: 1rem;
+  }
+
+  .brand-desc {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+    gap: 1rem;
+    line-height: 1.5;
+
+    p {
+      margin: 0;
+    }
+  }
+
+  .login-right {
+    flex: 1 1 auto;
+    width: 100%;
+    padding: 1.5rem;
+  }
+
+  .auth-language {
+    width: min(100%, 420px);
+    align-self: center;
+    display: flex;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 768px) {
+  .login-left {
+    padding: 1rem;
+  }
+
+  .logo-section {
+    margin-bottom: 0.75rem;
+  }
+
+  .brand-desc {
+    grid-template-columns: 1fr;
+    gap: 0.4rem;
+    font-size: 0.88rem;
+  }
+
+  .govt-logo {
+    width: 52px;
+    height: 52px;
+  }
+
+  .logo-text h1 {
+    font-size: 1.45rem;
+  }
+
+  .login-card {
+    padding: 2rem 1.5rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .login-left {
+    padding: 0.85rem;
+  }
+
+  .login-right {
+    padding: 1rem;
+    justify-content: flex-start;
+  }
+
+  .login-card {
+    border-radius: 12px;
+    padding: 1.25rem;
+  }
+
+  .login-card div[style*="display:flex"] {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+
+    button[mat-button] {
+      width: 100%;
+      min-width: 0 !important;
+    }
+  }
+
+  .otp-input {
+    letter-spacing: 0.25rem;
   }
 }

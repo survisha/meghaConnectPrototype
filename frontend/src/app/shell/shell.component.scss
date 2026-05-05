@@ -1,11 +1,52 @@
-.app-wrapper { display: flex; flex-direction: column; min-height: 100vh; }
-.body-wrapper { display: flex; flex: 1; }
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.app-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.body-wrapper {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  position: relative;
+}
+
+.header-emblem {
+  font-size: 1.5rem;
+  flex: 0 0 auto;
+}
+
+.header-brand {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.header-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.header-subtitle {
+  font-size: 0.7rem;
+  opacity: 0.8;
+  white-space: normal;
+}
 
 .megha-sidebar {
   background: #1a237e;
   width: 240px;
+  min-height: calc(100vh - var(--app-header-height, 64px));
   transition: width 0.25s ease;
   flex-shrink: 0;
+  overflow-y: auto;
   &.collapsed { width: 52px; }
 }
 
@@ -38,7 +79,9 @@
 }
 
 .header-right {
-  display: flex; align-items: center; gap: 1rem;
+  display: flex; align-items: center; justify-content: flex-end; gap: 0.85rem;
+  flex: 0 1 auto;
+  min-width: 0;
 }
 .icon-btn {
   background: rgba(255,255,255,0.1); border: none; color: white;
@@ -57,4 +100,72 @@
   position: absolute; top: -3px; right: -3px;
   width: 8px; height: 8px; border-radius: 50%;
   background: #ef4444;
+}
+
+@media (max-width: 1200px) {
+  .megha-sidebar {
+    width: 220px;
+  }
+}
+
+@media (max-width: 992px) {
+  .header-right {
+    gap: 0.65rem;
+  }
+
+  .user-info {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .body-wrapper {
+    display: block;
+  }
+
+  .megha-sidebar {
+    position: fixed;
+    top: var(--app-header-height, 80px);
+    left: 0;
+    bottom: 0;
+    width: min(82vw, 280px);
+    min-height: 0;
+    z-index: 95;
+    box-shadow: 8px 0 24px rgba(15, 23, 42, 0.22);
+    transform: translateX(0);
+    transition: transform 0.22s ease;
+
+    &.collapsed {
+      width: min(82vw, 280px);
+      transform: translateX(-105%);
+    }
+  }
+
+  .header-brand {
+    flex-basis: 180px;
+  }
+
+  .header-subtitle {
+    display: none;
+  }
+}
+
+@media (max-width: 576px) {
+  .header-emblem,
+  #shell_notificationIcon {
+    display: none;
+  }
+
+  .header-title {
+    font-size: 1rem;
+  }
+
+  .header-right {
+    gap: 0.5rem;
+  }
+
+  .icon-btn {
+    width: 34px;
+    height: 34px;
+  }
 }

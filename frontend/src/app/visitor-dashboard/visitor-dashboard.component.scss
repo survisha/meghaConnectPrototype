@@ -1,4 +1,9 @@
-.visitor-wrapper { max-width: 1100px; }
+.visitor-wrapper {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  min-width: 0;
+}
 
 .welcome-banner {
   background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
@@ -110,6 +115,42 @@
 @media (max-width: 768px) {
   .content-grid { grid-template-columns: 1fr; }
   .kpi-grid { grid-template-columns: 1fr 1fr; }
+  .welcome-banner {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    padding: 1.25rem;
+  }
+  .banner-actions {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 576px) {
+  .kpi-grid,
+  .analytics-row {
+    grid-template-columns: 1fr;
+  }
+
+  .welcome-banner {
+    padding: 1rem;
+  }
+
+  .banner-icon {
+    width: 44px;
+    height: 44px;
+    font-size: 1.25rem;
+  }
+
+  .profile-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .profile-label {
+    width: auto;
+  }
 }
 
 .card-body { padding: 1rem; }

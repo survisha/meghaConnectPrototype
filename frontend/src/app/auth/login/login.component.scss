@@ -1,10 +1,13 @@
 .login-page {
   display: flex;
+  width: 100%;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 .login-left {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;
   background: linear-gradient(135deg, #1a237e 0%, #0d47a1 50%, #1565c0 100%);
   display: flex;
   align-items: center;
@@ -232,7 +235,9 @@
 
 
 .login-right {
-  width: 420px;
+  flex: 0 1 460px;
+  width: min(100%, 460px);
+  min-width: 380px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -255,6 +260,7 @@
   padding: 2rem;
   box-shadow: 0 8px 32px rgba(0,0,0,0.1);
   width: 100%;
+  max-width: 420px;
 }
 .login-header { text-align: center; margin-bottom: 1.5rem; }
 .login-header h2 { margin: 0 0 0.25rem; color: #1a237e; font-size: 1.5rem; }
@@ -306,6 +312,146 @@
     
     &:hover:not(.active) {
       background: #f3f4f6;
+    }
+  }
+}
+
+@media (max-width: 1200px) {
+  .brand-box {
+    max-width: 480px;
+    gap: 1.5rem;
+  }
+
+  .login-right {
+    flex-basis: 430px;
+  }
+}
+
+@media (max-width: 992px) {
+  .login-page {
+    flex-direction: column;
+  }
+
+  .login-left {
+    flex: 0 0 auto;
+    width: 100%;
+    min-height: auto;
+    padding: 1.25rem;
+  }
+
+  .brand-box {
+    max-width: 760px;
+    gap: 1rem;
+  }
+
+  .logo-section,
+  .cm-profile-section,
+  .brand-features {
+    padding: 1rem;
+  }
+
+  .govt-logo {
+    width: 64px;
+    height: 64px;
+  }
+
+  .logo-text h1 {
+    font-size: 1.7rem;
+  }
+
+  .cm-photo {
+    width: 64px;
+    height: 64px;
+  }
+
+  .brand-features {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+  }
+
+  .feature-header {
+    grid-column: 1 / -1;
+    margin-bottom: 0;
+  }
+
+  .feat {
+    margin-bottom: 0;
+  }
+
+  .login-right {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    padding: 1.5rem;
+  }
+
+  .auth-language {
+    width: min(100%, 420px);
+    align-self: center;
+    display: flex;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 768px) {
+  .login-left {
+    padding: 1rem;
+  }
+
+  .logo-section,
+  .cm-profile-section {
+    gap: 1rem;
+  }
+
+  .brand-features {
+    display: none;
+  }
+}
+
+@media (max-width: 576px) {
+  .login-left {
+    padding: 0.85rem;
+  }
+
+  .logo-section,
+  .cm-profile-section {
+    border-radius: 12px;
+    padding: 0.85rem;
+  }
+
+  .govt-logo,
+  .cm-photo {
+    width: 52px;
+    height: 52px;
+  }
+
+  .logo-text h1 {
+    font-size: 1.35rem;
+  }
+
+  .cm-name {
+    font-size: 1rem;
+  }
+
+  .cm-office {
+    font-size: 0.75rem;
+  }
+
+  .login-right {
+    padding: 1rem;
+    justify-content: flex-start;
+  }
+
+  .login-card {
+    border-radius: 12px;
+    padding: 1.25rem;
+  }
+
+  .mode-tabs {
+    button {
+      padding: 0.75rem 0.5rem;
+      font-size: 0.82rem;
     }
   }
 }

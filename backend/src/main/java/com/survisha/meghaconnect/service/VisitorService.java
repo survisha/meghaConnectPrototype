@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -76,6 +77,35 @@ public class VisitorService {
 
     public Optional<Visitor> findById(Long id) {
         return visitorRepository.findById(id);
+    }
+
+    public List<Visitor> search(String mobile, String epic, String referenceId) {
+        String normalizedMobile = trimToNull(mobile);
+        String normalizedEpic = trimToNull(epic);
+        if (normalizedEpic != null) {
+            normalizedEpic = normalizedEpic.toUpperCase();
+        }
+        String normalizedReferenceId = trimToNull(referenceId);
+
+        if (normalizedReferenceId != null) {
+            try {
+                Long visitorId = Long.parseLong(normalizedReferenceId);
+                return visitorRepository.findById(visitorId).map(visitor -> List.of(visitor)).orElse(Collections.emptyList());
+            } catch (NumberFormatException ignored) {
+                return Collections.emptyList();
+            }
+        }
+
+        if (normalizedMobile != null && normalizedEpic != null) {
+            return visitorRepository.findByPhoneNumberAndEpicNumber(normalizedMobile, normalizedEpic);
+        }
+        if (normalizedMobile != null) {
+            return visitorRepository.findByPhoneNumber(normalizedMobile);
+        }
+        if (normalizedEpic != null) {
+            return visitorRepository.findByEpicNumber(normalizedEpic).map(visitor -> List.of(visitor)).orElse(Collections.emptyList());
+        }
+        return Collections.emptyList();
     }
 
     @Transactional

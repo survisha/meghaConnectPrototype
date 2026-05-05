@@ -5,6 +5,7 @@ import '../services/api_service.dart';
 import '../services/navigation_service.dart';
 import '../core/i18n/app_i18n.dart';
 import '../widgets/megha_ui.dart';
+import 'new_appointment_screen.dart';
 
 class _SummaryCard {
   final String label;
@@ -136,7 +137,7 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
   Future<void> _loadData() async {
     setState(() => _loading = true);
     final results = await Future.wait([
-      ApiService.getAppointments(size: 5),
+      ApiService.getMyAppointments(),
       ApiService.getSchemeApplications(size: 5),
       ApiService.getGrievances(size: 5),
     ]);
@@ -344,7 +345,7 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
                         icon: Icons.add_circle_outline,
                         label: 'Book\nAppointment',
                         color: _primaryBlue,
-                        onTap: () => nav.navigateTo('new_appointment'),
+                        onTap: () => _openNewAppointment(context),
                       ),
                       const SizedBox(width: 8),
                       _QuickActionBtn(
@@ -369,7 +370,7 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
                     title: 'My Appointments',
                     icon: Icons.calendar_today_outlined,
                     action: TextButton(
-                      onPressed: () => nav.navigateTo('new_appointment'),
+                      onPressed: () => _openNewAppointment(context),
                       child: const Text('+ Book New',
                           style: TextStyle(fontSize: 12)),
                     ),
@@ -477,6 +478,21 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
             child: Text(text,
                 style: const TextStyle(color: Colors.grey, fontSize: 13))),
       );
+
+  void _openNewAppointment(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          appBar: AppBar(
+            title: const Text('New Appointment'),
+            backgroundColor: MeghaColors.primary,
+            foregroundColor: Colors.white,
+          ),
+          body: const NewAppointmentScreen(isPublic: true),
+        ),
+      ),
+    );
+  }
 }
 
 class _SummaryTile extends StatelessWidget {

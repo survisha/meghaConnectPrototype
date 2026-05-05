@@ -9,9 +9,13 @@ public class AppointmentDto {
     private Long id;
     private String applicationId;
     private Long applicantId;
+    private VisitorDto applicant;
     private String applicantName;
     private String applicantPhone;
     private Appointment.EventType eventType;
+    private String subject;
+    private String department;
+    private String appointmentType;
     private String agendaType;
     private String agendaBrief;
     private Appointment.AppointmentStatus status;
@@ -25,4 +29,6 @@ public class AppointmentDto {
     private String shortNotes;
     private Boolean isWalkIn;
     private Integer meetingCountLast6Months;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

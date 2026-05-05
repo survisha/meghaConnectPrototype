@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -37,6 +38,22 @@ public class VisitorController {
      * registration APIs should be added under VisitorAuthController
      * (/api/v1/visitor/auth/**).
      */
+
+    @Operation(summary = "Search visitors", description = "Search visitor by mobile, EPIC, or visitor reference ID")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Visitor found",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = Visitor.class))),
+        @ApiResponse(responseCode = "404", description = "Visitor not found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @GetMapping("/search")
+    @PreAuthorize("hasAnyRole('ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO_OFFICER','APPROVER')")
+    public ResponseEntity<List<Visitor>> search(
+            @RequestParam(required = false) String mobile,
+            @RequestParam(required = false) String epic,
+            @RequestParam(required = false) String referenceId) {
+        return ResponseEntity.ok(visitorService.search(mobile, epic, referenceId));
+    }
 
     @Operation(summary = "Find visitor by phone", description = "Search visitor by phone number")
     @ApiResponses(value = {

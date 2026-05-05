@@ -52,10 +52,16 @@ class _ApproverWorkflowScreenState extends State<ApproverWorkflowScreen> {
 
   Future<void> _loadAppointments() async {
     setState(() => _loading = true);
-    final data = await ApiService.getAppointments(size: 100);
+    final data = await ApiService.getApproverAppointments(size: 100);
     if (!mounted) return;
     final content = (data['content'] as List<dynamic>?) ?? [];
-    const reviewStatuses = {'APPROVER_REVIEW', 'HCM_PENDING', 'CMO_REVIEW'};
+    const reviewStatuses = {
+      'SUBMITTED',
+      'PENDING_APPROVER_REVIEW',
+      'APPROVER_REVIEW',
+      'HCM_PENDING',
+      'CMO_REVIEW'
+    };
     setState(() {
       _appointments = content
           .map((e) => e as Map<String, dynamic>)
@@ -65,11 +71,16 @@ class _ApproverWorkflowScreenState extends State<ApproverWorkflowScreen> {
         return _ApproverAppointment(
           backendId: (m['id'] as num?)?.toInt() ?? 0,
           id: m['applicationId'] as String? ?? m['id']?.toString() ?? '',
-          applicantName: applicant['fullName'] as String? ?? '—',
-          district: applicant['district'] as String? ?? '',
+          applicantName: applicant['fullName'] as String? ??
+              m['applicantName'] as String? ??
+              '—',
+          district: applicant['district'] as String? ??
+              m['district'] as String? ??
+              '',
           agendaType: m['agendaType'] as String? ?? '',
-          agendaBrief: m['agendaBrief'] as String? ?? '',
-          eventType: m['agendaType'] as String? ?? '',
+          agendaBrief:
+              m['agendaBrief'] as String? ?? m['description'] as String? ?? '',
+          eventType: m['eventType'] as String? ?? '',
           location: m['requestedLocation'] as String? ?? '',
           status: m['status'] as String? ?? '',
         );

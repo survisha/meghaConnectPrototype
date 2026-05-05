@@ -331,6 +331,84 @@ class ApiService {
     return {'content': [], 'totalElements': 0};
   }
 
+  static Future<Map<String, dynamic>> getMyAppointments() async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .get(
+            _u('/appointments/my'),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 20));
+      if (resp.statusCode == 200) {
+        final decoded = jsonDecode(resp.body);
+        if (decoded is List) {
+          return {'content': decoded, 'totalElements': decoded.length};
+        }
+        if (decoded is Map<String, dynamic>) {
+          final data = decoded['data'];
+          if (data is List) {
+            return {'content': data, 'totalElements': data.length};
+          }
+          return decoded;
+        }
+      }
+    } catch (_) {}
+    return {'content': [], 'totalElements': 0};
+  }
+
+  static Future<Map<String, dynamic>> getDeoAppointments(
+      {int page = 0, int size = 100}) async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .get(
+            _u('/appointments/deo?page=$page&size=$size'),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 20));
+      if (resp.statusCode == 200) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return {'content': [], 'totalElements': 0};
+  }
+
+  static Future<Map<String, dynamic>> getApproverAppointments(
+      {int page = 0, int size = 100}) async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .get(
+            _u('/appointments/approver?page=$page&size=$size'),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 20));
+      if (resp.statusCode == 200) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return {'content': [], 'totalElements': 0};
+  }
+
+  static Future<Map<String, dynamic>?> createAppointment(
+      Map<String, dynamic> body) async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .post(
+            _u('/appointments'),
+            headers: headers,
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 20));
+      if (resp.statusCode == 200 || resp.statusCode == 201) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return null;
+  }
+
   static Future<Map<String, dynamic>?> updateAppointmentStatus(
       int id, String status,
       {String? remarks}) async {
@@ -491,6 +569,49 @@ class ApiService {
       final resp = await http
           .get(
             _u('/visitors/search/phone/$phone'),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 20));
+      if (resp.statusCode == 200) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  static Future<List<dynamic>> searchVisitors({
+    String? mobile,
+    String? epic,
+    String? referenceId,
+  }) async {
+    try {
+      final headers = await _headers();
+      final params = <String, String>{};
+      final m = (mobile ?? '').trim();
+      final e = (epic ?? '').trim();
+      final r = (referenceId ?? '').trim();
+      if (m.isNotEmpty) params['mobile'] = m;
+      if (e.isNotEmpty) params['epic'] = e.toUpperCase();
+      if (r.isNotEmpty) params['referenceId'] = r;
+      final resp = await http
+          .get(
+            _u('/visitors/search').replace(queryParameters: params),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 20));
+      if (resp.statusCode == 200) {
+        return jsonDecode(resp.body) as List<dynamic>;
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  static Future<Map<String, dynamic>?> getVisitorById(int id) async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .get(
+            _u('/visitors/$id'),
             headers: headers,
           )
           .timeout(const Duration(seconds: 20));

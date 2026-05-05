@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { AppointmentService } from '../../services/appointment.service';
 import { AuthService } from '../../services/auth.service';
 import { Appointment, AppointmentStatus } from '../../models';
+import { environment } from '../../../environments/environment';
 import { MatTableModule } from '@angular/material/table';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatButtonModule } from '@angular/material/button';
@@ -46,6 +47,8 @@ export class AppointmentListComponent implements OnInit {
   search = '';
   filterStatus = '';
   loading = false;
+  errorMsg = '';
+  private readonly allowDummyFallback = !environment.production || environment.appName.includes('[UAT]');
   displayedColumns: string[] = ['applicant', 'designation', 'constituency', 'agenda', 'eventType', 'location', 'status', 'actions'];
 
   statusOptions = [
@@ -61,20 +64,28 @@ export class AppointmentListComponent implements OnInit {
   constructor(private appointmentService: AppointmentService, public auth: AuthService, private dialog: MatDialog) {}
 
   ngOnInit() {
-    // Initialize with dummy data for demo purposes
-    this.initializeDummyData();
-    
     this.loading = true;
-    this.appointmentService.getAllAppointments(0, 100).subscribe({
+    const source = this.auth.hasRole('DATA_ENTRY_OPERATOR')
+      ? this.appointmentService.getDeoAppointments(0, 100)
+      : this.appointmentService.getAllAppointments(0, 100);
+    source.subscribe({
       next: page => {
-        if (page.content && page.content.length > 0) {
-          this.appointments = page.content;
-        }
-        // Dummy data already initialized, API overrides if available
+        this.errorMsg = '';
+        this.appointments = page.content ?? [];
         this.applyFilter();
         this.loading = false;
       },
-      error: () => { this.applyFilter(); this.loading = false; }
+      error: () => {
+        this.errorMsg = 'Unable to load appointments from API. Please try again.';
+        if (this.allowDummyFallback) {
+          // TODO: Remove dummy fallback after API stabilization.
+          this.initializeDummyData();
+        } else {
+          this.appointments = [];
+        }
+        this.applyFilter();
+        this.loading = false;
+      }
     });
   }
 

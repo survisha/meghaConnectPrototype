@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -22,6 +23,31 @@ import java.util.Optional;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class AppointmentService {
+
+    private static final List<Appointment.AppointmentStatus> DEO_VISIBLE_STATUSES = Arrays.asList(
+        Appointment.AppointmentStatus.CREATED,
+        Appointment.AppointmentStatus.SUBMITTED,
+        Appointment.AppointmentStatus.DEO_PROCESSED,
+        Appointment.AppointmentStatus.PENDING_APPROVER_REVIEW,
+        Appointment.AppointmentStatus.CMO_REVIEW,
+        Appointment.AppointmentStatus.APPROVER_REVIEW,
+        Appointment.AppointmentStatus.HCM_PENDING,
+        Appointment.AppointmentStatus.SELECTED_FOR_PUBLIC_DARBAR,
+        Appointment.AppointmentStatus.APPROVED_WITH_DATE_TIME,
+        Appointment.AppointmentStatus.SCHEDULED
+    );
+
+    private static final List<Appointment.AppointmentStatus> APPROVER_VISIBLE_STATUSES = Arrays.asList(
+        Appointment.AppointmentStatus.CREATED,
+        Appointment.AppointmentStatus.SUBMITTED,
+        Appointment.AppointmentStatus.PENDING_APPROVER_REVIEW,
+        Appointment.AppointmentStatus.CMO_REVIEW,
+        Appointment.AppointmentStatus.APPROVER_REVIEW,
+        Appointment.AppointmentStatus.HCM_PENDING,
+        Appointment.AppointmentStatus.SELECTED_FOR_PUBLIC_DARBAR,
+        Appointment.AppointmentStatus.APPROVED_WITH_DATE_TIME,
+        Appointment.AppointmentStatus.SCHEDULED
+    );
 
     private final AppointmentRepository appointmentRepository;
     private final VisitorRepository visitorRepository;
@@ -32,12 +58,34 @@ public class AppointmentService {
         return appointmentRepository.findAll(pageable);
     }
 
+    public Page<AppointmentDto> findAllDtos(Pageable pageable) {
+        return appointmentRepository.findAll(pageable).map(this::toDto);
+    }
+
     public Optional<Appointment> findById(Long id) {
         return appointmentRepository.findById(id);
     }
 
     public Optional<Appointment> findByApplicationId(String appId) {
         return appointmentRepository.findByApplicationId(appId);
+    }
+
+    public List<AppointmentDto> findMyAppointments(Long visitorId) {
+        if (visitorId == null) {
+            return List.of();
+        }
+        return appointmentRepository.findByApplicant_IdOrderByCreatedAtDesc(visitorId)
+            .stream()
+            .map(this::toDto)
+            .toList();
+    }
+
+    public Page<AppointmentDto> findForDeo(Pageable pageable) {
+        return appointmentRepository.findByStatusIn(DEO_VISIBLE_STATUSES, pageable).map(this::toDto);
+    }
+
+    public Page<AppointmentDto> findForApprover(Pageable pageable) {
+        return appointmentRepository.findByStatusIn(APPROVER_VISIBLE_STATUSES, pageable).map(this::toDto);
     }
 
     @Transactional
@@ -55,6 +103,9 @@ public class AppointmentService {
             .applicationId(appId)
             .applicant(applicant)
             .eventType(dto.getEventType())
+            .subject(dto.getSubject())
+            .department(dto.getDepartment())
+            .appointmentType(dto.getAppointmentType())
             .agendaType(dto.getAgendaType())
             .agendaBrief(dto.getAgendaBrief())
             .status(Appointment.AppointmentStatus.SUBMITTED)
@@ -63,11 +114,71 @@ public class AppointmentService {
             .isWalkIn(Boolean.TRUE.equals(dto.getIsWalkIn()))
             .meetingCountLast6Months(meetingCount)
             .build();
+        appt.setCreatedBy(createdBy);
+        appt.setUpdatedBy(createdBy);
 
         Appointment saved = appointmentRepository.save(appt);
         auditLogService.log("Appointment", saved.getId(), "CREATED",
             "New appointment created: " + appId, createdBy);
         return saved;
+    }
+
+    public AppointmentDto toDto(Appointment appointment) {
+        if (appointment == null) {
+            return null;
+        }
+
+        Visitor applicant = appointment.getApplicant();
+        com.survisha.meghaconnect.dto.VisitorDto applicantDto = applicant == null ? null
+            : com.survisha.meghaconnect.dto.VisitorDto.builder()
+                .id(applicant.getId())
+                .fullName(applicant.getFullName())
+                .phoneNumber(applicant.getPhoneNumber())
+                .epicNumber(applicant.getEpicNumber())
+                .aadhaarNumber(applicant.getAadhaarNumber())
+                .kycType(applicant.getKycType())
+                .kycVerified(applicant.getKycVerified())
+                .designation(applicant.getDesignation())
+                .addressLine(firstNonBlank(applicant.getAddressLine(), applicant.getAddress()))
+                .district(applicant.getDistrict())
+                .constituency(applicant.getConstituency())
+                .booth(applicant.getBooth())
+                .boothVillage(applicant.getBoothVillage())
+                .village(applicant.getVillage())
+                .outsideMeghalaya(applicant.getOutsideMeghalaya())
+                .location(applicant.getLocation())
+                .briefProfile(applicant.getBriefProfile())
+                .photoStoragePath(applicant.getPhotoStoragePath())
+                .livePhotoPath(applicant.getLivePhotoPath())
+                .build();
+
+        return AppointmentDto.builder()
+            .id(appointment.getId())
+            .applicationId(appointment.getApplicationId())
+            .applicantId(applicant != null ? applicant.getId() : null)
+            .applicant(applicantDto)
+            .applicantName(applicant != null ? applicant.getFullName() : null)
+            .applicantPhone(applicant != null ? applicant.getPhoneNumber() : null)
+            .eventType(appointment.getEventType())
+            .subject(appointment.getSubject())
+            .department(appointment.getDepartment())
+            .appointmentType(appointment.getAppointmentType())
+            .agendaType(appointment.getAgendaType())
+            .agendaBrief(appointment.getAgendaBrief())
+            .status(appointment.getStatus())
+            .requestedLocation(appointment.getRequestedLocation())
+            .scheduledDateTime(appointment.getScheduledDateTime())
+            .scheduledDurationMinutes(appointment.getScheduledDurationMinutes())
+            .mlaMdcApproved(appointment.getMlaMdcApproved())
+            .cmoRemarks(appointment.getCmoRemarks())
+            .approverRemarks(appointment.getApproverRemarks())
+            .hcmRemarks(appointment.getHcmRemarks())
+            .shortNotes(appointment.getShortNotes())
+            .isWalkIn(appointment.getIsWalkIn())
+            .meetingCountLast6Months(appointment.getMeetingCountLast6Months())
+            .createdAt(appointment.getCreatedAt())
+            .updatedAt(appointment.getUpdatedAt())
+            .build();
     }
 
     @Transactional
@@ -144,5 +255,9 @@ public class AppointmentService {
     private String generateApplicationId() {
         long count = appointmentRepository.count() + 1;
         return "MC-" + LocalDateTime.now().getYear() + "-" + String.format("%05d", count);
+    }
+
+    private String firstNonBlank(String primary, String fallback) {
+        return primary != null && !primary.trim().isEmpty() ? primary : fallback;
     }
 }

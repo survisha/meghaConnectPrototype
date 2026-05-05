@@ -51,7 +51,7 @@ public class AppointmentApprovalController {
      * R003: Get list of appointments awaiting approval
      */
     @GetMapping("/pending")
-    @PreAuthorize("hasAnyRole('CMO_OFFICER', 'APPROVER_JT_SECY', 'ADMIN', 'HCM')")
+    @PreAuthorize("hasAnyRole('CMO_OFFICER', 'APPROVER', 'APPROVER_JT_SECY', 'ADMIN', 'HCM')")
     @Operation(
         summary = "Get pending appointments for approval",
         description = "Returns list of appointments awaiting CMO or Joint Secretary review based on user role"
@@ -148,7 +148,7 @@ public class AppointmentApprovalController {
      * R003: Updates status to APPROVER_REVIEW → HCM_PENDING (awaiting scheduling)
      */
     @PutMapping("/{id}/approver-approve")
-    @PreAuthorize("hasRole('APPROVER_JT_SECY')")
+    @PreAuthorize("hasAnyRole('APPROVER', 'APPROVER_JT_SECY')")
     @Operation(
         summary = "Joint Secretary approves for scheduling",
         description = "Joint Secretary reviews and approves, ready for calendar scheduling"
@@ -179,7 +179,7 @@ public class AppointmentApprovalController {
      * R003: Updates status to REJECTED with rejection reason
      */
     @PutMapping("/{id}/reject")
-    @PreAuthorize("hasAnyRole('CMO_OFFICER', 'APPROVER_JT_SECY')")
+    @PreAuthorize("hasAnyRole('CMO_OFFICER', 'APPROVER', 'APPROVER_JT_SECY')")
     @Operation(summary = "Reject appointment")
     public ResponseEntity<AppointmentDto> rejectAppointment(
             @PathVariable Long id,
@@ -189,9 +189,10 @@ public class AppointmentApprovalController {
             Appointment appointment = appointmentRepository.findById(id)
                     .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
             
+            Appointment.AppointmentStatus oldStatus = appointment.getStatus();
             appointment.setStatus(Appointment.AppointmentStatus.HCM_REJECTED);
-            
-            if (appointment.getStatus() == Appointment.AppointmentStatus.CMO_REVIEW) {
+
+            if (oldStatus == Appointment.AppointmentStatus.CMO_REVIEW) {
                 appointment.setCmoRemarks("REJECTED: " + request.getRejectReason());
             } else {
                 appointment.setApproverRemarks("REJECTED: " + request.getRejectReason());
@@ -286,7 +287,7 @@ public class AppointmentApprovalController {
      * R015: Returns list of available time slots for given date & location
      */
     @GetMapping("/available-slots")
-    @PreAuthorize("hasAnyRole('HCM', 'ADMIN', 'OSD', 'CMO_OFFICER', 'APPROVER_JT_SECY')")
+    @PreAuthorize("hasAnyRole('HCM', 'ADMIN', 'OSD', 'CMO_OFFICER', 'APPROVER', 'APPROVER_JT_SECY')")
     @Operation(summary = "Get available slots for scheduling")
     public ResponseEntity<List<Map<String, Object>>> getAvailableSlots(
             @RequestParam String date,
@@ -326,21 +327,7 @@ public class AppointmentApprovalController {
     // ──────────────────────── Helper Methods ────────────────────────
 
     private AppointmentDto convertToDTO(Appointment appointment) {
-        return AppointmentDto.builder()
-                .id(appointment.getId())
-                .applicationId(appointment.getApplicationId())
-                .applicantName(appointment.getApplicant().getFullName())
-                .applicantPhone(appointment.getApplicant().getPhoneNumber())
-                .agendaType(appointment.getAgendaType())
-                .requestedLocation(appointment.getRequestedLocation())
-                .agendaBrief(appointment.getAgendaBrief())
-                .status(appointment.getStatus())
-                .scheduledDateTime(appointment.getScheduledDateTime())
-                .mlaMdcApproved(appointment.getMlaMdcApproved())
-                .cmoRemarks(appointment.getCmoRemarks())
-                .approverRemarks(appointment.getApproverRemarks())
-                .isWalkIn(appointment.getIsWalkIn())
-                .build();
+        return appointmentService.toDto(appointment);
     }
 
     private List<Appointment.AppointmentStatus> parseStatus(String status) {

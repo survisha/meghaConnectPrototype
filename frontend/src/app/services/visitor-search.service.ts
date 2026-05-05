@@ -12,6 +12,19 @@ export class VisitorSearchService {
 
   constructor(private http: HttpClient) {}
 
+  search(criteria: { mobile?: string; epic?: string; referenceId?: string }): Observable<Visitor[]> {
+    let params = new HttpParams();
+    const mobile = criteria.mobile?.trim();
+    const epic = criteria.epic?.trim();
+    const referenceId = criteria.referenceId?.trim();
+    if (mobile) params = params.set('mobile', mobile);
+    if (epic) params = params.set('epic', epic.toUpperCase());
+    if (referenceId) params = params.set('referenceId', referenceId);
+    return this.http.get<Visitor[]>(`${this.baseUrl}/search`, { params }).pipe(
+      catchError(() => of([]))
+    );
+  }
+
   searchByPhone(phone: string): Observable<Visitor | null> {
     return this.http.get<Visitor>(`${this.baseUrl}/search/phone/${encodeURIComponent(phone)}`).pipe(
       catchError(() => of(null))

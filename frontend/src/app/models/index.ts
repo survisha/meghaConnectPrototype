@@ -8,10 +8,12 @@ export type Location  = 'SHILLONG' | 'TURA' | 'DELHI' | 'OTHERS';
 export type SchemeType = 'CMSDF' | 'CMSG' | 'CM_CARE' | 'CM_CONNECT' | 'CM_ELEVATE' | 'FOCUS_PLUS' | 'OTHERS';
 export type DirectionColor = 'GREEN' | 'YELLOW' | 'BLUE';
 export type AppointmentStatus =
-  | 'SUBMITTED' | 'DEO_PROCESSED' | 'CMO_REVIEW'
-  | 'APPROVER_REVIEW' | 'HCM_PENDING'
+  | 'CREATED' | 'SUBMITTED' | 'DEO_PROCESSED' | 'PENDING_APPROVER_REVIEW'
+  | 'CMO_REVIEW' | 'APPROVER_REVIEW' | 'HCM_PENDING'
   | 'HCM_ACCEPTED' | 'HCM_SNOOZED' | 'HCM_REJECTED'
-  | 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
+  | 'SELECTED_FOR_PUBLIC_DARBAR' | 'PUBLIC_DARBAR_DATE_CREATED'
+  | 'SCHEDULED_FOR_PUBLIC_DARBAR' | 'APPROVED_WITH_DATE_TIME'
+  | 'REJECTED' | 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
 
 export type KycStatus = 'PENDING' | 'VERIFIED' | 'REJECTED';
 
@@ -50,7 +52,13 @@ export interface AppointmentDocument {
 export interface Appointment {
   id: number;
   applicationId: string;
+  applicantId?: number;
   applicant: Visitor;
+  applicantName?: string;
+  applicantPhone?: string;
+  subject?: string;
+  department?: string;
+  appointmentType?: string;
   agendaType: string;
   agendaBrief: string;
   status: AppointmentStatus;
@@ -66,6 +74,7 @@ export interface Appointment {
   shortNotes?: string;
   directions?: Direction[];
   isWalkIn?: boolean;
+  createdAt?: string;
   submittedAt?: string;
   updatedAt?: string;
 }

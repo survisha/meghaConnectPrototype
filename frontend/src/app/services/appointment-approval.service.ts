@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { map, tap } from 'rxjs/operators';
+import { environment } from '../../environments/environment';
 
 export interface AppointmentApproval {
   appointmentId: number;
@@ -39,7 +40,7 @@ export interface ScheduleEvent {
   providedIn: 'root'
 })
 export class AppointmentApprovalService {
-  private apiUrl = '/api/v1/appointments';
+  private apiUrl = environment.apiUrl + '/appointments';
   private pendingAppointments$ = new BehaviorSubject<AppointmentApproval[]>([]);
   private scheduleEvents$ = new BehaviorSubject<ScheduleEvent[]>([]);
 
@@ -49,7 +50,9 @@ export class AppointmentApprovalService {
    * Get pending appointments for CMO Officer
    */
   getPendingAppointments(role: string = 'CMO_OFFICER'): Observable<AppointmentApproval[]> {
-    return this.http.get<AppointmentApproval[]>(`${this.apiUrl}/pending?role=${role}`).pipe(
+    const path = role === 'DATA_ENTRY_OPERATOR' ? 'deo' : 'approver';
+    return this.http.get<unknown>(`${this.apiUrl}/${path}?page=0&size=100`).pipe(
+      map(res => this.normalizeApprovalList(res)),
       tap(appointments => this.pendingAppointments$.next(appointments))
     );
   }
@@ -58,7 +61,9 @@ export class AppointmentApprovalService {
    * Get appointment details for approval view
    */
   getAppointmentDetails(appointmentId: number): Observable<AppointmentApproval> {
-    return this.http.get<AppointmentApproval>(`${this.apiUrl}/${appointmentId}/approval-details`);
+    return this.http.get<unknown>(`${this.apiUrl}/${appointmentId}/approval-details`).pipe(
+      map(res => this.normalizeApproval(this.unwrapData(res)))
+    );
   }
 
   /**
@@ -76,9 +81,9 @@ export class AppointmentApprovalService {
    * CMO approves and forwards to Joint Secretary
    */
   approveAndForward(appointmentId: number, remarks: string): Observable<any> {
-    return this.http.put(`${this.apiUrl}/${appointmentId}/cmo-approve`, {
-      remarks,
-      nextAction: 'FORWARD_TO_APPROVER'
+    return this.http.put(`${this.apiUrl}/${appointmentId}/status`, {
+      status: 'APPROVER_REVIEW',
+      remarks
     });
   }
 
@@ -86,9 +91,9 @@ export class AppointmentApprovalService {
    * CMO rejects appointment
    */
   rejectAppointment(appointmentId: number, rejectReason: string): Observable<any> {
-    return this.http.put(`${this.apiUrl}/${appointmentId}/reject`, {
-      rejectReason,
-      status: 'REJECTED'
+    return this.http.put(`${this.apiUrl}/${appointmentId}/status`, {
+      remarks: rejectReason,
+      status: 'HCM_REJECTED'
     });
   }
 
@@ -166,5 +171,44 @@ export class AppointmentApprovalService {
       location,
       excludeAppointmentId: appointmentId
     });
+  }
+
+  private normalizeApprovalList(response: unknown): AppointmentApproval[] {
+    const data: any = this.unwrapData(response);
+    const rows = Array.isArray(data) ? data : (data?.content ?? []);
+    return (rows as unknown[]).map(row => this.normalizeApproval(row));
+  }
+
+  private normalizeApproval(row: unknown): AppointmentApproval {
+    const raw: any = row ?? {};
+    const applicant = raw.applicant ?? {};
+    return {
+      appointmentId: Number(raw.appointmentId ?? raw.id ?? 0),
+      applicantName: raw.applicantName ?? applicant.fullName ?? '—',
+      applicantPhone: raw.applicantPhone ?? raw.applicantMobile ?? applicant.phoneNumber ?? '',
+      agendaType: raw.agendaType ?? raw.appointmentType ?? raw.subject ?? '',
+      requestedLocation: raw.requestedLocation ?? 'OTHERS',
+      agendaBrief: raw.agendaBrief ?? raw.description ?? '',
+      status: raw.status ?? 'SUBMITTED',
+      submittedDate: raw.submittedDate ?? raw.createdAt ?? raw.updatedAt ?? new Date().toISOString(),
+      projectName: raw.projectName,
+      schemeType: raw.schemeType,
+      estimatedCost: raw.estimatedCost,
+      mlaMdcApproved: raw.mlaMdcApproved,
+      associates: raw.associates,
+      documents: raw.documents,
+      cmoRemarks: raw.cmoRemarks,
+      approverRemarks: raw.approverRemarks,
+      scheduledDate: raw.scheduledDate,
+      scheduledTime: raw.scheduledTime,
+    };
+  }
+
+  private unwrapData<T = unknown>(response: unknown): T {
+    const raw: any = response;
+    if (raw && typeof raw === 'object' && 'data' in raw && 'success' in raw) {
+      return raw.data as T;
+    }
+    return response as T;
   }
 }

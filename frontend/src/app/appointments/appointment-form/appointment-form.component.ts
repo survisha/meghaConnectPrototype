@@ -61,6 +61,8 @@ export class AppointmentFormComponent implements OnInit {
   loading = false;
   errorMsg = '';
   submittedAppId = '';
+  visitorId = '';
+  visitorProfile: any | null = null;
 
   steps = [
     { label: 'Personal Info' }, { label: 'Agenda' },
@@ -143,6 +145,7 @@ export class AppointmentFormComponent implements OnInit {
 
   get isScheme() { return this.form.agendaType === 'Scheme availment (CM)'; }
   get isCmCare() { return this.form.schemeType === 'CM Care'; }
+  get isPublicUser() { return this.auth.hasRole('PUBLIC'); }
 
   get effectivePriority(): 'HIGH' | 'MEDIUM' | 'LOW' | '' {
     return this.aiPriorityOverridden ? this.overriddenPriority : this.aiPriorityLevel;
@@ -303,6 +306,9 @@ export class AppointmentFormComponent implements OnInit {
   constructor(private http: HttpClient, private aiDocumentService: AiDocumentService, private schemeService: SchemeService, private visitorService: VisitorService, private auth: AuthService) {}
 
   ngOnInit() {
+    if (this.isPublicUser) {
+      this.steps[0] = { label: 'Citizen Details' };
+    }
     this.loadOrganizationTypes();
     this.loadVisitorDataIfPublic();
     // Initial visibility update based on default form values
@@ -314,10 +320,15 @@ export class AppointmentFormComponent implements OnInit {
     if (!this.auth.hasRole('PUBLIC')) return;
 
     const visitorId = sessionStorage.getItem('megha_visitor_id');
-    if (!visitorId) return;
+    if (!visitorId) {
+      this.errorMsg = 'Visitor session is missing. Please login again before creating an appointment.';
+      return;
+    }
+    this.visitorId = visitorId;
 
     this.visitorService.getById(parseInt(visitorId, 10)).subscribe({
       next: (visitor) => {
+        this.visitorProfile = visitor;
         // Auto-populate form fields from visitor data
         this.form.fullName = visitor.fullName || '';
         this.form.phoneNumber = visitor.phoneNumber || '';
@@ -333,6 +344,7 @@ export class AppointmentFormComponent implements OnInit {
       },
       error: (err) => {
         console.error('Failed to load visitor data:', err);
+        this.errorMsg = 'Could not load your visitor profile. Please refresh or login again.';
         // Default to PENDING status if API fails
         this.visitorKycStatus = 'PENDING';
         this.updateDocumentVisibility();
@@ -365,6 +377,16 @@ export class AppointmentFormComponent implements OnInit {
   submit() {
     this.errorMsg = '';
 
+    const visitorId = this.visitorId || sessionStorage.getItem('megha_visitor_id') || '';
+    if (this.isPublicUser && !visitorId) {
+      this.errorMsg = 'Visitor context is missing. Please login again before submitting an appointment.';
+      return;
+    }
+    if (!this.form.agendaType || !this.form.requestedLocation || !this.form.agendaBrief.trim()) {
+      this.errorMsg = 'Please complete the appointment agenda, location, and purpose before submitting.';
+      return;
+    }
+
     // Validate required documents are uploaded
     const requiredDocs = this.documents.filter(d => d.isVisible && d.isRequired);
     const missingDocs = requiredDocs.filter(d => !d.fileName);
@@ -377,13 +399,14 @@ export class AppointmentFormComponent implements OnInit {
 
     // Create FormData to handle file uploads
     const formData = new FormData();
-    const visitorId = sessionStorage.getItem('megha_visitor_id');
 
     // Add form fields
-    formData.append('applicantId', visitorId ? visitorId : '');
-    formData.append('applicantName', this.form.fullName);
-    formData.append('applicantPhone', this.form.phoneNumber);
-    formData.append('epicNumber', this.form.epicNumber);
+    formData.append('applicantId', visitorId);
+    if (!this.isPublicUser) {
+      formData.append('applicantName', this.form.fullName);
+      formData.append('applicantPhone', this.form.phoneNumber);
+      formData.append('epicNumber', this.form.epicNumber);
+    }
     formData.append('agendaType', this.form.agendaType);
     formData.append('agendaBrief', this.form.agendaBrief);
     formData.append('requestedLocation', this.form.requestedLocation?.toUpperCase() || 'OTHERS');

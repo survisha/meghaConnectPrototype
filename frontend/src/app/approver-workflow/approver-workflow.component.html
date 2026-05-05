@@ -9,7 +9,16 @@
   </div>
 
   <div class="section-card-body">
-    <div class="table-container">
+    <div *ngIf="errorMsg" style="background:#fef2f2;color:#991b1b;border:1px solid #fecaca;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.9rem">
+      <mat-icon style="font-size:18px;width:18px;height:18px;vertical-align:middle;margin-right:0.35rem">error</mat-icon>
+      {{ errorMsg }}
+    </div>
+
+    <div *ngIf="loading" style="display:flex;align-items:center;justify-content:center;padding:2rem;color:#6b7280">
+      Loading appointments...
+    </div>
+
+    <div class="table-container" *ngIf="!loading">
       <table mat-table [dataSource]="appointments" class="approver-table">
         
         <!-- App ID Column -->
@@ -24,15 +33,15 @@
         <ng-container matColumnDef="applicant">
           <th mat-header-cell *matHeaderCellDef>Applicant</th>
           <td mat-cell *matCellDef="let appt">
-            <div style="font-weight:600">{{ appt.applicant.fullName }}</div>
-            <div style="font-size:0.78rem;color:#6b7280">{{ appt.applicant.designation }}</div>
+            <div style="font-weight:600">{{ appt.applicant?.fullName || appt.applicantName || '—' }}</div>
+            <div style="font-size:0.78rem;color:#6b7280">{{ appt.applicant?.designation || '—' }}</div>
           </td>
         </ng-container>
 
         <!-- District Column -->
         <ng-container matColumnDef="district">
           <th mat-header-cell *matHeaderCellDef>District</th>
-          <td mat-cell *matCellDef="let appt">{{ appt.applicant.district }}</td>
+          <td mat-cell *matCellDef="let appt">{{ appt.applicant?.district || '—' }}</td>
         </ng-container>
 
         <!-- Agenda Column -->
@@ -137,7 +146,7 @@
   </div>
   <div class="dialog-content">
     <div *ngIf="selected" class="dialog-appt-summary">
-      <strong>{{ selected.applicationId }}</strong> – {{ selected.applicant.fullName }}
+      <strong>{{ selected.applicationId }}</strong> – {{ selected.applicant.fullName || selected.applicantName || '—' }}
       <span class="event-type-pill" style="margin-left:0.5rem">{{ selected.eventType }}</span>
     </div>
     <div style="margin-top:1rem">
@@ -170,7 +179,7 @@
   </div>
   <div class="dialog-content">
     <div *ngIf="selected" class="dialog-appt-summary">
-      <strong>{{ selected.applicationId }}</strong> – {{ selected.applicant.fullName }}
+      <strong>{{ selected.applicationId }}</strong> – {{ selected.applicant.fullName || selected.applicantName || '—' }}
     </div>
     <div style="margin-top:1rem">
       <mat-form-field appearance="outline" style="width:100%">

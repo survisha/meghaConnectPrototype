@@ -29,7 +29,6 @@ class _Appointment {
   });
 }
 
-
 class AppointmentsScreen extends StatefulWidget {
   const AppointmentsScreen({super.key});
 
@@ -58,7 +57,12 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
 
   Future<void> _loadAppointments() async {
     setState(() => _loading = true);
-    final data = await ApiService.getAppointments();
+    final role = context.read<AuthService>().user?.role;
+    final data = role == UserRole.PUBLIC
+        ? await ApiService.getMyAppointments()
+        : role == UserRole.DATA_ENTRY_OPERATOR
+            ? await ApiService.getDeoAppointments()
+            : await ApiService.getAppointments();
     if (!mounted) return;
     final content = (data['content'] as List<dynamic>?) ?? [];
     setState(() {
@@ -67,10 +71,16 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         final applicant = m['applicant'] as Map<String, dynamic>? ?? {};
         return _Appointment(
           id: m['applicationId'] as String? ?? m['id']?.toString() ?? '',
-          applicantName: applicant['fullName'] as String? ?? '—',
-          phone: applicant['phoneNumber'] as String? ?? '',
+          applicantName: applicant['fullName'] as String? ??
+              m['applicantName'] as String? ??
+              '—',
+          phone: applicant['phoneNumber'] as String? ??
+              m['applicantPhone'] as String? ??
+              m['applicantMobile'] as String? ??
+              '',
           agendaType: m['agendaType'] as String? ?? '',
-          agendaBrief: m['agendaBrief'] as String? ?? '',
+          agendaBrief:
+              m['agendaBrief'] as String? ?? m['description'] as String? ?? '',
           status: m['status'] as String? ?? '',
           location: m['requestedLocation'] as String? ?? '',
           scheduledAt: _fmtDateTime(m['scheduledDateTime'] as String?),
@@ -97,9 +107,13 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
 
       final matchFilter = _filterStatus == 'All' ||
           (_filterStatus == 'Pending' &&
-              (a.status.contains('PENDING') || a.status.contains('REVIEW') || a.status == 'SUBMITTED' || a.status == 'DEO_PROCESSED')) ||
+              (a.status.contains('PENDING') ||
+                  a.status.contains('REVIEW') ||
+                  a.status == 'SUBMITTED' ||
+                  a.status == 'DEO_PROCESSED')) ||
           (_filterStatus == 'Scheduled' && a.status == 'SCHEDULED') ||
-          (_filterStatus == 'Completed' && (a.status == 'COMPLETED' || a.status == 'HCM_ACCEPTED'));
+          (_filterStatus == 'Completed' &&
+              (a.status == 'COMPLETED' || a.status == 'HCM_ACCEPTED'));
 
       return matchSearch && matchFilter;
     }).toList();
@@ -135,8 +149,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                       ),
                     ),
         ),
-        if (canAddNew)
-          _buildBottomActions(context),
+        if (canAddNew) _buildBottomActions(context),
       ],
     );
   }
@@ -154,7 +167,8 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                   onPressed: () => setState(() => _searchQuery = ''),
                 )
               : null,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
         onChanged: (v) => setState(() => _searchQuery = v),
       ),
@@ -229,7 +243,9 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
             child: ElevatedButton.icon(
               icon: const Icon(Icons.add),
               label: const Text('New Appointment'),
-              onPressed: () => context.read<NavigationService>().navigateTo('new_appointment'),
+              onPressed: () => context
+                  .read<NavigationService>()
+                  .navigateTo('new_appointment'),
             ),
           ),
           const SizedBox(width: 10),
@@ -237,12 +253,14 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
             child: OutlinedButton.icon(
               icon: const Icon(Icons.login),
               label: const Text('Walk-in'),
-              onPressed: () => context.read<NavigationService>().navigateTo('walkin'),
+              onPressed: () =>
+                  context.read<NavigationService>().navigateTo('walkin'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: const Color(0xFF2E7D32),
                 side: const BorderSide(color: Color(0xFF2E7D32)),
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
               ),
             ),
           ),
@@ -257,10 +275,13 @@ class _AppointmentCard extends StatelessWidget {
   const _AppointmentCard({required this.appointment});
 
   Color _statusColor(String status) {
-    if (status.contains('ACCEPTED') || status == 'COMPLETED') return const Color(0xFF16A34A);
-    if (status.contains('PENDING') || status.contains('REVIEW')) return const Color(0xFFB45309);
+    if (status.contains('ACCEPTED') || status == 'COMPLETED')
+      return const Color(0xFF16A34A);
+    if (status.contains('PENDING') || status.contains('REVIEW'))
+      return const Color(0xFFB45309);
     if (status == 'SCHEDULED') return const Color(0xFF1A237E);
-    if (status.contains('REJECTED') || status.contains('CANCELLED')) return const Color(0xFF991B1B);
+    if (status.contains('REJECTED') || status.contains('CANCELLED'))
+      return const Color(0xFF991B1B);
     return const Color(0xFF4B5563);
   }
 
@@ -297,7 +318,8 @@ class _AppointmentCard extends StatelessWidget {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: tc.withAlpha(26),
                     borderRadius: BorderRadius.circular(6),
@@ -305,33 +327,40 @@ class _AppointmentCard extends StatelessWidget {
                   ),
                   child: Text(
                     appointment.agendaType,
-                    style: TextStyle(color: tc, fontWeight: FontWeight.bold, fontSize: 11),
+                    style: TextStyle(
+                        color: tc, fontWeight: FontWeight.bold, fontSize: 11),
                   ),
                 ),
                 if (appointment.isWalkIn) ...[
                   const SizedBox(width: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                     decoration: BoxDecoration(
                       color: const Color(0xFF006064).withAlpha(26),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: const Text(
                       'Walk-in',
-                      style: TextStyle(color: Color(0xFF006064), fontSize: 10, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                          color: Color(0xFF006064),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600),
                     ),
                   ),
                 ],
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: sc.withAlpha(20),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
                     _statusLabel(appointment.status),
-                    style: TextStyle(color: sc, fontSize: 10, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                        color: sc, fontSize: 10, fontWeight: FontWeight.w600),
                   ),
                 ),
               ],
@@ -339,11 +368,13 @@ class _AppointmentCard extends StatelessWidget {
             const SizedBox(height: 10),
             Row(
               children: [
-                const Icon(Icons.person_outline, size: 16, color: Color(0xFF1A237E)),
+                const Icon(Icons.person_outline,
+                    size: 16, color: Color(0xFF1A237E)),
                 const SizedBox(width: 6),
                 Text(
                   appointment.applicantName,
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600, fontSize: 15),
                 ),
               ],
             ),
@@ -359,11 +390,14 @@ class _AppointmentCard extends StatelessWidget {
               children: [
                 Icon(Icons.tag, size: 13, color: Colors.grey[500]),
                 const SizedBox(width: 4),
-                Text(appointment.id, style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                Text(appointment.id,
+                    style: TextStyle(fontSize: 12, color: Colors.grey[500])),
                 const SizedBox(width: 12),
-                Icon(Icons.location_on_outlined, size: 13, color: Colors.grey[500]),
+                Icon(Icons.location_on_outlined,
+                    size: 13, color: Colors.grey[500]),
                 const SizedBox(width: 4),
-                Text(appointment.location, style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                Text(appointment.location,
+                    style: TextStyle(fontSize: 12, color: Colors.grey[500])),
                 const SizedBox(width: 12),
                 Icon(Icons.access_time, size: 13, color: Colors.grey[500]),
                 const SizedBox(width: 4),

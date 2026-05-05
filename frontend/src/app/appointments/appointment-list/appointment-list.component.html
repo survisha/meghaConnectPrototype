@@ -34,16 +34,25 @@
         </mat-form-field>
       </div>
 
+      <div *ngIf="errorMsg" style="background:#fef2f2;color:#991b1b;border:1px solid #fecaca;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.9rem">
+        <mat-icon style="font-size:18px;width:18px;height:18px;vertical-align:middle;margin-right:0.35rem">error</mat-icon>
+        {{ errorMsg }}
+      </div>
+
+      <div *ngIf="loading" style="display:flex;align-items:center;justify-content:center;padding:2rem;color:#6b7280">
+        Loading appointments...
+      </div>
+
       <!-- Material Table -->
-      <div class="table-container">
+      <div class="table-container" *ngIf="!loading">
         <table mat-table [dataSource]="filtered" class="appointments-table">
           
           <!-- Applicant Column -->
           <ng-container matColumnDef="applicant">
             <th mat-header-cell *matHeaderCellDef>Applicant</th>
             <td mat-cell *matCellDef="let appt">
-              <div style="font-weight:600">{{ appt.applicant.fullName }}</div>
-              <div style="font-size:0.75rem;color:#6b7280">📞 {{ appt.applicant.phoneNumber }}</div>
+              <div style="font-weight:600">{{ appt.applicant?.fullName || appt.applicantName || '—' }}</div>
+              <div style="font-size:0.75rem;color:#6b7280">📞 {{ appt.applicant?.phoneNumber || appt.applicantPhone || '—' }}</div>
             </td>
           </ng-container>
 
@@ -51,7 +60,7 @@
           <ng-container matColumnDef="designation">
             <th mat-header-cell *matHeaderCellDef>Designation</th>
             <td mat-cell *matCellDef="let appt" style="font-size:0.85rem">
-              {{ appt.applicant.designation }}
+              {{ appt.applicant?.designation || '—' }}
             </td>
           </ng-container>
 
@@ -59,7 +68,7 @@
           <ng-container matColumnDef="constituency">
             <th mat-header-cell *matHeaderCellDef>Constituency</th>
             <td mat-cell *matCellDef="let appt" style="font-size:0.85rem">
-              {{ appt.applicant.constituency }}
+              {{ appt.applicant?.constituency || '—' }}
             </td>
           </ng-container>
 

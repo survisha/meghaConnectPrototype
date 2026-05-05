@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { AuthService } from '../services/auth.service';
+import { AppointmentService } from '../services/appointment.service';
 import { Tag } from 'primeng/tag';
 import { AiChatbotComponent } from '../ai-chatbot/ai-chatbot.component';
 
@@ -42,53 +43,33 @@ export class VisitorDashboardComponent implements OnInit {
 
   totalVisits = 0;
 
-  constructor(public auth: AuthService, private http: HttpClient) {}
+  constructor(public auth: AuthService, private http: HttpClient, private appointmentService: AppointmentService) {}
 
   ngOnInit() {
-    // Initialize dummy data for demo purposes
+    const user = this.auth.user();
     this.visitorProfile = {
-      fullName: 'Rajesh Kumar Sharma',
-      phoneNumber: '+91-9876543210',
-      address: 'Ward No. 5, Police Bazar Road',
-      district: 'East Khasi Hills',
-      kycType: 'AADHAAR',
-      kycVerified: true,
-      kycStatus: 'PHOTO_MATCHED',
-      kycConfidence: 94,
+      fullName: user?.fullName ?? 'Visitor',
+      phoneNumber: user?.username ?? '',
+      address: '',
+      district: '',
+      kycType: 'NONE',
+      kycVerified: false,
+      kycStatus: 'PENDING',
+      kycConfidence: 0,
       livePhotoPath: ''
     };
     this.updateVisitorPhotoUrl();
-
-    this.myAppointments = [
-      { id: 'APT-2024-001', title: 'Meeting with CM regarding Road Development', status: 'SCHEDULED', date: '2024-03-28 11:00 AM' },
-      { id: 'APT-2024-002', title: 'Discussion on Education Policy', status: 'COMPLETED', date: '2024-03-15 10:00 AM' },
-      { id: 'APT-2024-003', title: 'Healthcare Infrastructure Proposal', status: 'CMO_REVIEW', date: '2024-03-20 02:00 PM' }
-    ];
-
-    this.mySchemes = [
-      { id: 'SCH-2024-045', title: 'CM Self-Development Fund', status: 'APPROVED', date: '2024-03-10', extra: '₹50,000' },
-      { id: 'SCH-2024-078', title: 'CM Care Program', status: 'UNDER_REVIEW', date: '2024-03-22', extra: '₹25,000' },
-      { id: 'SCH-2024-091', title: 'CM Elevate Scholarship', status: 'APPROVED', date: '2024-02-28', extra: '₹15,000' }
-    ];
-
-    this.myGrievances = [
-      { id: 'GRV-2024-012', title: 'Water Supply Issue in Ward 5', status: 'RESOLVED', date: '2024-03-05' },
-      { id: 'GRV-2024-034', title: 'Street Light Maintenance Request', status: 'UNDER_REVIEW', date: '2024-03-18' }
-    ];
-
-    this.totalVisits = 7;
-
-    this.cards = [
-      { label: 'My Appointments', value: this.myAppointments.length, icon: 'pi-calendar',              color: '#1a237e', bg: '#e8eaf6' },
-      { label: 'Total Visits',    value: this.totalVisits, icon: 'pi-map-marker',             color: '#065f46', bg: '#d1fae5' },
-      { label: 'Active Schemes',  value: this.mySchemes.length, icon: 'pi-briefcase',              color: '#b45309', bg: '#fef3c7' },
-      { label: 'Grievances',      value: this.myGrievances.length, icon: 'pi-comments',               color: '#dc2626', bg: '#fee2e2' },
-    ];
+    this.myAppointments = [];
+    this.mySchemes = [];
+    this.myGrievances = [];
+    this.totalVisits = 0;
+    this.updateCards();
 
     const visitorId = sessionStorage.getItem('megha_visitor_id');
     if (visitorId) {
       this.loadProfile(visitorId);
     }
+    this.loadAppointments();
   }
 
   private loadProfile(visitorId: string) {
@@ -103,6 +84,45 @@ export class VisitorDashboardComponent implements OnInit {
       },
       error: () => { this.loading = false; }
     });
+  }
+
+  private loadAppointments() {
+    this.loading = true;
+    this.appointmentService.getMyAppointments().subscribe({
+      next: appointments => {
+        this.myAppointments = appointments.map(a => ({
+          id: a.applicationId,
+          title: a.subject || a.agendaBrief || a.agendaType || 'Appointment request',
+          status: a.status,
+          date: this.formatDate(a.scheduledDateTime || a.submittedAt || a.createdAt),
+        }));
+        this.totalVisits = this.myAppointments.length;
+        this.updateCards();
+        this.loading = false;
+      },
+      error: () => {
+        this.myAppointments = [];
+        this.totalVisits = 0;
+        this.updateCards();
+        this.loading = false;
+      }
+    });
+  }
+
+  private updateCards() {
+    this.cards = [
+      { label: 'My Appointments', value: this.myAppointments.length, icon: 'pi-calendar', color: '#1a237e', bg: '#e8eaf6' },
+      { label: 'Total Visits', value: this.totalVisits, icon: 'pi-map-marker', color: '#065f46', bg: '#d1fae5' },
+      { label: 'Active Schemes', value: this.mySchemes.length, icon: 'pi-briefcase', color: '#b45309', bg: '#fef3c7' },
+      { label: 'Grievances', value: this.myGrievances.length, icon: 'pi-comments', color: '#dc2626', bg: '#fee2e2' },
+    ];
+  }
+
+  private formatDate(value?: string) {
+    if (!value) return 'Not scheduled';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
   }
 
   private updateVisitorPhotoUrl() {

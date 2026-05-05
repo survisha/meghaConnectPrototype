@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AppointmentService } from '../services/appointment.service';
 import { Appointment } from '../models';
+import { environment } from '../../environments/environment';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -43,6 +44,8 @@ export class ApproverWorkflowComponent implements OnInit {
   appointments: Appointment[] = [];
   selected: Appointment | null = null;
   loading = false;
+  errorMsg = '';
+  private readonly allowDummyFallback = !environment.production || environment.appName.includes('[UAT]');
   displayedColumns: string[] = ['applicationId', 'applicant', 'district', 'agenda', 'eventType', 'location', 'status', 'aiNotes', 'actions'];
 
   showRemarksDialog = false;
@@ -54,19 +57,25 @@ export class ApproverWorkflowComponent implements OnInit {
   constructor(private appointmentService: AppointmentService, private snackBar: MatSnackBar) {}
 
   ngOnInit() {
-    this.initializeDummyData();
     this.loading = true;
-    this.appointmentService.getAllAppointments(0, 100).subscribe({
+    this.appointmentService.getApproverAppointments(0, 100).subscribe({
       next: page => {
-        const filtered = page.content.filter(a =>
-          ['CMO_REVIEW', 'APPROVER_REVIEW', 'HCM_PENDING'].includes(a.status)
+        this.errorMsg = '';
+        this.appointments = page.content.filter(a =>
+          ['SUBMITTED', 'PENDING_APPROVER_REVIEW', 'CMO_REVIEW', 'APPROVER_REVIEW', 'HCM_PENDING'].includes(a.status)
         );
-        if (filtered.length > 0) {
-          this.appointments = filtered;
-        }
         this.loading = false;
       },
-      error: () => { this.loading = false; }
+      error: () => {
+        this.errorMsg = 'Unable to load approver appointments from API. Please try again.';
+        if (this.allowDummyFallback) {
+          // TODO: Remove dummy fallback after API stabilization.
+          this.initializeDummyData();
+        } else {
+          this.appointments = [];
+        }
+        this.loading = false;
+      }
     });
   }
 

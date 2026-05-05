@@ -81,8 +81,14 @@
     <p>Loading appointments...</p>
   </div>
 
+  <div *ngIf="!loading && errorMsg" class="empty-state">
+    <mat-icon>error</mat-icon>
+    <p>{{ errorMsg }}</p>
+    <button mat-raised-button color="primary" (click)="loadPendingAppointments()">Retry</button>
+  </div>
+
   <!-- Empty State -->
-  <div *ngIf="!loading && filteredAppointments.length === 0" class="empty-state">
+  <div *ngIf="!loading && !errorMsg && filteredAppointments.length === 0" class="empty-state">
     <mat-icon>inbox</mat-icon>
     <p>No appointments found matching your criteria</p>
     <button mat-raised-button color="primary" (click)="clearFilters()">Clear Filters</button>

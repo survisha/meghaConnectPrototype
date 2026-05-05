@@ -20,6 +20,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -40,8 +41,8 @@ public class AppointmentController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping
-    public ResponseEntity<Page<Appointment>> getAll(Pageable pageable) {
-        return ResponseEntity.ok(appointmentService.findAll(pageable));
+    public ResponseEntity<Page<AppointmentDto>> getAll(Pageable pageable) {
+        return ResponseEntity.ok(appointmentService.findAllDtos(pageable));
     }
 
     @Operation(summary = "Get appointment by ID", description = "Retrieve a specific appointment by its ID")
@@ -52,8 +53,9 @@ public class AppointmentController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/{id}")
-    public ResponseEntity<Appointment> getById(@PathVariable Long id) {
+    public ResponseEntity<AppointmentDto> getById(@PathVariable Long id) {
         return appointmentService.findById(id)
+            .map(appointmentService::toDto)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
     }
@@ -66,10 +68,36 @@ public class AppointmentController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/by-app-id/{appId}")
-    public ResponseEntity<Appointment> getByApplicationId(@PathVariable String appId) {
+    public ResponseEntity<AppointmentDto> getByApplicationId(@PathVariable String appId) {
         return appointmentService.findByApplicationId(appId)
+            .map(appointmentService::toDto)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
+    }
+
+    @Operation(summary = "Get logged-in citizen appointments", description = "Retrieve appointments for the authenticated visitor")
+    @GetMapping("/my")
+    @PreAuthorize("hasAnyRole('PUBLIC','CITIZEN')")
+    public ResponseEntity<List<AppointmentDto>> getMyAppointments(@AuthenticationPrincipal UserDetails user) {
+        Long visitorId = visitorIdFromPrincipal(user);
+        if (visitorId == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        return ResponseEntity.ok(appointmentService.findMyAppointments(visitorId));
+    }
+
+    @Operation(summary = "Get appointments for DEO", description = "Retrieve appointments visible to DEO review queues")
+    @GetMapping("/deo")
+    @PreAuthorize("hasAnyRole('ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO_OFFICER')")
+    public ResponseEntity<Page<AppointmentDto>> getForDeo(Pageable pageable) {
+        return ResponseEntity.ok(appointmentService.findForDeo(pageable));
+    }
+
+    @Operation(summary = "Get appointments for approver", description = "Retrieve appointments visible to approver review queues")
+    @GetMapping("/approver")
+    @PreAuthorize("hasAnyRole('HCM','ADMIN','OSD','APPROVER','CMO_OFFICER')")
+    public ResponseEntity<Page<AppointmentDto>> getForApprover(Pageable pageable) {
+        return ResponseEntity.ok(appointmentService.findForApprover(pageable));
     }
 
     @Operation(summary = "Create appointment", description = "Create a new appointment")
@@ -84,7 +112,8 @@ public class AppointmentController {
     @ResponseStatus(HttpStatus.CREATED)
     public Appointment create(@Valid @RequestBody AppointmentDto dto,
                               @AuthenticationPrincipal UserDetails user) {
-        return appointmentService.create(dto, user.getUsername());
+        String actor = user != null ? user.getUsername() : "anonymous";
+        return appointmentService.create(dto, actor);
     }
 
     @Operation(summary = "Update appointment status", description = "Update the status of an appointment")
@@ -99,6 +128,15 @@ public class AppointmentController {
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasAnyRole('CMO_OFFICER','APPROVER','HCM','OSD','ADMIN')")
     public ResponseEntity<?> updateStatus(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body,
+            @AuthenticationPrincipal UserDetails user) {
+        return ResponseEntity.ok(appointmentService.updateStatus(id, body, user.getUsername()));
+    }
+
+    @PutMapping("/{id}/status")
+    @PreAuthorize("hasAnyRole('CMO_OFFICER','APPROVER','HCM','OSD','ADMIN')")
+    public ResponseEntity<?> putStatus(
             @PathVariable Long id,
             @RequestBody Map<String, String> body,
             @AuthenticationPrincipal UserDetails user) {
@@ -121,5 +159,16 @@ public class AppointmentController {
             @RequestBody Map<String, Object> body,
             @AuthenticationPrincipal UserDetails user) {
         return ResponseEntity.ok(appointmentService.schedule(id, body, user.getUsername()));
+    }
+
+    private Long visitorIdFromPrincipal(UserDetails user) {
+        if (user == null || user.getUsername() == null || !user.getUsername().startsWith("visitor_")) {
+            return null;
+        }
+        try {
+            return Long.parseLong(user.getUsername().substring("visitor_".length()));
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 }

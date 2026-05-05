@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import '../services/api_service.dart';
+import '../services/auth_service.dart';
 import '../services/navigation_service.dart';
+import 'visitor_registration_screen.dart';
 
 class NewAppointmentScreen extends StatefulWidget {
   final bool isWalkIn;
@@ -20,12 +23,9 @@ class NewAppointmentScreen extends StatefulWidget {
 class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  // Applicant Info
-  final _fullNameCtrl = TextEditingController();
-  final _phoneCtrl = TextEditingController();
-  final _epicCtrl = TextEditingController();
-  final _aadhaarCtrl = TextEditingController();
-  final _designationCtrl = TextEditingController();
+  final _searchMobileCtrl = TextEditingController();
+  final _searchEpicCtrl = TextEditingController();
+  final _searchReferenceCtrl = TextEditingController();
 
   // Appointment Details
   String _agendaType = 'A4';
@@ -33,33 +33,16 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
   final _agendaBriefCtrl = TextEditingController();
   final _profileCtrl = TextEditingController();
 
-  String _district = 'East Khasi Hills';
-  String _constituency = '';
-
-  // KYC / file-upload state
-  bool _photoUploaded = false;
-  bool _epicScanUploaded = false;
-  bool _aadhaarScanUploaded = false;
-
   bool _submitted = false;
   bool _loading = false;
+  bool _searching = false;
+  bool _visitorLoading = false;
+  String? _contextError;
+  String? _submittedAppId;
+  Map<String, dynamic>? _selectedVisitor;
 
   static const _agendaTypes = ['A1', 'A2', 'A3', 'A4', 'B1', 'B2'];
   static const _locations = ['SHILLONG', 'TURA', 'DELHI', 'OTHERS'];
-  static const _districts = [
-    'East Khasi Hills',
-    'West Khasi Hills',
-    'South West Khasi Hills',
-    'Ri Bhoi',
-    'Jaintia Hills',
-    'East Jaintia Hills',
-    'East Garo Hills',
-    'West Garo Hills',
-    'South Garo Hills',
-    'Eastern West Khasi Hills',
-    'North Garo Hills',
-    'Western South Garo Hills',
-  ];
 
   static const _agendaDescriptions = {
     'A1': 'Cabinet/Flight/State Function',
@@ -71,47 +54,135 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
   };
 
   @override
+  void initState() {
+    super.initState();
+    Future.microtask(_loadPublicVisitor);
+  }
+
+  @override
   void dispose() {
-    _fullNameCtrl.dispose();
-    _phoneCtrl.dispose();
-    _epicCtrl.dispose();
-    _aadhaarCtrl.dispose();
-    _designationCtrl.dispose();
+    _searchMobileCtrl.dispose();
+    _searchEpicCtrl.dispose();
+    _searchReferenceCtrl.dispose();
     _agendaBriefCtrl.dispose();
     _profileCtrl.dispose();
     super.dispose();
   }
 
+  int? get _selectedVisitorId {
+    final id = _selectedVisitor?['id'];
+    if (id is num) return id.toInt();
+    return int.tryParse(id?.toString() ?? '');
+  }
+
+  Future<void> _loadPublicVisitor() async {
+    if (!widget.isPublic || !mounted) return;
+    final auth = context.read<AuthService>();
+    final visitorId = auth.user?.visitorId;
+    if (visitorId == null || visitorId <= 0) {
+      setState(() {
+        _contextError =
+            'Visitor context is missing. Please login again before booking an appointment.';
+      });
+      return;
+    }
+
+    setState(() {
+      _visitorLoading = true;
+      _contextError = null;
+      _selectedVisitor = {
+        'id': visitorId,
+        'fullName': auth.user?.fullName ?? 'Visitor',
+        'phoneNumber': auth.user?.username ?? '',
+      };
+    });
+
+    final profile = await ApiService.getVisitorById(visitorId);
+    if (!mounted) return;
+    setState(() {
+      _visitorLoading = false;
+      if (profile != null) _selectedVisitor = profile;
+    });
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    final visitorId = _selectedVisitorId;
+    if (visitorId == null || visitorId <= 0) {
+      setState(() {
+        _contextError = widget.isPublic
+            ? 'Visitor context is missing. Please login again before submitting.'
+            : 'Search and select a visitor before creating the appointment.';
+      });
+      return;
+    }
+
     setState(() => _loading = true);
-    await Future.delayed(const Duration(milliseconds: 800));
+    final result = await ApiService.createAppointment({
+      'applicantId': visitorId,
+      'eventType': _agendaType,
+      'agendaType': _agendaDescriptions[_agendaType] ?? _agendaType,
+      'agendaBrief': _agendaBriefCtrl.text.trim(),
+      'requestedLocation': _location,
+      'isWalkIn': widget.isWalkIn,
+    });
     if (!mounted) return;
     setState(() {
       _loading = false;
-      _submitted = true;
+      if (result == null) {
+        _contextError = 'Unable to submit appointment. Please try again.';
+      } else {
+        _submittedAppId =
+            result['applicationId'] as String? ?? result['id']?.toString();
+        _submitted = true;
+      }
     });
   }
 
   void _reset() {
     _formKey.currentState?.reset();
-    _fullNameCtrl.clear();
-    _phoneCtrl.clear();
-    _epicCtrl.clear();
-    _aadhaarCtrl.clear();
-    _designationCtrl.clear();
+    _searchMobileCtrl.clear();
+    _searchEpicCtrl.clear();
+    _searchReferenceCtrl.clear();
     _agendaBriefCtrl.clear();
     _profileCtrl.clear();
     setState(() {
       _agendaType = 'A4';
       _location = 'SHILLONG';
-      _district = 'East Khasi Hills';
-      _constituency = '';
-      _photoUploaded = false;
-      _epicScanUploaded = false;
-      _aadhaarScanUploaded = false;
       _submitted = false;
+      _submittedAppId = null;
+      _contextError = null;
+      if (!widget.isPublic) _selectedVisitor = null;
     });
+  }
+
+  Future<void> _searchVisitor() async {
+    setState(() {
+      _searching = true;
+      _contextError = null;
+      _selectedVisitor = null;
+    });
+    final results = await ApiService.searchVisitors(
+      mobile: _searchMobileCtrl.text,
+      epic: _searchEpicCtrl.text,
+      referenceId: _searchReferenceCtrl.text,
+    );
+    if (!mounted) return;
+    setState(() {
+      _searching = false;
+      if (results.isEmpty) {
+        _contextError =
+            'No visitor found. Register the visitor first, then create the appointment.';
+      } else {
+        _selectedVisitor = results.first as Map<String, dynamic>;
+      }
+    });
+  }
+
+  Future<void> _openVisitorRegistration() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const VisitorRegistrationScreen()),
+    );
   }
 
   @override
@@ -126,37 +197,41 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (widget.isWalkIn || widget.isPublic) _buildInfoBanner(),
-            _buildSection('👤 Applicant Information', _buildApplicantFields()),
+            _buildSection(
+              widget.isPublic ? 'Citizen Details' : 'Visitor Search',
+              widget.isPublic
+                  ? _buildSelectedVisitorSummary()
+                  : _buildVisitorSearch(),
+            ),
             const SizedBox(height: 16),
-            // KYC section shown for public & walk-in registrations
-            if (widget.isWalkIn || widget.isPublic) ...[
-              _buildSection('🪪 KYC Verification', _buildKycFields()),
-              const SizedBox(height: 16),
-              _buildSection('📷 Photo & Documents', _buildPhotoDocFields()),
+            if (_contextError != null) ...[
+              _buildErrorBanner(_contextError!),
               const SizedBox(height: 16),
             ],
-            _buildSection('📋 Appointment Details', _buildAppointmentFields()),
+            if (_selectedVisitor != null)
+              _buildSection('Appointment Details', _buildAppointmentFields()),
             const SizedBox(height: 24),
-            SizedBox(
-              height: 50,
-              child: ElevatedButton.icon(
-                icon: _loading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
-                      )
-                    : const Icon(Icons.send),
-                label: Text(
-                  widget.isPublic
-                      ? 'Submit Application'
-                      : 'Register Appointment',
-                  style: const TextStyle(fontSize: 16),
+            if (_selectedVisitor != null)
+              SizedBox(
+                height: 50,
+                child: ElevatedButton.icon(
+                  icon: _loading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.send),
+                  label: Text(
+                    widget.isPublic
+                        ? 'Submit Appointment'
+                        : 'Create Appointment',
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                  onPressed: _loading ? null : _submit,
                 ),
-                onPressed: _loading ? null : _submit,
               ),
-            ),
             const SizedBox(height: 16),
           ],
         ),
@@ -188,7 +263,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
             child: Text(
               isWalkIn
                   ? 'Walk-in Counter: Register an in-person visitor for a direct appointment with the Chief Minister.'
-                  : 'Citizens: Submit your appointment request online. You will be contacted once reviewed.',
+                  : 'Your registered MeghaConnect profile will be used. Add only appointment-specific details.',
               style: TextStyle(
                 color: isWalkIn
                     ? const Color(0xFF065F46)
@@ -199,6 +274,111 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildErrorBanner(String text) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEF2F2),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFFECACA)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.error_outline, color: Color(0xFF991B1B), size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(color: Color(0xFF991B1B), fontSize: 12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSelectedVisitorSummary() {
+    if (_visitorLoading) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+    final v = _selectedVisitor;
+    if (v == null) {
+      return const Text(
+        'Visitor profile could not be loaded.',
+        style: TextStyle(color: Color(0xFF991B1B)),
+      );
+    }
+    return _VisitorSummary(visitor: v);
+  }
+
+  Widget _buildVisitorSearch() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextFormField(
+          controller: _searchMobileCtrl,
+          keyboardType: TextInputType.phone,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(10),
+          ],
+          decoration: const InputDecoration(
+            labelText: 'Mobile Number',
+            prefixIcon: Icon(Icons.phone_outlined),
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _searchEpicCtrl,
+          textCapitalization: TextCapitalization.characters,
+          decoration: const InputDecoration(
+            labelText: 'EPIC / Voter ID',
+            prefixIcon: Icon(Icons.credit_card_outlined),
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _searchReferenceCtrl,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: 'Visitor Reference ID',
+            prefixIcon: Icon(Icons.tag_outlined),
+          ),
+        ),
+        const SizedBox(height: 12),
+        ElevatedButton.icon(
+          icon: _searching
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.search),
+          label: Text(_searching ? 'Searching...' : 'Search Visitor'),
+          onPressed: _searching ? null : _searchVisitor,
+        ),
+        if (_selectedVisitor != null) ...[
+          const SizedBox(height: 14),
+          _VisitorSummary(visitor: _selectedVisitor!),
+        ],
+        if (_contextError != null && _selectedVisitor == null) ...[
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            icon: const Icon(Icons.person_add_alt_1_outlined),
+            label: const Text('Register Visitor First'),
+            onPressed: _openVisitorRegistration,
+          ),
+        ],
+      ],
     );
   }
 
@@ -222,243 +402,6 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildApplicantFields() {
-    return Column(
-      children: [
-        TextFormField(
-          controller: _fullNameCtrl,
-          decoration: const InputDecoration(
-            labelText: 'Full Name *',
-            prefixIcon: Icon(Icons.person_outline),
-          ),
-          textCapitalization: TextCapitalization.words,
-          validator: (v) =>
-              (v == null || v.trim().isEmpty) ? 'Full name is required' : null,
-          textInputAction: TextInputAction.next,
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: _phoneCtrl,
-          keyboardType: TextInputType.phone,
-          inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly,
-            LengthLimitingTextInputFormatter(10),
-          ],
-          decoration: const InputDecoration(
-            labelText: 'Mobile Number *',
-            prefixIcon: Icon(Icons.phone_outlined),
-            prefixText: '+91 ',
-          ),
-          validator: (v) {
-            if (v == null || v.isEmpty) return 'Mobile number is required';
-            if (v.length != 10) return 'Enter valid 10-digit number';
-            return null;
-          },
-          textInputAction: TextInputAction.next,
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: _epicCtrl,
-          decoration: const InputDecoration(
-            labelText: 'EPIC / Voter ID Number',
-            prefixIcon: Icon(Icons.credit_card_outlined),
-          ),
-          textCapitalization: TextCapitalization.characters,
-          textInputAction: TextInputAction.next,
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: _designationCtrl,
-          decoration: const InputDecoration(
-            labelText: 'Designation / Occupation',
-            prefixIcon: Icon(Icons.work_outline),
-          ),
-          textCapitalization: TextCapitalization.words,
-          textInputAction: TextInputAction.next,
-        ),
-        const SizedBox(height: 12),
-        DropdownButtonFormField<String>(
-          value: _district,
-          decoration: const InputDecoration(
-            labelText: 'District *',
-            prefixIcon: Icon(Icons.location_city_outlined),
-          ),
-          items: _districts
-              .map((d) => DropdownMenuItem(value: d, child: Text(d)))
-              .toList(),
-          onChanged: (v) => setState(() => _district = v ?? _district),
-          validator: (v) => v == null ? 'Select district' : null,
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          initialValue: _constituency,
-          decoration: const InputDecoration(
-            labelText: 'Constituency',
-            prefixIcon: Icon(Icons.map_outlined),
-          ),
-          textCapitalization: TextCapitalization.words,
-          onChanged: (v) => _constituency = v,
-          textInputAction: TextInputAction.next,
-        ),
-      ],
-    );
-  }
-
-  /// KYC section: EPIC (primary) with AADHAR as fallback.
-  /// AADHAR field is revealed automatically when EPIC is left empty.
-  Widget _buildKycFields() {
-    final epicEmpty = _epicCtrl.text.trim().isEmpty;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Priority note
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: const Color(0xFFE8EAF6),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: const Row(
-            children: [
-              Icon(Icons.info_outline, size: 16, color: Color(0xFF1A237E)),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'KYC Priority: EPIC (Voter ID) is primary. '
-                  'Provide Aadhaar only if EPIC is unavailable.',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF1A237E)),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        // EPIC – primary KYC
-        TextFormField(
-          controller: _epicCtrl,
-          decoration: InputDecoration(
-            labelText: 'EPIC / Voter ID Number (Primary KYC)',
-            prefixIcon: const Icon(Icons.credit_card_outlined),
-            hintText: 'e.g. MH/01/001/234567',
-            suffixIcon: _epicCtrl.text.isNotEmpty
-                ? const Icon(Icons.verified_outlined, color: Color(0xFF16A34A))
-                : null,
-          ),
-          textCapitalization: TextCapitalization.characters,
-          onChanged: (_) => setState(() {}), // trigger AADHAR field toggle
-          textInputAction: TextInputAction.next,
-        ),
-        const SizedBox(height: 12),
-        // AADHAR – fallback, shown when EPIC is blank
-        AnimatedCrossFade(
-          duration: const Duration(milliseconds: 250),
-          firstChild: const SizedBox.shrink(),
-          secondChild: Column(
-            children: [
-              TextFormField(
-                controller: _aadhaarCtrl,
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(12),
-                ],
-                decoration: const InputDecoration(
-                  labelText: 'Aadhaar Number (Fallback KYC)',
-                  prefixIcon: Icon(Icons.fingerprint),
-                  hintText: '12-digit Aadhaar number',
-                  helperText: 'Only required when EPIC is not available',
-                ),
-                validator: (v) {
-                  if (!epicEmpty) return null;
-                  if (v != null && v.isNotEmpty && v.length != 12) {
-                    return 'Aadhaar must be 12 digits';
-                  }
-                  return null;
-                },
-                textInputAction: TextInputAction.next,
-              ),
-              const SizedBox(height: 12),
-            ],
-          ),
-          crossFadeState:
-              epicEmpty ? CrossFadeState.showSecond : CrossFadeState.showFirst,
-        ),
-      ],
-    );
-  }
-
-  /// Photo capture + document upload section.
-  /// Files are stored in the file store; only the path is saved in DB.
-  Widget _buildPhotoDocFields() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Storage note
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF0FDF4),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: const Color(0xFF86EFAC)),
-          ),
-          child: const Row(
-            children: [
-              Icon(Icons.cloud_upload_outlined,
-                  size: 16, color: Color(0xFF16A34A)),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Photos & documents are stored in secure file storage. '
-                  'Only the file reference path is saved in the database.',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF065F46)),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 14),
-        // Live Photo
-        _UploadTile(
-          icon: Icons.camera_alt_outlined,
-          label: 'Live Photo *',
-          sublabel: 'Tap to capture / upload',
-          isUploaded: _photoUploaded,
-          onTap: () {
-            // TODO: open camera via image_picker
-            setState(() {
-              _photoUploaded = true;
-            });
-          },
-        ),
-        const SizedBox(height: 10),
-        // EPIC scan
-        _UploadTile(
-          icon: Icons.credit_card_outlined,
-          label: 'EPIC / Voter ID Scan',
-          sublabel: 'Upload front & back of Voter ID',
-          isUploaded: _epicScanUploaded,
-          onTap: () {
-            // TODO: open file picker
-            setState(() => _epicScanUploaded = true);
-          },
-        ),
-        const SizedBox(height: 10),
-        // Aadhaar scan – only relevant when no EPIC
-        if (_epicCtrl.text.trim().isEmpty)
-          _UploadTile(
-            icon: Icons.fingerprint,
-            label: 'Aadhaar Card Scan',
-            sublabel: 'Upload Aadhaar (fallback KYC)',
-            isUploaded: _aadhaarScanUploaded,
-            onTap: () {
-              // TODO: open file picker
-              setState(() => _aadhaarScanUploaded = true);
-            },
-          ),
-      ],
     );
   }
 
@@ -523,8 +466,8 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
   }
 
   Widget _buildSuccess(BuildContext context) {
-    final appId =
-        'MC-2024-${(DateTime.now().millisecondsSinceEpoch % 90000 + 10000).toString()}';
+    final appId = _submittedAppId ??
+        'MC-${DateTime.now().year}-${(DateTime.now().millisecondsSinceEpoch % 90000 + 10000).toString()}';
 
     return Center(
       child: Padding(
@@ -613,75 +556,115 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
   }
 }
 
-/// Reusable upload tile used in the Photo & Documents section.
-class _UploadTile extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String sublabel;
-  final bool isUploaded;
-  final VoidCallback onTap;
+class _VisitorSummary extends StatelessWidget {
+  final Map<String, dynamic> visitor;
 
-  const _UploadTile({
-    required this.icon,
-    required this.label,
-    required this.sublabel,
-    required this.isUploaded,
-    required this.onTap,
-  });
+  const _VisitorSummary({required this.visitor});
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: isUploaded ? const Color(0xFFF0FDF4) : Colors.grey[50],
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: isUploaded
-                ? const Color(0xFF86EFAC)
-                : Colors.grey.withAlpha(77),
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(icon,
-                color: isUploaded
-                    ? const Color(0xFF16A34A)
-                    : const Color(0xFF1A237E),
-                size: 22),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(label,
-                      style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                          color: isUploaded
-                              ? const Color(0xFF16A34A)
-                              : const Color(0xFF1F2937))),
-                  Text(
-                    isUploaded ? 'Uploaded ✓' : sublabel,
-                    style: TextStyle(
-                        fontSize: 11,
-                        color: isUploaded
-                            ? const Color(0xFF16A34A)
-                            : Colors.grey[500]),
-                  ),
-                ],
+    final name = visitor['fullName']?.toString() ?? 'Visitor';
+    final phone = visitor['phoneNumber']?.toString() ?? '—';
+    final epic = visitor['epicNumber']?.toString() ?? '—';
+    final district = visitor['district']?.toString() ?? '—';
+    final constituency = visitor['constituency']?.toString() ?? '—';
+    final kyc = visitor['kycStatus']?.toString() ??
+        (visitor['kycVerified'] == true ? 'VERIFIED' : 'PENDING');
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: const Color(0xFF1A237E),
+                foregroundColor: Colors.white,
+                child: Text(name.isEmpty ? 'V' : name[0].toUpperCase()),
               ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                      ),
+                    ),
+                    Text(
+                      'Profile details are read-only for appointment booking',
+                      style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _SummaryPill(label: 'Mobile', value: phone),
+              _SummaryPill(label: 'EPIC', value: epic),
+              _SummaryPill(label: 'District', value: district),
+              _SummaryPill(label: 'Constituency', value: constituency),
+              _SummaryPill(label: 'KYC', value: kyc),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SummaryPill extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _SummaryPill({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 128),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label.toUpperCase(),
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
             ),
-            Icon(
-              isUploaded ? Icons.check_circle : Icons.upload_file_outlined,
-              color: isUploaded ? const Color(0xFF16A34A) : Colors.grey[400],
-              size: 20,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value.isEmpty ? '—' : value,
+            style: const TextStyle(
+              color: Color(0xFF111827),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

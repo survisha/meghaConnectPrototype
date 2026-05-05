@@ -52,6 +52,7 @@ export class ApproverInboxComponent implements OnInit {
   totalCount = 0;
   
   loading = false;
+  errorMsg = '';
   userRole = 'CMO_OFFICER'; // Default role, can be overridden from auth service
 
   statusBadgeColor: { [key: string]: string } = {
@@ -85,6 +86,7 @@ export class ApproverInboxComponent implements OnInit {
     this.loading = true;
     this.appointmentService.getPendingAppointments(this.userRole).subscribe({
       next: (data) => {
+        this.errorMsg = '';
         this.appointments = data;
         this.totalCount = data.length;
         this.applyFilters();
@@ -92,6 +94,10 @@ export class ApproverInboxComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error loading pending appointments:', err);
+        this.errorMsg = 'Unable to load appointment inbox from API. Please try again.';
+        this.appointments = [];
+        this.filteredAppointments = [];
+        this.totalCount = 0;
         this.loading = false;
       }
     });
@@ -110,8 +116,8 @@ export class ApproverInboxComponent implements OnInit {
     this.filteredAppointments = this.appointments.filter(appointment => {
       // Search by applicant name or phone
       const searchMatch = !searchText || 
-        appointment.applicantName.toLowerCase().includes(searchText.toLowerCase()) ||
-        appointment.applicantPhone.includes(searchText);
+        (appointment.applicantName || '').toLowerCase().includes(searchText.toLowerCase()) ||
+        (appointment.applicantPhone || '').includes(searchText);
 
       // Filter by status
       const statusMatch = !statusFilter || appointment.status === statusFilter;

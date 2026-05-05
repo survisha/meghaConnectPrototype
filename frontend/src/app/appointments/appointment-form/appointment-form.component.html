@@ -59,10 +59,32 @@
       </div>
     </div>
 
-    <!-- Step 0: Personal Info -->
+    <!-- Step 0: Citizen/Applicant Info -->
     <div class="section-card" *ngIf="step===0">
-      <div class="section-card-header"><i class="pi pi-user"></i> Personal Information</div>
+      <div class="section-card-header"><i class="pi pi-user"></i> {{ isPublicUser ? 'Logged-in Citizen' : 'Personal Information' }}</div>
       <div class="section-card-body">
+        <ng-container *ngIf="isPublicUser; else manualApplicantFields">
+          <div *ngIf="visitorProfile" class="citizen-summary">
+            <div class="summary-avatar">{{ (form.fullName || 'V')[0] }}</div>
+            <div class="summary-main">
+              <div class="summary-title">{{ form.fullName || 'Logged-in visitor' }}</div>
+              <div class="summary-subtitle">MeghaConnect profile details will be used for this appointment.</div>
+            </div>
+          </div>
+          <div class="readonly-grid">
+            <div><span>Mobile</span><strong>{{ form.phoneNumber || '—' }}</strong></div>
+            <div><span>EPIC</span><strong>{{ form.epicNumber || '—' }}</strong></div>
+            <div><span>District</span><strong>{{ form.district || '—' }}</strong></div>
+            <div><span>Constituency</span><strong>{{ form.constituency || '—' }}</strong></div>
+            <div><span>Booth / Village</span><strong>{{ form.booth || '—' }}</strong></div>
+            <div><span>KYC Status</span><strong>{{ visitorKycStatus || 'PENDING' }}</strong></div>
+          </div>
+          <div class="info-box" style="margin-top:1rem">
+            Personal information is pulled from your logged-in visitor profile and is not collected again on this form.
+          </div>
+        </ng-container>
+
+        <ng-template #manualApplicantFields>
         <div class="form-grid">
           <mat-form-field appearance="outline" class="form-group">
             <mat-label>Full Name *</mat-label>
@@ -129,6 +151,7 @@
             </mat-form-field>
           </ng-container>
         </div>
+        </ng-template>
       </div>
     </div>
 

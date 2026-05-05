@@ -234,11 +234,21 @@
 .login-right {
   width: 420px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   background: #f0f2f5;
   padding: 2rem;
 }
+
+.auth-language {
+  align-self: flex-end;
+  margin-bottom: 1rem;
+  color: #1f2937;
+  --language-selector-bg: #ffffff;
+  --language-selector-border: #d1d5db;
+}
+
 .login-card {
   background: white;
   border-radius: 16px;

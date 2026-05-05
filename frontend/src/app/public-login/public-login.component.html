@@ -8,23 +8,26 @@
           <h1>MeghaConnect</h1>
           <div class="govt-badge">
             <i class="pi pi-shield"></i>
-            <span>Official Government Portal</span>
+            <span>{{ 'OFFICIAL_GOVERNMENT_PORTAL' | translate }}</span>
           </div>
         </div>
       </div>
       <div class="brand-desc">
-        <p>Citizen Portal – Government of Meghalaya</p>
-        <p>Log in with your registered mobile number to access appointments, schemes and grievance services.</p>
+        <p>{{ 'CITIZEN_PORTAL_GOVT' | translate }}</p>
+        <p>{{ 'LOGIN_WITH_REGISTERED_MOBILE' | translate }}</p>
       </div>
     </div>
   </div>
 
   <div class="login-right">
+    <div class="auth-language">
+      <app-language-selector></app-language-selector>
+    </div>
     <div class="login-card">
       <div class="login-header">
         <i class="pi pi-users" style="font-size:2rem;color:#1a237e;margin-bottom:0.5rem"></i>
-        <h2>Citizen / Visitor Login</h2>
-        <p>Enter your registered mobile number</p>
+        <h2>{{ 'CITIZEN_LOGIN_TITLE' | translate }}</h2>
+        <p>{{ 'ENTER_MOBILE_NUMBER' | translate }}</p>
       </div>
 
       <!-- Step 1: Enter mobile -->
@@ -32,14 +35,14 @@
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>
             <i class="pi pi-phone"></i>
-            <span> Mobile Number</span>
+            <span> {{ 'MOBILE_NUMBER' | translate }}</span>
           </mat-label>
           <input
             id="publicLogin_mobileInput"
             matInput
             type="tel"
             [(ngModel)]="phoneNumber"
-            placeholder="Enter 10-digit mobile number"
+            [placeholder]="'ENTER_10_DIGIT_MOBILE' | translate"
             maxlength="10"
             (keyup.enter)="checkMobile()"
           />
@@ -57,20 +60,20 @@
 
         <button id="publicLogin_generateOtpBtn" mat-raised-button color="primary" class="full-width" [disabled]="loading" (click)="checkMobile()">
           <i class="pi pi-send"></i>
-          <span *ngIf="!loading">Generate OTP</span>
-          <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Checking…</span>
+          <span *ngIf="!loading">{{ 'GENERATE_OTP' | translate }}</span>
+          <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> {{ 'CHECKING' | translate }}</span>
         </button>
 
         <div class="divider">
-          <span>New visitor?</span>
+          <span>{{ 'NEW_VISITOR' | translate }}</span>
         </div>
         <button id="publicLogin_registerBtn" mat-stroked-button color="primary" class="full-width" (click)="goToRegister()">
           <i class="pi pi-user-plus"></i>
-          <span>Register as New Visitor</span>
+          <span>{{ 'REGISTER_AS_NEW_VISITOR' | translate }}</span>
         </button>
 
         <div class="back-link">
-          <a id="publicLogin_staffLoginLink" routerLink="/login">&larr; Staff Login</a>
+          <a id="publicLogin_staffLoginLink" routerLink="/login">&larr; {{ 'STAFF_LOGIN' | translate }}</a>
         </div>
       </ng-container>
 
@@ -83,20 +86,20 @@
 
         <div class="phone-display">
           <i class="pi pi-phone"></i>
-          <span>OTP sent to <strong>{{ phoneNumber }}</strong></span>
+          <span>{{ 'OTP_SENT_TO' | translate: { phone: phoneNumber } }}</span>
         </div>
 
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>
             <i class="pi pi-key"></i>
-            <span> Enter OTP</span>
+            <span> {{ 'ENTER_OTP' | translate }}</span>
           </mat-label>
           <input
             matInput
             type="text"
             class="otp-input"
             [(ngModel)]="otp"
-            placeholder="6-digit OTP"
+            [placeholder]="'ENTER_6_DIGIT_OTP' | translate"
             maxlength="6"
             (keyup.enter)="validateOtp()"
             autofocus
@@ -112,18 +115,18 @@
 
         <button mat-raised-button color="primary" class="full-width" [disabled]="loading" (click)="validateOtp()">
           <mat-icon>check</mat-icon>
-          <span *ngIf="!loading">Verify &amp; Login</span>
-          <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Verifying…</span>
+          <span *ngIf="!loading">{{ 'VERIFY_LOGIN' | translate }}</span>
+          <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> {{ 'VERIFYING' | translate }}</span>
         </button>
 
         <div style="display:flex;gap:1rem;margin-top:0.75rem;justify-content:space-between">
           <button mat-button color="primary" (click)="goBack()">
             <i class="pi pi-arrow-left"></i>
-            <span>Change Number</span>
+            <span>{{ 'CHANGE_NUMBER' | translate }}</span>
           </button>
           <button mat-button color="primary" (click)="sendOtp()" [disabled]="loading">
             <i class="pi pi-refresh"></i>
-            <span>Resend OTP</span>
+            <span>{{ 'RESEND_OTP' | translate }}</span>
           </button>
         </div>
       </ng-container>

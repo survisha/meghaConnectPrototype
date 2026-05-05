@@ -1,0 +1,12 @@
+<label class="language-selector" [title]="'LANGUAGE' | translate">
+  <span class="sr-only">{{ 'LANGUAGE' | translate }}</span>
+  <i class="pi pi-language" aria-hidden="true"></i>
+  <select
+    [attr.aria-label]="'LANGUAGE' | translate"
+    [value]="selectedLanguage"
+    (change)="changeLanguage($event)">
+    <option *ngFor="let language of languages" [value]="language.code">
+      {{ language.label }}
+    </option>
+  </select>
+</label>

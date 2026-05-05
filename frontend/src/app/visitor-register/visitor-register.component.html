@@ -8,23 +8,26 @@
           <h1>MeghaConnect</h1>
           <div class="govt-badge">
             <i class="pi pi-shield"></i>
-            <span>Official Government Portal</span>
+            <span>{{ 'OFFICIAL_GOVERNMENT_PORTAL' | translate }}</span>
           </div>
         </div>
       </div>
       <div class="brand-desc">
-        <h3>Visitor Registration with KYC</h3>
-        <p>Secure registration with ID verification, OTP validation and photo capture.</p>
+        <h3>{{ 'VISITOR_REGISTRATION_KYC' | translate }}</h3>
+        <p>{{ 'VISITOR_REGISTRATION_STEPS' | translate }}</p>
         <ul class="feature-list">
-          <li><mat-icon>check_circle</mat-icon> Book appointments with the CM Office</li>
-          <li><mat-icon>check_circle</mat-icon> Track scheme applications</li>
-          <li><mat-icon>check_circle</mat-icon> Submit and monitor grievances</li>
+          <li><mat-icon>check_circle</mat-icon> {{ 'BOOK_APPOINTMENTS_CM_OFFICE' | translate }}</li>
+          <li><mat-icon>check_circle</mat-icon> {{ 'TRACK_SCHEME_APPLICATIONS' | translate }}</li>
+          <li><mat-icon>check_circle</mat-icon> {{ 'SUBMIT_MONITOR_GRIEVANCES' | translate }}</li>
         </ul>
       </div>
     </div>
   </div>
 
   <div class="register-right">
+    <div class="auth-language">
+      <app-language-selector></app-language-selector>
+    </div>
     <div class="register-card">
 
       
@@ -33,11 +36,11 @@
       <ng-container>
         <div class="card-header" *ngIf="!submitted" style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap">
           <div>
-            <h2>New Visitor Registration</h2>
-            <p>Complete KYC verification in 5 simple steps</p>
+            <h2>{{ 'NEW_VISITOR_REGISTRATION' | translate }}</h2>
+            <p>{{ 'COMPLETE_KYC_STEPS' | translate }}</p>
           </div>
           <button id="register_homeBtn" mat-stroked-button color="primary" (click)="goToLogin()" style="height:36px;align-self:center">
-            <mat-icon>home</mat-icon> Home
+            <mat-icon>home</mat-icon> {{ 'HOME' | translate }}
           </button>
         </div>
 
@@ -47,7 +50,7 @@
             <div class="step-circle">
               <i class="pi" [ngClass]="currentStep === 'id-entry' ? 'pi-id-card' : 'pi-check'"></i>
             </div>
-            <span class="step-label">ID Verification</span>
+            <span class="step-label">{{ 'ID_VERIFICATION' | translate }}</span>
           </div>
           <div class="step-line" [class.completed]="currentStep !== 'id-entry'"></div>
           
@@ -55,7 +58,7 @@
             <div class="step-circle">
               <i class="pi" [ngClass]="(currentStep === 'photo-capture' || currentStep === 'additional-details' || currentStep === 'kyc-complete') ? 'pi-check' : 'pi-mobile'"></i>
             </div>
-            <span class="step-label">OTP Verification</span>
+            <span class="step-label">{{ 'OTP_VERIFICATION' | translate }}</span>
           </div>
           <div class="step-line" [class.completed]="currentStep === 'photo-capture' || currentStep === 'additional-details' || currentStep === 'kyc-complete'"></div>
           
@@ -63,7 +66,7 @@
             <div class="step-circle">
               <i class="pi" [ngClass]="(currentStep === 'additional-details' || currentStep === 'kyc-complete') ? 'pi-check' : 'pi-camera'"></i>
             </div>
-            <span class="step-label">Photo Capture</span>
+            <span class="step-label">{{ 'PHOTO_CAPTURE' | translate }}</span>
           </div>
           <div class="step-line" [class.completed]="currentStep === 'additional-details' || currentStep === 'kyc-complete'"></div>
 
@@ -71,7 +74,7 @@
             <div class="step-circle">
               <i class="pi" [ngClass]="currentStep === 'kyc-complete' ? 'pi-check' : 'pi-user-edit'"></i>
             </div>
-            <span class="step-label">Details</span>
+            <span class="step-label">{{ 'DETAILS' | translate }}</span>
           </div>
           <div class="step-line" [class.completed]="currentStep === 'kyc-complete'"></div>
           
@@ -79,7 +82,7 @@
             <div class="step-circle">
               <i class="pi pi-verified"></i>
             </div>
-            <span class="step-label">Complete</span>
+            <span class="step-label">{{ 'COMPLETE' | translate }}</span>
           </div>
         </div>
 
@@ -96,22 +99,22 @@
 
         <!-- STEP 1: ID Entry -->
         <ng-container *ngIf="currentStep === 'id-entry'">
-          <div class="section-title">Step 1: Enter Your ID Details</div>
+          <div class="section-title">{{ 'STEP_1_ENTER_ID_DETAILS' | translate }}</div>
 
           <div class="form-group">
-            <label class="field-label">ID Type *</label>
+            <label class="field-label">{{ 'ID_TYPE' | translate }} *</label>
             <mat-radio-group [ngModel]="form.idType" (ngModelChange)="onIdTypeChange($event)" class="full-width">
               <mat-radio-button value="EPIC">
-                <i class="pi pi-id-card"></i> EPIC (Voter ID)
+                <i class="pi pi-id-card"></i> {{ 'EPIC_VOTER_ID' | translate }}
               </mat-radio-button>
               <mat-radio-button value="AADHAAR">
-                <i class="pi pi-id-card"></i> Aadhaar Card
+                <i class="pi pi-id-card"></i> {{ 'AADHAAR_CARD' | translate }}
               </mat-radio-button>
             </mat-radio-group>
           </div>
 
           <mat-form-field appearance="outline" class="full-width" *ngIf="form.idType === 'EPIC'">
-            <mat-label>EPIC Number *</mat-label>
+            <mat-label>{{ 'EPIC_NUMBER' | translate }} *</mat-label>
             <input
               id="register_epicNumberInput"
               matInput
@@ -121,12 +124,12 @@
               maxlength="10"
               (input)="sanitizeEpicInput()"
             />
-            <mat-hint><i class="pi pi-info-circle"></i> Format: 3 uppercase letters + 7 digits (e.g., ABC1234567)</mat-hint>
+            <mat-hint><i class="pi pi-info-circle"></i> {{ 'EPIC_FORMAT_HINT' | translate }}</mat-hint>
           </mat-form-field>
 
           <!-- Visitor Name Field (for EPIC verification) -->
           <mat-form-field appearance="outline" class="full-width" *ngIf="form.idType === 'EPIC'">
-            <mat-label>Visitor Name (as on Voter Card) *</mat-label>
+            <mat-label>{{ 'VISITOR_NAME_VOTER_CARD' | translate }} *</mat-label>
             <input
               matInput
               id="register_visitorNameInput"
@@ -135,46 +138,46 @@
               placeholder="e.g. MAREIAM MOSSANG"
               (input)="form.visitorName = form.visitorName.toUpperCase()"
             />
-            <mat-hint><i class="pi pi-info-circle"></i> Enter the name exactly as it appears on your voter card for verification</mat-hint>
+            <mat-hint><i class="pi pi-info-circle"></i> {{ 'VISITOR_NAME_VOTER_CARD_HINT' | translate }}</mat-hint>
           </mat-form-field>
 
           
 
           <!-- OTP Field (shown after ID validation for EPIC) -->
           <mat-form-field appearance="outline" class="full-width" *ngIf="otpSent && form.idType === 'EPIC'">
-            <mat-label>Enter OTP *</mat-label>
+            <mat-label>{{ 'ENTER_OTP' | translate }} *</mat-label>
             <input
               matInput
               id="register_otpInputStep1"
               type="text"
               class="otp-input"
               [(ngModel)]="otpCode"
-              placeholder="Enter 6-digit OTP"
+              [placeholder]="'ENTER_6_DIGIT_OTP' | translate"
               maxlength="6"
               (input)="sanitizeOtpInput()"
               style="text-align:center;font-size:1.5rem;letter-spacing:0.5rem;font-weight:600"
             />
             <mat-hint style="color:#16a34a">
-              <i class="pi pi-mobile"></i> OTP sent to {{ maskedPhone }}
+              <i class="pi pi-mobile"></i> {{ 'OTP_SENT_TO' | translate: { phone: maskedPhone } }}
             </mat-hint>
           </mat-form-field>
 
           <!-- Mobile Number Field (only for EPIC) -->
           <mat-form-field appearance="outline" class="full-width" *ngIf="!otpSent && form.idType === 'EPIC'">
-            <mat-label>Mobile Number *</mat-label>
+            <mat-label>{{ 'MOBILE_NUMBER' | translate }} *</mat-label>
             <input
               matInput
               id="register_mobileNumberInput"
               type="tel"
               [(ngModel)]="manualPhone"
-              placeholder="10-digit mobile number"
+              [placeholder]="'ENTER_10_DIGIT_MOBILE' | translate"
               maxlength="10"
               (input)="sanitizeManualPhone()"
               (blur)="onMobileBlur()"
             />
             <mat-hint *ngIf="mobileCheckLoading">
               <mat-icon class="inline-hint-icon">hourglass_empty</mat-icon>
-              Checking mobile number...
+              {{ 'CHECKING_MOBILE_NUMBER' | translate }}
             </mat-hint>
            
           </mat-form-field>
@@ -190,32 +193,32 @@
           <!-- OVSE QR Code Display (shown when idType === AADHAAR and Qr is generated) -->
           <div *ngIf="showQrCode && qrDataUri" class="qr-code-section" style="text-align:center;padding:1.5rem;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;margin:1rem 0">
             <div style="font-weight:700;margin-bottom:1rem;color:#1a237e">
-              <i class="pi pi-qrcode" style="font-size:1.5rem;margin-right:0.5rem"></i> Scan QR Code with Aadhaar App
+              <i class="pi pi-qrcode" style="font-size:1.5rem;margin-right:0.5rem"></i> {{ 'SCAN_QR_CODE_AADHAAR' | translate }}
             </div>
             <img [src]="qrDataUri" alt="OVSE QR Code" style="max-width:300px;width:100%;border:2px solid #1a237e;border-radius:8px;padding:1rem;background:white" />
             
             <!-- Instructions -->
             <div style="margin-top:1rem;font-size:0.9rem;color:#6b7280">
-              <p><strong>Steps:</strong></p>
+              <p><strong>{{ 'STEPS' | translate }}:</strong></p>
               <ol style="text-align:left;display:inline-block">
-                <li>Open your Aadhaar app on mobile</li>
-                <li>Select "Share KYC" or "Verify"</li>
-                <li>Scan this QR code</li>
-                <li>Provide consent to share your details</li>
+                <li>{{ 'AADHAAR_APP_SCAN_STEP_1' | translate }}</li>
+                <li>{{ 'AADHAAR_APP_SCAN_STEP_2' | translate }}</li>
+                <li>{{ 'AADHAAR_APP_SCAN_STEP_3' | translate }}</li>
+                <li>{{ 'AADHAAR_APP_SCAN_STEP_4' | translate }}</li>
               </ol>
             </div>
             
             <!-- Countdown Timer & Status -->
             <div style="margin-top:1.5rem;padding:0.85rem;background:#e3f2fd;border-left:4px solid #1976d2;border-radius:4px;text-align:center">
               <div style="display:flex;align-items:center;justify-content:center;gap:1rem;flex-wrap:wrap;margin-bottom:0.75rem">
-                <strong style="color:#1565c0">📱 Waiting for KYC verification...</strong>
+                <strong style="color:#1565c0">📱 {{ 'VERIFICATION_PENDING' | translate }}</strong>
               </div>
               
               <!-- Countdown Timer -->
               <div style="display:flex;align-items:center;justify-content:center;gap:0.5rem;margin-top:0.5rem">
                 <i class="pi pi-hourglass" style="color:#1976d2;font-size:1rem"></i>
                 <span style="font-weight:600;color:#1565c0">{{ pollingCountdown }}s</span>
-                <span style="font-size:0.85rem;color:#424242">remaining</span>
+                <span style="font-size:0.85rem;color:#424242">{{ 'WAIT_REMAINING' | translate }}</span>
               </div>
               
               <!-- Progress Bar -->
@@ -229,22 +232,22 @@
 
           <div class="kyc-notice" *ngIf="!otpSent && form.idType !== 'AADHAAR'">
             <i class="pi pi-info-circle"></i>
-            We will validate your ID and send OTP to the mobile number.
+            {{ 'WILL_VALIDATE_ID_SEND_OTP' | translate }}
           </div>
 
           <div class="kyc-notice" *ngIf="!showQrCode && form.idType === 'AADHAAR'" style="background:#f0fdf4;border-color:#86efac">
             <mat-icon style="color:#16a34a">check_circle</mat-icon>
-            Click "Generate QR" to create your Aadhaar verification code. Scan it with your Aadhaar app.
+            {{ 'CLICK_GENERATE_QR_AADHAAR' | translate }}
           </div>
 
           <div class="kyc-notice" *ngIf="otpSent && !otpVerified && form.idType === 'EPIC'" style="background:#f0fdf4;border-color:#86efac">
             <mat-icon style="color:#16a34a">check_circle</mat-icon>
-            OTP sent successfully! Enter the code above to continue.
+            {{ 'OTP_SENT_SUCCESS' | translate }}
           </div>
 
           <div style="display:flex;gap:1rem;margin-top:1.5rem">
             <button mat-stroked-button color="primary" (click)="goToLogin()">
-              <i class="pi pi-arrow-left"></i> Back to Login
+              <i class="pi pi-arrow-left"></i> {{ 'BACK_TO_LOGIN' | translate }}
             </button>
             <button 
               *ngIf="!otpSent && !showQrCode && form.idType === 'EPIC'" 
@@ -253,8 +256,8 @@
               class="flex-1" 
               [disabled]="loading || !canSendEpicOtp" 
               (click)="validateId()">
-              <span *ngIf="!loading"><i class="pi pi-send"></i> Send OTP</span>
-              <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Loading...</span>
+              <span *ngIf="!loading"><i class="pi pi-send"></i> {{ 'GENERATE_OTP' | translate }}</span>
+              <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> {{ 'LOADING' | translate }}</span>
             </button>
             <button 
               id="register_generateQrBtn"
@@ -264,8 +267,8 @@
               class="flex-1" 
               [disabled]="loading" 
               (click)="generateAadhaarQr()">
-              <span *ngIf="!loading"><i class="pi pi-qrcode"></i> Generate QR</span>
-              <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Generating...</span>
+              <span *ngIf="!loading"><i class="pi pi-qrcode"></i> {{ 'GENERATE_QR' | translate }}</span>
+              <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> {{ 'GENERATING' | translate }}</span>
             </button>
             <button 
               id="register_cancelAadhaarBtn"
@@ -273,7 +276,7 @@
               mat-stroked-button 
               color="primary"
               (click)="cancelAadhaarQr()">
-              <mat-icon>close</mat-icon> Cancel
+              <mat-icon>close</mat-icon> {{ 'CANCEL' | translate }}
             </button>
             <button 
               *ngIf="otpSent && !otpVerified && form.idType === 'EPIC'" 
@@ -282,37 +285,37 @@
               class="flex-1" 
               [disabled]="loading || otpCode.length !== 6" 
               (click)="verifyOtp()">
-              <span *ngIf="!loading"><mat-icon>check</mat-icon> Verify OTP</span>
-              <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Verifying...</span>
+              <span *ngIf="!loading"><mat-icon>check</mat-icon> {{ 'VERIFY_OTP' | translate }}</span>
+              <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> {{ 'VERIFYING' | translate }}</span>
             </button>
           </div>
 
           <div *ngIf="otpSent && !showQrCode && form.idType === 'EPIC'" style="text-align:center;margin-top:1rem">
             <button mat-button color="primary" (click)="resendOtp()" [disabled]="loading">
-              <i class="pi pi-refresh"></i> Resend OTP
+              <i class="pi pi-refresh"></i> {{ 'RESEND_OTP' | translate }}
             </button>
           </div>
         </ng-container>
 
         <!-- STEP 2: OTP Verification -->
         <ng-container *ngIf="currentStep === 'otp-verification'">
-          <div class="section-title">Step 2: Verify OTP</div>
+          <div class="section-title">{{ 'STEP_2_VERIFY_OTP' | translate }}</div>
 
           <div class="otp-info-box">
             <i class="pi pi-mobile" style="font-size:2rem;color:#1565C0"></i>
-            <p>OTP sent to <strong>{{ maskedPhone }}</strong></p>
-            <small>Please enter the 6-digit code to continue</small>
+            <p>{{ 'OTP_SENT_TO' | translate: { phone: maskedPhone } }}</p>
+            <small>{{ 'PLEASE_ENTER_6_DIGIT_CODE' | translate }}</small>
           </div>
 
           <div
                class="form-group">
-            <label>Enter OTP *</label>
+            <label>{{ 'ENTER_OTP' | translate }} *</label>
             <input
               id="register_otpInputStep2"
               type="text"
               class="input-field otp-input"
               [(ngModel)]="otpCode"
-              placeholder="Enter 6-digit OTP"
+              [placeholder]="'ENTER_6_DIGIT_OTP' | translate"
               maxlength="6"
               (input)="sanitizeOtpInput()"
               style="text-align:center;font-size:1.5rem;letter-spacing:0.5rem;font-weight:600"
@@ -321,46 +324,46 @@
 
           <div style="text-align:center;margin-top:1rem">
             <button mat-button color="primary" (click)="validateId()" [disabled]="loading">
-              <mat-icon>refresh</mat-icon> Resend OTP
+              <mat-icon>refresh</mat-icon> {{ 'RESEND_OTP' | translate }}
             </button>
           </div>
 
           <div style="display:flex;gap:1rem;margin-top:1.5rem">
             <button mat-stroked-button color="primary" (click)="goBackToIdEntry()">
-              <mat-icon>arrow_back</mat-icon> Previous
+              <mat-icon>arrow_back</mat-icon> {{ 'PREVIOUS' | translate }}
             </button>
             <button id="register_nextBtnStep2" mat-raised-button color="primary" class="flex-1" [disabled]="loading || otpCode.length !== 6" (click)="verifyOtp()">
-              <span *ngIf="!loading"><mat-icon>check</mat-icon> Next</span>
-              <span *ngIf="loading"><mat-icon>autorenew</mat-icon> Verifying...</span>
+              <span *ngIf="!loading"><mat-icon>check</mat-icon> {{ 'NEXT' | translate }}</span>
+              <span *ngIf="loading"><mat-icon>autorenew</mat-icon> {{ 'VERIFYING' | translate }}</span>
             </button>
           </div>
         </ng-container>
 
         <!-- STEP 3: Photo Capture -->
         <ng-container *ngIf="currentStep === 'photo-capture'">
-          <div class="section-title">Step 3: Capture Live Photo</div>
+          <div class="section-title">{{ 'STEP_3_CAPTURE_PHOTO' | translate }}</div>
 
           <div class="kyc-notice" style="background:#f0fdf4;border-color:#86efac">
             <mat-icon style="color:#16a34a">check_circle</mat-icon>
-            Now capture your live photo for face matching.
+            {{ 'CAPTURE_LIVE_PHOTO_NOTICE' | translate }}
           </div>
 
           <!-- Auto-populated demographics (read-only) -->
           <div style="padding:1rem;background:#F9FAFB;border-radius:8px;margin-bottom:1.5rem">
             <div style="font-size:0.9rem;color:#6b7280;margin-bottom:0.5rem">
-              <i class="pi pi-info-circle"></i> Auto-populated from verified ID
+              <i class="pi pi-info-circle"></i> {{ 'AUTO_POPULATED_FROM_VERIFIED_ID' | translate }}
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
               <div>
-                <strong style="font-size:0.85rem;color:#374151">Name:</strong>
+                <strong style="font-size:0.85rem;color:#374151">{{ 'NAME' | translate }}:</strong>
                 <div style="color:#1A237E;font-weight:600;padding:0.25rem">{{ form.fullName }}</div>
               </div>
               <div>
-                <strong style="font-size:0.85rem;color:#374151">District:</strong>
+                <strong style="font-size:0.85rem;color:#374151">{{ 'DISTRICT' | translate }}:</strong>
                 <div style="color:#1A237E;font-weight:600;padding:0.25rem">{{ form.district || 'N/A' }}</div>
               </div>
               <div style="grid-column:span 2">
-                <strong style="font-size:0.85rem;color:#374151">Address:</strong>
+                <strong style="font-size:0.85rem;color:#374151">{{ 'ADDRESS' | translate }}:</strong>
                 <div style="color:#1A237E;font-weight:600;padding:0.25rem">{{ form.address || 'N/A' }}</div>
               </div>
             </div>
@@ -370,7 +373,7 @@
           <div class="camera-section">
             <div *ngIf="!isCameraActive && !capturedPhotoUrl" class="camera-placeholder">
               <i class="pi pi-camera" style="font-size:3rem;color:#9ca3af"></i>
-              <p>Click below to start camera</p>
+              <p>{{ 'CLICK_BELOW_START_CAMERA' | translate }}</p>
             </div>
 
             <video *ngIf="isCameraActive" id="camera-preview" autoplay playsinline></video>
@@ -382,84 +385,84 @@
 
           <div style="display:flex;gap:1rem;margin-top:1rem;flex-wrap:wrap;align-items:center">
             <button mat-stroked-button color="primary" style="white-space:nowrap" (click)="goBackToOtpVerification()">
-              <mat-icon>arrow_back</mat-icon> Previous
+              <mat-icon>arrow_back</mat-icon> {{ 'PREVIOUS' | translate }}
             </button>
 
             <button *ngIf="!isCameraActive && !capturedPhotoUrl" mat-raised-button color="primary" class="flex-1" (click)="openCamera()">
-              <mat-icon>photo_camera</mat-icon> Open Camera
+              <mat-icon>photo_camera</mat-icon> {{ 'OPEN_CAMERA' | translate }}
             </button>
 
             <button *ngIf="isCameraActive" mat-raised-button color="primary" class="flex-1" (click)="capturePhoto()">
-              <mat-icon>photo_camera</mat-icon> Capture Photo
+              <mat-icon>photo_camera</mat-icon> {{ 'CAPTURE_PHOTO' | translate }}
             </button>
 
             <button *ngIf="capturedPhotoUrl && !isCameraActive" mat-stroked-button color="primary" style="white-space:nowrap" (click)="retakePhoto()">
-              <mat-icon>refresh</mat-icon> Retake Photo
+              <mat-icon>refresh</mat-icon> {{ 'RETAKE_PHOTO' | translate }}
             </button>
 
             <button *ngIf="capturedPhotoUrl && !isCameraActive" mat-raised-button color="primary" class="flex-1" [disabled]="loading" style="white-space:nowrap" (click)="validateFace()">
-              <span *ngIf="!loading"><mat-icon>arrow_forward</mat-icon> Validate & Continue</span>
-              <span *ngIf="loading"><mat-icon>autorenew</mat-icon> Validating...</span>
+              <span *ngIf="!loading"><mat-icon>arrow_forward</mat-icon> {{ 'VALIDATE_AND_CONTINUE' | translate }}</span>
+              <span *ngIf="loading"><mat-icon>autorenew</mat-icon> {{ 'VALIDATING' | translate }}</span>
             </button>
           </div>
 
           <small class="field-hint" style="display:block;text-align:center;margin-top:1rem">
-            <i class="pi pi-info-circle"></i> Ensure good lighting and look directly at the camera
+            <i class="pi pi-info-circle"></i> {{ 'CAMERA_LIGHTING_HINT' | translate }}
           </small>
         </ng-container>
 
         <!-- STEP 4: Additional Applicant Details -->
         <ng-container *ngIf="currentStep === 'additional-details'">
-          <div class="section-title">Step 4: Additional Applicant Details</div>
+          <div class="section-title">{{ 'STEP_4_ADDITIONAL_DETAILS' | translate }}</div>
 
           <div *ngIf="verifiedKycData" class="verified-kyc-panel">
             <div class="verified-kyc-header">
               <mat-icon>verified_user</mat-icon>
               <div>
-                <strong>Verified KYC Details</strong>
-                <span>{{ verifiedKycData.kycType }} details were auto-populated from KYC verification.</span>
+                <strong>{{ 'VERIFIED_KYC_DETAILS' | translate }}</strong>
+                <span>{{ 'VERIFIED_KYC_DETAILS_DESCRIPTION' | translate: { type: verifiedKycData.kycType } }}</span>
               </div>
             </div>
 
             <div class="verified-kyc-grid">
               <div>
-                <label>Name</label>
+                <label>{{ 'NAME' | translate }}</label>
                 <span>{{ form.fullName || 'N/A' }}</span>
               </div>
               <div>
-                <label>Gender</label>
+                <label>{{ 'GENDER' | translate }}</label>
                 <span>{{ form.gender || 'N/A' }}</span>
               </div>
               <div>
-                <label>Date of Birth</label>
+                <label>{{ 'DATE_OF_BIRTH' | translate }}</label>
                 <span>{{ form.dateOfBirth || 'N/A' }}</span>
               </div>
               <div>
-                <label>State</label>
+                <label>{{ 'STATE' | translate }}</label>
                 <span>{{ form.state || 'N/A' }}</span>
               </div>
               <div>
-                <label>District</label>
+                <label>{{ 'DISTRICT' | translate }}</label>
                 <span>{{ form.district || 'N/A' }}</span>
               </div>
               <div *ngIf="form.idType === 'EPIC'">
-                <label>EPIC</label>
+                <label>{{ 'EPIC' | translate }}</label>
                 <span>{{ form.maskedIdentityNumber || form.epicNumber || 'N/A' }}</span>
               </div>
               <div *ngIf="form.idType === 'EPIC'">
-                <label>Polling Part No.</label>
+                <label>{{ 'POLLING_PART_NO' | translate }}</label>
                 <span>{{ form.pollingPartNo || 'N/A' }}</span>
               </div>
               <div *ngIf="form.idType === 'EPIC'">
-                <label>Polling Station</label>
+                <label>{{ 'POLLING_STATION' | translate }}</label>
                 <span>{{ form.pollingStationAddress || 'N/A' }}</span>
               </div>
               <div *ngIf="form.idType === 'EPIC'">
-                <label>Name Match Score</label>
+                <label>{{ 'NAME_MATCH_SCORE' | translate }}</label>
                 <span>{{ form.nameMatchScore ?? 'N/A' }}</span>
               </div>
               <div *ngIf="form.idType === 'AADHAAR'">
-                <label>Aadhaar Ref.</label>
+                <label>{{ 'AADHAAR_REF' | translate }}</label>
                 <span>{{ form.aadhaarClientTxnId || 'N/A' }}</span>
               </div>
             </div>
@@ -467,26 +470,26 @@
 
           <div *ngIf="!verifiedKycData" class="status-msg error-msg">
             <mat-icon>error</mat-icon>
-            <span>Please complete KYC verification before entering visitor details.</span>
+            <span>{{ 'COMPLETE_KYC_BEFORE_DETAILS' | translate }}</span>
           </div>
 
           <div class="kyc-notice" style="background:#f0fdf4;border-color:#86efac;margin-bottom:1rem">
             <mat-icon style="color:#16a34a">check_circle</mat-icon>
-            <span *ngIf="form.kycStatus === 'PHOTO_MATCHED'"><strong>KYC Verified – Photo Match Successful.</strong> Please complete the remaining details.</span>
-            <span *ngIf="form.kycStatus === 'DEMOGRAPHIC_MATCHED'"><strong>KYC Verified – Demographic Match.</strong> Please complete the remaining details.</span>
-            <span *ngIf="form.kycStatus === 'MANUAL_VERIFICATION_REQUIRED'"><strong>Manual Verification Required.</strong> Your KYC will be verified by a DEO officer.</span>
+            <span *ngIf="form.kycStatus === 'PHOTO_MATCHED'"><strong>{{ 'KYC_VERIFIED_PHOTO' | translate }}</strong> {{ 'COMPLETE_REMAINING_DETAILS' | translate }}</span>
+            <span *ngIf="form.kycStatus === 'DEMOGRAPHIC_MATCHED'"><strong>{{ 'KYC_VERIFIED_DEMOGRAPHIC' | translate }}</strong> {{ 'COMPLETE_REMAINING_DETAILS' | translate }}</span>
+            <span *ngIf="form.kycStatus === 'MANUAL_VERIFICATION_REQUIRED'"><strong>{{ 'MANUAL_VERIFICATION_REQUIRED' | translate }}</strong> {{ 'YOUR_KYC_MANUAL_DEO' | translate }}</span>
           </div>
 
           <!-- R009: AI KYC Confidence Indicator -->
           <div *ngIf="kycConfidenceScore > 0" style="margin-bottom:1rem;padding:0.85rem 1rem;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px">
             <div style="font-weight:700;font-size:0.82rem;color:#374151;margin-bottom:0.5rem;display:flex;align-items:center;gap:0.4rem">
-              <i class="pi pi-sparkles" style="color:#1a237e"></i> AI KYC Confidence Indicator
+              <i class="pi pi-sparkles" style="color:#1a237e"></i> {{ 'AI_KYC_CONFIDENCE_INDICATOR' | translate }}
             </div>
             <div style="display:flex;justify-content:space-between;font-size:0.82rem;margin-bottom:0.35rem">
-              <span>Photo Match Score: <strong>{{ kycConfidenceScore }}%</strong></span>
+              <span>{{ 'PHOTO_MATCH_SCORE' | translate }}: <strong>{{ kycConfidenceScore }}%</strong></span>
               <span style="font-weight:600"
                 [style.color]="kycConfidenceScore >= 80 ? '#16a34a' : kycConfidenceScore >= 60 ? '#ca8a04' : '#dc2626'">
-                KYC Status: {{ kycConfidenceLabel }}
+                {{ 'KYC_STATUS' | translate }}: {{ kycConfidenceLabel }}
               </span>
             </div>
             <div style="height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden">
@@ -498,41 +501,41 @@
           </div>
 
           <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Designation *</mat-label>
+            <mat-label>{{ 'DESIGNATION' | translate }} *</mat-label>
             <mat-select [(ngModel)]="form.designation">
-              <mat-option value="">-- Select Designation --</mat-option>
+              <mat-option value="">{{ 'SELECT_DESIGNATION' | translate }}</mat-option>
               <mat-option *ngFor="let d of designations" [value]="d.value">{{ d.value }}</mat-option>
             </mat-select>
           </mat-form-field>
 
           <div class="form-group" style="margin-top:1rem;">
             <mat-checkbox id="register_outsideStateCheckbox" [(ngModel)]="form.outsideState" class="outside-state-checkbox" style="display:flex; align-items:center; width:100%; gap:0.5rem; margin:0; padding:0;">
-              Applicant is outside Meghalaya (Location = NA)
+              {{ 'APPLICANT_OUTSIDE_MEGHALAYA' | translate }}
             </mat-checkbox>
           </div>
 
           <ng-container *ngIf="!form.outsideState">
             <div class="form-row two-col">
               <mat-form-field appearance="outline" style="flex:1">
-                <mat-label>District</mat-label>
+                <mat-label>{{ 'DISTRICT' | translate }}</mat-label>
                 <mat-select id="register_districtSelect" [(ngModel)]="form.district">
-                  <mat-option value="">-- Select District --</mat-option>
+                  <mat-option value="">{{ 'SELECT_DISTRICT' | translate }}</mat-option>
                   <mat-option *ngFor="let d of districts" [value]="d">{{ d }}</mat-option>
                 </mat-select>
               </mat-form-field>
               <mat-form-field appearance="outline" style="flex:1">
-                <mat-label>Constituency</mat-label>
-                <input matInput type="text" [(ngModel)]="form.constituency" placeholder="Constituency name" />
+                <mat-label>{{ 'CONSTITUENCY' | translate }}</mat-label>
+                <input matInput type="text" [(ngModel)]="form.constituency" [placeholder]="'CONSTITUENCY_PLACEHOLDER' | translate" />
               </mat-form-field>
             </div>
             <div class="form-row two-col">
               <mat-form-field appearance="outline" style="flex:1">
-                <mat-label>Booth / Village</mat-label>
-                <input matInput type="text" [(ngModel)]="form.booth" placeholder="Booth or Village" />
+                <mat-label>{{ 'BOOTH_OR_VILLAGE' | translate }}</mat-label>
+                <input matInput type="text" [(ngModel)]="form.booth" [placeholder]="'BOOTH_OR_VILLAGE_PLACEHOLDER' | translate" />
               </mat-form-field>
               <mat-form-field appearance="outline" style="flex:1">
-                <mat-label>Village (if different)</mat-label>
-                <input matInput type="text" [(ngModel)]="form.village" placeholder="Village name" />
+                <mat-label>{{ 'VILLAGE_DIFFERENT' | translate }}</mat-label>
+                <input matInput type="text" [(ngModel)]="form.village" [placeholder]="'VILLAGE_NAME' | translate" />
               </mat-form-field>
             </div>
           </ng-container>
@@ -540,22 +543,22 @@
           <ng-container *ngIf="form.outsideState">
             <div class="kyc-notice">
               <i class="pi pi-info-circle"></i>
-              Location fields will be set to <strong>NA</strong> as applicant is outside Meghalaya.
+              {{ 'LOCATION_FIELDS_NA' | translate }}
             </div>
           </ng-container>
 
           <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Email (Optional)</mat-label>
-            <input matInput type="email" [(ngModel)]="form.email" placeholder="Enter your email" />
+            <mat-label>{{ 'EMAIL_OPTIONAL' | translate }}</mat-label>
+            <input matInput type="email" [(ngModel)]="form.email" [placeholder]="'ENTER_EMAIL' | translate" />
           </mat-form-field>
 
           <div style="display:flex;gap:1rem;margin-top:1.5rem">
             <button mat-stroked-button color="primary" (click)="currentStep = 'photo-capture'">
-              <i class="pi pi-arrow-left"></i> Back
+              <i class="pi pi-arrow-left"></i> {{ 'BACK' | translate }}
             </button>
             <button mat-raised-button color="primary" class="flex-1" [disabled]="loading || !form.designation" (click)="submitRegistration()">
-              <span *ngIf="!loading"><mat-icon>check</mat-icon> Complete Registration</span>
-              <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Registering...</span>
+              <span *ngIf="!loading"><mat-icon>check</mat-icon> {{ 'COMPLETE_REGISTRATION' | translate }}</span>
+              <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> {{ 'REGISTERING' | translate }}</span>
             </button>
           </div>
         </ng-container>
@@ -564,29 +567,29 @@
         <ng-container *ngIf="currentStep === 'kyc-complete' && submitted">
           <div class="success-banner" style="padding:1.5rem 0">
             <mat-icon style="font-size:3rem;width:3rem;height:3rem;color:#16a34a;margin-bottom:1rem">check_circle</mat-icon>
-            <h2 style="color:#166534;font-size:1.4rem;margin:0.5rem 0">Visitor registration completed successfully.</h2>
-            <p style="color:#374151">You can now login with your registered mobile number.</p>
+            <h2 style="color:#166534;font-size:1.4rem;margin:0.5rem 0">{{ 'REGISTRATION_SUCCESS' | translate }}</h2>
+            <p style="color:#374151">{{ 'REGISTRATION_COMPLETE_LOGIN' | translate }}</p>
             <div style="margin-top:1rem;padding:0.75rem;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;text-align:left">
               <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem">
                 <mat-icon style="color:#16a34a">verified_user</mat-icon>
-                <strong style="color:#166534">KYC Status:
-                  <span *ngIf="form.kycStatus === 'PHOTO_MATCHED'">Photo Matched</span>
-                  <span *ngIf="form.kycStatus === 'DEMOGRAPHIC_MATCHED'">Demographic Matched</span>
-                  <span *ngIf="form.kycStatus === 'MANUAL_VERIFICATION_REQUIRED'">Manual Verification Required</span>
-                  <span *ngIf="!form.kycStatus || form.kycStatus === 'PENDING'">Pending</span>
+                <strong style="color:#166534">{{ 'KYC_STATUS' | translate }}:
+                  <span *ngIf="form.kycStatus === 'PHOTO_MATCHED'">{{ 'PHOTO_MATCHED' | translate }}</span>
+                  <span *ngIf="form.kycStatus === 'DEMOGRAPHIC_MATCHED'">{{ 'CONFIDENCE_DEMOGRAPHIC' | translate }}</span>
+                  <span *ngIf="form.kycStatus === 'MANUAL_VERIFICATION_REQUIRED'">{{ 'CONFIDENCE_MANUAL' | translate }}</span>
+                  <span *ngIf="!form.kycStatus || form.kycStatus === 'PENDING'">{{ 'PENDING' | translate }}</span>
                 </strong>
               </div>
               <p style="font-size:0.85rem;color:#6b7280;margin:0">
                 <span *ngIf="form.kycStatus === 'MANUAL_VERIFICATION_REQUIRED'">
-                  Your KYC will be verified manually by a DEO officer during your visit.
+                  {{ 'YOUR_KYC_MANUAL_DEO' | translate }}
                 </span>
                 <span *ngIf="form.kycStatus !== 'MANUAL_VERIFICATION_REQUIRED'">
-                  Your identity has been verified and registration is complete.
+                  {{ 'YOUR_IDENTITY_VERIFIED_COMPLETE' | translate }}
                 </span>
               </p>
             </div>
             <button mat-raised-button color="primary" style="margin-top:1.5rem;width:auto;padding:0.7rem 2rem" (click)="goToLogin()">
-              <i class="pi pi-sign-in"></i> Go to Login
+              <i class="pi pi-sign-in"></i> {{ 'GO_TO_LOGIN' | translate }}
             </button>
           </div>
         </ng-container>

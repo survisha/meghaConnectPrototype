@@ -15,6 +15,8 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 import { MatStepperModule } from '@angular/material/stepper';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { LanguageSelectorComponent } from '../shared/language-selector/language-selector.component';
 
 type KycStep = 'id-entry' | 'otp-verification' | 'photo-capture' | 'additional-details' | 'kyc-complete';
 type MobileValidationType = 'warning' | 'error' | 'success' | '';
@@ -101,7 +103,9 @@ interface VerifiedKycData {
     MatCheckboxModule,
     MatProgressSpinnerModule,
     MatIconModule,
-    MatStepperModule
+    MatStepperModule,
+    TranslateModule,
+    LanguageSelectorComponent
   ],
   templateUrl: './visitor-register.component.html',
   styleUrls: ['./visitor-register.component.scss'],
@@ -196,7 +200,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private kycService: VisitorKycService,
     private auth: AuthService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private translate: TranslateService
   ) {
     // Detect DEO mode from route snapshot URL segments
     this.isDeoMode = this.route.snapshot.url.some(segment => segment.path === 'register-visitor');
@@ -214,6 +219,10 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.stopCamera();
+  }
+
+  private t(key: string, params?: Record<string, unknown>): string {
+    return this.translate.instant(key, params);
   }
 
   loadDesignations() {
@@ -262,14 +271,14 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
   validateId() {
     if (!this.canValidateId) {
-      this.errorMsg = 'Please enter a valid ID number and visitor name.';
+      this.errorMsg = this.t('ERROR_INVALID_ID_AND_NAME');
       return;
     }
 
     if (this.form.idType === 'EPIC' && !this.isManualPhoneValid) {
       this.mobileValidationType = 'error';
-      this.mobileValidationMsg = 'Please enter a valid 10-digit mobile number.';
-      this.errorMsg = 'Please enter a valid 10-digit mobile number before generating OTP.';
+      this.mobileValidationMsg = this.t('ERROR_VALID_10_DIGIT_MOBILE');
+      this.errorMsg = this.t('ERROR_MOBILE_BEFORE_OTP');
       return;
     }
 
@@ -290,7 +299,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
     // Fallback for other ID types (should not reach here)
     this.loading = false;
-    this.errorMsg = 'Unsupported ID type';
+    this.errorMsg = this.t('ERROR_UNSUPPORTED_ID_TYPE');
   }
 
   /**
@@ -310,7 +319,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
         if (res.code === '200' && res.data) {
           // EPIC verification successful with name match
           this.errorMsg = '';
-          this.successMsg = 'EPIC verified successfully. Sending OTP...';
+          this.successMsg = this.t('EPIC_VERIFIED_SENDING_OTP');
           
           this.populateVisitorDetailsFromKycResponse(res, 'EPIC');
           this.kycConfidenceScore = Math.min(this.verifiedKycData?.nameMatchScore ?? 0, 100);
@@ -323,11 +332,11 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
           this.generateRegistrationOtp();
         } else if (res.code === '400') {
           // Name mismatch or validation error
-          this.errorMsg = res.message || 'Name verification failed.';
+          this.errorMsg = res.message || this.t('ERROR_NAME_VERIFICATION_FAILED');
           this.successMsg = '';
         } else {
           // EPIC verification failed or other error
-          const errorMsg = res.message || 'EPIC verification failed';
+          const errorMsg = res.message || this.t('EPIC_VERIFICATION_FAILED');
           this.errorMsg = errorMsg;
           this.successMsg = '';
           this.loading = false;
@@ -335,7 +344,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       },
       error: err => {
         this.loading = false;
-        const errorMsg = err?.error?.message || err?.message || 'Failed to verify EPIC. Please try again.';
+        const errorMsg = err?.error?.message || err?.message || this.t('ERROR_FAILED_VERIFY_EPIC_TRY');
         this.errorMsg = errorMsg;
       }
     });
@@ -367,14 +376,16 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
           this.otpCode = '';
           this.otpSent = true;
           this.currentStep = 'otp-verification';
-          this.successMsg = `OTP sent to ${this.maskedPhone}` + (res.otp ? ` (demo OTP: ${res.otp})` : '');
+          this.successMsg = res.otp
+            ? this.t('OTP_SENT_TO_DEMO', { phone: this.maskedPhone, otp: res.otp })
+            : this.t('OTP_SENT_TO', { phone: this.maskedPhone });
         } else {
-          this.errorMsg = res.message || 'Failed to generate OTP.';
+          this.errorMsg = res.message || this.t('ERROR_FAILED_GENERATE_OTP');
         }
       },
       error: err => {
         this.loading = false;
-        this.errorMsg = err?.error?.message || 'Failed to generate OTP. Please try again.';
+        this.errorMsg = err?.error?.message || this.t('ERROR_FAILED_GENERATE_OTP_TRY');
       }
     });
   }
@@ -401,17 +412,17 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
           this.maskedPhone = res.maskedMobile || '';
           this.showQrCode = true;
           this.idValidated = true;
-          this.successMsg = 'QR code generated! Scan with your Aadhaar app to verify your identity.';
+          this.successMsg = this.t('QR_CODE_GENERATED');
           
           // Start polling for KYC result
           this.startPollingKycResult();
         } else {
-          this.errorMsg = res.errorMessage || 'Failed to generate QR code. Please try again.';
+          this.errorMsg = res.errorMessage || this.t('ERROR_FAILED_GENERATE_QR');
         }
       },
       error: err => {
         this.loading = false;
-        this.errorMsg = err?.error?.errorMessage || 'QR code generation failed. OVSE service may be unavailable.';
+        this.errorMsg = err?.error?.errorMessage || this.t('ERROR_QR_GENERATION_FAILED');
       },
     });
   }
@@ -423,7 +434,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
    */
   startPollingKycResult() {
     this.pollingAttempts = 0;
-    this.successMsg = 'QR code ready! Please scan with your Aadhaar app...';
+    this.successMsg = this.t('QR_CODE_READY_SCAN');
     this.errorMsg = '';
 
     this.pollingInterval = setInterval(() => {
@@ -432,7 +443,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
       if (this.pollingAttempts > this.maxPollingAttempts) {
         clearInterval(this.pollingInterval);
-        this.errorMsg = 'QR scan timeout (2 minutes). Please try again or use manual verification.';
+        this.errorMsg = this.t('QR_SCAN_TIMEOUT');
         this.showQrCode = false;
         return;
       }
@@ -443,12 +454,12 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
           if (res && !res.error && (res.claims || res.claimData)) {
             // KYC verification successful.
             clearInterval(this.pollingInterval);
-            this.successMsg = 'Aadhaar verification successful! Loading your details...';
+            this.successMsg = this.t('AADHAAR_VERIFICATION_SUCCESS_LOADING');
             this.handleAadhaarKycSuccess(res);
           } else if (res && res.error) {
             // User rejected or error occurred.
             clearInterval(this.pollingInterval);
-            this.errorMsg = `KYC verification failed: ${res.errorMessage || res.errorCode}`;
+            this.errorMsg = this.t('ERROR_KYC_FAILED', { reason: res.errorMessage || res.errorCode });
             this.showQrCode = false;
           }
           // If no result yet (404 or null), keep polling
@@ -458,7 +469,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
           // Only stop on max attempts
           if (this.pollingAttempts >= this.maxPollingAttempts) {
             clearInterval(this.pollingInterval);
-            this.errorMsg = 'Verification timeout. Please try again or contact support.';
+            this.errorMsg = this.t('ERROR_VERIFICATION_TIMEOUT');
             this.showQrCode = false;
           }
         },
@@ -487,12 +498,12 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     // Set KYC status
     this.kycStatus = 'PHOTO_MATCHED';
     this.kycConfidenceScore = 90;
-    this.kycConfidenceLabel = 'Verified';
+    this.kycConfidenceLabel = this.t('CONFIDENCE_VERIFIED');
     this.form.kycStatus = 'PHOTO_MATCHED';
 
     // Clear QR display
     this.showQrCode = false;
-    this.successMsg = 'Aadhaar KYC verified successfully! Your details have been pre-filled.';
+    this.successMsg = this.t('AADHAAR_KYC_VERIFIED_PREFILLED');
     this.errorMsg = '';
 
     // Move to next step
@@ -510,7 +521,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
     if (!verified.kycVerified) {
       this.verifiedKycData = null;
-      this.errorMsg = 'KYC verification data is incomplete. Please complete KYC again.';
+      this.errorMsg = this.t('ERROR_KYC_INCOMPLETE');
       return;
     }
 
@@ -662,7 +673,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
   verifyOtp() {
     if (!this.canVerifyOtp) {
-      this.errorMsg = 'Please enter a 6-digit OTP.';
+      this.errorMsg = this.t('ERROR_VALID_6_DIGIT_OTP');
       return;
     }
 
@@ -693,7 +704,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
           }
           this.form.phoneNumber = this.actualPhoneNumber;
 
-          this.successMsg = 'OTP verified! Continue with photo capture.';
+          this.successMsg = this.t('CONTINUE_WITH_PHOTO_CAPTURE');
           
           // Force change detection and transition to next step
           this.cdr.detectChanges();
@@ -702,12 +713,12 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
             this.cdr.detectChanges();
           }, 200);
         } else {
-          this.errorMsg = res.message || 'Invalid OTP. Please try again.';
+          this.errorMsg = res.message || this.t('ERROR_INVALID_OTP_TRY');
         }
       },
       error: err => {
         this.loading = false;
-        this.errorMsg = err?.error?.message || 'OTP verification failed.';
+        this.errorMsg = err?.error?.message || this.t('ERROR_OTP_VERIFICATION_FAILED');
       },
     });
   }
@@ -732,14 +743,14 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
         }
       }, 100);
     } catch (error) {
-      this.errorMsg = 'Camera access denied. Please allow camera permissions.';
+      this.errorMsg = this.t('CAMERA_ACCESS_DENIED');
     }
   }
 
   capturePhoto() {
     const videoElement = document.getElementById('camera-preview') as HTMLVideoElement;
     if (!videoElement) {
-      this.errorMsg = 'Camera not initialized.';
+      this.errorMsg = this.t('CAMERA_NOT_INITIALIZED');
       return;
     }
 
@@ -749,7 +760,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     
     const context = canvas.getContext('2d');
     if (!context) {
-      this.errorMsg = 'Failed to capture photo.';
+      this.errorMsg = this.t('ERROR_FAILED_CAPTURE_PHOTO');
       return;
     }
 
@@ -760,7 +771,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.photoCaptured = true;
     this.stopCamera();
     this.isCameraActive = false;  // Changed from showCamera to isCameraActive
-    this.successMsg = 'Photo captured successfully!';
+    this.successMsg = this.t('PHOTO_CAPTURED_SUCCESS');
   }
 
   retakePhoto() {
@@ -781,12 +792,12 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
   validateFace() {
     if (!this.verifiedKycData) {
-      this.errorMsg = 'Please complete ID KYC verification before continuing.';
+      this.errorMsg = this.t('PLEASE_COMPLETE_ID_KYC');
       return;
     }
 
     if (!this.form.livePhoto) {
-      this.errorMsg = 'Please capture your live photo first.';
+      this.errorMsg = this.t('PLEASE_CAPTURE_LIVE_PHOTO');
       return;
     }
 
@@ -809,18 +820,22 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
           }
           // R009: set KYC confidence score and label
           this.kycConfidenceScore = (res as any).confidenceScore ?? (this.kycStatus === 'PHOTO_MATCHED' ? 92 : this.kycStatus === 'DEMOGRAPHIC_MATCHED' ? 75 : 45);
-          this.kycConfidenceLabel = this.kycStatus === 'PHOTO_MATCHED' ? 'Verified' : this.kycStatus === 'DEMOGRAPHIC_MATCHED' ? 'Verified (Demographic)' : 'Manual Verification Required';
+          this.kycConfidenceLabel = this.kycStatus === 'PHOTO_MATCHED'
+            ? this.t('CONFIDENCE_VERIFIED')
+            : this.kycStatus === 'DEMOGRAPHIC_MATCHED'
+              ? this.t('CONFIDENCE_DEMOGRAPHIC')
+              : this.t('CONFIDENCE_MANUAL');
           this.currentStep = 'additional-details';
           this.successMsg = res.kycStatus === 'PHOTO_MATCHED'
-            ? 'KYC Verified – Photo Match Successful'
-            : 'KYC Verified – Demographic Match';
+            ? this.t('KYC_VERIFIED_PHOTO_SHORT')
+            : this.t('KYC_VERIFIED_DEMOGRAPHIC_SHORT');
         } else {
-          this.errorMsg = res.message || 'Face validation failed.';
+          this.errorMsg = res.message || this.t('FACE_VALIDATION_FAILED');
         }
       },
       error: err => {
         this.loading = false;
-        this.errorMsg = err?.error?.message || 'Face validation failed.';
+        this.errorMsg = err?.error?.message || this.t('FACE_VALIDATION_FAILED');
       },
     });
   }
@@ -829,12 +844,12 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
   submitRegistration() {
     if (this.duplicateRegistrationBlocked) {
-      this.errorMsg = 'User already registered with this EPIC and mobile number. Please login.';
+      this.errorMsg = this.t('USER_ALREADY_REGISTERED');
       return;
     }
 
     if (!this.verifiedKycData) {
-      this.errorMsg = 'Please complete KYC verification before registration.';
+      this.errorMsg = this.t('COMPLETE_KYC_BEFORE_REGISTRATION');
       return;
     }
 
@@ -888,14 +903,14 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
         if (res.success) {
           this.submitted = true;
           this.currentStep = 'kyc-complete';
-          this.successMsg = 'Visitor registration completed successfully.';
+          this.successMsg = this.t('REGISTRATION_SUCCESS');
         } else {
-          this.errorMsg = res.message || 'Registration failed.';
+          this.errorMsg = res.message || this.t('ERROR_REGISTRATION_FAILED');
         }
       },
       error: err => {
         this.loading = false;
-        this.errorMsg = err?.error?.message || 'Registration failed.';
+        this.errorMsg = err?.error?.message || this.t('ERROR_REGISTRATION_FAILED');
       },
     });
   }
@@ -1025,7 +1040,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
     if (!this.isManualPhoneValid) {
       this.mobileValidationType = 'error';
-      this.mobileValidationMsg = 'Please enter a valid 10-digit mobile number.';
+      this.mobileValidationMsg = this.t('ERROR_VALID_10_DIGIT_MOBILE');
       this.duplicateRegistrationBlocked = false;
       return;
     }
@@ -1036,7 +1051,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   private checkRegistrationStatus(proceedAfterCheck: boolean) {
     if (!this.isManualPhoneValid) {
       this.mobileValidationType = 'error';
-      this.mobileValidationMsg = 'Please enter a valid 10-digit mobile number.';
+      this.mobileValidationMsg = this.t('ERROR_VALID_10_DIGIT_MOBILE');
       this.loading = false;
       return;
     }
@@ -1057,7 +1072,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
         if (res.epicMobileExists) {
           this.loading = false;
-          this.errorMsg = res.message || 'User already registered with this EPIC and mobile number. Please login.';
+          this.errorMsg = res.message || this.t('USER_ALREADY_REGISTERED');
           return;
         }
 
@@ -1069,7 +1084,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
         this.mobileCheckLoading = false;
         this.loading = false;
         this.mobileValidationType = 'error';
-        this.mobileValidationMsg = err?.error?.message || 'Unable to validate mobile number. Please try again.';
+        this.mobileValidationMsg = err?.error?.message || this.t('ERROR_UNABLE_VALIDATE_MOBILE');
       }
     });
   }
@@ -1079,18 +1094,18 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
     if (res.epicMobileExists) {
       this.mobileValidationType = 'error';
-      this.mobileValidationMsg = res.message || 'User already registered with this EPIC and mobile number. Please login.';
+      this.mobileValidationMsg = res.message || this.t('USER_ALREADY_REGISTERED');
       return;
     }
 
     if (res.mobileExists) {
       this.mobileValidationType = 'warning';
-      this.mobileValidationMsg = res.message || 'This mobile number is already registered. You can change the mobile number or continue if you want to register another visitor using the same number.';
+      this.mobileValidationMsg = res.message || this.t('WARNING_MOBILE_EXISTS');
       return;
     }
 
     this.mobileValidationType = 'success';
-    this.mobileValidationMsg = 'Mobile number is available for OTP verification.';
+    this.mobileValidationMsg = this.t('MOBILE_AVAILABLE');
   }
 
   sanitizeNumericInput(field: 'phoneNumber' | 'aadhaarNumber') {

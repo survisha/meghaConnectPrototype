@@ -11,6 +11,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 import { AiChatbotComponent } from '../ai-chatbot/ai-chatbot.component';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { LanguageSelectorComponent } from '../shared/language-selector/language-selector.component';
 
 type LoginStep = 'enter-mobile' | 'enter-otp';
 
@@ -26,6 +28,8 @@ type LoginStep = 'enter-mobile' | 'enter-otp';
     MatButtonModule,
     MatProgressSpinnerModule,
     MatIconModule,
+    TranslateModule,
+    LanguageSelectorComponent,
     AiChatbotComponent
   ],
   templateUrl: './public-login.component.html',
@@ -46,7 +50,8 @@ export class PublicLoginComponent {
   constructor(
     private http: HttpClient,
     private auth: AuthService,
-    private router: Router
+    private router: Router,
+    private translate: TranslateService
   ) {}
 
   // ── Step 1: Check mobile ────────────────────────────────────────────────
@@ -54,7 +59,7 @@ export class PublicLoginComponent {
   checkMobile() {
     this.errorMsg = '';
     if (!this.phoneNumber || this.phoneNumber.length !== 10 || !/^\d{10}$/.test(this.phoneNumber)) {
-      this.errorMsg = 'Please enter a valid 10-digit mobile number.';
+      this.errorMsg = this.translate.instant('ERROR_VALID_10_DIGIT_MOBILE');
       return;
     }
     this.loading = true;
@@ -66,12 +71,12 @@ export class PublicLoginComponent {
         if (res.registered) {
           this.sendOtp();
         } else {
-          this.errorMsg = 'Account not found. Please register as a new visitor.';
+          this.errorMsg = this.translate.instant('ACCOUNT_NOT_FOUND_REGISTER');
         }
       },
       error: () => {
         this.loading = false;
-        this.errorMsg = 'Unable to check mobile. Please try again.';
+        this.errorMsg = this.translate.instant('ERROR_UNABLE_CHECK_MOBILE');
       },
     });
   }
@@ -88,15 +93,17 @@ export class PublicLoginComponent {
         this.loading = false;
         if (res.success) {
           this.mockOtp = res.otp ?? '';  // demo only
-          this.successMsg = `OTP sent to ${this.phoneNumber}` + (this.mockOtp ? ` (demo OTP: ${this.mockOtp})` : '');
+          this.successMsg = this.mockOtp
+            ? this.translate.instant('OTP_SENT_TO_DEMO', { phone: this.phoneNumber, otp: this.mockOtp })
+            : this.translate.instant('OTP_SENT_TO', { phone: this.phoneNumber });
           this.step = 'enter-otp';
         } else {
-          this.errorMsg = res.message || 'Failed to send OTP.';
+          this.errorMsg = res.message || this.translate.instant('ERROR_FAILED_SEND_OTP');
         }
       },
       error: err => {
         this.loading = false;
-        this.errorMsg = err?.error?.message || 'Failed to send OTP. Please try again.';
+        this.errorMsg = err?.error?.message || this.translate.instant('ERROR_FAILED_SEND_OTP_TRY');
       },
     });
   }
@@ -106,7 +113,7 @@ export class PublicLoginComponent {
   validateOtp() {
     this.errorMsg = '';
     if (!this.otp || this.otp.length !== 6) {
-      this.errorMsg = 'Please enter the 6-digit OTP.';
+      this.errorMsg = this.translate.instant('ERROR_VALID_6_DIGIT_OTP');
       return;
     }
     this.loading = true;
@@ -128,12 +135,12 @@ export class PublicLoginComponent {
           this.auth.setVisitorSession(this.phoneNumber, res.fullName, res.token, res.visitorId);
           this.router.navigate(['/visitor']);
         } else {
-          this.errorMsg = res.message || 'OTP verification failed.';
+          this.errorMsg = res.message || this.translate.instant('ERROR_OTP_VERIFICATION_FAILED');
         }
       },
       error: err => {
         this.loading = false;
-        this.errorMsg = err?.error?.message || 'OTP verification failed. Please try again.';
+        this.errorMsg = err?.error?.message || this.translate.instant('ERROR_OTP_VERIFICATION_FAILED_TRY');
       },
     });
   }

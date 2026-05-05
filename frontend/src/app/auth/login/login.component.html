@@ -9,7 +9,7 @@
           <h1>MeghaConnect</h1>
           <div class="govt-badge">
             <i class="pi pi-shield"></i>
-            <span>Official Government Portal</span>
+            <span>{{ 'OFFICIAL_GOVERNMENT_PORTAL' | translate }}</span>
           </div>
         </div>
       </div>
@@ -17,14 +17,14 @@
       <div class="cm-profile-section">
         <div class="cm-photo-container">
           <img src="/asserts/CM_Profile_Picture.jpg" alt="Chief Minister" class="cm-photo" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22%3E%3Crect fill=%22%23e0e7ff%22 width=%22100%22 height=%22100%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22Arial%22 font-size=%2224%22 fill=%22%234338ca%22%3ECM%3C/text%3E%3C/svg%3E'">
-          <div class="cm-badge">Hon'ble</div>
+          <div class="cm-badge">{{ 'HONBLE' | translate }}</div>
         </div>
         <div class="cm-info">
           <p class="cm-name">Conrad Sangma</p>
-          <p class="cm-designation">Government of Meghalaya</p>
+          <p class="cm-designation">{{ 'GOVERNMENT_OF_MEGHALAYA' | translate }}</p>
           <div class="cm-office">
             <i class="pi pi-building"></i>
-            <span>Chief Minister's Office</span>
+            <span>{{ 'CHIEF_MINISTERS_OFFICE' | translate }}</span>
           </div>
         </div>
       </div>
@@ -32,39 +32,42 @@
       <div class="brand-features">
         <div class="feature-header">
           <i class="pi pi-star-fill"></i>
-          <span>Key Features</span>
+          <span>{{ 'KEY_FEATURES' | translate }}</span>
         </div>
-        <div class="feat"><i class="pi pi-calendar"></i> <span>Smart Scheduling</span></div>
-        <div class="feat"><i class="pi pi-users"></i> <span>Appointment Management</span></div>
-        <div class="feat"><i class="pi pi-briefcase"></i> <span>CM Scheme Tracking</span></div>
-        <div class="feat"><i class="pi pi-map"></i> <span>Geographic Heatmaps</span></div>
-        <div class="feat"><i class="pi pi-chart-bar"></i> <span>Analytics & Reports</span></div>
+        <div class="feat"><i class="pi pi-calendar"></i> <span>{{ 'SMART_SCHEDULING' | translate }}</span></div>
+        <div class="feat"><i class="pi pi-users"></i> <span>{{ 'APPOINTMENT_MANAGEMENT' | translate }}</span></div>
+        <div class="feat"><i class="pi pi-briefcase"></i> <span>{{ 'CM_SCHEME_TRACKING' | translate }}</span></div>
+        <div class="feat"><i class="pi pi-map"></i> <span>{{ 'GEOGRAPHIC_HEATMAPS' | translate }}</span></div>
+        <div class="feat"><i class="pi pi-chart-bar"></i> <span>{{ 'ANALYTICS_REPORTS' | translate }}</span></div>
       </div>
     </div>
   </div>
 
   <div class="login-right">
+    <div class="auth-language">
+      <app-language-selector></app-language-selector>
+    </div>
     <div class="login-card">
       <div class="login-header">
-        <h2>Welcome Back</h2>
-        <p>Sign in to continue</p>
+        <h2>{{ 'WELCOME_BACK' | translate }}</h2>
+        <p>{{ 'SIGN_IN_TO_CONTINUE' | translate }}</p>
       </div>
 
       <div class="mode-tabs">
          <button id="login_citizenModeTab" [class.active]="isPublicMode" (click)="isPublicMode=true">
           <i class="pi pi-users"></i>
-          <span>Public/Citizen</span>
+          <span>{{ 'PUBLIC_CITIZEN' | translate }}</span>
         </button>
         <button id="login_staffModeTab" [class.active]="!isPublicMode" (click)="isPublicMode=false">
           <i class="pi pi-id-card"></i>
-          <span>Staff Login</span>
+          <span>{{ 'STAFF_LOGIN' | translate }}</span>
         </button>
        
       </div>
 
       <ng-container *ngIf="!isPublicMode">
         <div class="form-group">
-          <label>Quick Demo Access</label>
+          <label>{{ 'QUICK_DEMO_ACCESS' | translate }}</label>
           <div class="demo-chips">
             <button id="login_demoChip_{{d.value}}" *ngFor="let d of demoCredentials" class="demo-chip" (click)="selectDemo(d.value)">
               {{ d.label.split('(')[0].trim() }}
@@ -74,39 +77,39 @@
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>
             <i class="pi pi-user"></i>
-            <span> Username</span>
+            <span> {{ 'USERNAME' | translate }}</span>
           </mat-label>
-          <input matInput id="login_usernameInput" [(ngModel)]="username" placeholder="Enter username" />
+          <input matInput id="login_usernameInput" [(ngModel)]="username" [placeholder]="'ENTER_USERNAME' | translate" />
         </mat-form-field>
         
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>
             <i class="pi pi-lock"></i>
-            <span> Password</span>
+            <span> {{ 'PASSWORD' | translate }}</span>
           </mat-label>
-          <input matInput type="password" id="login_passwordInput" [(ngModel)]="password" placeholder="Enter password" (keyup.enter)="login()" />
+          <input matInput type="password" id="login_passwordInput" [(ngModel)]="password" [placeholder]="'ENTER_PASSWORD' | translate" (keyup.enter)="login()" />
         </mat-form-field>
         <div id="login_errorMsg" *ngIf="errorMsg" style="color:#dc2626;font-size:0.85rem;margin-bottom:0.75rem">
           <mat-icon style="font-size:1rem;width:1rem;height:1rem;vertical-align:text-bottom">error</mat-icon>
           {{ errorMsg }}
         </div>
         <button id="login_submitBtn" mat-raised-button color="primary" class="full-width" [disabled]="loading" (click)="login()">
-          <span *ngIf="!loading"><i class="pi pi-sign-in"></i> Sign In</span>
-          <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Signing in...</span>
+          <span *ngIf="!loading"><i class="pi pi-sign-in"></i> {{ 'SIGN_IN' | translate }}</span>
+          <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> {{ 'SIGNING_IN' | translate }}</span>
         </button>
       </ng-container>
 
       <ng-container *ngIf="isPublicMode">
         <div class="public-info">
-          <p><i class="pi pi-info-circle"></i> Citizens can log in using their registered mobile number and OTP.</p>
+          <p><i class="pi pi-info-circle"></i> {{ 'CITIZENS_OTP_INFO' | translate }}</p>
         </div>
         <a routerLink="/public-login" style="text-decoration:none;display:block">
           <button id="login_citizenOtpBtn" mat-raised-button color="accent" class="full-width">
-            <i class="pi pi-users"></i> Citizen OTP Login
+            <i class="pi pi-users"></i> {{ 'CITIZEN_OTP_LOGIN' | translate }}
           </button>
         </a>
         <div style="text-align:center;margin-top:0.75rem;font-size:0.85rem;color:#6b7280">
-          New visitor? <a id="login_registerLink" routerLink="/register-visitor" style="color:#1a237e;font-weight:600">Register here</a>
+          {{ 'NEW_VISITOR' | translate }} <a id="login_registerLink" routerLink="/register-visitor" style="color:#1a237e;font-weight:600">{{ 'REGISTER_HERE' | translate }}</a>
         </div>
       </ng-container>
     </div>

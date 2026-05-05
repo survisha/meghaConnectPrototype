@@ -66,10 +66,19 @@
 .login-right {
   flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 2rem;
   background: #f8fafc;
+}
+
+.auth-language {
+  align-self: flex-end;
+  margin-bottom: 1rem;
+  color: #1f2937;
+  --language-selector-bg: #ffffff;
+  --language-selector-border: #d1d5db;
 }
 
 .login-card {

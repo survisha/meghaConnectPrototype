@@ -7,9 +7,10 @@
     <span style="font-size:1.5rem">🏛️</span>
     <div style="flex:1">
       <div style="font-size:1.1rem;font-weight:700;letter-spacing:.3px">MeghaConnect</div>
-      <div style="font-size:0.7rem;opacity:.8">CM Office – Scheduling &amp; Scheme Management | Government of Meghalaya</div>
+      <div style="font-size:0.7rem;opacity:.8">{{ 'CM_OFFICE_SCHEDULING' | translate }}</div>
     </div>
     <div class="header-right">
+      <app-language-selector></app-language-selector>
       <span id="shell_notificationIcon" class="pi pi-bell" style="font-size:1.2rem;cursor:pointer;position:relative">
         <span class="notif-dot"></span>
       </span>
@@ -17,7 +18,7 @@
         <div style="font-size:0.85rem;font-weight:600">{{ auth.user()?.fullName }}</div>
         <div class="role-badge">{{ roleLabel }}</div>
       </div>
-      <button id="shell_logoutBtn" class="icon-btn" (click)="logout()" title="Logout">
+      <button id="shell_logoutBtn" class="icon-btn" (click)="logout()" [title]="'LOGOUT' | translate">
         <i class="pi pi-sign-out"></i>
       </button>
     </div>
@@ -31,19 +32,19 @@
           <li *ngIf="!item.children" class="nav-item">
             <a [id]="'shell_navLink_' + i" [routerLink]="item.route" class="nav-link">
               <i class="pi {{ item.icon }}"></i>
-              <span *ngIf="sidebarOpen">{{ item.label }}</span>
+              <span *ngIf="sidebarOpen">{{ item.labelKey | translate }}</span>
             </a>
           </li>
           <li *ngIf="item.children" class="nav-group">
             <button [id]="'shell_navGroup_' + i" class="nav-link nav-group-btn" (click)="toggle(item)">
               <i class="pi {{ item.icon }}"></i>
-              <span *ngIf="sidebarOpen" style="flex:1;text-align:left">{{ item.label }}</span>
+              <span *ngIf="sidebarOpen" style="flex:1;text-align:left">{{ item.labelKey | translate }}</span>
               <i *ngIf="sidebarOpen" class="pi" [class.pi-chevron-down]="item.expanded" [class.pi-chevron-right]="!item.expanded"></i>
             </button>
             <ul *ngIf="item.expanded && sidebarOpen" class="nav-sub">
               <li *ngFor="let child of item.children; let j = index">
                 <a [id]="'shell_navSubLink_' + i + '_' + j" [routerLink]="child.route" class="nav-sub-link">
-                  <i class="pi {{ child.icon }}"></i> {{ child.label }}
+                  <i class="pi {{ child.icon }}"></i> {{ child.labelKey | translate }}
                 </a>
               </li>
             </ul>

@@ -6,13 +6,15 @@ import { UserRole } from '../models';
 import { Toast } from 'primeng/toast';
 import { ConfirmDialog } from 'primeng/confirmdialog';
 import { MessageService, ConfirmationService } from 'primeng/api';
+import { TranslateModule } from '@ngx-translate/core';
+import { LanguageSelectorComponent } from '../shared/language-selector/language-selector.component';
 
-interface MenuItem { label: string; icon: string; route?: string; children?: MenuItem[]; expanded?: boolean; roles?: UserRole[]; }
+interface MenuItem { labelKey: string; icon: string; route?: string; children?: MenuItem[]; expanded?: boolean; roles?: UserRole[]; }
 
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterOutlet, Toast, ConfirmDialog],
+  imports: [CommonModule, RouterLink, RouterOutlet, Toast, ConfirmDialog, TranslateModule, LanguageSelectorComponent],
   providers: [MessageService, ConfirmationService],
   templateUrl: './shell.component.html',
   styleUrls: ['./shell.component.scss'],
@@ -22,65 +24,65 @@ export class ShellComponent implements OnInit {
   menu: MenuItem[] = [];
 
   private ALL_MENU: MenuItem[] = [
-    { label: 'Dashboard', icon: 'pi-home', route: '/dashboard',
+    { labelKey: 'DASHBOARD', icon: 'pi-home', route: '/dashboard',
       roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER','DATA_ENTRY_OPERATOR'] },
-    { label: 'My Portal', icon: 'pi-user', route: '/visitor',
+    { labelKey: 'MY_PORTAL', icon: 'pi-user', route: '/visitor',
       roles: ['PUBLIC'] },
-    { label: 'Calendar / Schedule', icon: 'pi-calendar', route: '/scheduling',
+    { labelKey: 'CALENDAR_SCHEDULE', icon: 'pi-calendar', route: '/scheduling',
       roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER'] },
-    { label: 'HCM Actions', icon: 'pi-hand-open', route: '/hcm/appointments',
+    { labelKey: 'HCM_ACTIONS', icon: 'pi-hand-open', route: '/hcm/appointments',
       roles: ['HCM'] },
     {
-      label: 'Appointments', icon: 'pi-users', expanded: false,
+      labelKey: 'APPOINTMENTS', icon: 'pi-users', expanded: false,
       roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER','DATA_ENTRY_OPERATOR','PUBLIC'],
       children: [
-        { label: 'All Appointments', icon: 'pi-list', route: '/appointments',
+        { labelKey: 'ALL_APPOINTMENTS', icon: 'pi-list', route: '/appointments',
           roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER','DATA_ENTRY_OPERATOR'] },
-        { label: 'New Appointment', icon: 'pi-plus-circle', route: '/appointments/new',
+        { labelKey: 'NEW_APPOINTMENT', icon: 'pi-plus-circle', route: '/appointments/new',
           roles: ['ADMIN','OSD','DATA_ENTRY_OPERATOR','PUBLIC'] },
-        { label: 'Walk-in Counter', icon: 'pi-sign-in', route: '/appointments/walkin',
+        { labelKey: 'WALKIN_COUNTER', icon: 'pi-sign-in', route: '/appointments/walkin',
           roles: ['ADMIN','OSD','DATA_ENTRY_OPERATOR'] },
-        { label: 'Approver Review', icon: 'pi-check-square', route: '/approver',
+        { labelKey: 'APPROVER_REVIEW', icon: 'pi-check-square', route: '/approver',
           roles: ['HCM','ADMIN','OSD','APPROVER'] },
-        { label: 'CMO Moderation', icon: 'pi-filter', route: '/cmo-moderation',
+        { labelKey: 'CMO_MODERATION', icon: 'pi-filter', route: '/cmo-moderation',
           roles: ['HCM','ADMIN','OSD','CMO_OFFICER'] },
       ]
     },
     {
-      label: 'CM Schemes', icon: 'pi-briefcase', expanded: false,
+      labelKey: 'CM_SCHEMES', icon: 'pi-briefcase', expanded: false,
       roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER','PUBLIC'],
       children: [
-        { label: 'All Applications', icon: 'pi-list', route: '/schemes',
+        { labelKey: 'ALL_APPLICATIONS', icon: 'pi-list', route: '/schemes',
           roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER'] },
-        { label: 'New Application', icon: 'pi-file-edit', route: '/schemes/apply',
+        { labelKey: 'NEW_APPLICATION', icon: 'pi-file-edit', route: '/schemes/apply',
           roles: ['ADMIN','OSD','PUBLIC'] },
       ]
     },
-    { label: 'Grievances', icon: 'pi-comments', route: '/grievances',
+    { labelKey: 'GRIEVANCES', icon: 'pi-comments', route: '/grievances',
       roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER','DATA_ENTRY_OPERATOR','PUBLIC'] },
-    { label: 'Register Visitor', icon: 'pi-user-plus', route: '/deo/register-visitor',
+    { labelKey: 'REGISTER_VISITOR', icon: 'pi-user-plus', route: '/deo/register-visitor',
       roles: ['DATA_ENTRY_OPERATOR'] },
-    { label: 'Public Identification', icon: 'pi-id-card', route: '/identify',
+    { labelKey: 'PUBLIC_IDENTIFICATION', icon: 'pi-id-card', route: '/identify',
       roles: ['HCM','ADMIN','OSD','DATA_ENTRY_OPERATOR'] },
     {
-      label: 'Reports', icon: 'pi-chart-bar', expanded: false,
+      labelKey: 'REPORTS', icon: 'pi-chart-bar', expanded: false,
       roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER'],
       children: [
-        { label: 'Analytics', icon: 'pi-chart-pie', route: '/reports',
+        { labelKey: 'ANALYTICS', icon: 'pi-chart-pie', route: '/reports',
           roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER'] },
-        { label: 'Scheme Heatmap', icon: 'pi-map', route: '/reports/heatmap',
+        { labelKey: 'SCHEME_HEATMAP', icon: 'pi-map', route: '/reports/heatmap',
           roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER'] },
-        { label: 'Pending Follow-ups', icon: 'pi-clock', route: '/reports/followups',
+        { labelKey: 'PENDING_FOLLOWUPS', icon: 'pi-clock', route: '/reports/followups',
           roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER'] },
-        { label: 'Audit Trail', icon: 'pi-history', route: '/reports/audit',
+        { labelKey: 'AUDIT_TRAIL', icon: 'pi-history', route: '/reports/audit',
           roles: ['ADMIN'] },
       ]
     },
-    { label: 'User Management', icon: 'pi-shield', route: '/admin/users',
+    { labelKey: 'USER_MANAGEMENT', icon: 'pi-shield', route: '/admin/users',
       roles: ['HCM','ADMIN','OSD'] },
-    { label: 'Scheme Management', icon: 'pi-sliders-h', route: '/admin/schemes',
+    { labelKey: 'SCHEME_MANAGEMENT', icon: 'pi-sliders-h', route: '/admin/schemes',
       roles: ['ADMIN'] },
-    { label: 'Appointment Types', icon: 'pi-calendar', route: '/admin/appointment-types',
+    { labelKey: 'APPOINTMENT_TYPES', icon: 'pi-calendar', route: '/admin/appointment-types',
       roles: ['ADMIN'] },
   ];
 

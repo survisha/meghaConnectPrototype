@@ -8,6 +8,8 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { LanguageSelectorComponent } from '../../shared/language-selector/language-selector.component';
 
 @Component({
   selector: 'app-login',
@@ -20,7 +22,9 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
     MatInputModule,
     MatButtonModule,
     MatIconModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    TranslateModule,
+    LanguageSelectorComponent
   ],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss'],
@@ -43,7 +47,11 @@ export class LoginComponent {
     { label: 'DEO (deo1 / deo123)', value: { u: 'deo1', p: 'deo123' } },
   ];
 
-  constructor(private auth: AuthService, private router: Router) {
+  constructor(
+    private auth: AuthService,
+    private router: Router,
+    private translate: TranslateService
+  ) {
     if (auth.isLoggedIn()) router.navigate(['/dashboard']);
   }
 
@@ -58,7 +66,7 @@ export class LoginComponent {
       if (success) {
         this.router.navigate(['/dashboard']);
       } else {
-        this.errorMsg = 'Invalid username or password.';
+        this.errorMsg = this.translate.instant('ERROR_INVALID_USERNAME_PASSWORD');
       }
       this.loading = false;
     });
@@ -70,7 +78,7 @@ export class LoginComponent {
       if (success) {
         this.router.navigate(['/visitor']);
       } else {
-        this.errorMsg = 'OTP verification failed.';
+        this.errorMsg = this.translate.instant('ERROR_OTP_VERIFICATION_FAILED');
       }
       this.loading = false;
     });

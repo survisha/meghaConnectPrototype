@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
+import '../core/i18n/app_i18n.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -26,10 +27,14 @@ class _LoginScreenState extends State<LoginScreen>
   // Public login fields
   final _publicFormKey = GlobalKey<FormState>();
   final _phoneCtrl = TextEditingController();
+  final _publicEpicCtrl = TextEditingController();
   final _otpCtrl = TextEditingController();
   bool _publicLoading = false;
-  String? _publicError;
+  String? _publicNotice;
+  bool _publicNoticeIsWarning = false;
   bool _otpSent = false;
+  bool _requiresEpic = false;
+  String? _epicForOtpLogin;
 
   static const _primaryBlue = Color(0xFF1A237E);
   static const _accentBlue = Color(0xFF1565C0);
@@ -46,6 +51,7 @@ class _LoginScreenState extends State<LoginScreen>
     _usernameCtrl.dispose();
     _passwordCtrl.dispose();
     _phoneCtrl.dispose();
+    _publicEpicCtrl.dispose();
     _otpCtrl.dispose();
     super.dispose();
   }
@@ -67,21 +73,50 @@ class _LoginScreenState extends State<LoginScreen>
     if (!_publicFormKey.currentState!.validate()) return;
     setState(() {
       _publicLoading = true;
-      _publicError = null;
+      _publicNotice = null;
     });
-    final sent = await ApiService.sendOtp(_phoneCtrl.text.trim());
+    final i18n = context.read<AppI18n>();
+
+    final phone = _phoneCtrl.text.trim();
+    final epicRaw = _requiresEpic ? _publicEpicCtrl.text.trim() : '';
+    final epic = epicRaw.isNotEmpty ? epicRaw : null;
+    final result = await ApiService.generateVisitorOtp(
+      phoneNumber: phone,
+      epicNumber: epic,
+    );
+
     if (!mounted) return;
     setState(() => _publicLoading = false);
-    if (sent) {
-      setState(() => _otpSent = true);
+
+    final success = result['success'] == true;
+    final requiresEpic = result['requiresEpic'] == true;
+    final message = (result['message'] as String?)?.trim();
+
+    if (success) {
+      setState(() {
+        _otpSent = true;
+        _requiresEpic = false;
+        _epicForOtpLogin = epic?.trim();
+        _publicNotice = null;
+        _publicNoticeIsWarning = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('OTP sent successfully'),
+        SnackBar(
+          content: Text(message?.isNotEmpty == true ? message! : i18n.t('OTP_SENT_SUCCESS')),
           backgroundColor: Color(0xFF065F46),
         ),
       );
     } else {
-      setState(() => _publicError = 'Failed to send OTP. Please try again.');
+      setState(() {
+        _otpSent = false;
+        _requiresEpic = requiresEpic;
+        _publicNotice = message?.isNotEmpty == true
+            ? message
+            : (requiresEpic
+                ? i18n.t('MULTIPLE_REGISTRATIONS_EPIC_REQUIRED')
+                : i18n.t('ERROR_FAILED_SEND_OTP_TRY'));
+        _publicNoticeIsWarning = requiresEpic;
+      });
     }
   }
 
@@ -89,23 +124,66 @@ class _LoginScreenState extends State<LoginScreen>
     if (!_publicFormKey.currentState!.validate()) return;
     setState(() {
       _publicLoading = true;
-      _publicError = null;
+      _publicNotice = null;
     });
-    final verified =
-        await ApiService.verifyOtp(_phoneCtrl.text.trim(), _otpCtrl.text.trim());
+    final i18n = context.read<AppI18n>();
+
+    final phone = _phoneCtrl.text.trim();
+    final epic = (_epicForOtpLogin ?? _publicEpicCtrl.text).trim().isNotEmpty
+        ? (_epicForOtpLogin ?? _publicEpicCtrl.text).trim()
+        : null;
+    final otp = _otpCtrl.text.trim();
+
+    final result = await ApiService.validateVisitorOtp(
+      phoneNumber: phone,
+      otp: otp,
+      epicNumber: epic,
+    );
+
     if (!mounted) return;
-    if (!verified) {
+
+    final success = result['success'] == true;
+    final requiresEpic = result['requiresEpic'] == true;
+    final message = (result['message'] as String?)?.trim();
+
+    if (!success) {
       setState(() {
         _publicLoading = false;
-        _publicError = 'Invalid OTP. Please try again.';
+        _requiresEpic = requiresEpic;
+        _publicNotice = message?.isNotEmpty == true ? message : i18n.t('ERROR_INVALID_OTP_TRY');
+        _publicNoticeIsWarning = requiresEpic;
       });
       return;
     }
+
+    final token = result['token'] as String?;
+    final fullName = result['fullName'] as String? ?? 'Visitor';
+    final visitorId = (result['visitorId'] as num?)?.toInt();
+
+    if (token == null || visitorId == null || visitorId <= 0) {
+      setState(() {
+        _publicLoading = false;
+        _publicNotice = 'Login failed. Please try again.';
+        _publicNoticeIsWarning = false;
+      });
+      return;
+    }
+
     final auth = context.read<AuthService>();
-    final ok = await auth.publicLogin(_phoneCtrl.text.trim());
+    final ok = await auth.publicLoginWithVisitorJwt(
+      phoneNumber: phone,
+      token: token,
+      fullName: fullName,
+      visitorId: visitorId,
+    );
     if (!mounted) return;
     setState(() => _publicLoading = false);
-    if (!ok) setState(() => _publicError = 'Login failed. Please try again.');
+    if (!ok) {
+      setState(() {
+        _publicNotice = 'Login failed. Please try again.';
+        _publicNoticeIsWarning = false;
+      });
+    }
   }
 
   void _fillDemo(String user, String pass) {
@@ -156,6 +234,7 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Widget _buildHeader() {
+    final i18n = context.watch<AppI18n>();
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
       decoration: BoxDecoration(
@@ -190,6 +269,37 @@ class _LoginScreenState extends State<LoginScreen>
                   color: Colors.white.withOpacity(0.15),
                   width: 2,
                   style: BorderStyle.solid,
+                ),
+              ),
+            ),
+          ),
+          // Language selector (top-right)
+          Positioned(
+            top: 0,
+            right: 0,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.14),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.white.withOpacity(0.22)),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: i18n.lang,
+                  icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 18),
+                  dropdownColor: _primaryBlue,
+                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                  items: AppI18n.supported.entries
+                      .map((e) => DropdownMenuItem<String>(
+                            value: e.key,
+                            child: Text(e.value),
+                          ))
+                      .toList(),
+                  onChanged: (v) {
+                    if (v == null) return;
+                    context.read<AppI18n>().setLang(v);
+                  },
                 ),
               ),
             ),
@@ -295,6 +405,7 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Widget _buildTabBar() {
+    final i18n = context.watch<AppI18n>();
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
@@ -310,15 +421,16 @@ class _LoginScreenState extends State<LoginScreen>
         labelColor: Colors.white,
         unselectedLabelColor: Colors.grey[600],
         dividerColor: Colors.transparent,
-        tabs: const [
-          Tab(text: '🔐  Staff Login'),
-          Tab(text: '📱  Citizen Login'),
+        tabs: [
+          Tab(text: '🔐  ${i18n.t('STAFF_LOGIN')}'),
+          Tab(text: '📱  ${i18n.t('CITIZEN_OTP_LOGIN')}'),
         ],
       ),
     );
   }
 
   Widget _buildStaffTab() {
+    final i18n = context.watch<AppI18n>();
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Form(
@@ -329,12 +441,12 @@ class _LoginScreenState extends State<LoginScreen>
             const SizedBox(height: 8),
             TextFormField(
               controller: _usernameCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Username',
-                prefixIcon: Icon(Icons.person_outline),
+              decoration: InputDecoration(
+                labelText: i18n.t('USERNAME'),
+                prefixIcon: const Icon(Icons.person_outline),
               ),
               validator: (v) =>
-                  (v == null || v.isEmpty) ? 'Enter username' : null,
+                  (v == null || v.isEmpty) ? i18n.t('ENTER_USERNAME') : null,
               textInputAction: TextInputAction.next,
             ),
             const SizedBox(height: 16),
@@ -342,7 +454,7 @@ class _LoginScreenState extends State<LoginScreen>
               controller: _passwordCtrl,
               obscureText: _staffObscure,
               decoration: InputDecoration(
-                labelText: 'Password',
+                labelText: i18n.t('PASSWORD'),
                 prefixIcon: const Icon(Icons.lock_outline),
                 suffixIcon: IconButton(
                   icon: Icon(
@@ -352,7 +464,7 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
               ),
               validator: (v) =>
-                  (v == null || v.isEmpty) ? 'Enter password' : null,
+                  (v == null || v.isEmpty) ? i18n.t('ENTER_PASSWORD') : null,
               textInputAction: TextInputAction.done,
               onFieldSubmitted: (_) => _staffLogin(),
             ),
@@ -374,7 +486,7 @@ class _LoginScreenState extends State<LoginScreen>
                           color: Colors.white,
                         ),
                       )
-                    : const Text('Sign In', style: TextStyle(fontSize: 16)),
+                    : Text(i18n.t('SIGN_IN'), style: const TextStyle(fontSize: 16)),
               ),
             ),
             const SizedBox(height: 24),
@@ -431,6 +543,7 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Widget _buildPublicTab() {
+    final i18n = context.watch<AppI18n>();
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Form(
@@ -452,7 +565,7 @@ class _LoginScreenState extends State<LoginScreen>
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Citizens can log in with their registered mobile number to book appointments with the Chief Minister.',
+                      i18n.t('CITIZENS_OTP_INFO'),
                       style: TextStyle(color: Colors.grey[700], fontSize: 12),
                     ),
                   ),
@@ -467,18 +580,52 @@ class _LoginScreenState extends State<LoginScreen>
                 FilteringTextInputFormatter.digitsOnly,
                 LengthLimitingTextInputFormatter(10),
               ],
-              decoration: const InputDecoration(
-                labelText: 'Mobile Number',
-                prefixIcon: Icon(Icons.phone_outlined),
+              decoration: InputDecoration(
+                labelText: i18n.t('MOBILE_NUMBER'),
+                prefixIcon: const Icon(Icons.phone_outlined),
                 prefixText: '+91 ',
-                hintText: '10-digit number',
+                hintText: i18n.t('ENTER_10_DIGIT_MOBILE'),
               ),
+              onChanged: (_) {
+                if (_requiresEpic || _otpSent || _publicNotice != null) {
+                  setState(() {
+                    _requiresEpic = false;
+                    _otpSent = false;
+                    _epicForOtpLogin = null;
+                    _publicNotice = null;
+                    _publicNoticeIsWarning = false;
+                  });
+                  _publicEpicCtrl.clear();
+                  _otpCtrl.clear();
+                }
+              },
               validator: (v) {
-                if (v == null || v.isEmpty) return 'Enter mobile number';
-                if (v.length != 10) return 'Enter valid 10-digit number';
+                if (v == null || v.isEmpty) return i18n.t('ENTER_MOBILE_NUMBER');
+                if (v.length != 10) return i18n.t('ENTER_10_DIGIT_MOBILE');
                 return null;
               },
             ),
+            if (_requiresEpic) ...[
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _publicEpicCtrl,
+                decoration: InputDecoration(
+                  labelText: i18n.t('EPIC_NUMBER'),
+                  prefixIcon: const Icon(Icons.credit_card_outlined),
+                  hintText: i18n.t('ENTER_EPIC_NUMBER'),
+                ),
+                textCapitalization: TextCapitalization.characters,
+                validator: (v) {
+                  if (!_requiresEpic) return null;
+                  if (v == null || v.trim().isEmpty) return i18n.t('ENTER_EPIC_NUMBER');
+                  return null;
+                },
+              ),
+            ],
+            if (_publicNotice != null) ...[
+              const SizedBox(height: 12),
+              _buildNotice(_publicNotice!, warning: _publicNoticeIsWarning),
+            ],
             const SizedBox(height: 12),
             OutlinedButton(
               onPressed: _publicLoading ? null : _sendOtp,
@@ -493,9 +640,9 @@ class _LoginScreenState extends State<LoginScreen>
                   ? const SizedBox(
                       height: 18,
                       width: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                  child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : Text(_otpSent ? 'Resend OTP' : 'Send OTP'),
+                  : Text(_otpSent ? i18n.t('RESEND_OTP') : i18n.t('GENERATE_OTP')),
             ),
             if (_otpSent) ...[
               const SizedBox(height: 16),
@@ -506,23 +653,19 @@ class _LoginScreenState extends State<LoginScreen>
                   FilteringTextInputFormatter.digitsOnly,
                   LengthLimitingTextInputFormatter(6),
                 ],
-                decoration: const InputDecoration(
-                  labelText: 'Enter OTP',
-                  prefixIcon: Icon(Icons.verified_outlined),
-                  hintText: '6-digit OTP',
+                decoration: InputDecoration(
+                  labelText: i18n.t('ENTER_OTP'),
+                  prefixIcon: const Icon(Icons.verified_outlined),
+                  hintText: i18n.t('ENTER_6_DIGIT_OTP'),
                 ),
                 validator: (v) {
-                  if (v == null || v.isEmpty) return 'Enter OTP';
-                  if (v.length != 6) return 'Enter valid 6-digit OTP';
+                  if (v == null || v.isEmpty) return i18n.t('ENTER_OTP');
+                  if (v.length != 6) return i18n.t('ENTER_6_DIGIT_OTP');
                   return null;
                 },
                 textInputAction: TextInputAction.done,
                 onFieldSubmitted: (_) => _publicLogin(),
               ),
-              if (_publicError != null) ...[
-                const SizedBox(height: 12),
-                _buildError(_publicError!),
-              ],
               const SizedBox(height: 20),
               SizedBox(
                 height: 48,
@@ -537,8 +680,8 @@ class _LoginScreenState extends State<LoginScreen>
                             color: Colors.white,
                           ),
                         )
-                      : const Text('Verify & Login',
-                          style: TextStyle(fontSize: 16)),
+                      : Text(i18n.t('VERIFY_LOGIN'),
+                          style: const TextStyle(fontSize: 16)),
                 ),
               ),
             ],
@@ -549,7 +692,7 @@ class _LoginScreenState extends State<LoginScreen>
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Text(
-                    'Demo Credentials',
+                    i18n.t('QUICK_DEMO_ACCESS'),
                     style: TextStyle(color: Colors.grey[500], fontSize: 12),
                   ),
                 ),
@@ -583,6 +726,32 @@ class _LoginScreenState extends State<LoginScreen>
           Expanded(
             child: Text(msg,
                 style: const TextStyle(color: Color(0xFF991B1B), fontSize: 13)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotice(String msg, {required bool warning}) {
+    final bg = warning ? const Color(0xFFFEF3C7) : const Color(0xFFFEE2E2);
+    final border = warning ? const Color(0xFFFCD34D) : const Color(0xFFFCA5A5);
+    final iconColor = warning ? const Color(0xFFB45309) : const Color(0xFF991B1B);
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: border),
+      ),
+      child: Row(
+        children: [
+          Icon(warning ? Icons.warning_amber_outlined : Icons.error_outline, color: iconColor, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              msg,
+              style: TextStyle(color: iconColor, fontSize: 13),
+            ),
           ),
         ],
       ),

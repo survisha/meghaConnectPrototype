@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/user.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
 
@@ -27,7 +26,6 @@ class _SchemeApp {
     this.hcmApprovedCost,
   });
 }
-
 
 const _schemeStats = [
   ('CMSDF', 45, 28, 12, 5),
@@ -125,7 +123,8 @@ class _SchemesScreenState extends State<SchemesScreen>
   String _statusLabel(String s) => s
       .replaceAll('_', ' ')
       .split(' ')
-      .map((w) => w.isEmpty ? w : w[0].toUpperCase() + w.substring(1).toLowerCase())
+      .map((w) =>
+          w.isEmpty ? w : w[0].toUpperCase() + w.substring(1).toLowerCase())
       .join(' ');
 
   @override
@@ -288,8 +287,8 @@ class _SchemesScreenState extends State<SchemesScreen>
             ),
             const SizedBox(height: 12),
             Text(app.projectName,
-                style: const TextStyle(
-                    fontSize: 17, fontWeight: FontWeight.bold)),
+                style:
+                    const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             _detailRow('Applicant', app.applicantName),
             _detailRow('Constituency', app.constituency),
@@ -322,8 +321,8 @@ class _SchemesScreenState extends State<SchemesScreen>
           ),
           Expanded(
             child: Text(value,
-                style: const TextStyle(
-                    fontSize: 13, fontWeight: FontWeight.w600)),
+                style:
+                    const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -337,7 +336,9 @@ class _SchemesScreenState extends State<SchemesScreen>
         const Text(
           'Scheme-wise Summary',
           style: TextStyle(
-              fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1A237E)),
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1A237E)),
         ),
         const SizedBox(height: 10),
         ..._schemeStats.map((s) {
@@ -371,7 +372,8 @@ class _SchemeCard extends StatelessWidget {
   String _statusLabel(String s) => s
       .replaceAll('_', ' ')
       .split(' ')
-      .map((w) => w.isEmpty ? w : w[0].toUpperCase() + w.substring(1).toLowerCase())
+      .map((w) =>
+          w.isEmpty ? w : w[0].toUpperCase() + w.substring(1).toLowerCase())
       .join(' ');
 
   @override
@@ -390,8 +392,8 @@ class _SchemeCard extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: color.withAlpha(26),
                       borderRadius: BorderRadius.circular(6),
@@ -423,8 +425,8 @@ class _SchemeCard extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 app.projectName,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w600, fontSize: 14),
+                style:
+                    const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -434,14 +436,12 @@ class _SchemeCard extends StatelessWidget {
                   Icon(Icons.person_outline, size: 13, color: Colors.grey[500]),
                   const SizedBox(width: 4),
                   Text(app.applicantName,
-                      style:
-                          TextStyle(fontSize: 12, color: Colors.grey[600])),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600])),
                   const SizedBox(width: 12),
                   Icon(Icons.map_outlined, size: 13, color: Colors.grey[500]),
                   const SizedBox(width: 4),
                   Text(app.constituency,
-                      style:
-                          TextStyle(fontSize: 12, color: Colors.grey[600])),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600])),
                   const Spacer(),
                   Text(
                     '₹${app.estimatedCost.toStringAsFixed(0)}',
@@ -497,22 +497,26 @@ class _StatCard extends StatelessWidget {
                 ),
                 Text(
                   '$total total',
-                  style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 13),
+                  style: TextStyle(color: Colors.grey[600], fontSize: 13),
                 ),
               ],
             ),
             const SizedBox(height: 10),
             Row(
               children: [
-                _StatPill(label: 'Approved', count: approved,
+                _StatPill(
+                    label: 'Approved',
+                    count: approved,
                     color: const Color(0xFF16A34A)),
                 const SizedBox(width: 8),
-                _StatPill(label: 'Pending', count: pending,
+                _StatPill(
+                    label: 'Pending',
+                    count: pending,
                     color: const Color(0xFFB45309)),
                 const SizedBox(width: 8),
-                _StatPill(label: 'Rejected', count: rejected,
+                _StatPill(
+                    label: 'Rejected',
+                    count: rejected,
                     color: const Color(0xFF991B1B)),
                 const Spacer(),
                 Text(
@@ -530,8 +534,8 @@ class _StatCard extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: total > 0 ? approved / total : 0,
                 backgroundColor: Colors.grey[200],
-                valueColor: const AlwaysStoppedAnimation<Color>(
-                    Color(0xFF16A34A)),
+                valueColor:
+                    const AlwaysStoppedAnimation<Color>(Color(0xFF16A34A)),
                 minHeight: 6,
               ),
             ),
@@ -559,8 +563,8 @@ class _StatPill extends StatelessWidget {
       ),
       child: Text(
         '$count $label',
-        style: TextStyle(
-            color: color, fontSize: 11, fontWeight: FontWeight.w600),
+        style:
+            TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
       ),
     );
   }

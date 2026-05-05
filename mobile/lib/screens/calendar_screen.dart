@@ -136,8 +136,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   ],
                 ),
         ),
-        if (canAdd)
-          _buildAddButton(context),
+        if (canAdd) _buildAddButton(context),
       ],
     );
   }
@@ -145,12 +144,27 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Widget _buildDateHeader() {
     final now = DateTime.now();
     final days = [
-      'Monday', 'Tuesday', 'Wednesday', 'Thursday',
-      'Friday', 'Saturday', 'Sunday'
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday'
     ];
     final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -376,8 +390,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             const SizedBox(height: 12),
             Text(
               event.title,
-              style: const TextStyle(
-                  fontSize: 18, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             _detailRow(Icons.access_time_outlined,
@@ -538,24 +551,20 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   value: _newType,
-                  decoration:
-                      const InputDecoration(labelText: 'Event Type *'),
+                  decoration: const InputDecoration(labelText: 'Event Type *'),
                   items: ['A1', 'A2', 'A3', 'A4', 'B1', 'B2']
                       .map((t) => DropdownMenuItem(
                           value: t,
                           child: Text('$t – ${_typeDescriptions[t]}')))
                       .toList(),
-                  onChanged: (v) =>
-                      setState(() => _newType = v ?? _newType),
+                  onChanged: (v) => setState(() => _newType = v ?? _newType),
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   value: _newLocation,
-                  decoration:
-                      const InputDecoration(labelText: 'Location *'),
+                  decoration: const InputDecoration(labelText: 'Location *'),
                   items: ['SHILLONG', 'TURA', 'DELHI', 'OTHERS']
-                      .map((l) =>
-                          DropdownMenuItem(value: l, child: Text(l)))
+                      .map((l) => DropdownMenuItem(value: l, child: Text(l)))
                       .toList(),
                   onChanged: (v) =>
                       setState(() => _newLocation = v ?? _newLocation),
@@ -564,8 +573,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 TextFormField(
                   controller: _descCtrl,
                   maxLines: 2,
-                  decoration:
-                      const InputDecoration(labelText: 'Description'),
+                  decoration: const InputDecoration(labelText: 'Description'),
                 ),
               ],
             ),

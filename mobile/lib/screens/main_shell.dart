@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
 import '../services/navigation_service.dart';
+import '../core/i18n/app_i18n.dart';
 import 'dashboard_screen.dart';
 import 'appointments_screen.dart';
 import 'new_appointment_screen.dart';
@@ -274,6 +275,7 @@ class _MainShellState extends State<MainShell> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
     final nav = context.watch<NavigationService>();
+    final i18n = context.watch<AppI18n>();
     final user = auth.user!;
     _currentRoute = nav.currentRoute;
 
@@ -286,6 +288,19 @@ class _MainShellState extends State<MainShell> {
       appBar: AppBar(
         title: Text('🏛️ ${_pageTitle(_currentRoute)}'),
         actions: [
+          PopupMenuButton<String>(
+            tooltip: 'Language',
+            icon: const Icon(Icons.language),
+            onSelected: (v) => context.read<AppI18n>().setLang(v),
+            itemBuilder: (ctx) => [
+              for (final e in AppI18n.supported.entries)
+                CheckedPopupMenuItem<String>(
+                  value: e.key,
+                  checked: e.key == i18n.lang,
+                  child: Text(e.value),
+                ),
+            ],
+          ),
           _RoleBadge(role: user.role),
           const SizedBox(width: 8),
         ],

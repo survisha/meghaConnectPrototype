@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'services/auth_service.dart';
 import 'services/navigation_service.dart';
+import 'core/i18n/app_i18n.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_shell.dart';
 
@@ -9,10 +10,13 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final authService = AuthService();
   await authService.init();
+  final i18n = AppI18n();
+  await i18n.init();
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider<AuthService>.value(value: authService),
+        ChangeNotifierProvider<AppI18n>.value(value: i18n),
         ChangeNotifierProvider<NavigationService>(create: (_) => NavigationService()),
       ],
       child: const MeghaConnectApp(),
@@ -51,7 +55,7 @@ class MeghaConnectApp extends StatelessWidget {
         drawerTheme: const DrawerThemeData(
           backgroundColor: Colors.white,
         ),
-        cardTheme: CardThemeData(
+        cardTheme: CardTheme(
           elevation: 2,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),

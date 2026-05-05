@@ -2,10 +2,12 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
+import '../core/config/app_config.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://localhost:8080';
   static const String _tokenKey = 'megha_token';
+
+  static Uri _u(String path) => Uri.parse('${AppConfig.apiBaseUrl}$path');
 
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -47,10 +49,10 @@ class ApiService {
       String username, String password) async {
     try {
       final resp = await http.post(
-        Uri.parse('$baseUrl/api/v1/auth/login'),
+        _u('/auth/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'username': username, 'password': password}),
-      );
+      ).timeout(const Duration(seconds: 20));
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
         // normalise role field before returning
@@ -65,30 +67,82 @@ class ApiService {
     }
   }
 
-  // OTP
-  static Future<bool> sendOtp(String phone) async {
+  // ── Visitor (Citizen) OTP Auth ─────────────────────────────────────────────
+  //
+  // Backend: /api/v1/visitor/auth/**
+  //
+  // Business rule: one mobile can map to multiple visitor registrations;
+  // EPIC is the unique identity. If multiple registrations are found, the API
+  // responds with requiresEpic=true (and a clear message).
+
+  static Future<Map<String, dynamic>> generateVisitorOtp({
+    required String phoneNumber,
+    String? epicNumber,
+  }) async {
     try {
+      final body = <String, dynamic>{'phoneNumber': phoneNumber};
+      final epic = (epicNumber ?? '').trim();
+      if (epic.isNotEmpty) body['epicNumber'] = epic.toUpperCase();
       final resp = await http.post(
-        Uri.parse('$baseUrl/api/v1/public/otp/send'),
+        _u('/visitor/auth/generate-otp'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'phoneNumber': phone}),
-      );
-      return resp.statusCode == 200 || resp.statusCode == 201;
+        body: jsonEncode(body),
+      ).timeout(const Duration(seconds: 20));
+
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        return data;
+      }
+
+      return {
+        'success': false,
+        'code': 'HTTP_${resp.statusCode}',
+        'message': 'Failed to generate OTP. Please try again.',
+        'requiresEpic': false,
+      };
     } catch (_) {
-      return false;
+      return {
+        'success': false,
+        'code': 'NETWORK_ERROR',
+        'message': 'Network error. Please try again.',
+        'requiresEpic': false,
+      };
     }
   }
 
-  static Future<bool> verifyOtp(String phone, String otp) async {
+  static Future<Map<String, dynamic>> validateVisitorOtp({
+    required String phoneNumber,
+    required String otp,
+    String? epicNumber,
+  }) async {
     try {
+      final body = <String, dynamic>{'phoneNumber': phoneNumber, 'otp': otp};
+      final epic = (epicNumber ?? '').trim();
+      if (epic.isNotEmpty) body['epicNumber'] = epic.toUpperCase();
       final resp = await http.post(
-        Uri.parse('$baseUrl/api/v1/public/otp/verify'),
+        _u('/visitor/auth/validate-otp'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'phoneNumber': phone, 'otp': otp}),
-      );
-      return resp.statusCode == 200 || resp.statusCode == 201;
+        body: jsonEncode(body),
+      ).timeout(const Duration(seconds: 20));
+
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        return data;
+      }
+
+      return {
+        'success': false,
+        'code': 'HTTP_${resp.statusCode}',
+        'message': 'Failed to verify OTP. Please try again.',
+        'requiresEpic': false,
+      };
     } catch (_) {
-      return false;
+      return {
+        'success': false,
+        'code': 'NETWORK_ERROR',
+        'message': 'Network error. Please try again.',
+        'requiresEpic': false,
+      };
     }
   }
 
@@ -98,9 +152,9 @@ class ApiService {
     try {
       final headers = await _headers();
       final resp = await http.get(
-        Uri.parse('$baseUrl/api/v1/appointments?page=$page&size=$size'),
+        _u('/appointments?page=$page&size=$size'),
         headers: headers,
-      );
+      ).timeout(const Duration(seconds: 20));
       if (resp.statusCode == 200) {
         return jsonDecode(resp.body) as Map<String, dynamic>;
       }
@@ -116,10 +170,10 @@ class ApiService {
       final body = <String, dynamic>{'status': status};
       if (remarks != null) body['remarks'] = remarks;
       final resp = await http.patch(
-        Uri.parse('$baseUrl/api/v1/appointments/$id/status'),
+        _u('/appointments/$id/status'),
         headers: headers,
         body: jsonEncode(body),
-      );
+      ).timeout(const Duration(seconds: 20));
       if (resp.statusCode == 200) {
         return jsonDecode(resp.body) as Map<String, dynamic>;
       }
@@ -132,13 +186,13 @@ class ApiService {
     try {
       final headers = await _headers();
       final resp = await http.post(
-        Uri.parse('$baseUrl/api/v1/appointments/$id/schedule'),
+        _u('/appointments/$id/schedule'),
         headers: headers,
         body: jsonEncode({
           'scheduledDateTime': scheduledDateTime,
           'durationMinutes': durationMinutes,
         }),
-      );
+      ).timeout(const Duration(seconds: 20));
       if (resp.statusCode == 200) {
         return jsonDecode(resp.body) as Map<String, dynamic>;
       }
@@ -152,9 +206,9 @@ class ApiService {
     try {
       final headers = await _headers();
       final resp = await http.get(
-        Uri.parse('$baseUrl/api/v1/grievances?page=$page&size=$size'),
+        _u('/grievances?page=$page&size=$size'),
         headers: headers,
-      );
+      ).timeout(const Duration(seconds: 20));
       if (resp.statusCode == 200) {
         return jsonDecode(resp.body) as Map<String, dynamic>;
       }
@@ -167,10 +221,10 @@ class ApiService {
     try {
       final headers = await _headers();
       final resp = await http.post(
-        Uri.parse('$baseUrl/api/v1/grievances'),
+        _u('/grievances'),
         headers: headers,
         body: jsonEncode(body),
-      );
+      ).timeout(const Duration(seconds: 20));
       if (resp.statusCode == 200 || resp.statusCode == 201) {
         return jsonDecode(resp.body) as Map<String, dynamic>;
       }
@@ -186,10 +240,10 @@ class ApiService {
       final body = <String, dynamic>{'status': status};
       if (remarks != null) body['remarks'] = remarks;
       final resp = await http.patch(
-        Uri.parse('$baseUrl/api/v1/grievances/$id/status'),
+        _u('/grievances/$id/status'),
         headers: headers,
         body: jsonEncode(body),
-      );
+      ).timeout(const Duration(seconds: 20));
       if (resp.statusCode == 200) {
         return jsonDecode(resp.body) as Map<String, dynamic>;
       }
@@ -202,9 +256,9 @@ class ApiService {
     try {
       final headers = await _headers();
       final resp = await http.get(
-        Uri.parse('$baseUrl/api/v1/schedule'),
+        _u('/schedule'),
         headers: headers,
-      );
+      ).timeout(const Duration(seconds: 20));
       if (resp.statusCode == 200) {
         return jsonDecode(resp.body) as List<dynamic>;
       }
@@ -217,10 +271,10 @@ class ApiService {
     try {
       final headers = await _headers();
       final resp = await http.post(
-        Uri.parse('$baseUrl/api/v1/schedule'),
+        _u('/schedule'),
         headers: headers,
         body: jsonEncode(body),
-      );
+      ).timeout(const Duration(seconds: 20));
       if (resp.statusCode == 200 || resp.statusCode == 201) {
         return jsonDecode(resp.body) as Map<String, dynamic>;
       }
@@ -235,9 +289,9 @@ class ApiService {
       final headers = await _headers();
       final resp = await http.get(
         Uri.parse(
-            '$baseUrl/api/v1/audit-logs?page=$page&size=$size&sort=timestamp,desc'),
+            '${AppConfig.apiBaseUrl}/audit-logs?page=$page&size=$size&sort=timestamp,desc'),
         headers: headers,
-      );
+      ).timeout(const Duration(seconds: 20));
       if (resp.statusCode == 200) {
         return jsonDecode(resp.body) as Map<String, dynamic>;
       }
@@ -245,15 +299,15 @@ class ApiService {
     return {'content': [], 'totalElements': 0};
   }
 
-  // Persons
+  // Visitors (used by "Public Identification" screen)
   static Future<Map<String, dynamic>?> searchPersonByPhone(
       String phone) async {
     try {
       final headers = await _headers();
       final resp = await http.get(
-        Uri.parse('$baseUrl/api/v1/persons/search/phone/$phone'),
+        _u('/visitors/search/phone/$phone'),
         headers: headers,
-      );
+      ).timeout(const Duration(seconds: 20));
       if (resp.statusCode == 200) {
         return jsonDecode(resp.body) as Map<String, dynamic>;
       }
@@ -265,9 +319,9 @@ class ApiService {
     try {
       final headers = await _headers();
       final resp = await http.get(
-        Uri.parse('$baseUrl/api/v1/persons/search/epic/$epic'),
+        _u('/visitors/search/epic/$epic'),
         headers: headers,
-      );
+      ).timeout(const Duration(seconds: 20));
       if (resp.statusCode == 200) {
         return jsonDecode(resp.body) as Map<String, dynamic>;
       }
@@ -279,10 +333,9 @@ class ApiService {
     try {
       final headers = await _headers();
       final resp = await http.get(
-        Uri.parse(
-            '$baseUrl/api/v1/persons/search/name?q=${Uri.encodeComponent(q)}'),
+        _u('/visitors/search/name?q=${Uri.encodeComponent(q)}'),
         headers: headers,
-      );
+      ).timeout(const Duration(seconds: 20));
       if (resp.statusCode == 200) {
         return jsonDecode(resp.body) as List<dynamic>;
       }
@@ -294,10 +347,9 @@ class ApiService {
     try {
       final headers = await _headers();
       final resp = await http.get(
-        Uri.parse(
-            '$baseUrl/api/v1/persons/search/district/${Uri.encodeComponent(d)}'),
+        _u('/visitors/search/district/${Uri.encodeComponent(d)}'),
         headers: headers,
-      );
+      ).timeout(const Duration(seconds: 20));
       if (resp.statusCode == 200) {
         return jsonDecode(resp.body) as List<dynamic>;
       }
@@ -310,9 +362,9 @@ class ApiService {
     try {
       final headers = await _headers();
       final resp = await http.get(
-        Uri.parse('$baseUrl/api/v1/directions'),
+        _u('/directions'),
         headers: headers,
-      );
+      ).timeout(const Duration(seconds: 20));
       if (resp.statusCode == 200) {
         return jsonDecode(resp.body) as List<dynamic>;
       }
@@ -325,9 +377,9 @@ class ApiService {
     try {
       final headers = await _headers();
       final resp = await http.get(
-        Uri.parse('$baseUrl/api/v1/users'),
+        _u('/users'),
         headers: headers,
-      );
+      ).timeout(const Duration(seconds: 20));
       if (resp.statusCode == 200) {
         return jsonDecode(resp.body) as List<dynamic>;
       }
@@ -342,9 +394,9 @@ class ApiService {
       final headers = await _headers();
       final resp = await http.get(
         Uri.parse(
-            '$baseUrl/api/v1/scheme-applications?page=$page&size=$size'),
+            '${AppConfig.apiBaseUrl}/scheme-applications?page=$page&size=$size'),
         headers: headers,
-      );
+      ).timeout(const Duration(seconds: 20));
       if (resp.statusCode == 200) {
         return jsonDecode(resp.body) as Map<String, dynamic>;
       }

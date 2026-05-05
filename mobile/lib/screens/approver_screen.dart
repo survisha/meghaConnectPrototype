@@ -27,7 +27,6 @@ class _ApproverAppointment {
     required this.eventType,
     required this.location,
     required this.status,
-    this.approverRemarks,
     this.shortNotes,
   });
 }
@@ -180,8 +179,7 @@ class _ApproverWorkflowScreenState extends State<ApproverWorkflowScreen> {
       decoration: const BoxDecoration(color: _primaryBlue),
       child: Row(
         children: [
-          const Icon(Icons.how_to_reg_outlined,
-              color: Colors.white, size: 20),
+          const Icon(Icons.how_to_reg_outlined, color: Colors.white, size: 20),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -208,8 +206,7 @@ class _ApproverWorkflowScreenState extends State<ApproverWorkflowScreen> {
             ),
           ),
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
               color: Colors.white.withAlpha(51),
               borderRadius: BorderRadius.circular(12),
@@ -297,8 +294,8 @@ class _ApproverWorkflowScreenState extends State<ApproverWorkflowScreen> {
               if (appt.shortNotes != null) ...[
                 const SizedBox(height: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: const Color(0xFFEFF6FF),
                     borderRadius: BorderRadius.circular(6),
@@ -331,13 +328,11 @@ class _ApproverWorkflowScreenState extends State<ApproverWorkflowScreen> {
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
-                        icon: const Icon(Icons.check_circle_outline,
-                            size: 16),
+                        icon: const Icon(Icons.check_circle_outline, size: 16),
                         label: const Text('Approve'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: const Color(0xFF2E7D32),
-                          side: const BorderSide(
-                              color: Color(0xFF2E7D32)),
+                          side: const BorderSide(color: Color(0xFF2E7D32)),
                           padding: const EdgeInsets.symmetric(vertical: 6),
                         ),
                         onPressed: () => _openDetailSheet(appt),
@@ -350,8 +345,7 @@ class _ApproverWorkflowScreenState extends State<ApproverWorkflowScreen> {
                         label: const Text('Reject'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: const Color(0xFFC62828),
-                          side: const BorderSide(
-                              color: Color(0xFFC62828)),
+                          side: const BorderSide(color: Color(0xFFC62828)),
                           padding: const EdgeInsets.symmetric(vertical: 6),
                         ),
                         onPressed: () => _openDetailSheet(appt),
@@ -409,8 +403,7 @@ class _ApproverWorkflowScreenState extends State<ApproverWorkflowScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.inbox_outlined,
-              size: 64, color: Color(0xFFBFDBFE)),
+          const Icon(Icons.inbox_outlined, size: 64, color: Color(0xFFBFDBFE)),
           const SizedBox(height: 16),
           const Text(
             'No Pending Appointments',
@@ -487,8 +480,8 @@ class _ApproverDetailSheetState extends State<_ApproverDetailSheet> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: const Color(0xFFE8EAF6),
                   borderRadius: BorderRadius.circular(6),
@@ -516,8 +509,7 @@ class _ApproverDetailSheetState extends State<_ApproverDetailSheet> {
           const SizedBox(height: 12),
           Text(
             appt.applicantName,
-            style: const TextStyle(
-                fontSize: 20, fontWeight: FontWeight.bold),
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 4),
           Text(
@@ -573,7 +565,8 @@ class _ApproverDetailSheetState extends State<_ApproverDetailSheet> {
               ),
             ),
           ],
-          if (appt.approverRemarks != null && appt.approverRemarks!.isNotEmpty) ...[
+          if (appt.approverRemarks != null &&
+              appt.approverRemarks!.isNotEmpty) ...[
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(12),
@@ -688,7 +681,8 @@ class _ApproverDetailSheetState extends State<_ApproverDetailSheet> {
                     onPressed: () async {
                       final picked = await showDatePicker(
                         context: context,
-                        initialDate: DateTime.now().add(const Duration(days: 1)),
+                        initialDate:
+                            DateTime.now().add(const Duration(days: 1)),
                         firstDate: DateTime.now(),
                         lastDate: DateTime.now().add(const Duration(days: 365)),
                       );

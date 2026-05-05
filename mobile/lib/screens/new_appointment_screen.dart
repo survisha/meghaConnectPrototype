@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import '../services/auth_service.dart';
 import '../services/navigation_service.dart';
 
 class NewAppointmentScreen extends StatefulWidget {
@@ -128,8 +127,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (widget.isWalkIn || widget.isPublic)
-              _buildInfoBanner(),
+            if (widget.isWalkIn || widget.isPublic) _buildInfoBanner(),
             _buildSection('👤 Applicant Information', _buildApplicantFields()),
             const SizedBox(height: 16),
             // KYC section shown for public & walk-in registrations
@@ -148,11 +146,14 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                     ? const SizedBox(
                         height: 20,
                         width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
                       )
                     : const Icon(Icons.send),
                 label: Text(
-                  widget.isPublic ? 'Submit Application' : 'Register Appointment',
+                  widget.isPublic
+                      ? 'Submit Application'
+                      : 'Register Appointment',
                   style: const TextStyle(fontSize: 16),
                 ),
                 onPressed: _loading ? null : _submit,
@@ -191,7 +192,9 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                   ? 'Walk-in Counter: Register an in-person visitor for a direct appointment with the Chief Minister.'
                   : 'Citizens: Submit your appointment request online. You will be contacted once reviewed.',
               style: TextStyle(
-                color: isWalkIn ? const Color(0xFF065F46) : const Color(0xFF1A237E),
+                color: isWalkIn
+                    ? const Color(0xFF065F46)
+                    : const Color(0xFF1A237E),
                 fontSize: 12,
               ),
             ),
@@ -234,7 +237,8 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
             prefixIcon: Icon(Icons.person_outline),
           ),
           textCapitalization: TextCapitalization.words,
-          validator: (v) => (v == null || v.trim().isEmpty) ? 'Full name is required' : null,
+          validator: (v) =>
+              (v == null || v.trim().isEmpty) ? 'Full name is required' : null,
           textInputAction: TextInputAction.next,
         ),
         const SizedBox(height: 12),
@@ -327,8 +331,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                 child: Text(
                   'KYC Priority: EPIC (Voter ID) is primary. '
                   'Provide Aadhaar only if EPIC is unavailable.',
-                  style: TextStyle(
-                      fontSize: 12, color: Color(0xFF1A237E)),
+                  style: TextStyle(fontSize: 12, color: Color(0xFF1A237E)),
                 ),
               ),
             ],
@@ -343,12 +346,11 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
             prefixIcon: const Icon(Icons.credit_card_outlined),
             hintText: 'e.g. MH/01/001/234567',
             suffixIcon: _epicCtrl.text.isNotEmpty
-                ? const Icon(Icons.verified_outlined,
-                    color: Color(0xFF16A34A))
+                ? const Icon(Icons.verified_outlined, color: Color(0xFF16A34A))
                 : null,
           ),
           textCapitalization: TextCapitalization.characters,
-          onChanged: (_) => setState(() {}),  // trigger AADHAR field toggle
+          onChanged: (_) => setState(() {}), // trigger AADHAR field toggle
           textInputAction: TextInputAction.next,
         ),
         const SizedBox(height: 12),
@@ -369,8 +371,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                   labelText: 'Aadhaar Number (Fallback KYC)',
                   prefixIcon: Icon(Icons.fingerprint),
                   hintText: '12-digit Aadhaar number',
-                  helperText:
-                      'Only required when EPIC is not available',
+                  helperText: 'Only required when EPIC is not available',
                 ),
                 validator: (v) {
                   if (!epicEmpty) return null;
@@ -384,9 +385,8 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
               const SizedBox(height: 12),
             ],
           ),
-          crossFadeState: epicEmpty
-              ? CrossFadeState.showSecond
-              : CrossFadeState.showFirst,
+          crossFadeState:
+              epicEmpty ? CrossFadeState.showSecond : CrossFadeState.showFirst,
         ),
       ],
     );
@@ -415,8 +415,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                 child: Text(
                   'Photos & documents are stored in secure file storage. '
                   'Only the file reference path is saved in the database.',
-                  style: TextStyle(
-                      fontSize: 12, color: Color(0xFF065F46)),
+                  style: TextStyle(fontSize: 12, color: Color(0xFF065F46)),
                 ),
               ),
             ],
@@ -505,7 +504,9 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
             prefixIcon: Icon(Icons.description_outlined),
             alignLabelWithHint: true,
           ),
-          validator: (v) => (v == null || v.trim().isEmpty) ? 'Please describe the purpose' : null,
+          validator: (v) => (v == null || v.trim().isEmpty)
+              ? 'Please describe the purpose'
+              : null,
           textInputAction: TextInputAction.newline,
         ),
         const SizedBox(height: 12),
@@ -540,7 +541,8 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                 color: Color(0xFFD1FAE5),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.check_circle_outline, size: 72, color: Color(0xFF065F46)),
+              child: const Icon(Icons.check_circle_outline,
+                  size: 72, color: Color(0xFF065F46)),
             ),
             const SizedBox(height: 24),
             const Text(
@@ -588,7 +590,8 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                       foregroundColor: const Color(0xFF1A237E),
                       side: const BorderSide(color: Color(0xFF1A237E)),
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
                     ),
                   ),
                 ),
@@ -598,8 +601,9 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                     child: ElevatedButton.icon(
                       icon: const Icon(Icons.list_alt),
                       label: const Text('View All'),
-                      onPressed: () =>
-                          context.read<NavigationService>().navigateTo('appointments'),
+                      onPressed: () => context
+                          .read<NavigationService>()
+                          .navigateTo('appointments'),
                     ),
                   ),
                 ],
@@ -636,9 +640,7 @@ class _UploadTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: isUploaded
-              ? const Color(0xFFF0FDF4)
-              : Colors.grey[50],
+          color: isUploaded ? const Color(0xFFF0FDF4) : Colors.grey[50],
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: isUploaded
@@ -677,12 +679,8 @@ class _UploadTile extends StatelessWidget {
               ),
             ),
             Icon(
-              isUploaded
-                  ? Icons.check_circle
-                  : Icons.upload_file_outlined,
-              color: isUploaded
-                  ? const Color(0xFF16A34A)
-                  : Colors.grey[400],
+              isUploaded ? Icons.check_circle : Icons.upload_file_outlined,
+              color: isUploaded ? const Color(0xFF16A34A) : Colors.grey[400],
               size: 20,
             ),
           ],

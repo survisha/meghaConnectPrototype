@@ -59,22 +59,26 @@ class AuthUser {
   final String username;
   final String fullName;
   final UserRole role;
+  final int? visitorId;
 
   const AuthUser({
     required this.username,
     required this.fullName,
     required this.role,
+    this.visitorId,
   });
 
   Map<String, dynamic> toJson() => {
         'username': username,
         'fullName': fullName,
         'role': role.name,
+        if (visitorId != null) 'visitorId': visitorId,
       };
 
   factory AuthUser.fromJson(Map<String, dynamic> json) => AuthUser(
         username: json['username'] as String,
         fullName: json['fullName'] as String,
         role: UserRole.values.byName(json['role'] as String),
+        visitorId: (json['visitorId'] as num?)?.toInt(),
       );
 }

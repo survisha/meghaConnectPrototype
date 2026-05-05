@@ -42,6 +42,7 @@ class AuthService extends ChangeNotifier {
     final uname = data['username'] as String? ?? username.trim();
     final fullName = data['fullName'] as String? ?? uname;
     final roleStr = data['role'] as String? ?? 'PUBLIC';
+    final visitorId = (data['visitorId'] as num?)?.toInt();
 
     UserRole role;
     try {
@@ -52,7 +53,7 @@ class AuthService extends ChangeNotifier {
 
     if (token != null) await ApiService.setToken(token);
 
-    _user = AuthUser(username: uname, fullName: fullName, role: role);
+    _user = AuthUser(username: uname, fullName: fullName, role: role, visitorId: visitorId);
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_storageKey, jsonEncode(_user!.toJson()));
@@ -61,12 +62,28 @@ class AuthService extends ChangeNotifier {
     return true;
   }
 
-  /// Authenticates as the shared public user after OTP has been verified.
-  /// The phone parameter is not passed to the backend because the OTP
-  /// verification step already authenticated the phone; we then log in
-  /// with the shared public-user credentials to obtain a JWT token.
-  Future<bool> publicLogin(String phone) async {
-    return login('public1', 'public123');
+  /// Logs in a PUBLIC/Citizen user using the JWT returned from
+  /// `/api/v1/visitor/auth/validate-otp`.
+  Future<bool> publicLoginWithVisitorJwt({
+    required String phoneNumber,
+    required String token,
+    required String fullName,
+    required int visitorId,
+  }) async {
+    await ApiService.setToken(token);
+
+    _user = AuthUser(
+      username: phoneNumber,
+      fullName: fullName,
+      role: UserRole.PUBLIC,
+      visitorId: visitorId,
+    );
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_storageKey, jsonEncode(_user!.toJson()));
+
+    notifyListeners();
+    return true;
   }
 
   Future<void> logout() async {

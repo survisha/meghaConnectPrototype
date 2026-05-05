@@ -16,6 +16,14 @@ import { LanguageSelectorComponent } from '../shared/language-selector/language-
 
 type LoginStep = 'enter-mobile' | 'enter-otp';
 
+interface GenerateOtpResponse {
+  success: boolean;
+  code?: string;
+  otp?: string;
+  message: string;
+  requiresEpic?: boolean;
+}
+
 @Component({
   selector: 'app-public-login',
   standalone: true,
@@ -39,10 +47,13 @@ export class PublicLoginComponent {
   step: LoginStep = 'enter-mobile';
 
   phoneNumber = '';
+  epicNumber = '';
   otp = '';
   errorMsg = '';
+  warningMsg = '';
   successMsg = '';
   loading = false;
+  requiresEpic = false;
 
   /** OTP returned in mock response (for demo only – remove when SMS gateway is live) */
   mockOtp = '';
@@ -58,45 +69,51 @@ export class PublicLoginComponent {
 
   checkMobile() {
     this.errorMsg = '';
+    this.successMsg = '';
+    this.warningMsg = '';
     if (!this.phoneNumber || this.phoneNumber.length !== 10 || !/^\d{10}$/.test(this.phoneNumber)) {
       this.errorMsg = this.translate.instant('ERROR_VALID_10_DIGIT_MOBILE');
       return;
     }
-    this.loading = true;
-    this.http.post<{ registered: boolean; message: string }>(`${environment.apiUrl}/visitor/auth/check-mobile`, {
-      phoneNumber: this.phoneNumber,
-    }).subscribe({
-      next: res => {
-        this.loading = false;
-        if (res.registered) {
-          this.sendOtp();
-        } else {
-          this.errorMsg = this.translate.instant('ACCOUNT_NOT_FOUND_REGISTER');
-        }
-      },
-      error: () => {
-        this.loading = false;
-        this.errorMsg = this.translate.instant('ERROR_UNABLE_CHECK_MOBILE');
-      },
-    });
+
+    if (this.requiresEpic && !this.epicNumber.trim()) {
+      this.warningMsg = this.translate.instant('MULTIPLE_REGISTRATIONS_EPIC_REQUIRED');
+      return;
+    }
+
+    this.sendOtp();
   }
 
   // ── Step 1b: Generate OTP ───────────────────────────────────────────────
 
   sendOtp() {
     this.errorMsg = '';
+    this.warningMsg = '';
+    this.successMsg = '';
     this.loading = true;
-    this.http.post<{ success: boolean; otp?: string; message: string }>(`${environment.apiUrl}/visitor/auth/generate-otp`, {
+    const payload: { phoneNumber: string; epicNumber?: string } = {
       phoneNumber: this.phoneNumber,
-    }).subscribe({
+    };
+
+    const normalizedEpic = this.epicNumber.trim().toUpperCase();
+    if (normalizedEpic) {
+      payload.epicNumber = normalizedEpic;
+      this.epicNumber = normalizedEpic;
+    }
+
+    this.http.post<GenerateOtpResponse>(`${environment.apiUrl}/visitor/auth/generate-otp`, payload).subscribe({
       next: res => {
         this.loading = false;
         if (res.success) {
           this.mockOtp = res.otp ?? '';  // demo only
+          this.requiresEpic = false;
           this.successMsg = this.mockOtp
             ? this.translate.instant('OTP_SENT_TO_DEMO', { phone: this.phoneNumber, otp: this.mockOtp })
             : this.translate.instant('OTP_SENT_TO', { phone: this.phoneNumber });
           this.step = 'enter-otp';
+        } else if (res.requiresEpic || res.code === 'MULTIPLE_REGISTRATIONS_FOUND') {
+          this.requiresEpic = true;
+          this.warningMsg = res.message || this.translate.instant('MULTIPLE_REGISTRATIONS_EPIC_REQUIRED');
         } else {
           this.errorMsg = res.message || this.translate.instant('ERROR_FAILED_SEND_OTP');
         }
@@ -119,13 +136,16 @@ export class PublicLoginComponent {
     this.loading = true;
     this.http.post<{
       success: boolean;
+      code?: string;
       token: string;
       fullName: string;
       visitorId: number;
       role: string;
       message: string;
+      requiresEpic?: boolean;
     }>(`${environment.apiUrl}/visitor/auth/validate-otp`, {
       phoneNumber: this.phoneNumber,
+      epicNumber: this.epicNumber.trim().toUpperCase() || undefined,
       otp: this.otp,
     }).subscribe({
       next: res => {
@@ -135,6 +155,9 @@ export class PublicLoginComponent {
           this.auth.setVisitorSession(this.phoneNumber, res.fullName, res.token, res.visitorId);
           this.router.navigate(['/visitor']);
         } else {
+          if (res.requiresEpic) {
+            this.requiresEpic = true;
+          }
           this.errorMsg = res.message || this.translate.instant('ERROR_OTP_VERIFICATION_FAILED');
         }
       },
@@ -151,8 +174,26 @@ export class PublicLoginComponent {
     this.step = 'enter-mobile';
     this.otp = '';
     this.errorMsg = '';
+    this.warningMsg = '';
     this.successMsg = '';
     this.mockOtp = '';
+  }
+
+  onMobileInput() {
+    this.phoneNumber = this.phoneNumber.replace(/\D/g, '');
+    this.errorMsg = '';
+    this.warningMsg = '';
+    this.successMsg = '';
+    this.requiresEpic = false;
+    this.epicNumber = '';
+    this.otp = '';
+  }
+
+  onEpicInput() {
+    this.epicNumber = this.epicNumber.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    this.errorMsg = '';
+    this.warningMsg = '';
+    this.successMsg = '';
   }
 
   goToRegister() {

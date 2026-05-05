@@ -17,6 +17,14 @@ public interface OtpTempRepository extends JpaRepository<OtpTemp, Long> {
     Optional<OtpTemp> findTopByPhoneNumberAndConsumedFalseAndExpiresAtAfterOrderByCreatedAtDesc(
             String phoneNumber, LocalDateTime now);
 
+    /** Find the latest non-consumed, non-expired OTP for a resolved visitor. */
+    Optional<OtpTemp> findTopByPhoneNumberAndVisitorIdAndConsumedFalseAndExpiresAtAfterOrderByCreatedAtDesc(
+            String phoneNumber, Long visitorId, LocalDateTime now);
+
+    /** Find the latest KYC/registration-flow OTP that is not tied to a visitor yet. */
+    Optional<OtpTemp> findTopByPhoneNumberAndVisitorIdIsNullAndConsumedFalseAndExpiresAtAfterOrderByCreatedAtDesc(
+            String phoneNumber, LocalDateTime now);
+
     /** Count failed attempts within a time window to support brute-force detection. */
     @Query("SELECT COALESCE(SUM(o.attemptCount), 0) FROM OtpTemp o " +
            "WHERE o.phoneNumber = :phone AND o.createdAt > :since")

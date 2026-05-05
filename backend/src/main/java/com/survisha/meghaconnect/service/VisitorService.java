@@ -26,7 +26,15 @@ public class VisitorService {
     private final FileStorageService fileStorageService;
 
     public Optional<Visitor> findByPhone(String phone) {
+        return visitorRepository.findByPhoneNumber(phone).stream().findFirst();
+    }
+
+    public List<Visitor> findAllByPhone(String phone) {
         return visitorRepository.findByPhoneNumber(phone);
+    }
+
+    public List<Visitor> findByPhoneAndEpic(String phone, String epic) {
+        return visitorRepository.findByPhoneNumberAndEpicNumber(phone, epic);
     }
 
     public Optional<Visitor> findByEpic(String epic) {

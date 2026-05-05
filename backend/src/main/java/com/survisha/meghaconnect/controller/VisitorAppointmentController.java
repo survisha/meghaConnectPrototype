@@ -112,28 +112,37 @@ public class VisitorAppointmentController {
                 final String applicantNameValue = validationService.requireText(applicantName, "applicantName");
                 final String applicantPhoneValue = validationService.requirePhone(applicantPhone);
 
-                // Reuse existing visitor by phone to avoid duplicates
-                applicant = visitorRepository.findByPhoneNumber(applicantPhoneValue).orElseGet(() -> {
-                    String epicFinal = epicNumber;
-                    // Validate EPIC format if provided
-                    if (epicFinal != null && !epicFinal.trim().isEmpty() && !epicFinal.matches(ValidationConstants.REGEX_EPIC)) {
-                        epicFinal = null; // Ignore invalid EPIC rather than rejecting
-                    }
+                String epicFinal = epicNumber;
+                if (epicFinal != null) {
+                    epicFinal = epicFinal.trim().toUpperCase();
+                }
+                // Validate EPIC format if provided
+                if (epicFinal != null && !epicFinal.isEmpty() && !epicFinal.matches(ValidationConstants.REGEX_EPIC)) {
+                    epicFinal = null; // Ignore invalid EPIC rather than rejecting
+                }
+
+                List<Visitor> existingVisitors = epicFinal != null
+                        ? visitorRepository.findByPhoneNumberAndEpicNumber(applicantPhoneValue, epicFinal)
+                        : visitorRepository.findByPhoneNumber(applicantPhoneValue);
+
+                if (!existingVisitors.isEmpty()) {
+                    applicant = existingVisitors.get(0);
+                } else {
                     // Check EPIC uniqueness if provided
                     if (epicFinal != null && visitorRepository.findByEpicNumber(epicFinal).isPresent()) {
-                        return visitorRepository.findByEpicNumber(epicFinal).get();
+                        applicant = visitorRepository.findByEpicNumber(epicFinal).get();
+                    } else {
+                        Visitor v = Visitor.builder()
+                                .fullName(applicantNameValue)
+                                .phoneNumber(applicantPhoneValue)
+                                .epicNumber(epicFinal)
+                                .kycType("NONE")
+                                .kycVerified(false)
+                                .kycStatus("PENDING")
+                                .build();
+                        applicant = visitorRepository.save(v);
                     }
-
-                    Visitor v = Visitor.builder()
-                            .fullName(applicantNameValue)
-                            .phoneNumber(applicantPhoneValue)
-                            .epicNumber(epicFinal)
-                            .kycType("NONE")
-                            .kycVerified(false)
-                            .kycStatus("PENDING")
-                            .build();
-                    return visitorRepository.save(v);
-                });
+                }
             }
 
             // ── Validate agenda ─────────────────────────────────────────────────

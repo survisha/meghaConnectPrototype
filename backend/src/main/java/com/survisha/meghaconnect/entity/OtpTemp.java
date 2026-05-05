@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 @Table(name = "visitor_otp_temp",
     indexes = {
         @Index(name = "idx_otp_phone", columnList = "phone_number"),
+        @Index(name = "idx_otp_phone_visitor", columnList = "phone_number, visitor_id"),
         @Index(name = "idx_otp_expiry", columnList = "expires_at"),
     })
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
@@ -24,6 +25,9 @@ public class OtpTemp {
 
     @Column(name = "phone_number", nullable = false, length = 20)
     private String phoneNumber;
+
+    @Column(name = "visitor_id")
+    private Long visitorId;
 
     @Column(name = "otp_code", nullable = false, length = 10)
     private String otpCode;

@@ -44,6 +44,31 @@
             [(ngModel)]="phoneNumber"
             [placeholder]="'ENTER_10_DIGIT_MOBILE' | translate"
             maxlength="10"
+            (input)="onMobileInput()"
+            (keyup.enter)="checkMobile()"
+          />
+        </mat-form-field>
+
+        <div id="publicLogin_warningMsg" *ngIf="warningMsg" class="warning-msg">
+          <div class="status-line">
+            <mat-icon>warning</mat-icon>
+            <span>{{ warningMsg }}</span>
+          </div>
+        </div>
+
+        <mat-form-field appearance="outline" class="full-width" *ngIf="requiresEpic">
+          <mat-label>
+            <i class="pi pi-id-card"></i>
+            <span> {{ 'EPIC_NUMBER' | translate }}</span>
+          </mat-label>
+          <input
+            id="publicLogin_epicInput"
+            matInput
+            type="text"
+            [(ngModel)]="epicNumber"
+            [placeholder]="'ENTER_EPIC_NUMBER' | translate"
+            maxlength="10"
+            (input)="onEpicInput()"
             (keyup.enter)="checkMobile()"
           />
         </mat-form-field>

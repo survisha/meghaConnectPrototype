@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -49,7 +50,7 @@ public class VisitorOtpService {
     // ── Check mobile ─────────────────────────────────────────────────────────
 
     public boolean isMobileRegistered(String phone) {
-        return visitorRepository.findByPhoneNumber(phone).isPresent();
+        return !visitorRepository.findByPhoneNumber(phone).isEmpty();
     }
 
     // ── Generate OTP ─────────────────────────────────────────────────────────
@@ -63,13 +64,31 @@ public class VisitorOtpService {
      */
     @Transactional
     public String generateOtp(String phone) {
-        if (!isMobileRegistered(phone)) {
+        List<Visitor> visitors = visitorRepository.findByPhoneNumber(phone);
+        if (visitors.isEmpty()) {
             throw new VisitorRegistrationValidationException(
                 ErrorCodeConstants.MOBILE_NOT_FOUND,
                 ErrorCodeConstants.format(ErrorCodeConstants.MOBILE_NOT_FOUND_MSG, phone)
             );
         }
 
+        Long visitorId = visitors.size() == 1 ? visitors.get(0).getId() : null;
+        return generateOtpRecord(phone, visitorId, "LOGIN");
+    }
+
+    @Transactional
+    public String generateOtp(String phone, Long visitorId) {
+        if (visitorId == null || !visitorRepository.findById(visitorId).isPresent()) {
+            throw new VisitorRegistrationValidationException(
+                    ErrorCodeConstants.VISITOR_NOT_FOUND,
+                    "Visitor not found"
+            );
+        }
+
+        return generateOtpRecord(phone, visitorId, "LOGIN");
+    }
+
+    private String generateOtpRecord(String phone, Long visitorId, String purpose) {
         // Rate-limit check
         LocalDateTime windowStart = LocalDateTime.now().minusMinutes(RATE_WINDOW_MINUTES);
         int recentRequests = otpTempRepository.sumAttemptCountSince(phone, windowStart);
@@ -81,6 +100,7 @@ public class VisitorOtpService {
         String otpCode = generateSixDigitOtp();
         OtpTemp record = OtpTemp.builder()
                 .phoneNumber(phone)
+                .visitorId(visitorId)
                 .otpCode(otpCode)
                 .expiresAt(LocalDateTime.now().plusMinutes(OTP_VALIDITY_MINUTES))
                 .consumed(false)
@@ -89,7 +109,8 @@ public class VisitorOtpService {
         otpTempRepository.save(record);
 
         // TODO: integrate SMS gateway (MSG91 / CDAC) to send `otpCode` to `phone`
-        log.info("OTP generated for phone={} (mock SMS gateway pending)", RequestContextUtil.maskPhone(phone));
+        log.info("OTP generated purpose={} phone={} visitorId={} (mock SMS gateway pending)",
+                purpose, RequestContextUtil.maskPhone(phone), visitorId);
         return otpCode;
     }
 
@@ -104,9 +125,22 @@ public class VisitorOtpService {
      */
     @Transactional
     public String validateOtpAndLogin(String phone, String submittedOtp) {
+        List<Visitor> visitors = visitorRepository.findByPhoneNumber(phone);
+        if (visitors.size() != 1) {
+            throw new VisitorRegistrationValidationException(
+                    ErrorCodeConstants.INVALID_VISITOR_DATA,
+                    "Unable to resolve a single visitor for this mobile number"
+            );
+        }
+
+        return validateOtpAndLogin(phone, submittedOtp, visitors.get(0).getId());
+    }
+
+    @Transactional
+    public String validateOtpAndLogin(String phone, String submittedOtp, Long visitorId) {
         Optional<OtpTemp> optRecord =
-                otpTempRepository.findTopByPhoneNumberAndConsumedFalseAndExpiresAtAfterOrderByCreatedAtDesc(
-                        phone, LocalDateTime.now());
+                otpTempRepository.findTopByPhoneNumberAndVisitorIdAndConsumedFalseAndExpiresAtAfterOrderByCreatedAtDesc(
+                        phone, visitorId, LocalDateTime.now());
 
         if (!optRecord.isPresent()) {
             throw new OtpExpiredException();
@@ -130,10 +164,10 @@ public class VisitorOtpService {
         otpTempRepository.save(record);
 
         // Build a minimal UserDetails to feed into JwtService
-        Visitor visitor = visitorRepository.findByPhoneNumber(phone)
+        Visitor visitor = visitorRepository.findById(visitorId)
                 .orElseThrow(() -> new VisitorRegistrationValidationException(
-                    ErrorCodeConstants.MOBILE_NOT_FOUND,
-                    ErrorCodeConstants.format(ErrorCodeConstants.MOBILE_NOT_FOUND_MSG, phone)
+                    ErrorCodeConstants.VISITOR_NOT_FOUND,
+                    "Visitor not found"
                 ));
 
         UserDetails userDetails = User.builder()
@@ -180,6 +214,7 @@ public class VisitorOtpService {
         
         OtpTemp record = OtpTemp.builder()
                 .phoneNumber(phone)
+                .visitorId(null)
                 .otpCode(otpCode)
                 .expiresAt(LocalDateTime.now().plusMinutes(OTP_VALIDITY_MINUTES))
                 .consumed(false)
@@ -203,7 +238,7 @@ public class VisitorOtpService {
     @Transactional
     public boolean validateKycOtp(String phone, String submittedOtp) {
         Optional<OtpTemp> optRecord =
-                otpTempRepository.findTopByPhoneNumberAndConsumedFalseAndExpiresAtAfterOrderByCreatedAtDesc(
+                otpTempRepository.findTopByPhoneNumberAndVisitorIdIsNullAndConsumedFalseAndExpiresAtAfterOrderByCreatedAtDesc(
                         phone, LocalDateTime.now());
 
         if (!optRecord.isPresent()) {

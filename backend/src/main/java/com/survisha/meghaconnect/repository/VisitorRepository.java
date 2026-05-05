@@ -11,7 +11,8 @@ import java.util.List;
 
 @Repository
 public interface VisitorRepository extends JpaRepository<Visitor, Long>, JpaSpecificationExecutor<Visitor> {
-    Optional<Visitor> findByPhoneNumber(String phoneNumber);
+    List<Visitor> findByPhoneNumber(String phoneNumber);
+    List<Visitor> findByPhoneNumberAndEpicNumber(String phoneNumber, String epicNumber);
     Optional<Visitor> findByEpicNumber(String epicNumber);
     Optional<Visitor> findByAadhaarNumber(String aadhaarNumber);
     boolean existsByPhoneNumber(String phoneNumber);

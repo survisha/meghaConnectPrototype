@@ -78,9 +78,6 @@
             <mat-icon>error</mat-icon>
             <span>{{ errorMsg }}</span>
           </div>
-          <div *ngIf="errorMsg.includes('register')" style="margin-top:0.75rem">
-            
-          </div>
         </div>
 
         <button id="publicLogin_generateOtpBtn" mat-raised-button color="primary" class="full-width" [disabled]="loading" (click)="checkMobile()">

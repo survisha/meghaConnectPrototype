@@ -64,6 +64,7 @@ interface RegistrationCheckResponse {
   success: boolean;
   mobileExists: boolean;
   epicMobileExists: boolean;
+  epicExists: boolean;
   message: string;
 }
 
@@ -1183,7 +1184,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   private applyRegistrationCheck(res: RegistrationCheckResponse) {
     this.duplicateRegistrationBlocked = !!res.epicMobileExists;
 
-    if (res.epicMobileExists) {
+    if (res.epicMobileExists || res.epicExists) {
       this.mobileValidationType = 'error';
       this.mobileValidationMsg = res.message || this.t('USER_ALREADY_REGISTERED');
       return;

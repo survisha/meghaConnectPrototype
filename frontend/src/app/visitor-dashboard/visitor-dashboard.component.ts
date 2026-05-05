@@ -16,6 +16,7 @@ interface VisitorProfile {
   district: string;
   kycStatus?: string;
   kycConfidence?: number;
+  livePhotoPath?: string;
 }
 
 interface VisitorCard { label: string; value: string | number; icon: string; color: string; bg: string; }
@@ -36,6 +37,8 @@ export class VisitorDashboardComponent implements OnInit {
   loading = false;
 
   visitorProfile: VisitorProfile | null = null;
+  visitorPhotoUrl = '';
+  photoLoadFailed = false;
 
   totalVisits = 0;
 
@@ -51,8 +54,10 @@ export class VisitorDashboardComponent implements OnInit {
       kycType: 'AADHAAR',
       kycVerified: true,
       kycStatus: 'PHOTO_MATCHED',
-      kycConfidence: 94
+      kycConfidence: 94,
+      livePhotoPath: ''
     };
+    this.updateVisitorPhotoUrl();
 
     this.myAppointments = [
       { id: 'APT-2024-001', title: 'Meeting with CM regarding Road Development', status: 'SCHEDULED', date: '2024-03-28 11:00 AM' },
@@ -93,10 +98,24 @@ export class VisitorDashboardComponent implements OnInit {
         this.loading = false;
         if (res.success) {
           this.visitorProfile = res;
+          this.updateVisitorPhotoUrl();
         }
       },
       error: () => { this.loading = false; }
     });
+  }
+
+  private updateVisitorPhotoUrl() {
+    this.photoLoadFailed = false;
+    const path = (this.visitorProfile?.livePhotoPath || '').trim();
+    if (!path) {
+      this.visitorPhotoUrl = '';
+      return;
+    }
+
+    // Best-effort: apiUrl is usually `${origin}/api/v1`, while uploads live at `${origin}/uploads`.
+    const origin = environment.apiUrl.replace(/\/api\/v1\/?$/i, '');
+    this.visitorPhotoUrl = `${origin}/uploads/${path}`;
   }
 
   getStatusSeverity(s: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' | undefined {

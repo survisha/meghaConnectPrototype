@@ -44,6 +44,10 @@ public class VisitorService {
     public Optional<Visitor> findByAadhaar(String aadhaar) {
         return visitorRepository.findByAadhaarNumber(aadhaar);
     }
+    
+    public boolean existsByEpicNumber(String epicNumber) {
+        return visitorRepository.existsByEpicNumber(epicNumber);
+    }
 
     public boolean existsByPhone(String phone) {
         return visitorRepository.existsByPhoneNumber(phone);

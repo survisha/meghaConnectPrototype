@@ -37,8 +37,20 @@
 
     <!-- Visitor Profile -->
     <div class="section-card profile-card">
-      <div class="section-card-header">
-        <i class="pi pi-id-card"></i> Visitor Profile
+      <div class="section-card-header profile-header">
+        <div class="profile-header-left">
+          <i class="pi pi-id-card"></i> Visitor Profile
+        </div>
+        <div class="profile-avatar" *ngIf="!loading && visitorProfile">
+          <img
+            *ngIf="visitorPhotoUrl && !photoLoadFailed"
+            [src]="visitorPhotoUrl"
+            alt="Visitor photo"
+            (error)="photoLoadFailed = true" />
+          <div *ngIf="!visitorPhotoUrl || photoLoadFailed" class="avatar-fallback" aria-label="Visitor avatar">
+            <i class="pi pi-user"></i>
+          </div>
+        </div>
       </div>
       <div class="card-body">
         <div *ngIf="loading" class="empty-state">Loading profile…</div>
@@ -77,9 +89,7 @@
               <span class="profile-label">AI KYC Confidence</span>
               <div style="width:100%">
                 <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:0.25rem">
-                  <span style="font-weight:600" [style.color]="kycConfidenceDisplay.color">
-                    Photo Match Score: {{ kycConfidenceDisplay.score }}%
-                  </span>
+                  
                   <span style="font-weight:600" [style.color]="kycConfidenceDisplay.color">
                     KYC Status: {{ kycConfidenceDisplay.label }}
                   </span>

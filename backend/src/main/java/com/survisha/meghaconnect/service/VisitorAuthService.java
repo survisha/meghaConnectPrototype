@@ -64,6 +64,7 @@ public class VisitorAuthService {
 
         boolean mobileExists = visitorService.existsByPhone(phone);
         boolean epicMobileExists = epic != null && visitorService.existsByEpicAndPhone(epic, phone);
+        boolean epicExists = epic != null && visitorService.existsByEpicNumber(epic);
 
         log.info("Visitor registration duplicate check mobileExists={} epicMobileExists={} phone={}",
                 mobileExists, epicMobileExists, RequestContextUtil.maskPhone(phone));
@@ -72,8 +73,9 @@ public class VisitorAuthService {
         response.put("success", true);
         response.put("mobileExists", mobileExists);
         response.put("epicMobileExists", epicMobileExists);
+        response.put("epicExists", epicExists);
 
-        if (epicMobileExists) {
+        if (epicMobileExists || epicExists) {
             response.put("message", ErrorCodeConstants.DUPLICATE_EPIC_MOBILE_REGISTRATION_MSG);
         } else if (mobileExists) {
             response.put("message", ErrorCodeConstants.MOBILE_ALREADY_REGISTERED_WARNING_MSG);

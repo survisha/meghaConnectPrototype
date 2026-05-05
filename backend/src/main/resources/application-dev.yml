@@ -111,6 +111,7 @@ meghaconnect:
   storage:
     base-path: ${FILE_UPLOAD_ROOT:/opt/meghaconnect/uploads/dev}
     base-url: ${STORAGE_BASE_URL:https://meghaconnect.cloud/api/uploads}
+    visitor-photo-path: ${STORAGE_VISITOR_PHOTO_PATH:visitor-photos}
     allowed-types: ${STORAGE_ALLOWED_TYPES:pdf,jpg,jpeg,png,doc,docx}
     max-file-size-mb: ${STORAGE_MAX_FILE_SIZE_MB:25}
   public-darbar:

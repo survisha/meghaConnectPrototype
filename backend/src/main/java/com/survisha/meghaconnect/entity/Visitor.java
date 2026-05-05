@@ -51,6 +51,9 @@ public class Visitor extends BaseEntity {
     @Column(length = 500)
     private String photoStoragePath;
 
+    @Column(length = 500)
+    private String livePhotoPath;
+
     /** Legacy short path – kept for backward-compat; prefer photoStoragePath. */
     @Column(length = 200)
     private String photoPath;
@@ -66,6 +69,9 @@ public class Visitor extends BaseEntity {
 
     @Column(length = 100)
     private String booth;
+
+    @Column(length = 200)
+    private String boothVillage;
 
     @Column(length = 100)
     private String village;
@@ -83,6 +89,14 @@ public class Visitor extends BaseEntity {
 
     @Column(length = 500)
     private String address;
+
+    @Column(length = 500)
+    private String addressLine;
+
+    private Boolean outsideMeghalaya;
+
+    @Column(length = 255)
+    private String location;
 
     @Column(length = 100)
     private String borrowerAddressHouseNumber;

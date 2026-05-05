@@ -54,8 +54,13 @@ public class PublicRegistrationDto {
     private String district;
     private String constituency;
     private String booth;
+    private String boothVillage;
     private String village;
     private String address;
+    private String addressLine;
+    private String houseNoColony;
+    private Boolean outsideMeghalaya;
+    private String location;
 
     // ── KYC result ───────────────────────────────────────────────
     /**
@@ -79,9 +84,13 @@ public class PublicRegistrationDto {
 
     /**
      * Base64-encoded live photo captured during KYC.
-     * Stored in the database for demo; production should use object storage.
+     * Accepted only as transport input; backend stores it as a file and never
+     * persists the base64 content in the database.
      */
     private String livePhotoBase64;
+
+    /** File path/key created by the backend after storing livePhotoBase64. */
+    private String livePhotoPath;
 
     /**
      * Flag indicating the user provided a manual phone number (not retrieved from ID API).

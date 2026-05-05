@@ -633,25 +633,39 @@ mat-checkbox {
   margin-bottom: 1rem;
 }
 
+.autofill-helper {
+  margin: -0.25rem 0 1rem;
+}
+
+.outside-state-row {
+  margin: 0 0 1rem;
+}
+
 :host ::ng-deep mat-checkbox.outside-state-checkbox {
-  display: inline-flex !important;
-  align-items: center !important;
+  display: block !important;
   width: 100% !important;
-  margin-bottom: 1rem;
+  margin: 0 !important;
 }
 
+:host ::ng-deep mat-checkbox.outside-state-checkbox .mdc-form-field,
 :host ::ng-deep mat-checkbox.outside-state-checkbox .mat-checkbox-layout {
-  display: inline-flex !important;
+  display: flex !important;
   align-items: center !important;
-  gap: 0.5rem !important;
-  vertical-align: middle !important;
+  gap: 8px !important;
+  width: 100% !important;
 }
 
+:host ::ng-deep mat-checkbox.outside-state-checkbox .mdc-checkbox,
+:host ::ng-deep mat-checkbox.outside-state-checkbox .mat-checkbox-inner-container {
+  flex: 0 0 auto !important;
+}
+
+:host ::ng-deep mat-checkbox.outside-state-checkbox label,
 :host ::ng-deep mat-checkbox.outside-state-checkbox .mat-checkbox-label {
   margin: 0 !important;
-  line-height: 1.2 !important;
-  white-space: nowrap !important;
-  vertical-align: middle !important;
+  line-height: 1.35 !important;
+  white-space: normal !important;
+  color: #374151 !important;
 }
 
 :host ::ng-deep mat-checkbox.outside-state-checkbox .mat-checkbox-frame,

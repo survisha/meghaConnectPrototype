@@ -400,9 +400,8 @@
               <mat-icon>refresh</mat-icon> {{ 'RETAKE_PHOTO' | translate }}
             </button>
 
-            <button *ngIf="capturedPhotoUrl && !isCameraActive" mat-raised-button color="primary" class="flex-1" [disabled]="loading" style="white-space:nowrap" (click)="validateFace()">
-              <span *ngIf="!loading"><mat-icon>arrow_forward</mat-icon> {{ 'VALIDATE_AND_CONTINUE' | translate }}</span>
-              <span *ngIf="loading"><mat-icon>autorenew</mat-icon> {{ 'VALIDATING' | translate }}</span>
+            <button *ngIf="capturedPhotoUrl && !isCameraActive" mat-raised-button color="primary" class="flex-1" [disabled]="loading" style="white-space:nowrap" (click)="continueAfterPhotoCapture()">
+              <span><mat-icon>arrow_forward</mat-icon> {{ 'CONTINUE_TO_DETAILS' | translate }}</span>
             </button>
           </div>
 
@@ -444,6 +443,14 @@
               <div>
                 <label>{{ 'DISTRICT' | translate }}</label>
                 <span>{{ form.district || 'N/A' }}</span>
+              </div>
+              <div>
+                <label>{{ 'CONSTITUENCY' | translate }}</label>
+                <span>{{ form.constituency || 'N/A' }}</span>
+              </div>
+              <div>
+                <label>{{ 'BOOTH_VILLAGE' | translate }}</label>
+                <span>{{ form.boothVillage || form.booth || 'N/A' }}</span>
               </div>
               <div *ngIf="form.idType === 'EPIC'">
                 <label>{{ 'EPIC' | translate }}</label>
@@ -508,37 +515,67 @@
             </mat-select>
           </mat-form-field>
 
-          <div class="form-group" style="margin-top:1rem;">
-            <mat-checkbox id="register_outsideStateCheckbox" [(ngModel)]="form.outsideState" class="outside-state-checkbox" style="display:flex; align-items:center; width:100%; gap:0.5rem; margin:0; padding:0;">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>{{ 'ADDRESS_HOUSE_COLONY' | translate }}</mat-label>
+            <textarea
+              matInput
+              rows="3"
+              id="register_addressLineInput"
+              [(ngModel)]="form.addressLine"
+              [placeholder]="'ADDRESS_HOUSE_COLONY_PLACEHOLDER' | translate"></textarea>
+          </mat-form-field>
+
+          <div class="kyc-notice autofill-helper">
+            <i class="pi pi-info-circle"></i>
+            {{ 'AUTO_FILL_MISSING_DETAILS_HELPER' | translate }}
+          </div>
+
+          <div class="form-group outside-state-row">
+            <mat-checkbox
+              id="register_outsideStateCheckbox"
+              [ngModel]="form.outsideState"
+              (ngModelChange)="onOutsideMeghalayaChange($event)"
+              class="outside-state-checkbox">
               {{ 'APPLICANT_OUTSIDE_MEGHALAYA' | translate }}
             </mat-checkbox>
           </div>
 
-          <ng-container *ngIf="!form.outsideState">
-            <div class="form-row two-col">
-              <mat-form-field appearance="outline" style="flex:1">
-                <mat-label>{{ 'DISTRICT' | translate }}</mat-label>
-                <mat-select id="register_districtSelect" [(ngModel)]="form.district">
-                  <mat-option value="">{{ 'SELECT_DISTRICT' | translate }}</mat-option>
-                  <mat-option *ngFor="let d of districts" [value]="d">{{ d }}</mat-option>
-                </mat-select>
-              </mat-form-field>
-              <mat-form-field appearance="outline" style="flex:1">
-                <mat-label>{{ 'CONSTITUENCY' | translate }}</mat-label>
-                <input matInput type="text" [(ngModel)]="form.constituency" [placeholder]="'CONSTITUENCY_PLACEHOLDER' | translate" />
-              </mat-form-field>
-            </div>
-            <div class="form-row two-col">
-              <mat-form-field appearance="outline" style="flex:1">
-                <mat-label>{{ 'BOOTH_OR_VILLAGE' | translate }}</mat-label>
-                <input matInput type="text" [(ngModel)]="form.booth" [placeholder]="'BOOTH_OR_VILLAGE_PLACEHOLDER' | translate" />
-              </mat-form-field>
-              <mat-form-field appearance="outline" style="flex:1">
-                <mat-label>{{ 'VILLAGE_DIFFERENT' | translate }}</mat-label>
-                <input matInput type="text" [(ngModel)]="form.village" [placeholder]="'VILLAGE_NAME' | translate" />
-              </mat-form-field>
-            </div>
-          </ng-container>
+          <div class="form-row two-col">
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'DISTRICT' | translate }} <span *ngIf="!form.outsideState">*</span></mat-label>
+              <input
+                matInput
+                id="register_districtInput"
+                type="text"
+                [(ngModel)]="form.district"
+                [placeholder]="'DISTRICT_PLACEHOLDER' | translate" />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'CONSTITUENCY' | translate }}</mat-label>
+              <input
+                matInput
+                id="register_constituencyInput"
+                type="text"
+                [(ngModel)]="form.constituency"
+                [placeholder]="'CONSTITUENCY_PLACEHOLDER' | translate" />
+            </mat-form-field>
+          </div>
+
+          <div class="form-row two-col">
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'BOOTH_VILLAGE' | translate }}</mat-label>
+              <input
+                matInput
+                id="register_boothVillageInput"
+                type="text"
+                [(ngModel)]="form.boothVillage"
+                [placeholder]="'BOOTH_VILLAGE_PLACEHOLDER' | translate" />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'VILLAGE_DIFFERENT' | translate }}</mat-label>
+              <input matInput type="text" [(ngModel)]="form.village" [placeholder]="'VILLAGE_NAME' | translate" />
+            </mat-form-field>
+          </div>
 
           <ng-container *ngIf="form.outsideState">
             <div class="kyc-notice">
@@ -556,7 +593,7 @@
             <button mat-stroked-button color="primary" (click)="currentStep = 'photo-capture'">
               <i class="pi pi-arrow-left"></i> {{ 'BACK' | translate }}
             </button>
-            <button mat-raised-button color="primary" class="flex-1" [disabled]="loading || !form.designation" (click)="submitRegistration()">
+            <button mat-raised-button color="primary" class="flex-1" [disabled]="!canSubmitRegistration" (click)="submitRegistration()">
               <span *ngIf="!loading"><mat-icon>check</mat-icon> {{ 'COMPLETE_REGISTRATION' | translate }}</span>
               <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> {{ 'REGISTERING' | translate }}</span>
             </button>

@@ -26,11 +26,14 @@ interface VisitorRegistrationForm {
   phoneNumber: string;
   email: string;
   address: string;
+  addressLine: string;
   state: string;
   district: string;
   constituency: string;
   booth: string;
+  boothVillage: string;
   village: string;
+  location: string;
   designation: string;
   gender: string;
   dateOfBirth: string;
@@ -74,6 +77,8 @@ interface VerifiedKycData {
   dob?: string;
   state?: string;
   district?: string;
+  constituency?: string;
+  boothVillage?: string;
   address?: string;
   epicNumber?: string;
   maskedIdentityNumber?: string;
@@ -119,11 +124,14 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     phoneNumber: '',
     email: '',
     address: '',
+    addressLine: '',
     state: '',
     district: '',
     constituency: '',
     booth: '',
+    boothVillage: '',
     village: '',
+    location: '',
     designation: '',
     gender: '',
     dateOfBirth: '',
@@ -534,6 +542,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     const polling = data.pollingdetails || data.pollingDetails || {};
     const state = data.borroweraddressstate || data.state || response?.state || '';
     const district = data.borroweraddressdistrict || data.district || response?.district || '';
+    const constituency = data.assemblyconstituencyname || data.assemblyConstituencyName || data.constituency || response?.constituency || '';
+    const boothVillage = polling.pollingstationpartname || polling.pollingStationPartName || polling.pollingStationPartname || '';
     const houseNumber = data.borroweraddresshousenumber || '';
     const sectionNumber = data.borroweraddresssectionnumber || '';
     const nameMatchScore = Number(data.namematchscore ?? response?.nameMatchScore ?? 0);
@@ -549,6 +559,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       dob: this.normalizeDate(data.borrowerdateofbirth),
       state,
       district,
+      constituency,
+      boothVillage,
       address: this.composeEpicAddress(houseNumber, sectionNumber, district, state),
       epicNumber,
       maskedIdentityNumber: this.maskEpic(epicNumber),
@@ -582,6 +594,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       aadhaarAppId: response?.appId || '',
       state: '',
       district: '',
+      constituency: '',
+      boothVillage: '',
       pollingPartNo: '',
       pollingStationAddress: '',
     };
@@ -594,12 +608,16 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       dateOfBirth: verified.dob || this.form.dateOfBirth,
       state: verified.state || this.form.state,
       district: verified.district || this.form.district,
+      constituency: verified.constituency || this.form.constituency,
+      booth: verified.boothVillage || this.form.booth,
+      boothVillage: verified.boothVillage || this.form.boothVillage,
       address: verified.address || this.form.address,
+      addressLine: verified.houseNumber || this.form.addressLine,
       epicNumber: verified.epicNumber || this.form.epicNumber,
       phoneNumber: this.form.idType === 'AADHAAR'
         ? this.extractUsableMobileFromAadhaar(verified) || this.form.phoneNumber
         : this.manualPhone || this.form.phoneNumber,
-      kycStatus: this.form.kycStatus || 'PHOTO_MATCHED',
+      kycStatus: this.form.kycStatus || (verified.kycType === 'EPIC' ? 'DEMOGRAPHIC_MATCHED' : 'PHOTO_MATCHED'),
       borrowerAddressHouseNumber: verified.houseNumber || '',
       borrowerAddressSectionNumber: verified.sectionNumber || '',
       relativeNameOnVoterId: verified.relativeName || '',
@@ -616,6 +634,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
     if (verified.state && verified.state.toLowerCase() !== 'meghalaya') {
       this.form.outsideState = true;
+      this.form.location = 'NA';
     }
   }
 
@@ -669,6 +688,13 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
   get canVerifyOtp(): boolean {
     return this.otpCode.length === 6;
+  }
+
+  get canSubmitRegistration(): boolean {
+    return !this.loading
+      && !!this.form.designation
+      && !!this.form.livePhoto
+      && (this.form.outsideState || !!this.form.district.trim());
   }
 
   verifyOtp() {
@@ -790,6 +816,37 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
   // ── STEP 4: FACE VALIDATION ─────────────────────────────────────────────
 
+  continueAfterPhotoCapture() {
+    if (!this.verifiedKycData) {
+      this.errorMsg = this.t('PLEASE_COMPLETE_ID_KYC');
+      return;
+    }
+
+    if (!this.form.livePhoto) {
+      this.errorMsg = this.t('PLEASE_CAPTURE_LIVE_PHOTO');
+      return;
+    }
+
+    // Face validation skipped because EPIC does not provide reference photo.
+    if (this.form.idType === 'EPIC') {
+      this.kycStatus = this.manualVerification ? 'MANUAL_VERIFICATION_REQUIRED' : 'DEMOGRAPHIC_MATCHED';
+      this.form.kycStatus = this.kycStatus;
+      this.kycConfidenceScore = this.manualVerification ? 45 : 75;
+      this.kycConfidenceLabel = this.manualVerification
+        ? this.t('CONFIDENCE_MANUAL')
+        : this.t('CONFIDENCE_DEMOGRAPHIC');
+    } else if (!this.form.kycStatus) {
+      this.kycStatus = 'PHOTO_MATCHED';
+      this.form.kycStatus = 'PHOTO_MATCHED';
+      this.kycConfidenceScore = this.kycConfidenceScore || 90;
+      this.kycConfidenceLabel = this.kycConfidenceLabel || this.t('CONFIDENCE_VERIFIED');
+    }
+
+    this.errorMsg = '';
+    this.successMsg = this.t('PHOTO_CAPTURED_CONTINUE_DETAILS');
+    this.currentStep = 'additional-details';
+  }
+
   validateFace() {
     if (!this.verifiedKycData) {
       this.errorMsg = this.t('PLEASE_COMPLETE_ID_KYC');
@@ -853,17 +910,34 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (!this.form.livePhoto) {
+      this.errorMsg = this.t('PLEASE_CAPTURE_LIVE_PHOTO');
+      return;
+    }
+
+    if (!this.form.outsideState && !this.form.district.trim()) {
+      this.errorMsg = this.t('ERROR_DISTRICT_REQUIRED');
+      return;
+    }
+
     this.loading = true;
+    const addressLine = (this.form.addressLine || this.form.address || '').trim();
+    const boothVillage = (this.form.boothVillage || this.form.booth || '').trim();
     const payload: Record<string, string | boolean | number | null | undefined> = {
       fullName: this.form.fullName.trim(),
       phoneNumber: this.form.phoneNumber || this.maskedPhone.replace(/\*+/g, '').trim(),
       email: this.form.email.trim(),
-      address: this.form.address.trim(),
+      address: addressLine,
+      addressLine,
+      houseNoColony: addressLine,
       state: this.form.state.trim(),
       district: this.form.district.trim() || (this.form.outsideState ? 'NA' : ''),
       constituency: this.form.outsideState ? 'NA' : this.form.constituency.trim(),
-      booth: this.form.outsideState ? 'NA' : (this.form.booth || '').trim(),
+      booth: this.form.outsideState ? 'NA' : boothVillage,
+      boothVillage: this.form.outsideState ? 'NA' : boothVillage,
       village: this.form.outsideState ? 'NA' : (this.form.village || '').trim(),
+      outsideMeghalaya: this.form.outsideState,
+      location: this.form.outsideState ? 'NA' : (this.form.location || '').trim(),
       designation: this.form.designation,
       gender: this.form.gender,
       dateOfBirth: this.form.dateOfBirth,
@@ -937,6 +1011,17 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.errorMsg = '';
   }
 
+  onOutsideMeghalayaChange(checked: boolean) {
+    this.form.outsideState = checked;
+    if (checked) {
+      this.form.location = 'NA';
+      return;
+    }
+    if (this.form.location === 'NA') {
+      this.form.location = '';
+    }
+  }
+
   /**
    * Reset all KYC-related state when switching between EPIC and AADHAAR
    * This clears any previous errors, operations, and ongoing processes
@@ -998,8 +1083,14 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     // Only reset fields that are auto-populated during KYC
     this.form.fullName = '';
     this.form.address = '';
+    this.form.addressLine = '';
     this.form.state = '';
     this.form.district = '';
+    this.form.constituency = '';
+    this.form.booth = '';
+    this.form.boothVillage = '';
+    this.form.village = '';
+    this.form.location = '';
     this.form.gender = '';
     this.form.dateOfBirth = '';
     this.form.borrowerAddressHouseNumber = '';
@@ -1153,11 +1244,14 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       phoneNumber: '',
       email: '',
       address: '',
+      addressLine: '',
       state: '',
       district: '',
       constituency: '',
       booth: '',
+      boothVillage: '',
       village: '',
+      location: '',
       designation: '',
       gender: '',
       dateOfBirth: '',

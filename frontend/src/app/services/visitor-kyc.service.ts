@@ -76,6 +76,10 @@ export interface EpicVerificationRequest {
 export interface PollingDetailsResponse {
   pollingpartno?: string;
   pollingstationaddress?: string;
+  pollingstationpartname?: string;
+  pollingPartNo?: string;
+  pollingStationAddress?: string;
+  pollingStationPartName?: string;
 }
 
 export interface EpicVerificationData {
@@ -91,6 +95,8 @@ export interface EpicVerificationData {
   borrowerdateofbirth?: string;
   borroweraddressstate?: string;
   borroweraddressdistrict?: string;
+  assemblyconstituencyname?: string;
+  assemblyConstituencyName?: string;
   borroweraddresshousenumber?: string;
   borroweraddresssectionnumber?: string;
   accountnumber?: string;
@@ -175,8 +181,8 @@ export class VisitorKycService {
   }
 
   /**
-   * Step 3: Validate face by comparing live photo with ID photo
-   * Returns KYC status (PHOTO_MATCHED or DEMOGRAPHIC_MATCHED)
+   * Backward-compatible face validation endpoint. The EPIC registration flow
+   * does not call this because EPIC does not provide a reference photo.
    */
   validateFace(request: FaceValidationRequest): Observable<FaceValidationResponse> {
     return this.http.post<FaceValidationResponse>(`${environment.apiUrl}/visitor/validate-face`, request);

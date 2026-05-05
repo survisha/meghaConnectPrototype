@@ -145,7 +145,13 @@ public class VisitorAuthService {
         response.put("kycVerified", Boolean.TRUE.equals(visitor.getKycVerified()));
         response.put("kycStatus", visitor.getKycStatus() != null ? visitor.getKycStatus() : "PENDING");
         response.put("address", visitor.getAddress() != null ? visitor.getAddress() : "");
+        response.put("addressLine", visitor.getAddressLine() != null ? visitor.getAddressLine() : "");
         response.put("district", visitor.getDistrict() != null ? visitor.getDistrict() : "");
+        response.put("constituency", visitor.getConstituency() != null ? visitor.getConstituency() : "");
+        response.put("boothVillage", visitor.getBoothVillage() != null ? visitor.getBoothVillage() : "");
+        response.put("outsideMeghalaya", Boolean.TRUE.equals(visitor.getOutsideMeghalaya()));
+        response.put("location", visitor.getLocation() != null ? visitor.getLocation() : "");
+        response.put("livePhotoPath", visitor.getLivePhotoPath() != null ? visitor.getLivePhotoPath() : "");
         return response;
     }
 }

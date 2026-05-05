@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.List;
@@ -22,6 +23,7 @@ import java.util.Optional;
 public class VisitorService {
 
     private final VisitorRepository visitorRepository;
+    private final FileStorageService fileStorageService;
 
     public Optional<Visitor> findByPhone(String phone) {
         return visitorRepository.findByPhoneNumber(phone);
@@ -147,6 +149,21 @@ public class VisitorService {
 
         boolean kycVerified = "PHOTO_MATCHED".equals(kycStatus) || "DEMOGRAPHIC_MATCHED".equals(kycStatus);
 
+        boolean outsideMeghalaya = Boolean.TRUE.equals(dto.getOutsideMeghalaya());
+        if (!outsideMeghalaya && trimToNull(dto.getDistrict()) == null) {
+            throw new VisitorRegistrationValidationException(
+                    ErrorCodeConstants.MISSING_REQUIRED_FIELD,
+                    ErrorCodeConstants.format(ErrorCodeConstants.MISSING_REQUIRED_FIELD_MSG, "district")
+            );
+        }
+
+        String photoPath = resolveLivePhotoPath(dto);
+        String addressLine = firstNonBlank(dto.getAddressLine(), dto.getHouseNoColony(), dto.getAddress());
+        String boothVillage = firstNonBlank(dto.getBoothVillage(), dto.getBooth());
+        String location = outsideMeghalaya ? "NA" : trimToNull(dto.getLocation());
+
+        // TODO production hardening: encrypt or tokenize stored file paths before
+        // persisting once the production file-system server contract is finalized.
         // TODO production hardening: validate dto.kycReferenceId against a
         // server-side KYC verification cache/audit record before saving. The
         // current UAT flow only stores the final registration after frontend KYC.
@@ -165,13 +182,18 @@ public class VisitorService {
                 .dateOfBirth(parseDate(dto.getDateOfBirth()))
                 .gender(trimToNull(dto.getGender()))
                 .state(trimToNull(dto.getState()))
-                .address(dto.getAddress())
+                .address(addressLine)
                 .designation(dto.getDesignation())
-                .district(dto.getDistrict())
-                .constituency(dto.getConstituency())
-                .booth(dto.getBooth())
-                .village(dto.getVillage())
-                .photoStoragePath(dto.getPhotoStoragePath())
+                .district(outsideMeghalaya ? firstNonBlank(dto.getDistrict(), "NA") : trimToNull(dto.getDistrict()))
+                .constituency(outsideMeghalaya ? firstNonBlank(dto.getConstituency(), "NA") : trimToNull(dto.getConstituency()))
+                .booth(outsideMeghalaya ? firstNonBlank(dto.getBooth(), "NA") : trimToNull(dto.getBooth()))
+                .boothVillage(outsideMeghalaya ? firstNonBlank(boothVillage, "NA") : boothVillage)
+                .village(outsideMeghalaya ? firstNonBlank(dto.getVillage(), "NA") : trimToNull(dto.getVillage()))
+                .location(location)
+                .outsideMeghalaya(outsideMeghalaya)
+                .photoStoragePath(photoPath)
+                .livePhotoPath(photoPath)
+                .addressLine(addressLine)
                 .borrowerAddressHouseNumber(trimToNull(dto.getBorrowerAddressHouseNumber()))
                 .borrowerAddressSectionNumber(trimToNull(dto.getBorrowerAddressSectionNumber()))
                 .relativeNameOnVoterId(trimToNull(dto.getRelativeNameOnVoterId()))
@@ -205,6 +227,33 @@ public class VisitorService {
         }
     }
 
+    private String resolveLivePhotoPath(PublicRegistrationDto dto) {
+        String existingPath = firstNonBlank(dto.getLivePhotoPath(), dto.getPhotoStoragePath());
+        if (existingPath != null) {
+            return existingPath;
+        }
+
+        if (trimToNull(dto.getLivePhotoBase64()) == null) {
+            throw new VisitorRegistrationValidationException(
+                    ErrorCodeConstants.INVALID_IMAGE_FORMAT,
+                    "Captured image is required."
+            );
+        }
+
+        try {
+            return fileStorageService.storeVisitorPhotoBase64(dto.getLivePhotoBase64());
+        } catch (VisitorRegistrationValidationException e) {
+            throw e;
+        } catch (IOException e) {
+            throw new MeghaConnectException(
+                    ErrorCodeConstants.FILE_UPLOAD_FAILED,
+                    "Visitor live photo storage failed.",
+                    500,
+                    e
+            );
+        }
+    }
+
     private LocalDate parseDate(String value) {
         String normalized = trimToNull(value);
         if (normalized == null) {
@@ -229,5 +278,18 @@ public class VisitorService {
             return null;
         }
         return value.trim();
+    }
+
+    private String firstNonBlank(String... values) {
+        if (values == null) {
+            return null;
+        }
+        for (String value : values) {
+            String normalized = trimToNull(value);
+            if (normalized != null) {
+                return normalized;
+            }
+        }
+        return null;
     }
 }

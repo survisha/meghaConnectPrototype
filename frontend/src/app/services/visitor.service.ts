@@ -8,10 +8,15 @@ export interface RegisterVisitorRequest {
   phoneNumber: string;
   epicNumber?: string;
   designation?: string;
+  addressLine?: string;
   district?: string;
   constituency?: string;
   booth?: string;
+  boothVillage?: string;
   village?: string;
+  outsideMeghalaya?: boolean;
+  location?: string;
+  livePhotoBase64?: string;
 }
 
 export interface OtpLoginRequest {

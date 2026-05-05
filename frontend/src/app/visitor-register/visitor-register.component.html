@@ -412,6 +412,64 @@
         <ng-container *ngIf="currentStep === 'additional-details'">
           <div class="section-title">Step 4: Additional Applicant Details</div>
 
+          <div *ngIf="verifiedKycData" class="verified-kyc-panel">
+            <div class="verified-kyc-header">
+              <mat-icon>verified_user</mat-icon>
+              <div>
+                <strong>Verified KYC Details</strong>
+                <span>{{ verifiedKycData.kycType }} details were auto-populated from KYC verification.</span>
+              </div>
+            </div>
+
+            <div class="verified-kyc-grid">
+              <div>
+                <label>Name</label>
+                <span>{{ form.fullName || 'N/A' }}</span>
+              </div>
+              <div>
+                <label>Gender</label>
+                <span>{{ form.gender || 'N/A' }}</span>
+              </div>
+              <div>
+                <label>Date of Birth</label>
+                <span>{{ form.dateOfBirth || 'N/A' }}</span>
+              </div>
+              <div>
+                <label>State</label>
+                <span>{{ form.state || 'N/A' }}</span>
+              </div>
+              <div>
+                <label>District</label>
+                <span>{{ form.district || 'N/A' }}</span>
+              </div>
+              <div *ngIf="form.idType === 'EPIC'">
+                <label>EPIC</label>
+                <span>{{ form.maskedIdentityNumber || form.epicNumber || 'N/A' }}</span>
+              </div>
+              <div *ngIf="form.idType === 'EPIC'">
+                <label>Polling Part No.</label>
+                <span>{{ form.pollingPartNo || 'N/A' }}</span>
+              </div>
+              <div *ngIf="form.idType === 'EPIC'">
+                <label>Polling Station</label>
+                <span>{{ form.pollingStationAddress || 'N/A' }}</span>
+              </div>
+              <div *ngIf="form.idType === 'EPIC'">
+                <label>Name Match Score</label>
+                <span>{{ form.nameMatchScore ?? 'N/A' }}</span>
+              </div>
+              <div *ngIf="form.idType === 'AADHAAR'">
+                <label>Aadhaar Ref.</label>
+                <span>{{ form.aadhaarClientTxnId || 'N/A' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="!verifiedKycData" class="status-msg error-msg">
+            <mat-icon>error</mat-icon>
+            <span>Please complete KYC verification before entering visitor details.</span>
+          </div>
+
           <div class="kyc-notice" style="background:#f0fdf4;border-color:#86efac;margin-bottom:1rem">
             <mat-icon style="color:#16a34a">check_circle</mat-icon>
             <span *ngIf="form.kycStatus === 'PHOTO_MATCHED'"><strong>KYC Verified – Photo Match Successful.</strong> Please complete the remaining details.</span>

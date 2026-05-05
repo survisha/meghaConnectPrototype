@@ -79,8 +79,13 @@ export interface PollingDetailsResponse {
 }
 
 export interface EpicVerificationData {
+  state?: string;
+  district?: string;
+  verifiedName?: string;
+  idFound?: boolean;
   voteridnumber?: string;
   borrowernameonvoteridcard?: string;
+  relativemameonvoterid?: string;
   relativenameonvoterid?: string;
   borrowergender?: string;
   borrowerdateofbirth?: string;
@@ -101,13 +106,35 @@ export interface EpicVerificationResponse {
   code: string;                 // HTTP status code (200, 400, 503)
   message: string;              // "Success" or error message
   data?: EpicVerificationData;  // Strongly-typed response data
+  requestId?: string;
+  state?: string;
+  success?: boolean;
+  district?: string;
+  verifiedName?: string;
+  nameMatchScore?: number;
+  idFound?: boolean;
 }
 
 export interface KycDataResponse {
   error: boolean;
   errorCode?: string;
   errorMessage?: string;
-  txnId: string;
+  appId?: string;
+  clientTxnId?: string;
+  txnId?: string;
+  claimData?: {
+    residentName?: string;
+    localResidentName?: string;
+    dob?: string;
+    gender?: string;
+    mobile?: string;
+    maskedMobile?: string;
+    email?: string;
+    maskedEmail?: string;
+    residentImage?: string;
+    address?: string;
+    regionalAddress?: string;
+  };
   claims?: {
     residentName?: string;
     localResidentName?: string;

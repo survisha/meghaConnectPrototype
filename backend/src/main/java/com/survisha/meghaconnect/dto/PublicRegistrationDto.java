@@ -48,6 +48,8 @@ public class PublicRegistrationDto {
 
     // ── Demographics ─────────────────────────────────────────────
     private String dateOfBirth;     // ISO-8601 date string (yyyy-MM-dd)
+    private String gender;
+    private String state;
     private String designation;
     private String district;
     private String constituency;
@@ -61,6 +63,19 @@ public class PublicRegistrationDto {
      * PENDING | PHOTO_MATCHED | DEMOGRAPHIC_MATCHED | FAILED | MANUAL_VERIFICATION_REQUIRED
      */
     private String kycStatus;
+    private String kycReferenceId;
+    private String maskedIdentityNumber;
+    private String relativeNameOnVoterId;
+    private String borrowerAddressHouseNumber;
+    private String borrowerAddressSectionNumber;
+    private String pollingPartNo;
+    private String pollingStationAddress;
+    private Integer nameMatchScore;
+    private Boolean idFound;
+    private String voterIdVerificationRequestId;
+    private String voterIdVerificationCompletionTimestamp;
+    private String aadhaarClientTxnId;
+    private String aadhaarAppId;
 
     /**
      * Base64-encoded live photo captured during KYC.

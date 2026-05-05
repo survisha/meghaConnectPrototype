@@ -16,6 +16,10 @@ public class VisitorKycService {
     private final VisitorOtpService visitorOtpService;
     private final RequestValidationService validationService;
 
+    /**
+     * Backward-compatible mock ID validation. Real EPIC/Aadhaar provider calls
+     * live in KycController and its services.
+     */
     public Map<String, Object> validateIdType(Map<String, String> request) {
         String idType = validationService.requireKycIdType(value(request, ValidationConstants.FIELD_ID_TYPE));
         String idNumber = identityValue(request);

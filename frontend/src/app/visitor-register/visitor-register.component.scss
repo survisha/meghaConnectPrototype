@@ -284,6 +284,65 @@ textarea.input-field { resize: vertical; }
   color: #166534;
 }
 
+.verified-kyc-panel {
+  border: 1px solid #c7d2fe;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.verified-kyc-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  color: #1a237e;
+  margin-bottom: 0.85rem;
+}
+
+.verified-kyc-header mat-icon {
+  flex: 0 0 auto;
+  color: #16a34a;
+}
+
+.verified-kyc-header strong {
+  display: block;
+  font-size: 0.9rem;
+}
+
+.verified-kyc-header span {
+  display: block;
+  color: #6b7280;
+  font-size: 0.78rem;
+  margin-top: 0.15rem;
+}
+
+.verified-kyc-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.verified-kyc-grid div {
+  min-width: 0;
+}
+
+.verified-kyc-grid label {
+  display: block;
+  color: #6b7280;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 0.2rem;
+}
+
+.verified-kyc-grid span {
+  display: block;
+  color: #1f2937;
+  font-size: 0.86rem;
+  overflow-wrap: anywhere;
+}
+
 .success-banner {
   text-align: center;
   padding: 2rem 1rem;

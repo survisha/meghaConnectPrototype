@@ -24,11 +24,14 @@ interface VisitorRegistrationForm {
   phoneNumber: string;
   email: string;
   address: string;
+  state: string;
   district: string;
   constituency: string;
   booth: string;
   village: string;
   designation: string;
+  gender: string;
+  dateOfBirth: string;
   outsideState: boolean;
   idType: 'EPIC' | 'AADHAAR' | '';
   epicNumber: string;
@@ -38,6 +41,18 @@ interface VisitorRegistrationForm {
   livePhoto: string;
   photoFromId: string;
   kycStatus?: string;
+  borrowerAddressHouseNumber?: string;
+  borrowerAddressSectionNumber?: string;
+  relativeNameOnVoterId?: string;
+  pollingPartNo?: string;
+  pollingStationAddress?: string;
+  voterIdVerificationRequestId?: string;
+  voterIdVerificationCompletionTimestamp?: string;
+  nameMatchScore?: number;
+  idFound?: boolean;
+  aadhaarClientTxnId?: string;
+  aadhaarAppId?: string;
+  maskedIdentityNumber?: string;
 }
 
 interface RegistrationCheckResponse {
@@ -45,6 +60,31 @@ interface RegistrationCheckResponse {
   mobileExists: boolean;
   epicMobileExists: boolean;
   message: string;
+}
+
+interface VerifiedKycData {
+  kycVerified: boolean;
+  kycType: 'EPIC' | 'AADHAAR';
+  kycReferenceId?: string;
+  visitorName?: string;
+  mobile?: string;
+  gender?: string;
+  dob?: string;
+  state?: string;
+  district?: string;
+  address?: string;
+  epicNumber?: string;
+  maskedIdentityNumber?: string;
+  houseNumber?: string;
+  sectionNumber?: string;
+  relativeName?: string;
+  pollingPartNo?: string;
+  pollingStationAddress?: string;
+  nameMatchScore?: number;
+  idFound?: boolean;
+  voterIdVerificationCompletionTimestamp?: string;
+  aadhaarClientTxnId?: string;
+  aadhaarAppId?: string;
 }
 
 @Component({
@@ -75,11 +115,14 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     phoneNumber: '',
     email: '',
     address: '',
+    state: '',
     district: '',
     constituency: '',
     booth: '',
     village: '',
     designation: '',
+    gender: '',
+    dateOfBirth: '',
     outsideState: false,
     idType: '',
     epicNumber: '',
@@ -107,6 +150,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   mobileValidationType: MobileValidationType = '';
   mobileCheckLoading = false;
   duplicateRegistrationBlocked = false;
+  verifiedKycData: VerifiedKycData | null = null;
   
   // KYC state
   idValidated = false;
@@ -268,19 +312,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
           this.errorMsg = '';
           this.successMsg = 'EPIC verified successfully. Sending OTP...';
           
-          // Extract verified details from response data
-          const verifiedName = res.data?.borrowernameonvoteridcard || this.form.visitorName;
-          const district = res.data?.borroweraddressdistrict || '';
-          const state = res.data?.borroweraddressstate || '';
-          const nameMatchScore = res.data?.namematchscore || 0;
-          
-          // Auto-populate form with verified details
-          this.form.fullName = verifiedName;
-          this.form.district = district;
-          this.form.address = state + (district ? ', ' + district : '');
-          
-          // Log AI KYC score for display
-          this.kycConfidenceScore = Math.min(nameMatchScore * 10, 100);
+          this.populateVisitorDetailsFromKycResponse(res, 'EPIC');
+          this.kycConfidenceScore = Math.min(this.verifiedKycData?.nameMatchScore ?? 0, 100);
           
           this.idValidated = true;
           this.maskedPhone = this.maskPhone(this.manualPhone);
@@ -407,7 +440,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       // Poll for result from OVSE callback
       this.kycService.getAadhaarKycResult(this.currentTxnId).subscribe({
         next: res => {
-          if (res && !res.error && res.claims) {
+          if (res && !res.error && (res.claims || res.claimData)) {
             // KYC verification successful.
             clearInterval(this.pollingInterval);
             this.successMsg = 'Aadhaar verification successful! Loading your details...';
@@ -440,18 +473,10 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   handleAadhaarKycSuccess(kycData: any) {
     clearInterval(this.pollingInterval);
 
-    // Extract claims from KYC data
-    const claims = kycData.claims || {};
+    const claims = kycData.claimData || kycData.claims || {};
+    this.populateVisitorDetailsFromKycResponse(kycData, 'AADHAAR');
 
-    // Populate form with verified data
-    Object.assign(this.form, {
-      fullName: claims.residentName || claims.localResidentName || '',
-      phoneNumber: claims.mobile || claims.maskedMobile || this.maskedPhone || '',
-      email: claims.email || claims.maskedEmail || '',
-      address: claims.address || claims.regionalAddress || '',
-      kycStatus: 'PHOTO_MATCHED',
-      livePhoto: claims.residentImage ? `data:image/jpeg;base64,${claims.residentImage}` : '',
-    });
+    this.form.livePhoto = claims.residentImage ? `data:image/jpeg;base64,${claims.residentImage}` : '';
 
     // Set captured photo URL for display
     if (claims.residentImage) {
@@ -476,6 +501,143 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       this.currentStep = 'additional-details';
       this.cdr.detectChanges();
     }, 500);
+  }
+
+  populateVisitorDetailsFromKycResponse(response: any, kycType: 'EPIC' | 'AADHAAR') {
+    const verified = kycType === 'EPIC'
+      ? this.mapEpicKycResponse(response)
+      : this.mapAadhaarKycResponse(response);
+
+    if (!verified.kycVerified) {
+      this.verifiedKycData = null;
+      this.errorMsg = 'KYC verification data is incomplete. Please complete KYC again.';
+      return;
+    }
+
+    this.verifiedKycData = verified;
+    this.patchVisitorDetailsFromKyc(verified);
+  }
+
+  private mapEpicKycResponse(response: any): VerifiedKycData {
+    const data = response?.data || {};
+    const polling = data.pollingdetails || data.pollingDetails || {};
+    const state = data.borroweraddressstate || data.state || response?.state || '';
+    const district = data.borroweraddressdistrict || data.district || response?.district || '';
+    const houseNumber = data.borroweraddresshousenumber || '';
+    const sectionNumber = data.borroweraddresssectionnumber || '';
+    const nameMatchScore = Number(data.namematchscore ?? response?.nameMatchScore ?? 0);
+    const verifiedName = data.verifiedName || response?.verifiedName || data.borrowernameonvoteridcard || '';
+    const epicNumber = data.voteridnumber || this.form.epicNumber || '';
+
+    return {
+      kycVerified: !!verifiedName && !!epicNumber,
+      kycType: 'EPIC',
+      kycReferenceId: data.voteridverificationrequestid || response?.requestId || '',
+      visitorName: verifiedName,
+      gender: data.borrowergender || '',
+      dob: this.normalizeDate(data.borrowerdateofbirth),
+      state,
+      district,
+      address: this.composeEpicAddress(houseNumber, sectionNumber, district, state),
+      epicNumber,
+      maskedIdentityNumber: this.maskEpic(epicNumber),
+      houseNumber,
+      sectionNumber,
+      relativeName: data.relativenameonvoterid || data.relativemameonvoterid || '',
+      pollingPartNo: polling.pollingpartno || polling.pollingPartNo || '',
+      pollingStationAddress: polling.pollingstationaddress || polling.pollingStationAddress || '',
+      nameMatchScore: Number.isFinite(nameMatchScore) ? nameMatchScore : 0,
+      idFound: Boolean(data.idFound ?? response?.idFound ?? false),
+      voterIdVerificationCompletionTimestamp: data.voteridverificationcompletiontimestamp || '',
+    };
+  }
+
+  private mapAadhaarKycResponse(response: any): VerifiedKycData {
+    const claims = response?.claimData || response?.claims || {};
+    const mobile = claims.mobile || claims.maskedMobile || '';
+    const clientTxnId = response?.clientTxnId || response?.txnId || '';
+
+    return {
+      kycVerified: !response?.error && !!(claims.residentName || claims.localResidentName),
+      kycType: 'AADHAAR',
+      kycReferenceId: clientTxnId,
+      visitorName: claims.residentName || claims.localResidentName || '',
+      mobile,
+      gender: claims.gender || '',
+      dob: this.normalizeDate(claims.dob),
+      address: claims.address || claims.regionalAddress || '',
+      maskedIdentityNumber: this.form.aadhaarNumber ? this.maskAadhaar(this.form.aadhaarNumber) : '',
+      aadhaarClientTxnId: clientTxnId,
+      aadhaarAppId: response?.appId || '',
+      state: '',
+      district: '',
+      pollingPartNo: '',
+      pollingStationAddress: '',
+    };
+  }
+
+  private patchVisitorDetailsFromKyc(verified: VerifiedKycData) {
+    Object.assign(this.form, {
+      fullName: verified.visitorName || this.form.fullName,
+      gender: verified.gender || this.form.gender,
+      dateOfBirth: verified.dob || this.form.dateOfBirth,
+      state: verified.state || this.form.state,
+      district: verified.district || this.form.district,
+      address: verified.address || this.form.address,
+      epicNumber: verified.epicNumber || this.form.epicNumber,
+      phoneNumber: this.form.idType === 'AADHAAR'
+        ? this.extractUsableMobileFromAadhaar(verified) || this.form.phoneNumber
+        : this.manualPhone || this.form.phoneNumber,
+      kycStatus: this.form.kycStatus || 'PHOTO_MATCHED',
+      borrowerAddressHouseNumber: verified.houseNumber || '',
+      borrowerAddressSectionNumber: verified.sectionNumber || '',
+      relativeNameOnVoterId: verified.relativeName || '',
+      pollingPartNo: verified.pollingPartNo || '',
+      pollingStationAddress: verified.pollingStationAddress || '',
+      voterIdVerificationRequestId: verified.kycReferenceId || '',
+      voterIdVerificationCompletionTimestamp: verified.voterIdVerificationCompletionTimestamp || '',
+      nameMatchScore: verified.nameMatchScore,
+      idFound: verified.idFound,
+      aadhaarClientTxnId: verified.aadhaarClientTxnId || '',
+      aadhaarAppId: verified.aadhaarAppId || '',
+      maskedIdentityNumber: verified.maskedIdentityNumber || '',
+    });
+
+    if (verified.state && verified.state.toLowerCase() !== 'meghalaya') {
+      this.form.outsideState = true;
+    }
+  }
+
+  private extractUsableMobileFromAadhaar(verified: VerifiedKycData): string {
+    const mobile = verified.mobile || '';
+    return /^\d{10}$/.test(mobile) ? mobile : '';
+  }
+
+  private composeEpicAddress(houseNumber: string, sectionNumber: string, district: string, state: string): string {
+    return [
+      houseNumber && houseNumber !== 'Not Available' ? houseNumber : '',
+      sectionNumber ? `Section ${sectionNumber}` : '',
+      district,
+      state,
+    ].filter(Boolean).join(', ');
+  }
+
+  private normalizeDate(value: string | null | undefined): string {
+    if (!value) return '';
+    const trimmed = value.trim();
+    if (!trimmed || trimmed.toLowerCase() === 'not available') return '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+    return '';
+  }
+
+  private maskAadhaar(aadhaar: string): string {
+    const digits = aadhaar.replace(/\D/g, '');
+    return digits.length === 12 ? `XXXX-XXXX-${digits.substring(8)}` : '';
+  }
+
+  private maskEpic(epic: string): string {
+    if (!epic || epic.length < 4) return '';
+    return `${epic.substring(0, 3)}***${epic.substring(epic.length - 2)}`;
   }
 
   /**
@@ -518,21 +680,20 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
         
         if (res.success && res.demographics) {
           this.otpVerified = true;
-          
-          // Auto-populate demographics
-          const demo = res.demographics;
-          
-          // Use Object.assign to update form to ensure Angular tracks changes
-          Object.assign(this.form, {
-            fullName: demo.fullName || '',
-            address: demo.address || '',
-            district: demo.district || '',
-            constituency: demo.constituency || '',
-            photoFromId: demo.photoFromId || '',
-            phoneNumber: this.actualPhoneNumber  // Use stored actual phone number
-          });
-          
-          this.successMsg = 'OTP verified! Demographics auto-populated.';
+
+          if (!this.verifiedKycData) {
+            const demo = res.demographics;
+            Object.assign(this.form, {
+              fullName: demo.fullName || '',
+              address: demo.address || '',
+              district: demo.district || '',
+              constituency: demo.constituency || '',
+              photoFromId: demo.photoFromId || '',
+            });
+          }
+          this.form.phoneNumber = this.actualPhoneNumber;
+
+          this.successMsg = 'OTP verified! Continue with photo capture.';
           
           // Force change detection and transition to next step
           this.cdr.detectChanges();
@@ -619,6 +780,11 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   // ── STEP 4: FACE VALIDATION ─────────────────────────────────────────────
 
   validateFace() {
+    if (!this.verifiedKycData) {
+      this.errorMsg = 'Please complete ID KYC verification before continuing.';
+      return;
+    }
+
     if (!this.form.livePhoto) {
       this.errorMsg = 'Please capture your live photo first.';
       return;
@@ -667,18 +833,39 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (!this.verifiedKycData) {
+      this.errorMsg = 'Please complete KYC verification before registration.';
+      return;
+    }
+
     this.loading = true;
-    const payload: Record<string, string | boolean> = {
+    const payload: Record<string, string | boolean | number | null | undefined> = {
       fullName: this.form.fullName.trim(),
       phoneNumber: this.form.phoneNumber || this.maskedPhone.replace(/\*+/g, '').trim(),
       email: this.form.email.trim(),
       address: this.form.address.trim(),
-      district: this.form.outsideState ? 'NA' : this.form.district.trim(),
+      state: this.form.state.trim(),
+      district: this.form.district.trim() || (this.form.outsideState ? 'NA' : ''),
       constituency: this.form.outsideState ? 'NA' : this.form.constituency.trim(),
       booth: this.form.outsideState ? 'NA' : (this.form.booth || '').trim(),
       village: this.form.outsideState ? 'NA' : (this.form.village || '').trim(),
       designation: this.form.designation,
-      kycStatus: this.form.kycStatus || this.kycStatus || 'PENDING',
+      gender: this.form.gender,
+      dateOfBirth: this.form.dateOfBirth,
+      kycStatus: this.form.kycStatus || this.kycStatus,
+      kycReferenceId: this.verifiedKycData.kycReferenceId,
+      maskedIdentityNumber: this.form.maskedIdentityNumber,
+      borrowerAddressHouseNumber: this.form.borrowerAddressHouseNumber,
+      borrowerAddressSectionNumber: this.form.borrowerAddressSectionNumber,
+      relativeNameOnVoterId: this.form.relativeNameOnVoterId,
+      pollingPartNo: this.form.pollingPartNo,
+      pollingStationAddress: this.form.pollingStationAddress,
+      voterIdVerificationRequestId: this.form.voterIdVerificationRequestId,
+      voterIdVerificationCompletionTimestamp: this.form.voterIdVerificationCompletionTimestamp,
+      nameMatchScore: this.form.nameMatchScore,
+      idFound: this.form.idFound,
+      aadhaarClientTxnId: this.form.aadhaarClientTxnId,
+      aadhaarAppId: this.form.aadhaarAppId,
     };
 
     if (this.form.idType === 'EPIC') {
@@ -782,6 +969,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.kycConfidenceScore = 0;
     this.kycConfidenceLabel = '';
     this.loading = false;
+    this.verifiedKycData = null;
 
     // Clear ID-specific form fields
     this.form.epicNumber = '';
@@ -795,6 +983,22 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     // Only reset fields that are auto-populated during KYC
     this.form.fullName = '';
     this.form.address = '';
+    this.form.state = '';
+    this.form.district = '';
+    this.form.gender = '';
+    this.form.dateOfBirth = '';
+    this.form.borrowerAddressHouseNumber = '';
+    this.form.borrowerAddressSectionNumber = '';
+    this.form.relativeNameOnVoterId = '';
+    this.form.pollingPartNo = '';
+    this.form.pollingStationAddress = '';
+    this.form.voterIdVerificationRequestId = '';
+    this.form.voterIdVerificationCompletionTimestamp = '';
+    this.form.nameMatchScore = undefined;
+    this.form.idFound = undefined;
+    this.form.aadhaarClientTxnId = '';
+    this.form.aadhaarAppId = '';
+    this.form.maskedIdentityNumber = '';
 
     // Keep the current step at 'id-entry' to show the form again
     this.currentStep = 'id-entry';
@@ -928,16 +1132,20 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.mobileValidationType = '';
     this.mobileCheckLoading = false;
     this.duplicateRegistrationBlocked = false;
+    this.verifiedKycData = null;
     this.form = {
       fullName: '',
       phoneNumber: '',
       email: '',
       address: '',
+      state: '',
       district: '',
       constituency: '',
       booth: '',
       village: '',
       designation: '',
+      gender: '',
+      dateOfBirth: '',
       outsideState: false,
       idType: '',
       epicNumber: '',

@@ -75,8 +75,48 @@ public class Visitor extends BaseEntity {
 
     private LocalDate dateOfBirth;
 
+    @Column(length = 20)
+    private String gender;
+
+    @Column(length = 100)
+    private String state;
+
     @Column(length = 500)
     private String address;
+
+    @Column(length = 100)
+    private String borrowerAddressHouseNumber;
+
+    @Column(length = 100)
+    private String borrowerAddressSectionNumber;
+
+    @Column(length = 200)
+    private String relativeNameOnVoterId;
+
+    @Column(length = 50)
+    private String pollingPartNo;
+
+    @Column(length = 500)
+    private String pollingStationAddress;
+
+    @Column(length = 100)
+    private String voterIdVerificationRequestId;
+
+    @Column(length = 100)
+    private String voterIdVerificationCompletionTimestamp;
+
+    private Integer nameMatchScore;
+
+    private Boolean idFound;
+
+    @Column(length = 100)
+    private String aadhaarClientTxnId;
+
+    @Column(length = 50)
+    private String aadhaarAppId;
+
+    @Column(length = 50)
+    private String maskedIdentityNumber;
 
     // Facial recognition embedding reference
     @Column(length = 500)

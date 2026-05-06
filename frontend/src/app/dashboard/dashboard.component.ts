@@ -4,7 +4,6 @@ import { RouterLink } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 import { ScheduleEventService } from '../services/schedule-event.service';
 import { AuditLogService } from '../services/audit-log.service';
-import { ScheduleEvent } from '../models';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { UIChart } from 'primeng/chart';

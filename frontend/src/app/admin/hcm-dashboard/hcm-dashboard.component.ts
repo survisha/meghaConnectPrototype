@@ -1,4 +1,4 @@
-import { Component, OnInit, HostListener } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -332,7 +332,7 @@ export class HcmDashboardComponent implements OnInit {
     this.loading = true;
     this.http.post(`${environment.apiUrl}/hcm/actions${endpoint}`, payload)
       .subscribe({
-        next: (response) => {
+        next: () => {
           alert('Action submitted successfully');
           this.resetActionForm();
           this.showActionMenu = false;

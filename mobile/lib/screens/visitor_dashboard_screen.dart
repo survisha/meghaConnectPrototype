@@ -201,8 +201,8 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
           Icons.workspace_premium_outlined, _green, const Color(0xFFD1FAE5)),
       _SummaryCard('Grievances Raised', _grievances.length,
           Icons.comment_outlined, _amber, const Color(0xFFFEF3C7)),
-      _SummaryCard('Pending Actions', 1, Icons.warning_amber_outlined, _red,
-          const Color(0xFFFEE2E2)),
+      const _SummaryCard('Pending Actions', 1, Icons.warning_amber_outlined,
+          _red, Color(0xFFFEE2E2)),
     ];
 
     return Scaffold(

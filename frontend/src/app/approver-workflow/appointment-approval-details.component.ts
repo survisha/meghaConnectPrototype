@@ -96,7 +96,7 @@ export class AppointmentApprovalDetailsComponent implements OnInit {
     const remarks = this.approvalForm.get('remarks')?.value;
 
     this.appointmentService.approveAndForward(this.appointmentId, remarks).subscribe({
-      next: (response) => {
+      next: () => {
         alert('Appointment approved and forwarded to next approver');
         this.router.navigate(['/appointments/pending-approvals']);
         this.submitting = false;
@@ -122,7 +122,7 @@ export class AppointmentApprovalDetailsComponent implements OnInit {
     const rejectReason = this.rejectForm.get('rejectReason')?.value;
 
     this.appointmentService.rejectAppointment(this.appointmentId, rejectReason).subscribe({
-      next: (response) => {
+      next: () => {
         alert('Appointment rejected');
         this.router.navigate(['/appointments/pending-approvals']);
         this.submitting = false;

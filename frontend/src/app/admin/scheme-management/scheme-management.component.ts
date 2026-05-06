@@ -225,7 +225,7 @@ export class SchemeManagementComponent implements OnInit {
     }
 
     // Validate documents
-    for (let doc of this.documentForm) {
+    for (const doc of this.documentForm) {
       if (!doc.documentType || !doc.documentLabel) {
         alert('Please fill in all required document fields');
         return;

@@ -83,6 +83,7 @@ class _ApproverWorkflowScreenState extends State<ApproverWorkflowScreen> {
           eventType: m['eventType'] as String? ?? '',
           location: m['requestedLocation'] as String? ?? '',
           status: m['status'] as String? ?? '',
+          shortNotes: m['shortNotes'] as String?,
         );
       }).toList();
       _loading = false;
@@ -697,6 +698,7 @@ class _ApproverDetailSheetState extends State<_ApproverDetailSheet> {
                         firstDate: DateTime.now(),
                         lastDate: DateTime.now().add(const Duration(days: 365)),
                       );
+                      if (!context.mounted) return;
                       if (picked != null) {
                         final formatted =
                             '${picked.day}/${picked.month}/${picked.year}';

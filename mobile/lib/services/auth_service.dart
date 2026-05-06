@@ -53,7 +53,8 @@ class AuthService extends ChangeNotifier {
 
     if (token != null) await ApiService.setToken(token);
 
-    _user = AuthUser(username: uname, fullName: fullName, role: role, visitorId: visitorId);
+    _user = AuthUser(
+        username: uname, fullName: fullName, role: role, visitorId: visitorId);
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_storageKey, jsonEncode(_user!.toJson()));

@@ -29,7 +29,8 @@ class AppI18n extends ChangeNotifier {
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
     final stored = prefs.getString(AppConfig.languageStorageKey);
-    final initial = (stored != null && supported.containsKey(stored)) ? stored : 'en';
+    final initial =
+        (stored != null && supported.containsKey(stored)) ? stored : 'en';
 
     _fallbackEn = await _loadLang('en');
     _lang = initial;
@@ -71,4 +72,3 @@ class AppI18n extends ChangeNotifier {
     return <String, dynamic>{};
   }
 }
-

@@ -73,12 +73,19 @@ class _ReportsScreenState extends State<ReportsScreen>
     return Container(
       color: const Color(0xFF1A237E),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
+      child: const Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _MiniKpi(label: 'This Month', value: '28', icon: Icons.calendar_today),
-          _MiniKpi(label: 'Approved', value: '62%', icon: Icons.check_circle_outline),
-          _MiniKpi(label: 'Schemes', value: '139', icon: Icons.workspace_premium_outlined),
+          _MiniKpi(
+              label: 'This Month', value: '28', icon: Icons.calendar_today),
+          _MiniKpi(
+              label: 'Approved',
+              value: '62%',
+              icon: Icons.check_circle_outline),
+          _MiniKpi(
+              label: 'Schemes',
+              value: '139',
+              icon: Icons.workspace_premium_outlined),
           _MiniKpi(label: 'Pending', value: '17', icon: Icons.pending_actions),
         ],
       ),
@@ -141,42 +148,44 @@ class _ReportsScreenState extends State<ReportsScreen>
             children: [
               // Header
               Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE8EAF6),
-                  borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(12)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFE8EAF6),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
                 ),
-                child: Row(
+                child: const Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                         flex: 3,
                         child: Text('Constituency',
                             style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
                                 color: Color(0xFF1A237E)))),
-                    const Expanded(
+                    Expanded(
                         child: Text('Total',
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
-                    const Expanded(
+                            style: TextStyle(
+                                fontSize: 12, fontWeight: FontWeight.bold))),
+                    Expanded(
                         child: Text('Approved',
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
-                    const Expanded(
+                            style: TextStyle(
+                                fontSize: 12, fontWeight: FontWeight.bold))),
+                    Expanded(
                         child: Text('Rejected',
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+                            style: TextStyle(
+                                fontSize: 12, fontWeight: FontWeight.bold))),
                   ],
                 ),
               ),
               ..._topConstituencies.asMap().entries.map((e) {
                 final (name, total, approved, rejected) = e.value;
                 return Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
                     color: e.key.isEven ? Colors.white : Colors.grey[50],
                   ),
@@ -227,9 +236,7 @@ class _ReportsScreenState extends State<ReportsScreen>
     return Text(
       text,
       style: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFF374151)),
+          fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF374151)),
     );
   }
 
@@ -271,8 +278,8 @@ class _ReportsScreenState extends State<ReportsScreen>
                       ),
                       const SizedBox(height: 4),
                       Text(labels[i],
-                          style: TextStyle(
-                              fontSize: 11, color: Colors.grey[600])),
+                          style:
+                              TextStyle(fontSize: 11, color: Colors.grey[600])),
                     ],
                   );
                 }),
@@ -305,13 +312,12 @@ class _ReportsScreenState extends State<ReportsScreen>
                   Container(
                     width: 12,
                     height: 12,
-                    decoration: BoxDecoration(
-                        color: color, shape: BoxShape.circle),
+                    decoration:
+                        BoxDecoration(color: color, shape: BoxShape.circle),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(label,
-                        style: const TextStyle(fontSize: 13)),
+                    child: Text(label, style: const TextStyle(fontSize: 13)),
                   ),
                   SizedBox(
                     width: 140,
@@ -323,8 +329,7 @@ class _ReportsScreenState extends State<ReportsScreen>
                             child: LinearProgressIndicator(
                               value: pct / 100,
                               backgroundColor: Colors.grey[200],
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(color),
+                              valueColor: AlwaysStoppedAnimation<Color>(color),
                               minHeight: 8,
                             ),
                           ),
@@ -364,11 +369,9 @@ class _ReportsScreenState extends State<ReportsScreen>
             leading: Container(
               width: 12,
               height: 12,
-              decoration:
-                  BoxDecoration(color: color, shape: BoxShape.circle),
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             ),
-            title: Text(label,
-                style: const TextStyle(fontSize: 13)),
+            title: Text(label, style: const TextStyle(fontSize: 13)),
             trailing: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
@@ -378,9 +381,7 @@ class _ReportsScreenState extends State<ReportsScreen>
               child: Text(
                 '$count',
                 style: TextStyle(
-                    color: color,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13),
+                    color: color, fontWeight: FontWeight.bold, fontSize: 13),
               ),
             ),
           );
@@ -404,23 +405,22 @@ class _ReportsScreenState extends State<ReportsScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(14, 12, 14, 4),
             child: Row(
               children: [
-                _HeatLegend(label: 'Hot', color: const Color(0xFFDC2626)),
-                const SizedBox(width: 16),
-                _HeatLegend(label: 'Warm', color: const Color(0xFFF59E0B)),
-                const SizedBox(width: 16),
-                _HeatLegend(label: 'Cool', color: const Color(0xFF16A34A)),
+                _HeatLegend(label: 'Hot', color: Color(0xFFDC2626)),
+                SizedBox(width: 16),
+                _HeatLegend(label: 'Warm', color: Color(0xFFF59E0B)),
+                SizedBox(width: 16),
+                _HeatLegend(label: 'Cool', color: Color(0xFF16A34A)),
               ],
             ),
           ),
           ...districts.map((d) {
             final (name, apps, color) = d;
             return Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 14, vertical: 5),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
               child: Row(
                 children: [
                   SizedBox(
@@ -435,8 +435,7 @@ class _ReportsScreenState extends State<ReportsScreen>
                       child: LinearProgressIndicator(
                         value: apps / 100,
                         backgroundColor: Colors.grey[200],
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(color),
+                        valueColor: AlwaysStoppedAnimation<Color>(color),
                         minHeight: 14,
                       ),
                     ),
@@ -548,8 +547,8 @@ class _SchemeStatRow extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: total > 0 ? approved / total : 0,
                 backgroundColor: Colors.grey[200],
-                valueColor: const AlwaysStoppedAnimation<Color>(
-                    Color(0xFF16A34A)),
+                valueColor:
+                    const AlwaysStoppedAnimation<Color>(Color(0xFF16A34A)),
                 minHeight: 6,
               ),
             ),
@@ -572,7 +571,8 @@ class _HeatLegend extends StatelessWidget {
         Container(
           width: 12,
           height: 12,
-          decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2)),
+          decoration: BoxDecoration(
+              color: color, borderRadius: BorderRadius.circular(2)),
         ),
         const SizedBox(width: 4),
         Text(label, style: const TextStyle(fontSize: 12)),

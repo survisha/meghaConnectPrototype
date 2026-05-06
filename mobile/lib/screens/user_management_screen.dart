@@ -79,7 +79,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         return _searchQuery.isEmpty ||
             u.fullName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
             u.username.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-            u.role.displayName.toLowerCase().contains(_searchQuery.toLowerCase());
+            u.role.displayName
+                .toLowerCase()
+                .contains(_searchQuery.toLowerCase());
       }).toList();
 
   @override
@@ -125,7 +127,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                             onPressed: () => setState(() => _searchQuery = ''),
                           )
                         : null,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                   ),
                   onChanged: (v) => setState(() => _searchQuery = v),
                 ),
@@ -136,7 +139,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 label: const Text('Add'),
                 onPressed: () => _showAddDialog(context),
                 style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 ),
               ),
             ],
@@ -146,9 +150,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             children: [
               _statChip('Total', '${_users.length}', const Color(0xFF1A237E)),
               const SizedBox(width: 8),
-              _statChip('Active', '${_users.where((u) => u.active).length}', const Color(0xFF16A34A)),
+              _statChip('Active', '${_users.where((u) => u.active).length}',
+                  const Color(0xFF16A34A)),
               const SizedBox(width: 8),
-              _statChip('Inactive', '${_users.where((u) => !u.active).length}', const Color(0xFF6B7280)),
+              _statChip('Inactive', '${_users.where((u) => !u.active).length}',
+                  const Color(0xFF6B7280)),
             ],
           ),
         ],
@@ -169,7 +175,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         children: [
           Text(label, style: TextStyle(color: color, fontSize: 12)),
           const SizedBox(width: 6),
-          Text(value, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
+          Text(value,
+              style: TextStyle(
+                  color: color, fontWeight: FontWeight.bold, fontSize: 13)),
         ],
       ),
     );
@@ -221,9 +229,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   ),
                   items: UserRole.values
                       .where((r) => r != UserRole.PUBLIC)
-                      .map((r) => DropdownMenuItem(value: r, child: Text(r.displayName)))
+                      .map((r) => DropdownMenuItem(
+                          value: r, child: Text(r.displayName)))
                       .toList(),
-                  onChanged: (v) => setLocalState(() => selectedRole = v ?? selectedRole),
+                  onChanged: (v) =>
+                      setLocalState(() => selectedRole = v ?? selectedRole),
                 ),
               ],
             ),
@@ -303,12 +313,14 @@ class _UserCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           user.fullName,
-                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w600, fontSize: 14),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 4, vertical: 2),
                         decoration: BoxDecoration(
                           color: user.active
                               ? const Color(0xFFD1FAE5)
@@ -318,7 +330,9 @@ class _UserCard extends StatelessWidget {
                         child: Text(
                           user.active ? 'Active' : 'Inactive',
                           style: TextStyle(
-                            color: user.active ? const Color(0xFF065F46) : Colors.grey[600],
+                            color: user.active
+                                ? const Color(0xFF065F46)
+                                : Colors.grey[600],
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
                           ),
@@ -335,18 +349,23 @@ class _UserCard extends StatelessWidget {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
                           color: rc.withAlpha(20),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
                           user.role.badgeLabel,
-                          style: TextStyle(color: rc, fontSize: 10, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              color: rc,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold),
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Icon(Icons.access_time, size: 11, color: Colors.grey[400]),
+                      Icon(Icons.access_time,
+                          size: 11, color: Colors.grey[400]),
                       const SizedBox(width: 3),
                       Text(
                         user.lastLogin,

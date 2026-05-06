@@ -11,7 +11,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule, provideNativeDateAdapter } from '@angular/material/core';
 import { MatCardModule } from '@angular/material/card';
-import { DragDropModule, CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
+import { DragDropModule, CdkDragDrop } from '@angular/cdk/drag-drop';
 
 @Component({
   selector: 'app-scheduling',
@@ -67,25 +67,10 @@ export class SchedulingComponent implements OnInit {
   ngOnInit() {
     // Initialize with dummy data for demo purposes
     this.initializeDummyData();
-    
-    console.log('[SchedulingComponent] ✅ Initialized', this.events.length, 'dummy events');
-    
+
     // Set initial date to April 1, 2026 for consistent demo
     this.selectedDate = new Date(2026, 3, 1); // Month is 0-indexed, so 3 = April
-    
-    // Log first 3 events to verify structure
-    if (this.events.length > 0) {
-      console.log('[SchedulingComponent] First 3 events:', 
-        this.events.slice(0, 3).map(e => ({
-          id: e.id,
-          startTime: e.startTime,
-          parsedDate: new Date(e.startTime).toDateString()
-        }))
-      );
-    }
-    
-    console.log('[SchedulingComponent] Events for Apr 1:', this.getEventsForSelectedDate().length);
-    
+
     this.loading = true;
     this.scheduleEventService.getAll().subscribe({
       next: events => {
@@ -94,22 +79,14 @@ export class SchedulingComponent implements OnInit {
         if (events && events.length > 0) {
           const firstEventDate = new Date(events[0].startTime);
           if (firstEventDate.getFullYear() === 2026) {
-            console.log('[SchedulingComponent] ✅ API returned 2026 data - using it');
             this.events = events;
-          } else {
-            console.log('[SchedulingComponent] ⚠️ API returned old data from', firstEventDate.getFullYear(), '- keeping April 2026 dummy data');
           }
-        } else {
-          console.log('[SchedulingComponent] ✅ No API events - keeping dummy data');
         }
         // Dummy data already initialized, API data overrides if available
         this.loading = false; 
-        console.log('[SchedulingComponent] Final total:', this.events.length, 'events');
-        console.log('[SchedulingComponent] Final Apr 1 count:', this.getEventsForSelectedDate().length);
       },
       error: () => { 
         this.loading = false;
-        console.log('[SchedulingComponent] ✅ API error - keeping', this.events.length, 'dummy events');
       }
     });
   }
@@ -513,7 +490,6 @@ export class SchedulingComponent implements OnInit {
       }
     ];
     
-    console.log('[SchedulingComponent] Created', this.events.length, 'dummy events');
   }
 
   onDateSelected(date: Date | null) {
@@ -521,9 +497,6 @@ export class SchedulingComponent implements OnInit {
       this.selectedDate = date;
       // Automatically switch to day view to show events
       this.viewMode = 'day';
-      
-      const eventsForDate = this.getEventsForSelectedDate();
-      console.log(`[SchedulingComponent] Selected: ${date.toDateString()} - ${eventsForDate.length} event(s)`);
     }
   }
 
@@ -532,20 +505,6 @@ export class SchedulingComponent implements OnInit {
       const eventDate = new Date(event.startTime);
       return this.isSameDay(eventDate, this.selectedDate);
     });
-    
-    // Debug log when no events found
-    if (filtered.length === 0 && this.events.length > 0) {
-      console.warn('[getEventsForSelectedDate] ❌ No events found!');
-      console.log('  Selected date:', this.selectedDate.toDateString(), 
-                  '| Y:', this.selectedDate.getFullYear(),
-                  'M:', this.selectedDate.getMonth(),
-                  'D:', this.selectedDate.getDate());
-      console.log('  Sample event date:', new Date(this.events[0].startTime).toDateString(),
-                  '| Y:', new Date(this.events[0].startTime).getFullYear(),
-                  'M:', new Date(this.events[0].startTime).getMonth(),
-                  'D:', new Date(this.events[0].startTime).getDate());
-      console.log('  Event startTime string:', this.events[0].startTime);
-    }
     
     return filtered;
   }
@@ -608,7 +567,6 @@ export class SchedulingComponent implements OnInit {
     const targetHourNum = parseInt(targetHour);
     
     // Calculate new start and end times
-    const eventDate = new Date(droppedEvent.startTime);
     const duration = new Date(droppedEvent.endTime).getTime() - new Date(droppedEvent.startTime).getTime();
     
     // Create new date with selected date and target hour
@@ -620,8 +578,6 @@ export class SchedulingComponent implements OnInit {
     // Update the event
     droppedEvent.startTime = newStart.toISOString();
     droppedEvent.endTime = newEnd.toISOString();
-    
-    console.log('[SchedulingComponent] Event dropped to', targetHour, '- New time:', droppedEvent.startTime);
     
     // In a real app, you would call the service to update the event on the backend
     // this.scheduleEventService.update(droppedEvent.id, droppedEvent).subscribe();

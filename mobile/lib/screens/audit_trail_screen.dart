@@ -52,11 +52,20 @@ class _AuditTrailScreenState extends State<AuditTrailScreen> {
         final dt = DateTime.tryParse(ts);
         if (dt != null) {
           final months = [
-            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+            'Jan',
+            'Feb',
+            'Mar',
+            'Apr',
+            'May',
+            'Jun',
+            'Jul',
+            'Aug',
+            'Sep',
+            'Oct',
+            'Nov',
+            'Dec'
           ];
-          timeLabel =
-              '${dt.day} ${months[dt.month - 1]} ${dt.year} '
+          timeLabel = '${dt.day} ${months[dt.month - 1]} ${dt.year} '
               '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
         }
         return _AuditEntry(
@@ -87,7 +96,8 @@ class _AuditTrailScreenState extends State<AuditTrailScreen> {
     if (action.contains('DELETE') || action.contains('REJECT')) {
       return const Color(0xFF991B1B);
     }
-    if (action.contains('UPDATE') || action.contains('CHANGE') ||
+    if (action.contains('UPDATE') ||
+        action.contains('CHANGE') ||
         action == 'DELEGATION') {
       return const Color(0xFFB45309);
     }
@@ -253,8 +263,8 @@ class _AuditCard extends StatelessWidget {
                         ),
                         child: Text(
                           entry.entityType,
-                          style: TextStyle(
-                              color: Colors.grey[600], fontSize: 10),
+                          style:
+                              TextStyle(color: Colors.grey[600], fontSize: 10),
                         ),
                       ),
                       const Spacer(),
@@ -293,8 +303,7 @@ class _AuditCard extends StatelessWidget {
                       const SizedBox(width: 4),
                       Text(
                         entry.timestamp,
-                        style: TextStyle(
-                            fontSize: 11, color: Colors.grey[500]),
+                        style: TextStyle(fontSize: 11, color: Colors.grey[500]),
                       ),
                     ],
                   ),

@@ -105,8 +105,18 @@ class _GrievanceScreenState extends State<GrievanceScreen> {
 
   static String _monthName(int m) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
     ];
     return months[m - 1];
   }
@@ -149,36 +159,53 @@ class _GrievanceScreenState extends State<GrievanceScreen> {
                   decoration: InputDecoration(
                     hintText: 'Search by name, ticket ID, subject…',
                     prefixIcon: const Icon(Icons.search, size: 20),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
                     isDense: true,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8)),
                   ),
                   onChanged: (v) => setState(() => _search = v),
                 ),
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    const Text('Status: ', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                    const Text('Status: ',
+                        style: TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w600)),
                     const SizedBox(width: 8),
                     Expanded(
                       child: DropdownButtonFormField<String>(
                         value: _filterStatus.isEmpty ? null : _filterStatus,
                         decoration: InputDecoration(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 8),
                           isDense: true,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(6)),
                         ),
-                        hint: const Text('All Statuses', style: TextStyle(fontSize: 13)),
+                        hint: const Text('All Statuses',
+                            style: TextStyle(fontSize: 13)),
                         items: const [
-                          DropdownMenuItem(value: '', child: Text('All Statuses')),
-                          DropdownMenuItem(value: 'SUBMITTED', child: Text('Submitted')),
-                          DropdownMenuItem(value: 'ACKNOWLEDGED', child: Text('Acknowledged')),
-                          DropdownMenuItem(value: 'UNDER_REVIEW', child: Text('Under Review')),
-                          DropdownMenuItem(value: 'FORWARDED', child: Text('Forwarded')),
-                          DropdownMenuItem(value: 'RESOLVED', child: Text('Resolved')),
-                          DropdownMenuItem(value: 'CLOSED', child: Text('Closed')),
+                          DropdownMenuItem(
+                              value: '', child: Text('All Statuses')),
+                          DropdownMenuItem(
+                              value: 'SUBMITTED', child: Text('Submitted')),
+                          DropdownMenuItem(
+                              value: 'ACKNOWLEDGED',
+                              child: Text('Acknowledged')),
+                          DropdownMenuItem(
+                              value: 'UNDER_REVIEW',
+                              child: Text('Under Review')),
+                          DropdownMenuItem(
+                              value: 'FORWARDED', child: Text('Forwarded')),
+                          DropdownMenuItem(
+                              value: 'RESOLVED', child: Text('Resolved')),
+                          DropdownMenuItem(
+                              value: 'CLOSED', child: Text('Closed')),
                         ],
-                        onChanged: (v) => setState(() => _filterStatus = v ?? ''),
+                        onChanged: (v) =>
+                            setState(() => _filterStatus = v ?? ''),
                       ),
                     ),
                   ],
@@ -235,7 +262,8 @@ class _GrievanceScreenState extends State<GrievanceScreen> {
           grievance: g,
           scrollController: controller,
           onStatusUpdate: (newStatus) async {
-            final result = await ApiService.updateGrievanceStatus(g.backendId, newStatus);
+            final result =
+                await ApiService.updateGrievanceStatus(g.backendId, newStatus);
             if (!context.mounted) return;
             if (result != null) {
               setState(() => g.status = newStatus);
@@ -265,7 +293,8 @@ class _GrievanceScreenState extends State<GrievanceScreen> {
             final created = result != null
                 ? _Grievance(
                     backendId: (result['id'] as num?)?.toInt() ?? 0,
-                    ticketId: result['ticketId'] as String? ?? localGrievance.ticketId,
+                    ticketId: result['ticketId'] as String? ??
+                        localGrievance.ticketId,
                     applicantName: localGrievance.applicantName,
                     district: localGrievance.district,
                     category: localGrievance.category,
@@ -279,7 +308,8 @@ class _GrievanceScreenState extends State<GrievanceScreen> {
             Navigator.pop(context);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Grievance submitted! Ticket: ${created.ticketId}'),
+                content:
+                    Text('Grievance submitted! Ticket: ${created.ticketId}'),
                 backgroundColor: const Color(0xFF065F46),
               ),
             );
@@ -331,7 +361,8 @@ class _GrievanceCard extends StatelessWidget {
               const SizedBox(height: 6),
               Text(
                 grievance.subject,
-                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                style:
+                    const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -340,29 +371,37 @@ class _GrievanceCard extends StatelessWidget {
                 children: [
                   Icon(Icons.person_outline, size: 14, color: Colors.grey[600]),
                   const SizedBox(width: 4),
-                  Text(grievance.applicantName, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                  Text(grievance.applicantName,
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600])),
                   const SizedBox(width: 12),
-                  Icon(Icons.location_on_outlined, size: 14, color: Colors.grey[600]),
+                  Icon(Icons.location_on_outlined,
+                      size: 14, color: Colors.grey[600]),
                   const SizedBox(width: 4),
-                  Text(grievance.district, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                  Text(grievance.district,
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600])),
                 ],
               ),
               const SizedBox(height: 6),
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: const Color(0xFFE8EAF6),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
                       grievance.category,
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF1A237E)),
+                      style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1A237E)),
                     ),
                   ),
                   const Spacer(),
-                  Text(grievance.submittedAt, style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                  Text(grievance.submittedAt,
+                      style: TextStyle(fontSize: 11, color: Colors.grey[500])),
                 ],
               ),
             ],
@@ -388,7 +427,10 @@ class _StatusBadge extends StatelessWidget {
       ),
       child: Text(
         status.replaceAll('_', ' '),
-        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: _statusColor(status)),
+        style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: _statusColor(status)),
       ),
     );
   }
@@ -419,9 +461,12 @@ class _GrievanceDetailSheet extends StatelessWidget {
           // Handle
           Center(
             child: Container(
-              width: 36, height: 4,
+              width: 36,
+              height: 4,
               margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+              decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2)),
             ),
           ),
           Row(
@@ -451,9 +496,14 @@ class _GrievanceDetailSheet extends StatelessWidget {
           _DetailRow(label: 'Category', value: grievance.category),
           _DetailRow(label: 'Submitted', value: grievance.submittedAt),
           if (grievance.assignedDepartment != null)
-            _DetailRow(label: 'Assigned To', value: grievance.assignedDepartment!),
+            _DetailRow(
+                label: 'Assigned To', value: grievance.assignedDepartment!),
           const Divider(height: 24),
-          const Text('Description', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.grey)),
+          const Text('Description',
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.grey)),
           const SizedBox(height: 6),
           Container(
             padding: const EdgeInsets.all(12),
@@ -462,11 +512,16 @@ class _GrievanceDetailSheet extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: Colors.grey[200]!),
             ),
-            child: Text(grievance.description, style: const TextStyle(fontSize: 14, height: 1.6)),
+            child: Text(grievance.description,
+                style: const TextStyle(fontSize: 14, height: 1.6)),
           ),
           if (grievance.remarks != null) ...[
             const SizedBox(height: 12),
-            const Text('Remarks', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.grey)),
+            const Text('Remarks',
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.grey)),
             const SizedBox(height: 6),
             Container(
               padding: const EdgeInsets.all(12),
@@ -474,14 +529,20 @@ class _GrievanceDetailSheet extends StatelessWidget {
                 color: const Color(0xFFF0FDF4),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Text(grievance.remarks!, style: const TextStyle(fontSize: 13, color: Color(0xFF065F46))),
+              child: Text(grievance.remarks!,
+                  style:
+                      const TextStyle(fontSize: 13, color: Color(0xFF065F46))),
             ),
           ],
-          if (grievance.status != 'RESOLVED' && grievance.status != 'CLOSED') ...[
+          if (grievance.status != 'RESOLVED' &&
+              grievance.status != 'CLOSED') ...[
             const Divider(height: 24),
             const Text(
               'Update Status',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF1A237E)),
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF1A237E)),
             ),
             const SizedBox(height: 10),
             Wrap(
@@ -489,9 +550,17 @@ class _GrievanceDetailSheet extends StatelessWidget {
               runSpacing: 8,
               children: [
                 if (grievance.status == 'SUBMITTED')
-                  _ActionChip(label: 'Acknowledge', onTap: () => onStatusUpdate('ACKNOWLEDGED')),
-                _ActionChip(label: 'Forward to Dept', onTap: () => onStatusUpdate('FORWARDED'), outline: true),
-                _ActionChip(label: 'Mark Resolved', onTap: () => onStatusUpdate('RESOLVED'), green: true),
+                  _ActionChip(
+                      label: 'Acknowledge',
+                      onTap: () => onStatusUpdate('ACKNOWLEDGED')),
+                _ActionChip(
+                    label: 'Forward to Dept',
+                    onTap: () => onStatusUpdate('FORWARDED'),
+                    outline: true),
+                _ActionChip(
+                    label: 'Mark Resolved',
+                    onTap: () => onStatusUpdate('RESOLVED'),
+                    green: true),
               ],
             ),
           ],
@@ -516,7 +585,11 @@ class _DetailRow extends StatelessWidget {
         children: [
           SizedBox(
             width: 110,
-            child: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey)),
+            child: Text(label,
+                style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey)),
           ),
           Expanded(child: Text(value, style: const TextStyle(fontSize: 14))),
         ],
@@ -531,7 +604,11 @@ class _ActionChip extends StatelessWidget {
   final bool outline;
   final bool green;
 
-  const _ActionChip({required this.label, required this.onTap, this.outline = false, this.green = false});
+  const _ActionChip(
+      {required this.label,
+      required this.onTap,
+      this.outline = false,
+      this.green = false});
 
   @override
   Widget build(BuildContext context) {
@@ -568,19 +645,34 @@ class _NewGrievanceFormState extends State<_NewGrievanceForm> {
   final _descCtrl = TextEditingController();
 
   static const _districts = [
-    'East Khasi Hills', 'West Khasi Hills', 'Ri Bhoi',
-    'East Jaintia Hills', 'West Jaintia Hills', 'East Garo Hills',
-    'West Garo Hills', 'South Garo Hills', 'North Garo Hills',
+    'East Khasi Hills',
+    'West Khasi Hills',
+    'Ri Bhoi',
+    'East Jaintia Hills',
+    'West Jaintia Hills',
+    'East Garo Hills',
+    'West Garo Hills',
+    'South Garo Hills',
+    'North Garo Hills',
   ];
   static const _categories = [
-    'Public Services', 'Infrastructure', 'Health', 'Education',
-    'Employment', 'Welfare Scheme', 'Law & Order', 'Others',
+    'Public Services',
+    'Infrastructure',
+    'Health',
+    'Education',
+    'Employment',
+    'Welfare Scheme',
+    'Law & Order',
+    'Others',
   ];
 
   @override
   void dispose() {
-    _nameCtrl.dispose(); _phoneCtrl.dispose();
-    _constituencyCtrl.dispose(); _subjectCtrl.dispose(); _descCtrl.dispose();
+    _nameCtrl.dispose();
+    _phoneCtrl.dispose();
+    _constituencyCtrl.dispose();
+    _subjectCtrl.dispose();
+    _descCtrl.dispose();
     super.dispose();
   }
 
@@ -598,25 +690,35 @@ class _NewGrievanceFormState extends State<_NewGrievanceForm> {
         children: [
           Center(
             child: Container(
-              width: 36, height: 4,
+              width: 36,
+              height: 4,
               margin: const EdgeInsets.only(bottom: 12),
-              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+              decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2)),
             ),
           ),
           Text(
             'Raise a Grievance – Step ${_step + 1} of 3',
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1A237E)),
+            style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1A237E)),
           ),
           const SizedBox(height: 16),
           if (_step == 0) ...[
             _field('Full Name *', _nameCtrl, 'Enter your full name'),
             const SizedBox(height: 12),
-            _field('Mobile Number *', _phoneCtrl, '10-digit mobile number', keyboard: TextInputType.phone),
+            _field('Mobile Number *', _phoneCtrl, '10-digit mobile number',
+                keyboard: TextInputType.phone),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               value: _district,
-              decoration: const InputDecoration(labelText: 'District *', isDense: true),
-              items: _districts.map((d) => DropdownMenuItem(value: d, child: Text(d))).toList(),
+              decoration:
+                  const InputDecoration(labelText: 'District *', isDense: true),
+              items: _districts
+                  .map((d) => DropdownMenuItem(value: d, child: Text(d)))
+                  .toList(),
               onChanged: (v) => setState(() => _district = v),
             ),
             const SizedBox(height: 12),
@@ -624,8 +726,11 @@ class _NewGrievanceFormState extends State<_NewGrievanceForm> {
           ] else if (_step == 1) ...[
             DropdownButtonFormField<String>(
               value: _category,
-              decoration: const InputDecoration(labelText: 'Category *', isDense: true),
-              items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+              decoration:
+                  const InputDecoration(labelText: 'Category *', isDense: true),
+              items: _categories
+                  .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                  .toList(),
               onChanged: (v) => setState(() => _category = v),
             ),
             const SizedBox(height: 12),
@@ -637,7 +742,8 @@ class _NewGrievanceFormState extends State<_NewGrievanceForm> {
               decoration: InputDecoration(
                 labelText: 'Description *',
                 hintText: 'Provide detailed description…',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                 alignLabelWithHint: true,
               ),
             ),
@@ -648,7 +754,11 @@ class _NewGrievanceFormState extends State<_NewGrievanceForm> {
             _reviewRow('Category', _category ?? '–'),
             _reviewRow('Subject', _subjectCtrl.text),
             const Divider(height: 16),
-            const Text('Description', style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600)),
+            const Text('Description',
+                style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey,
+                    fontWeight: FontWeight.w600)),
             const SizedBox(height: 4),
             Container(
               padding: const EdgeInsets.all(10),
@@ -681,7 +791,8 @@ class _NewGrievanceFormState extends State<_NewGrievanceForm> {
                   onPressed: _submit,
                   icon: const Icon(Icons.send),
                   label: const Text('Submit'),
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF065F46)),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF065F46)),
                 ),
             ],
           ),
@@ -690,7 +801,8 @@ class _NewGrievanceFormState extends State<_NewGrievanceForm> {
     );
   }
 
-  Widget _field(String label, TextEditingController ctrl, String hint, {TextInputType? keyboard}) {
+  Widget _field(String label, TextEditingController ctrl, String hint,
+      {TextInputType? keyboard}) {
     return TextField(
       controller: ctrl,
       keyboardType: keyboard,
@@ -708,7 +820,13 @@ class _NewGrievanceFormState extends State<_NewGrievanceForm> {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          SizedBox(width: 90, child: Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600))),
+          SizedBox(
+              width: 90,
+              child: Text(label,
+                  style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey,
+                      fontWeight: FontWeight.w600))),
           Expanded(child: Text(value, style: const TextStyle(fontSize: 13))),
         ],
       ),

@@ -47,19 +47,19 @@ const _allRoles = [
 const _fullControl = [UserRole.HCM, UserRole.ADMIN, UserRole.OSD];
 
 final _navTree = <_NavItem>[
-  _NavItem(
+  const _NavItem(
     label: 'Dashboard',
     icon: Icons.dashboard_outlined,
     route: 'dashboard',
     roles: _allRoles,
   ),
-  _NavItem(
+  const _NavItem(
     label: 'My Portal',
     icon: Icons.person_outline,
     route: 'visitor',
     roles: [UserRole.PUBLIC],
   ),
-  _NavItem(
+  const _NavItem(
     label: 'Calendar / Schedule',
     icon: Icons.calendar_month_outlined,
     route: 'calendar',
@@ -71,7 +71,7 @@ final _navTree = <_NavItem>[
       UserRole.CMO_OFFICER,
     ],
   ),
-  _NavItem(
+  const _NavItem(
     label: 'Approver Review',
     icon: Icons.how_to_reg_outlined,
     route: 'approver',
@@ -82,7 +82,7 @@ final _navTree = <_NavItem>[
       UserRole.APPROVER,
     ],
   ),
-  _NavItem(
+  const _NavItem(
     label: 'Appointments',
     icon: Icons.people_outline,
     route: 'appointments',
@@ -113,7 +113,7 @@ final _navTree = <_NavItem>[
       ),
     ],
   ),
-  _NavItem(
+  const _NavItem(
     label: 'CM Schemes',
     icon: Icons.workspace_premium_outlined,
     route: 'schemes',
@@ -126,13 +126,13 @@ final _navTree = <_NavItem>[
       UserRole.PUBLIC,
     ],
   ),
-  _NavItem(
+  const _NavItem(
     label: 'Grievances',
     icon: Icons.comment_outlined,
     route: 'grievances',
     roles: [..._allRoles, UserRole.PUBLIC],
   ),
-  _NavItem(
+  const _NavItem(
     label: 'Public Identification',
     icon: Icons.badge_outlined,
     route: 'identify',
@@ -143,7 +143,7 @@ final _navTree = <_NavItem>[
       UserRole.DATA_ENTRY_OPERATOR,
     ],
   ),
-  _NavItem(
+  const _NavItem(
     label: 'Reports',
     icon: Icons.bar_chart_outlined,
     route: 'reports',
@@ -187,7 +187,7 @@ final _navTree = <_NavItem>[
       ),
     ],
   ),
-  _NavItem(
+  const _NavItem(
     label: 'User Management',
     icon: Icons.manage_accounts_outlined,
     route: 'users',
@@ -620,8 +620,8 @@ class _PlaceholderScreen extends StatelessWidget {
           children: [
             Container(
               padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE8EAF6),
+              decoration: const BoxDecoration(
+                color: Color(0xFFE8EAF6),
                 shape: BoxShape.circle,
               ),
               child: Icon(info.$2, size: 64, color: const Color(0xFF1A237E)),
@@ -650,15 +650,14 @@ class _PlaceholderScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: const Color(0xFFFCD34D)),
               ),
-              child: Row(
+              child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.construction,
-                      color: Color(0xFFB45309), size: 18),
-                  const SizedBox(width: 8),
+                  Icon(Icons.construction, color: Color(0xFFB45309), size: 18),
+                  SizedBox(width: 8),
                   Text(
                     'Full implementation in progress',
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: Color(0xFFB45309),
                       fontWeight: FontWeight.w500,
                       fontSize: 13,

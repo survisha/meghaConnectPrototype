@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { SchemeService } from '../../services/scheme.service';
 import { MockDataService } from '../../services/mock-data.service';
-import { SchemeApplication, SchemeType } from '../../models';
+import { SchemeApplication } from '../../models';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -72,7 +72,6 @@ export class SchemeListComponent implements OnInit {
         
         // If API returns empty or no data, use dummy data for demo
         if (!content || content.length === 0) {
-          console.log('[SchemeListComponent] API returned no data, using dummy data for demo');
           this.schemes = this.mockDataService.schemeApplications;
         } else {
           this.schemes = content;

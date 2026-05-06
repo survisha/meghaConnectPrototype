@@ -473,7 +473,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
           }
           // If no result yet (404 or null), keep polling
         },
-        error: err => {
+        error: () => {
           // Continue polling on 404 (result not yet available)
           // Only stop on max attempts
           if (this.pollingAttempts >= this.maxPollingAttempts) {
@@ -769,7 +769,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
           videoElement.play();
         }
       }, 100);
-    } catch (error) {
+    } catch {
       this.errorMsg = this.t('CAMERA_ACCESS_DENIED');
     }
   }

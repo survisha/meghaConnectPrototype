@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+    <!-- DTO/entity classes intentionally expose simple JavaBean properties for Jackson/JPA. -->
+    <Match>
+        <Or>
+            <Class name="~com\.survisha\.meghaconnect\.dto\..*"/>
+            <Class name="~com\.survisha\.meghaconnect\.entity\..*"/>
+        </Or>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+</FindBugsFilter>

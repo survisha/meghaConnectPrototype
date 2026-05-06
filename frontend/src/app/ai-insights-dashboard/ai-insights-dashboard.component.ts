@@ -31,24 +31,18 @@ export class AiInsightsDashboardComponent implements OnInit {
   constructor(private http: HttpClient) {}
 
   ngOnInit() {
-    console.log('✅ AI Insights Dashboard initializing...');
-    
     this.http.get<AiDashboardInsights>('/api/ai/dashboard-insights').pipe(
-      catchError((error) => {
-        console.log('⚠️ API call failed, using mock data:', error);
+      catchError(() => {
         return of(this.getMockInsights());
       })
     ).subscribe((data: AiDashboardInsights) => {
       // Validate API data - use mock data if API returns empty/zero values
       if (!data || data.totalApplicationsThisMonth === 0 || !data.topSchemes?.length) {
-        console.log('⚠️ API returned empty data, using mock insights instead');
         this.insights = this.getMockInsights();
       } else {
-        console.log('✅ Using API data:', data);
         this.insights = data;
       }
       this.loading = false;
-      console.log('✅ Final insights loaded:', this.insights);
     });
   }
 

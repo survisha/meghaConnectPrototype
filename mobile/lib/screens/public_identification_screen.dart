@@ -395,10 +395,10 @@ class _PublicIdentificationScreenState
                         Text(person.designation,
                             style: const TextStyle(color: MeghaColors.muted)),
                         const SizedBox(height: 8),
-                        Wrap(
+                        const Wrap(
                           spacing: 6,
                           runSpacing: 6,
-                          children: const [
+                          children: [
                             _StatusPill('Active Voter', Color(0xFF065F46)),
                             _StatusPill('EPIC Verified', Color(0xFF1E40AF)),
                           ],

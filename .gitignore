@@ -15,6 +15,15 @@ automation/target/
 
 # Log files
 *.log
+logs/
+monitoring/.data/
+
+# Quality/security scan outputs
+.scannerwork/
+backend/target/pmd.*
+backend/target/spotbugs.*
+semgrep-results.json
+sonar-report.json
 
 # IDE
 .idea/

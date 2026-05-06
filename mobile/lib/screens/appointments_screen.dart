@@ -275,13 +275,16 @@ class _AppointmentCard extends StatelessWidget {
   const _AppointmentCard({required this.appointment});
 
   Color _statusColor(String status) {
-    if (status.contains('ACCEPTED') || status == 'COMPLETED')
+    if (status.contains('ACCEPTED') || status == 'COMPLETED') {
       return const Color(0xFF16A34A);
-    if (status.contains('PENDING') || status.contains('REVIEW'))
+    }
+    if (status.contains('PENDING') || status.contains('REVIEW')) {
       return const Color(0xFFB45309);
+    }
     if (status == 'SCHEDULED') return const Color(0xFF1A237E);
-    if (status.contains('REJECTED') || status.contains('CANCELLED'))
+    if (status.contains('REJECTED') || status.contains('CANCELLED')) {
       return const Color(0xFF991B1B);
+    }
     return const Color(0xFF4B5563);
   }
 

@@ -31,8 +31,7 @@ class PendingFollowupsScreen extends StatefulWidget {
   const PendingFollowupsScreen({super.key});
 
   @override
-  State<PendingFollowupsScreen> createState() =>
-      _PendingFollowupsScreenState();
+  State<PendingFollowupsScreen> createState() => _PendingFollowupsScreenState();
 }
 
 class _PendingFollowupsScreenState extends State<PendingFollowupsScreen> {
@@ -59,13 +58,28 @@ class _PendingFollowupsScreenState extends State<PendingFollowupsScreen> {
         final dt = DateTime.tryParse(deadline);
         if (dt != null) {
           daysLeft = dt.difference(DateTime.now()).inDays;
-          final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-              'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-          deadlineLabel = '${dt.day.toString().padLeft(2, '0')} ${months[dt.month - 1]} ${dt.year}';
+          final months = [
+            'Jan',
+            'Feb',
+            'Mar',
+            'Apr',
+            'May',
+            'Jun',
+            'Jul',
+            'Aug',
+            'Sep',
+            'Oct',
+            'Nov',
+            'Dec'
+          ];
+          deadlineLabel =
+              '${dt.day.toString().padLeft(2, '0')} ${months[dt.month - 1]} ${dt.year}';
         }
         final isCompleted = m['isCompleted'] as bool? ?? false;
         final color = m['color'] as String? ?? 'GREEN';
-        String status = isCompleted ? 'Completed' : (daysLeft < 0 ? 'Overdue' : 'In Progress');
+        String status = isCompleted
+            ? 'Completed'
+            : (daysLeft < 0 ? 'Overdue' : 'In Progress');
         return _Followup(
           id: (m['id'] as num?)?.toInt() ?? 0,
           appointmentId: m['appointmentId']?.toString() ?? '',
@@ -141,16 +155,18 @@ class _PendingFollowupsScreenState extends State<PendingFollowupsScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _SummaryPill(
-              label: 'Total', value: '${_followups.length}',
+              label: 'Total',
+              value: '${_followups.length}',
               color: Colors.white70),
           _SummaryPill(
-              label: 'Green', value: '$green',
-              color: const Color(0xFF86EFAC)),
+              label: 'Green', value: '$green', color: const Color(0xFF86EFAC)),
           _SummaryPill(
-              label: 'Yellow', value: '$yellow',
+              label: 'Yellow',
+              value: '$yellow',
               color: const Color(0xFFFDE68A)),
           _SummaryPill(
-              label: 'Overdue', value: '$overdue',
+              label: 'Overdue',
+              value: '$overdue',
               color: const Color(0xFFFCA5A5)),
         ],
       ),
@@ -240,8 +256,8 @@ class _FollowupCard extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: dirColor.withAlpha(26),
                       borderRadius: BorderRadius.circular(6),
@@ -257,8 +273,8 @@ class _FollowupCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: statusColor.withAlpha(20),
                       borderRadius: BorderRadius.circular(6),
@@ -303,8 +319,8 @@ class _FollowupCard extends StatelessWidget {
               // Direction
               Text(
                 followup.direction,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w600, fontSize: 14),
+                style:
+                    const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -312,18 +328,15 @@ class _FollowupCard extends StatelessWidget {
               // Applicant and App ID
               Row(
                 children: [
-                  Icon(Icons.person_outline,
-                      size: 13, color: Colors.grey[500]),
+                  Icon(Icons.person_outline, size: 13, color: Colors.grey[500]),
                   const SizedBox(width: 4),
                   Text(followup.applicant,
-                      style: TextStyle(
-                          fontSize: 12, color: Colors.grey[600])),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600])),
                   const SizedBox(width: 10),
                   Icon(Icons.tag, size: 13, color: Colors.grey[500]),
                   const SizedBox(width: 4),
                   Text(followup.appointmentId,
-                      style: TextStyle(
-                          fontSize: 12, color: Colors.grey[600])),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600])),
                 ],
               ),
               const SizedBox(height: 4),
@@ -333,11 +346,9 @@ class _FollowupCard extends StatelessWidget {
                   Icon(Icons.business, size: 13, color: Colors.grey[500]),
                   const SizedBox(width: 4),
                   Text(followup.department,
-                      style: TextStyle(
-                          fontSize: 12, color: Colors.grey[600])),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600])),
                   const SizedBox(width: 10),
-                  Icon(Icons.calendar_today,
-                      size: 13, color: Colors.grey[500]),
+                  Icon(Icons.calendar_today, size: 13, color: Colors.grey[500]),
                   const SizedBox(width: 4),
                   Text(followup.deadline,
                       style: TextStyle(
@@ -354,8 +365,7 @@ class _FollowupCard extends StatelessWidget {
                       size: 13, color: Colors.grey[500]),
                   const SizedBox(width: 4),
                   Text('Officer: ${followup.officer}',
-                      style: TextStyle(
-                          fontSize: 12, color: Colors.grey[600])),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600])),
                 ],
               ),
             ],

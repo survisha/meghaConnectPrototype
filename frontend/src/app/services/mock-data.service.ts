@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Appointment, Visitor, ScheduleEvent, SchemeApplication, Direction, AuditEntry, Grievance } from '../models';
+import { Appointment, Visitor, ScheduleEvent, SchemeApplication, AuditEntry, Grievance } from '../models';
 
 @Injectable({ providedIn: 'root' })
 export class MockDataService {

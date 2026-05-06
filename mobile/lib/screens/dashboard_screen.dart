@@ -12,7 +12,8 @@ class _Kpi {
   final Color color;
   final Color bg;
   final List<UserRole> roles;
-  const _Kpi(this.label, this.value, this.icon, this.color, this.bg, this.roles);
+  const _Kpi(
+      this.label, this.value, this.icon, this.color, this.bg, this.roles);
 }
 
 class _QuickAction {
@@ -22,15 +23,6 @@ class _QuickAction {
   final Color color;
   final List<UserRole> roles;
   const _QuickAction(this.label, this.icon, this.route, this.color, this.roles);
-}
-
-class _ScheduleItem {
-  final String time;
-  final String title;
-  final String type;
-  final String location;
-  final Color color;
-  const _ScheduleItem(this.time, this.title, this.type, this.location, this.color);
 }
 
 const _allStaff = [
@@ -51,43 +43,63 @@ const _seniorStaff = [
 ];
 
 final _allKpis = <_Kpi>[
-  _Kpi("Today's Appointments", 6, Icons.calendar_today_outlined,
-      const Color(0xFF1A237E), const Color(0xFFE8EAF6), _allStaff),
-  _Kpi('Pending Approvals', 3, Icons.pending_actions_outlined,
-      const Color(0xFFB45309), const Color(0xFFFEF3C7),
+  const _Kpi("Today's Appointments", 6, Icons.calendar_today_outlined,
+      Color(0xFF1A237E), Color(0xFFE8EAF6), _allStaff),
+  const _Kpi(
+      'Pending Approvals',
+      3,
+      Icons.pending_actions_outlined,
+      Color(0xFFB45309),
+      Color(0xFFFEF3C7),
       [UserRole.HCM, UserRole.ADMIN, UserRole.OSD, UserRole.APPROVER]),
-  _Kpi('Active Scheme Apps', 12, Icons.workspace_premium_outlined,
-      const Color(0xFF065F46), const Color(0xFFD1FAE5), _seniorStaff),
-  _Kpi('Pending Follow-ups', 5, Icons.warning_amber_outlined,
-      const Color(0xFF991B1B), const Color(0xFFFEE2E2),
+  const _Kpi('Active Scheme Apps', 12, Icons.workspace_premium_outlined,
+      Color(0xFF065F46), Color(0xFFD1FAE5), _seniorStaff),
+  const _Kpi(
+      'Pending Follow-ups',
+      5,
+      Icons.warning_amber_outlined,
+      Color(0xFF991B1B),
+      Color(0xFFFEE2E2),
       [UserRole.HCM, UserRole.ADMIN, UserRole.OSD]),
-  _Kpi('Walk-ins Today', 4, Icons.login_outlined,
-      const Color(0xFF0369A1), const Color(0xFFE0F2FE),
+  const _Kpi(
+      'Walk-ins Today',
+      4,
+      Icons.login_outlined,
+      Color(0xFF0369A1),
+      Color(0xFFE0F2FE),
       [UserRole.DATA_ENTRY_OPERATOR, UserRole.ADMIN, UserRole.OSD]),
-  _Kpi('CMO Reviews Due', 7, Icons.rate_review_outlined,
-      const Color(0xFF7C3AED), const Color(0xFFEDE9FE), [UserRole.CMO_OFFICER]),
+  const _Kpi('CMO Reviews Due', 7, Icons.rate_review_outlined,
+      Color(0xFF7C3AED), Color(0xFFEDE9FE), [UserRole.CMO_OFFICER]),
 ];
 
 final _allQuickActions = <_QuickAction>[
-  _QuickAction('New Appointment', Icons.add_circle_outline, 'new_appointment',
-      const Color(0xFF1A237E),
+  const _QuickAction(
+      'New Appointment',
+      Icons.add_circle_outline,
+      'new_appointment',
+      Color(0xFF1A237E),
       [UserRole.ADMIN, UserRole.OSD, UserRole.DATA_ENTRY_OPERATOR]),
-  _QuickAction('Walk-in Counter', Icons.login_outlined, 'walkin',
-      const Color(0xFF2E7D32),
+  const _QuickAction(
+      'Walk-in Counter',
+      Icons.login_outlined,
+      'walkin',
+      Color(0xFF2E7D32),
       [UserRole.ADMIN, UserRole.OSD, UserRole.DATA_ENTRY_OPERATOR]),
-  _QuickAction('Apply for Scheme', Icons.workspace_premium_outlined, 'schemes',
-      const Color(0xFFB45309),
-      [UserRole.ADMIN, UserRole.OSD]),
-  _QuickAction('Identify Person', Icons.badge_outlined, 'identify',
-      const Color(0xFF0288D1),
-      [UserRole.HCM, UserRole.ADMIN, UserRole.OSD, UserRole.DATA_ENTRY_OPERATOR]),
-  _QuickAction('View Reports', Icons.bar_chart_outlined, 'reports',
-      const Color(0xFF6D28D9), _seniorStaff),
-  _QuickAction('Manage Users', Icons.manage_accounts_outlined, 'users',
-      const Color(0xFF0369A1),
-      [UserRole.HCM, UserRole.ADMIN, UserRole.OSD]),
-  _QuickAction('Audit Trail', Icons.history, 'audit',
-      const Color(0xFF374151), [UserRole.ADMIN]),
+  const _QuickAction('Apply for Scheme', Icons.workspace_premium_outlined,
+      'schemes', Color(0xFFB45309), [UserRole.ADMIN, UserRole.OSD]),
+  const _QuickAction(
+      'Identify Person', Icons.badge_outlined, 'identify', Color(0xFF0288D1), [
+    UserRole.HCM,
+    UserRole.ADMIN,
+    UserRole.OSD,
+    UserRole.DATA_ENTRY_OPERATOR
+  ]),
+  const _QuickAction('View Reports', Icons.bar_chart_outlined, 'reports',
+      Color(0xFF6D28D9), _seniorStaff),
+  const _QuickAction('Manage Users', Icons.manage_accounts_outlined, 'users',
+      Color(0xFF0369A1), [UserRole.HCM, UserRole.ADMIN, UserRole.OSD]),
+  const _QuickAction('Audit Trail', Icons.history, 'audit', Color(0xFF374151),
+      [UserRole.ADMIN]),
 ];
 
 class DashboardScreen extends StatefulWidget {
@@ -116,8 +128,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final auditPage = results[1] as Map<String, dynamic>;
     final auditList = (auditPage['content'] as List<dynamic>?) ?? [];
     setState(() {
-      _scheduleItems =
-          schedList.map((e) => e as Map<String, dynamic>).toList();
+      _scheduleItems = schedList.map((e) => e as Map<String, dynamic>).toList();
       _auditItems = auditList.map((e) => e as Map<String, dynamic>).toList();
     });
   }
@@ -128,7 +139,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final role = auth.user!.role;
 
     final kpis = _allKpis.where((k) => k.roles.contains(role)).toList();
-    final actions = _allQuickActions.where((a) => a.roles.contains(role)).toList();
+    final actions =
+        _allQuickActions.where((a) => a.roles.contains(role)).toList();
     final showSchedule = _seniorStaff.contains(role);
 
     return SingleChildScrollView(
@@ -225,10 +237,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   String _formattedDate() {
     final now = DateTime.now();
-    final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    final days = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday'
+    ];
     final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     final day = days[now.weekday - 1];
     return '$day, ${now.day} ${months[now.month - 1]} ${now.year}';
@@ -280,7 +310,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return const Card(
         child: Padding(
           padding: EdgeInsets.all(16),
-          child: Center(child: Text('No schedule events', style: TextStyle(color: Colors.grey))),
+          child: Center(
+              child: Text('No schedule events',
+                  style: TextStyle(color: Colors.grey))),
         ),
       );
     }
@@ -309,13 +341,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
             ),
-            title: Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+            title: Text(title,
+                style:
+                    const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
             subtitle: Text('$time  ·  $location',
                 style: TextStyle(fontSize: 12, color: Colors.grey[500])),
             trailing: Container(
               width: 6,
               height: 6,
-              decoration: const BoxDecoration(color: color, shape: BoxShape.circle),
+              decoration:
+                  const BoxDecoration(color: color, shape: BoxShape.circle),
             ),
           );
         }).toList(),
@@ -328,7 +363,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return const Card(
         child: Padding(
           padding: EdgeInsets.all(16),
-          child: Center(child: Text('No recent activity', style: TextStyle(color: Colors.grey))),
+          child: Center(
+              child: Text('No recent activity',
+                  style: TextStyle(color: Colors.grey))),
         ),
       );
     }
@@ -346,7 +383,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           }
           return ListTile(
             dense: true,
-            leading: const Icon(Icons.swap_horiz, color: Color(0xFF1A237E), size: 20),
+            leading: const Icon(Icons.swap_horiz,
+                color: Color(0xFF1A237E), size: 20),
             title: Text(details, style: const TextStyle(fontSize: 13)),
             trailing: Text(timeLabel,
                 style: TextStyle(fontSize: 11, color: Colors.grey[500])),

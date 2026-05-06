@@ -48,9 +48,7 @@ extension UserRoleExtension on UserRole {
   }
 
   bool get isFullControl =>
-      this == UserRole.HCM ||
-      this == UserRole.ADMIN ||
-      this == UserRole.OSD;
+      this == UserRole.HCM || this == UserRole.ADMIN || this == UserRole.OSD;
 
   bool get isStaff => this != UserRole.PUBLIC;
 }

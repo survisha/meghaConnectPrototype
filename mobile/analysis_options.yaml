@@ -1,1 +1,6 @@
 include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  errors:
+    # These enum values intentionally match backend role names and JWT payloads.
+    constant_identifier_names: ignore

@@ -77,6 +77,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           description: m['description'] as String?,
           travelMinutes: (m['travelTimeMinutes'] as num?)?.toInt(),
           isConflict: m['isConflict'] as bool? ?? false,
+          shortNotes: m['shortNotes'] as String?,
         );
       }).toList();
       _loading = false;
@@ -407,16 +408,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   color: const Color(0xFFFEF3C7),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Row(
+                child: const Row(
                   children: [
-                    const Icon(Icons.notifications_outlined,
+                    Icon(Icons.notifications_outlined,
                         color: Color(0xFFB45309), size: 16),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Push notification will be sent 5 min before departure',
-                        style: const TextStyle(
-                            color: Color(0xFFB45309), fontSize: 12),
+                        style:
+                            TextStyle(color: Color(0xFFB45309), fontSize: 12),
                       ),
                     ),
                   ],

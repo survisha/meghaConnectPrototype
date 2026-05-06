@@ -6,7 +6,6 @@ import { ShellComponent } from './shell/shell.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { SchedulingComponent } from './scheduling/scheduling.component';
 import { AppointmentListComponent } from './appointments/appointment-list/appointment-list.component';
-import { AppointmentDetailComponent } from './appointments/appointment-detail/appointment-detail.component';
 import { AppointmentFormComponent } from './appointments/appointment-form/appointment-form.component';
 import { WalkinComponent } from './appointments/walkin/walkin.component';
 import { SchemeListComponent } from './schemes/scheme-list/scheme-list.component';

@@ -75,7 +75,7 @@ export class AiDocumentService {
   }
 
   /** Local mock for demo/offline mode */
-  getMockAnalysis(fileName: string): AiDocumentAnalysisResponse {
+  getMockAnalysis(_fileName: string): AiDocumentAnalysisResponse {
     return {
       success: true,
       summary:

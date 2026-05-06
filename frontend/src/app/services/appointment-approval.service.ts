@@ -70,11 +70,7 @@ export class AppointmentApprovalService {
    * Submit appointment from form to CMO for review
    */
   submitForApproval(appointmentData: any): Observable<any> {
-    return this.http.post(`${this.apiUrl}/submit-for-approval`, appointmentData).pipe(
-      tap(response => {
-        console.log('Appointment submitted for approval:', response);
-      })
-    );
+    return this.http.post(`${this.apiUrl}/submit-for-approval`, appointmentData);
   }
 
   /**
@@ -113,11 +109,7 @@ export class AppointmentApprovalService {
     location: string;
     remarks?: string;
   }): Observable<any> {
-    return this.http.put(`${this.apiUrl}/${appointmentId}/schedule`, scheduleData).pipe(
-      tap(response => {
-        console.log('Appointment scheduled:', response);
-      })
-    );
+    return this.http.put(`${this.apiUrl}/${appointmentId}/schedule`, scheduleData);
   }
 
   /**
@@ -129,11 +121,7 @@ export class AppointmentApprovalService {
     location: string;
     rescheduledReason?: string;
   }): Observable<any> {
-    return this.http.put(`${this.apiUrl}/${appointmentId}/reschedule`, newScheduleData).pipe(
-      tap(response => {
-        console.log('Appointment rescheduled:', response);
-      })
-    );
+    return this.http.put(`${this.apiUrl}/${appointmentId}/reschedule`, newScheduleData);
   }
 
   /**

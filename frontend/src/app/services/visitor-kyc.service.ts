@@ -258,7 +258,7 @@ export class VisitorKycService {
           resolve(base64Image);
         });
       });
-    } catch (error) {
+    } catch {
       throw new Error('Camera access denied or not available');
     }
   }

@@ -107,7 +107,7 @@ class _LoginScreenState extends State<LoginScreen>
           content: Text(message?.isNotEmpty == true
               ? message!
               : i18n.t('OTP_SENT_SUCCESS')),
-          backgroundColor: Color(0xFF065F46),
+          backgroundColor: const Color(0xFF065F46),
         ),
       );
     } else {
@@ -243,11 +243,11 @@ class _LoginScreenState extends State<LoginScreen>
     final i18n = context.watch<AppI18n>();
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [_primaryBlue, const Color(0xFF0D47A1), _accentBlue],
+          colors: [_primaryBlue, Color(0xFF0D47A1), _accentBlue],
         ),
       ),
       child: Stack(
@@ -614,8 +614,9 @@ class _LoginScreenState extends State<LoginScreen>
                 }
               },
               validator: (v) {
-                if (v == null || v.isEmpty)
+                if (v == null || v.isEmpty) {
                   return i18n.t('ENTER_MOBILE_NUMBER');
+                }
                 if (v.length != 10) return i18n.t('ENTER_10_DIGIT_MOBILE');
                 return null;
               },
@@ -632,8 +633,9 @@ class _LoginScreenState extends State<LoginScreen>
                 textCapitalization: TextCapitalization.characters,
                 validator: (v) {
                   if (!_requiresEpic) return null;
-                  if (v == null || v.trim().isEmpty)
+                  if (v == null || v.trim().isEmpty) {
                     return i18n.t('ENTER_EPIC_NUMBER');
+                  }
                   return null;
                 },
               ),

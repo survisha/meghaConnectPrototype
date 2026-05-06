@@ -1,0 +1,31 @@
+rules:
+  - id: meghaconnect-hardcoded-secret
+    message: Avoid hardcoded credentials, tokens, API keys, and long-lived secrets. Use environment variables or a secret manager.
+    severity: WARNING
+    languages:
+      - generic
+    paths:
+      exclude:
+        - docs/**
+        - quality/**
+        - monitoring/**
+        - frontend/package-lock.json
+    pattern-regex: '(?i)(password|passwd|pwd|secret|api[_-]?key|token)\s*[:=]\s*["''][^$][^"'']{8,}["'']'
+
+  - id: meghaconnect-sensitive-console-output
+    message: Do not write sensitive identity/authentication data to console logs.
+    severity: WARNING
+    languages:
+      - typescript
+      - dart
+      - java
+    pattern-regex: '(?i)(console\.log|print|System\.out\.println|log\.(info|debug|warn|error))\s*\([^)]*(otp|aadhaar|aadhar|token|authorization|password|secret|epic)[^)]*\)'
+
+  - id: meghaconnect-spring-permit-all-catchall
+    message: Avoid catch-all permitAll security rules on Spring request authorization.
+    severity: WARNING
+    languages:
+      - java
+    patterns:
+      - pattern: |
+          .anyRequest().permitAll()

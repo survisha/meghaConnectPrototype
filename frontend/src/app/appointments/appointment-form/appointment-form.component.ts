@@ -27,7 +27,7 @@ interface Associate {
 }
 
 interface DocumentUpload {
-  type: 'EPIC_SCAN' | 'APPLICATION_LETTER' | 'PLANS_ESTIMATES' | 'BANK_DETAILS' | 'MLA_APPROVAL_LETTER' | 'ORG_REGISTRATION_CERTIFICATE' | 'CM_CARE_ELIGIBILITY' | 'CM_CARE_HOSPITAL' | 'CM_CARE_SUPPORTING';
+  type: 'APPLICATION_LETTER' | 'PLANS_ESTIMATES' | 'BANK_DETAILS' | 'MLA_APPROVAL_LETTER' | 'ORG_REGISTRATION_CERTIFICATE' | 'CM_CARE_ELIGIBILITY' | 'CM_CARE_HOSPITAL' | 'CM_CARE_SUPPORTING';
   label: string;
   isRequired: boolean;
   isVisible: boolean;
@@ -88,7 +88,7 @@ export class AppointmentFormComponent implements OnInit {
   associates: Associate[] = [];
   newAssociate: Associate = { name: '', phoneNumber: '', epicNumber: '', designation: '', address: '' };
 
-  // AI state – R004/R005/R006/R007/R015
+  // AI state – R004/R005/R006/R007
   aiAnalysisLoading = false;
   aiExtracted: AiExtractedFields | null = null;
   aiSummary = '';
@@ -97,12 +97,10 @@ export class AppointmentFormComponent implements OnInit {
   aiPriorityOverridden = false;
   overriddenPriority: 'HIGH' | 'MEDIUM' | 'LOW' | '' = '';
   duplicateWarning: { previousApplicationId: string; schemeName: string; dateSubmitted: string } | null = null;
-  suggestedSlots: string[] = [];
 
   // Document tracking
   visitorKycStatus: 'PENDING' | 'VERIFIED' | 'REJECTED' | null = null;
   documents: DocumentUpload[] = [
-    { type: 'EPIC_SCAN', label: 'EPIC / Voter ID Scan', isRequired: true, isVisible: false },
     { type: 'APPLICATION_LETTER', label: 'Application Letter / Project Proposal', isRequired: true, isVisible: true },
     { type: 'PLANS_ESTIMATES', label: 'Plans & Estimates (up to 3)', isRequired: false, isVisible: false },
     { type: 'BANK_DETAILS', label: 'Bank Account Details', isRequired: true, isVisible: true },
@@ -181,10 +179,6 @@ export class AppointmentFormComponent implements OnInit {
   }
 
   updateDocumentVisibility() {
-    // EPIC scan: visible if KYC is pending
-    const epicDoc = this.documents.find(d => d.type === 'EPIC_SCAN');
-    if (epicDoc) epicDoc.isVisible = this.visitorKycStatus === 'PENDING';
-
     // Plans & Estimates: visible for scheme applications
     const plansDoc = this.documents.find(d => d.type === 'PLANS_ESTIMATES');
     if (plansDoc) plansDoc.isVisible = this.isScheme;
@@ -217,7 +211,7 @@ export class AppointmentFormComponent implements OnInit {
   nextStep() {
     if (this.step < this.steps.length - 1) {
       this.step++;
-      // On moving to Review step, trigger AI priority + duplicate check + slot suggestions
+      // On moving to Review step, trigger AI priority + duplicate check
       if (this.step === 5) {
         this.runAiPreSubmitChecks();
       }
@@ -258,7 +252,7 @@ export class AppointmentFormComponent implements OnInit {
     }
   }
 
-  /** R007: AI priority recommendation + R006 duplicate check + R015 slot suggestions */
+  /** R007: AI priority recommendation + R006 duplicate check */
   private runAiPreSubmitChecks() {
     // Priority
     if (!this.aiPriorityLevel) {
@@ -283,12 +277,6 @@ export class AppointmentFormComponent implements OnInit {
             dateSubmitted: res.dateSubmitted ?? '',
           };
         }
-      });
-    }
-    // Slot suggestions
-    if (this.form.requestedLocation) {
-      this.aiDocumentService.suggestTimeSlots(this.form.requestedLocation, this.form.agendaType).subscribe((slots: string[]) => {
-        this.suggestedSlots = slots;
       });
     }
   }
@@ -439,7 +427,7 @@ export class AppointmentFormComponent implements OnInit {
     });
 
     this.http.post<{ success: boolean; applicationId?: string; message?: string; id?: number }>(
-      `${environment.apiUrl}/visitor/appointments`, formData
+      `${environment.apiUrl}/appointments`, formData
     ).subscribe({
       next: res => {
         this.loading = false;

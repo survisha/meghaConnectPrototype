@@ -68,12 +68,6 @@ export class AiDocumentService {
     ).pipe(catchError(() => of(this.getMockPriority(agendaType))));
   }
 
-  suggestTimeSlots(requestedLocation: string, agendaType: string): Observable<string[]> {
-    return this.http.post<string[]>('/api/ai/suggest-slots', { requestedLocation, agendaType }).pipe(
-      catchError(() => of(this.getMockSlots()))
-    );
-  }
-
   /** Local mock for demo/offline mode */
   getMockAnalysis(_fileName: string): AiDocumentAnalysisResponse {
     return {
@@ -108,13 +102,5 @@ export class AiDocumentService {
       return { level: 'MEDIUM', reason: 'Public grievance – moderate priority' };
     }
     return { level: 'LOW', reason: 'General discussion or political matter' };
-  }
-
-  getMockSlots(): string[] {
-    return [
-      'Mon, 10 Mar – 10:00 AM (Shillong)',
-      'Tue, 11 Mar – 02:30 PM (Shillong)',
-      'Wed, 12 Mar – 11:00 AM (Tura)',
-    ];
   }
 }

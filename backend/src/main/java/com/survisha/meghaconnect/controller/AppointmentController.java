@@ -1,5 +1,6 @@
 package com.survisha.meghaconnect.controller;
 
+import com.survisha.meghaconnect.dto.AppointmentMultipartRequest;
 import com.survisha.meghaconnect.dto.AppointmentDto;
 import com.survisha.meghaconnect.entity.Appointment;
 import com.survisha.meghaconnect.service.AppointmentService;
@@ -15,11 +16,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.Map;
 
@@ -108,7 +111,17 @@ public class AppointmentController {
         @ApiResponse(responseCode = "401", description = "Unauthorized"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String, Object>> createMultipart(
+            @ModelAttribute AppointmentMultipartRequest form,
+            HttpServletRequest request,
+            @AuthenticationPrincipal UserDetails user) {
+        String actor = user != null ? user.getUsername() : "anonymous";
+        Map<String, Object> response = appointmentService.createMultipart(form, request, actor);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public Appointment create(@Valid @RequestBody AppointmentDto dto,
                               @AuthenticationPrincipal UserDetails user) {

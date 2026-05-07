@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Visitor } from '../models';
+import { environment } from '../../environments/environment';
 
 export interface RegisterVisitorRequest {
   fullName: string;
@@ -58,7 +59,7 @@ export class VisitorService {
   }
 
   getById(id: number): Observable<Visitor> {
-    return this.http.get<Visitor>(`${this.baseUrl}/${id}`);
+    return this.http.get<Visitor>(`${environment.apiUrl}/visitor/auth/profile/${id}`);
   }
 
   getHistory(id: number): Observable<VisitorHistory> {

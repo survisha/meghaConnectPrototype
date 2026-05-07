@@ -450,7 +450,7 @@
       </div>
     </div>
 
-    <!-- Step 5: Review (R005/R006/R007/R015) -->
+    <!-- Step 5: Review (R005/R006/R007) -->
     <div class="section-card" *ngIf="step===5">
       <div class="section-card-header"><mat-icon>check_circle</mat-icon> Review &amp; Submit</div>
       <div class="section-card-body">
@@ -469,42 +469,6 @@
           <div style="margin-top:0.4rem;font-size:0.8rem;color:#92400e">You may still proceed if this is a different request.</div>
         </div>
 
-        <!-- R007: AI Priority Recommendation -->
-        <div *ngIf="aiPriorityLevel" style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;flex-wrap:wrap">
-          <span style="font-size:0.85rem;color:#374151;font-weight:600">AI Recommended Priority:</span>
-          <span class="priority-badge" [class.high]="effectivePriority==='HIGH'" [class.medium]="effectivePriority==='MEDIUM'" [class.low]="effectivePriority==='LOW'">
-            <i class="pi" [class.pi-arrow-up]="effectivePriority==='HIGH'" [class.pi-minus]="effectivePriority==='MEDIUM'" [class.pi-arrow-down]="effectivePriority==='LOW'"></i>
-            {{ effectivePriority }}
-          </span>
-          <span *ngIf="aiPriorityReason && !aiPriorityOverridden" style="font-size:0.78rem;color:#6b7280">— {{ aiPriorityReason }}</span>
-          <span *ngIf="aiPriorityOverridden" style="font-size:0.78rem;color:#b45309">(Overridden by you)</span>
-          <div style="display:flex;gap:0.4rem;margin-left:auto">
-            <button *ngFor="let p of priorityOptions"
-              (click)="overridePriority(p)"
-              style="padding:0.2rem 0.6rem;border-radius:6px;border:1px solid #d1d5db;background:white;cursor:pointer;font-size:0.78rem;font-weight:600"
-              [style.background]="overriddenPriority===p ? '#e8eaf6' : 'white'"
-              [style.color]="overriddenPriority===p ? '#1a237e' : '#374151'">
-              {{ p }}
-            </button>
-            <button *ngIf="aiPriorityOverridden" (click)="resetPriorityOverride()"
-              style="padding:0.2rem 0.6rem;border-radius:6px;border:1px solid #d1d5db;background:white;cursor:pointer;font-size:0.75rem;color:#6b7280">
-              Reset
-            </button>
-          </div>
-        </div>
-
-        <!-- R015: AI Slot Suggestions -->
-        <div *ngIf="suggestedSlots.length > 0" style="margin-bottom:1rem;padding:0.85rem 1rem;background:#f0fdf4;border:1px solid #86efac;border-radius:8px">
-          <div style="font-weight:700;font-size:0.85rem;color:#166534;margin-bottom:0.5rem;display:flex;align-items:center;gap:0.4rem">
-            <i class="pi pi-calendar-clock"></i> AI Suggested Available Slots
-          </div>
-          <div style="display:flex;flex-wrap:wrap;gap:0.5rem">
-            <span *ngFor="let slot of suggestedSlots" style="padding:0.3rem 0.75rem;background:white;border:1px solid #86efac;border-radius:6px;font-size:0.82rem;color:#166534;font-weight:500">
-              <i class="pi pi-clock" style="margin-right:0.3rem"></i>{{ slot }}
-            </span>
-          </div>
-          <div style="font-size:0.75rem;color:#6b7280;margin-top:0.4rem">Final scheduling will be confirmed by the CMO team.</div>
-        </div>
 
         <div class="review-grid">
           <div><strong>Name:</strong> {{ form.fullName || '–' }}</div>

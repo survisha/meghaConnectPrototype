@@ -103,9 +103,11 @@ public class Appointment extends BaseEntity {
     private String aiPriorityLevel;
 
     /** True if AI detected a possible duplicate application (R006) */
-    @Column(name = "ai_duplicate_flag")
+    @Builder.Default
+    @Column(name = "ai_duplicate_flag", nullable = false)
     private Boolean aiDuplicateFlag = false;
 
+    @Builder.Default
     private Boolean isWalkIn = false;
 
     // Snooze

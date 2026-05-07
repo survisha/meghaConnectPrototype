@@ -1,23 +1,38 @@
 package com.survisha.meghaconnect.service;
 
 import com.survisha.meghaconnect.dto.AppointmentDto;
+import com.survisha.meghaconnect.dto.AppointmentMultipartRequest;
 import com.survisha.meghaconnect.entity.Appointment;
+import com.survisha.meghaconnect.entity.DocumentUpload;
+import com.survisha.meghaconnect.entity.SchemeApplication;
 import com.survisha.meghaconnect.entity.Visitor;
 import com.survisha.meghaconnect.repository.AppointmentRepository;
+import com.survisha.meghaconnect.repository.DocumentUploadRepository;
+import com.survisha.meghaconnect.repository.SchemeApplicationRepository;
 import com.survisha.meghaconnect.repository.VisitorRepository;
 import com.survisha.meghaconnect.exception.*;
 import com.survisha.meghaconnect.util.ValidationConstants;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.Part;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -49,10 +64,23 @@ public class AppointmentService {
         Appointment.AppointmentStatus.SCHEDULED
     );
 
+    private static final Set<String> DUPLICATE_ALLOWED_FINAL_SCHEME_STATUSES = Set.of(
+        "REJECTED",
+        "HCM_REJECTED",
+        "CANCELLED",
+        "CANCELED",
+        "COMPLETED",
+        "CLOSED"
+    );
+
     private final AppointmentRepository appointmentRepository;
     private final VisitorRepository visitorRepository;
+    private final DocumentUploadRepository documentUploadRepository;
+    private final SchemeApplicationRepository schemeApplicationRepository;
     private final AuditLogService auditLogService;
     private final RequestValidationService validationService;
+    private final FileStorageService fileStorageService;
+    private final ObjectMapper objectMapper;
 
     public Page<Appointment> findAll(Pageable pageable) {
         return appointmentRepository.findAll(pageable);
@@ -112,6 +140,7 @@ public class AppointmentService {
             .requestedLocation(dto.getRequestedLocation())
             .mlaMdcApproved(dto.getMlaMdcApproved())
             .isWalkIn(Boolean.TRUE.equals(dto.getIsWalkIn()))
+            .aiDuplicateFlag(false)
             .meetingCountLast6Months(meetingCount)
             .build();
         appt.setCreatedBy(createdBy);
@@ -121,6 +150,69 @@ public class AppointmentService {
         auditLogService.log("Appointment", saved.getId(), "CREATED",
             "New appointment created: " + appId, createdBy);
         return saved;
+    }
+
+    @Transactional
+    public Map<String, Object> createMultipart(
+            AppointmentMultipartRequest form,
+            HttpServletRequest request,
+            String createdBy) {
+
+        AppointmentMultipartRequest safeForm = form != null ? form : new AppointmentMultipartRequest();
+        Visitor applicant = resolveAppointmentApplicant(
+                safeForm.getApplicantId(),
+                safeForm.getApplicantName(),
+                safeForm.getApplicantPhone(),
+                safeForm.getEpicNumber());
+        String actor = resolveAppointmentActor(createdBy, applicant);
+        String agendaTypeValue = validationService.requireText(safeForm.getAgendaType(), "agendaType");
+        Appointment.MeetingLocation location = parseMeetingLocation(safeForm.getRequestedLocation());
+        Appointment.EventType parsedEventType = parseEventType(safeForm.getEventType());
+        SchemeApplication.SchemeType schemeType = parseSchemeType(safeForm.getSchemeType());
+        ensureSchemeApplicationIsNotDuplicate(applicant, schemeType);
+        String appId = generatePublicApplicationId();
+
+        int meetingCount = appointmentRepository.countMeetingsLast6Months(
+                applicant.getId(), LocalDateTime.now().minusMonths(6));
+
+        Appointment appt = Appointment.builder()
+            .applicationId(appId)
+            .applicant(applicant)
+            .eventType(parsedEventType)
+            .agendaType(agendaTypeValue)
+            .agendaBrief(safeForm.getAgendaBrief())
+            .status(Appointment.AppointmentStatus.SUBMITTED)
+            .requestedLocation(location)
+            .mlaMdcApproved(safeForm.getMlaMdcApproved() != null && safeForm.getMlaMdcApproved())
+            .isWalkIn(false)
+            .aiDuplicateFlag(false)
+            .meetingCountLast6Months(meetingCount)
+            .build();
+        appt.setCreatedBy(actor);
+        appt.setUpdatedBy(actor);
+
+        if (safeForm.getAiSummary() != null && !safeForm.getAiSummary().trim().isEmpty()) {
+            appt.setAiSummary(safeForm.getAiSummary().trim());
+        }
+        if (safeForm.getAiPriorityLevel() != null && !safeForm.getAiPriorityLevel().trim().isEmpty()) {
+            appt.setAiPriorityLevel(safeForm.getAiPriorityLevel().trim());
+        }
+
+        Appointment saved = appointmentRepository.save(appt);
+        saveSchemeApplicationIfRequired(safeForm, saved, applicant, schemeType, actor);
+        saveAppointmentDocuments(request, saved, applicant, appId, actor);
+        auditAppointmentAssociates(safeForm.getAssociates(), saved, actor);
+
+        auditLogService.log("Appointment", saved.getId(), "SUBMITTED",
+            "Appointment submitted: " + appId, actor);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("id", saved.getId());
+        response.put("applicationId", appId);
+        response.put("status", saved.getStatus().name());
+        response.put("message", "Appointment request submitted successfully.");
+        return response;
     }
 
     public AppointmentDto toDto(Appointment appointment) {
@@ -257,7 +349,330 @@ public class AppointmentService {
         return "MC-" + LocalDateTime.now().getYear() + "-" + String.format("%05d", count);
     }
 
-    private String firstNonBlank(String primary, String fallback) {
-        return primary != null && !primary.trim().isEmpty() ? primary : fallback;
+    private String firstNonBlank(String... values) {
+        if (values == null) {
+            return null;
+        }
+        for (String value : values) {
+            if (value != null && !value.trim().isEmpty()) {
+                return value.trim();
+            }
+        }
+        return null;
+    }
+
+    private Visitor resolveAppointmentApplicant(Long applicantId, String applicantName,
+                                                String applicantPhone, String epicNumber) {
+        if (applicantId != null && applicantId > 0) {
+            Optional<Visitor> visitor = visitorRepository.findById(applicantId);
+            if (visitor.isPresent()) {
+                return visitor.get();
+            }
+        }
+
+        String applicantNameValue = validationService.requireText(applicantName, "applicantName");
+        String applicantPhoneValue = validationService.requirePhone(applicantPhone);
+        String epicFinal = epicNumber != null ? epicNumber.trim().toUpperCase() : null;
+
+        if (epicFinal != null && !epicFinal.isEmpty() && !epicFinal.matches(ValidationConstants.REGEX_EPIC)) {
+            epicFinal = null;
+        }
+
+        List<Visitor> existingVisitors = epicFinal != null
+                ? visitorRepository.findByPhoneNumberAndEpicNumber(applicantPhoneValue, epicFinal)
+                : visitorRepository.findByPhoneNumber(applicantPhoneValue);
+
+        if (!existingVisitors.isEmpty()) {
+            return existingVisitors.get(0);
+        }
+        if (epicFinal != null && visitorRepository.findByEpicNumber(epicFinal).isPresent()) {
+            return visitorRepository.findByEpicNumber(epicFinal).get();
+        }
+
+        Visitor visitor = Visitor.builder()
+                .fullName(applicantNameValue)
+                .phoneNumber(applicantPhoneValue)
+                .epicNumber(epicFinal)
+                .kycType("NONE")
+                .kycVerified(false)
+                .kycStatus("PENDING")
+                .build();
+        return visitorRepository.save(visitor);
+    }
+
+    private void saveAppointmentDocuments(HttpServletRequest request, Appointment appointment,
+                                          Visitor applicant, String applicationId, String uploadedBy) {
+        try {
+            for (Part part : request.getParts()) {
+                String paramName = part.getName();
+                if (!paramName.startsWith("documents_")) {
+                    continue;
+                }
+
+                MultipartFile file = convertPartToMultipartFile(part);
+                if (file == null || file.isEmpty()) {
+                    continue;
+                }
+
+                String documentType = paramName.replace("documents_", "");
+                String filePath = fileStorageService.storeFile(file, applicant.getId(), applicationId);
+
+                DocumentUpload docUpload = DocumentUpload.builder()
+                        .appointment(appointment)
+                        .visitor(applicant)
+                        .documentType(documentType)
+                        .originalFilename(file.getOriginalFilename())
+                        .filePath(filePath)
+                        .fileSizeBytes(file.getSize())
+                        .mimeType(file.getContentType())
+                        .uploadedBy(uploadedBy)
+                        .createdAt(LocalDateTime.now())
+                        .updatedAt(LocalDateTime.now())
+                        .build();
+                documentUploadRepository.save(docUpload);
+            }
+        } catch (ServletException | IOException e) {
+            auditLogService.log("Appointment", appointment.getId(), "DOCUMENT_UPLOAD_ERROR",
+                    "Failed to process appointment documents: " + e.getMessage(), uploadedBy);
+            throw new IllegalArgumentException("Failed to process uploaded documents.", e);
+        }
+    }
+
+    private void saveSchemeApplicationIfRequired(AppointmentMultipartRequest form, Appointment appointment,
+                                                 Visitor applicant, SchemeApplication.SchemeType schemeType,
+                                                 String actor) {
+        if (schemeType == null) {
+            return;
+        }
+
+        SchemeApplication schemeApplication = SchemeApplication.builder()
+                .applicant(applicant)
+                .appointment(appointment)
+                .schemeType(schemeType)
+                .projectName(firstNonBlank(
+                        form.getProjectName(),
+                        form.getAgendaBrief(),
+                        formatSchemeType(schemeType) + " application"))
+                .projectCategory(trimToNull(form.getProjectCategory()))
+                .beneficiaryType(trimToNull(form.getBeneficiaryType()))
+                .beneficiaryCount(trimToNull(form.getBeneficiaryCount()))
+                .estimatedCost(parseAmount(form.getEstimatedCost()))
+                .communityContribution(parseAmount(form.getCommunityContribution()))
+                .justification(trimToNull(firstNonBlank(form.getJustification(), form.getAgendaBrief())))
+                .status(Appointment.AppointmentStatus.SUBMITTED.name())
+                .build();
+        schemeApplication.setCreatedBy(actor);
+        schemeApplication.setUpdatedBy(actor);
+        schemeApplicationRepository.save(schemeApplication);
+    }
+
+    private void ensureSchemeApplicationIsNotDuplicate(Visitor applicant, SchemeApplication.SchemeType schemeType) {
+        if (schemeType == null) {
+            return;
+        }
+
+        schemeApplicationRepository.findByApplicant_IdAndSchemeTypeOrderByCreatedAtDesc(applicant.getId(), schemeType)
+                .stream()
+                .filter(this::isActiveSchemeApplication)
+                .findFirst()
+                .ifPresent(existing -> {
+                    Appointment existingAppointment = existing.getAppointment();
+                    String applicationRef = existingAppointment != null && existingAppointment.getApplicationId() != null
+                            ? existingAppointment.getApplicationId()
+                            : "scheme application #" + existing.getId();
+                    String status = firstNonBlank(existing.getStatus(), "SUBMITTED");
+                    String message = "Multiple applications for " + formatSchemeType(schemeType)
+                            + " are not allowed. Existing application " + applicationRef
+                            + " is currently " + status + ".";
+                    throw new MeghaConnectException(ErrorCodeConstants.DUPLICATE_ENTRY, message, 409);
+                });
+    }
+
+    private boolean isActiveSchemeApplication(SchemeApplication application) {
+        String status = application.getStatus();
+        if (status == null || status.trim().isEmpty()) {
+            return true;
+        }
+        return !DUPLICATE_ALLOWED_FINAL_SCHEME_STATUSES.contains(status.trim().toUpperCase());
+    }
+
+    private SchemeApplication.SchemeType parseSchemeType(String schemeType) {
+        String normalized = normalizeSchemeType(schemeType);
+        if (normalized == null) {
+            return null;
+        }
+        try {
+            return SchemeApplication.SchemeType.valueOf(normalized);
+        } catch (IllegalArgumentException e) {
+            throw new MeghaConnectException(
+                    ErrorCodeConstants.GENERAL_ERROR,
+                    "Invalid scheme type: " + schemeType,
+                    400
+            );
+        }
+    }
+
+    private String normalizeSchemeType(String schemeType) {
+        if (schemeType == null || schemeType.trim().isEmpty()) {
+            return null;
+        }
+
+        String normalized = schemeType.trim()
+                .toUpperCase()
+                .replace("&", "AND")
+                .replace("+", "_PLUS")
+                .replaceAll("[\\s-]+", "_")
+                .replaceAll("_+", "_");
+
+        if ("CMCARE".equals(normalized)) {
+            return "CM_CARE";
+        }
+        if ("CMCONNECT".equals(normalized)) {
+            return "CM_CONNECT";
+        }
+        if ("CMELEVATE".equals(normalized)) {
+            return "CM_ELEVATE";
+        }
+        if ("FOCUSPLUS".equals(normalized) || "FOCUS_PLUS".equals(normalized)) {
+            return "FOCUS_PLUS";
+        }
+        if ("OTHER".equals(normalized)) {
+            return "OTHERS";
+        }
+        return normalized;
+    }
+
+    private String formatSchemeType(SchemeApplication.SchemeType schemeType) {
+        if (schemeType == null) {
+            return "this scheme";
+        }
+        return switch (schemeType) {
+            case CM_CARE -> "CM Care";
+            case CM_CONNECT -> "CM Connect";
+            case CM_ELEVATE -> "CM Elevate";
+            case FOCUS_PLUS -> "Focus+";
+            case OTHERS -> "Others";
+            default -> schemeType.name();
+        };
+    }
+
+    private BigDecimal parseAmount(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        String normalized = value.trim().replaceAll("[^0-9.]", "");
+        if (normalized.isEmpty()) {
+            return null;
+        }
+        try {
+            return new BigDecimal(normalized);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private String trimToNull(String value) {
+        return value == null || value.trim().isEmpty() ? null : value.trim();
+    }
+
+    private void auditAppointmentAssociates(String associates, Appointment appointment, String actor) {
+        if (associates == null || associates.trim().isEmpty() || "[]".equals(associates.trim())) {
+            return;
+        }
+        try {
+            objectMapper.readValue(associates, new TypeReference<List<Map<String, String>>>() {});
+        } catch (Exception e) {
+            auditLogService.log("Appointment", appointment.getId(), "ASSOCIATES_PARSE_ERROR",
+                    "Failed to parse associates JSON: " + e.getMessage(), actor);
+        }
+    }
+
+    private MultipartFile convertPartToMultipartFile(Part part) throws IOException {
+        byte[] fileContent = part.getInputStream().readAllBytes();
+
+        return new MultipartFile() {
+            @Override
+            public String getName() {
+                return part.getName();
+            }
+
+            @Override
+            public String getOriginalFilename() {
+                return part.getSubmittedFileName();
+            }
+
+            @Override
+            public String getContentType() {
+                return part.getContentType();
+            }
+
+            @Override
+            public boolean isEmpty() {
+                return fileContent.length == 0;
+            }
+
+            @Override
+            public long getSize() {
+                return fileContent.length;
+            }
+
+            @Override
+            public byte[] getBytes() throws IOException {
+                return fileContent;
+            }
+
+            @Override
+            public java.io.InputStream getInputStream() throws IOException {
+                return new java.io.ByteArrayInputStream(fileContent);
+            }
+
+            @Override
+            public void transferTo(java.io.File dest) throws IOException, IllegalStateException {
+                java.nio.file.Files.write(dest.toPath(), fileContent);
+            }
+
+            @Override
+            public void transferTo(java.nio.file.Path dest) throws IOException, IllegalStateException {
+                java.nio.file.Files.write(dest, fileContent);
+            }
+        };
+    }
+
+    private Appointment.MeetingLocation parseMeetingLocation(String requestedLocation) {
+        if (requestedLocation == null || requestedLocation.trim().isEmpty()) {
+            return Appointment.MeetingLocation.OTHERS;
+        }
+        try {
+            return Appointment.MeetingLocation.valueOf(requestedLocation.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return Appointment.MeetingLocation.OTHERS;
+        }
+    }
+
+    private Appointment.EventType parseEventType(String eventType) {
+        if (eventType == null || eventType.trim().isEmpty()) {
+            return Appointment.EventType.A1;
+        }
+        try {
+            return Appointment.EventType.valueOf(eventType.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return Appointment.EventType.A1;
+        }
+    }
+
+    private String resolveAppointmentActor(String createdBy, Visitor applicant) {
+        String applicantName = applicant != null ? trimToNull(applicant.getFullName()) : null;
+        if (createdBy != null && createdBy.trim().startsWith("visitor_") && applicantName != null) {
+            return applicantName;
+        }
+        if (createdBy != null && !createdBy.trim().isEmpty() && !"anonymous".equalsIgnoreCase(createdBy.trim())) {
+            return createdBy.trim();
+        }
+        return applicantName != null ? applicantName : "visitor_" + applicant.getId();
+    }
+
+    private String generatePublicApplicationId() {
+        return "MC-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"))
+                + "-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
 }

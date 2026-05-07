@@ -18,6 +18,9 @@ interface VisitorProfile {
   kycStatus?: string;
   kycConfidence?: number;
   livePhotoPath?: string;
+  livePhotoBase64?: string;
+  photoBase64?: string;
+  photoUrl?: string;
 }
 
 interface VisitorCard { label: string; value: string | number; icon: string; color: string; bg: string; }
@@ -127,6 +130,17 @@ export class VisitorDashboardComponent implements OnInit {
 
   private updateVisitorPhotoUrl() {
     this.photoLoadFailed = false;
+    const inlinePhoto = (
+      this.visitorProfile?.livePhotoBase64
+      || this.visitorProfile?.photoBase64
+      || this.visitorProfile?.photoUrl
+      || ''
+    ).trim();
+    if (inlinePhoto) {
+      this.visitorPhotoUrl = inlinePhoto;
+      return;
+    }
+
     const path = (this.visitorProfile?.livePhotoPath || '').trim();
     if (!path) {
       this.visitorPhotoUrl = '';

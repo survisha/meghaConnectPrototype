@@ -24,6 +24,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 @Tag(name = "Visitor Registration Validation", description = "Backward-compatible OTP and face validation endpoints")
+@Deprecated
 public class VisitorKycController {
 
     private final VisitorKycService visitorKycService;

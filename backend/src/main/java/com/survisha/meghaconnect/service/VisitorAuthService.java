@@ -38,6 +38,7 @@ public class VisitorAuthService {
     private final VisitorOtpService visitorOtpService;
     private final VisitorService visitorService;
     private final RequestValidationService validationService;
+    private final FileStorageService fileStorageService;
 
     public Map<String, Object> checkMobile(Map<String, String> body) {
         String phone = validationService.requirePhone(body != null ? body.get(ValidationConstants.FIELD_PHONE_NUMBER) : null);
@@ -250,7 +251,26 @@ public class VisitorAuthService {
         response.put("boothVillage", visitor.getBoothVillage() != null ? visitor.getBoothVillage() : "");
         response.put("outsideMeghalaya", Boolean.TRUE.equals(visitor.getOutsideMeghalaya()));
         response.put("location", visitor.getLocation() != null ? visitor.getLocation() : "");
-        response.put("livePhotoPath", visitor.getLivePhotoPath() != null ? visitor.getLivePhotoPath() : "");
+        String visitorPhotoPath = firstNonBlank(visitor.getLivePhotoPath(), visitor.getPhotoStoragePath(), visitor.getPhotoPath());
+        response.put("livePhotoPath", visitorPhotoPath);
+        response.put("photoStoragePath", visitor.getPhotoStoragePath() != null ? visitor.getPhotoStoragePath() : "");
+        response.put("photoPath", visitor.getPhotoPath() != null ? visitor.getPhotoPath() : "");
+        String livePhotoBase64 = fileStorageService.loadImageDataUri(visitorPhotoPath).orElse("");
+        response.put("livePhotoBase64", livePhotoBase64);
+        response.put("photoBase64", livePhotoBase64);
+        response.put("photoUrl", livePhotoBase64);
         return response;
+    }
+
+    private String firstNonBlank(String... values) {
+        if (values == null) {
+            return "";
+        }
+        for (String value : values) {
+            if (value != null && !value.trim().isEmpty()) {
+                return value.trim();
+            }
+        }
+        return "";
     }
 }

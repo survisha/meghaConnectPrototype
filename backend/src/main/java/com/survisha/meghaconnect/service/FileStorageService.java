@@ -17,6 +17,7 @@ import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -83,6 +84,50 @@ public class FileStorageService {
 
     public Path resolveFilePath(String relativePath) {
         return Paths.get(basePath).resolve(relativePath);
+    }
+
+    /**
+     * Loads a stored visitor photo as a browser-renderable data URI. The DB
+     * stores only the relative path; this method keeps reads inside basePath.
+     */
+    public Optional<String> loadImageDataUri(String relativePath) {
+        if (relativePath == null || relativePath.trim().isEmpty()) {
+            return Optional.empty();
+        }
+
+        Path root = Paths.get(basePath).toAbsolutePath().normalize();
+        Path target = root.resolve(relativePath.trim()).normalize();
+        if (!target.startsWith(root)) {
+            log.warn("Rejected stored photo path outside upload root requestId={}", RequestContextUtil.getRequestId());
+            return Optional.empty();
+        }
+
+        try {
+            if (!Files.isRegularFile(target)) {
+                log.warn("Stored visitor photo file not found requestId={} path={}", RequestContextUtil.getRequestId(), relativePath);
+                return Optional.empty();
+            }
+
+            long maxBytes = maxFileSizeMb * 1024 * 1024;
+            long fileSize = Files.size(target);
+            if (fileSize <= 0 || fileSize > maxBytes) {
+                log.warn("Stored visitor photo has invalid size requestId={} sizeBytes={}", RequestContextUtil.getRequestId(), fileSize);
+                return Optional.empty();
+            }
+
+            byte[] bytes = Files.readAllBytes(target);
+            String extension = detectImageExtension(bytes);
+            if (extension.isEmpty()) {
+                log.warn("Stored visitor photo is not a supported image requestId={}", RequestContextUtil.getRequestId());
+                return Optional.empty();
+            }
+
+            String mimeType = "jpg".equals(extension) ? "jpeg" : extension;
+            return Optional.of("data:image/" + mimeType + ";base64," + Base64.getEncoder().encodeToString(bytes));
+        } catch (IOException e) {
+            log.warn("Unable to load stored visitor photo requestId={} path={}", RequestContextUtil.getRequestId(), relativePath, e);
+            return Optional.empty();
+        }
     }
 
     private void validateFile(MultipartFile file) {

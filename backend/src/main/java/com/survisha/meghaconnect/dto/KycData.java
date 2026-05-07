@@ -218,6 +218,7 @@ public class KycData implements Serializable {
 
         // Step 7: Remaining is address
         address = remaining.substring(0, remaining.lastIndexOf(city)).trim();
+        address = address.replaceAll("[,\\s]+$", "");
 
 
         return new ParsedAddress(address, city, state, pincode,fatherName);

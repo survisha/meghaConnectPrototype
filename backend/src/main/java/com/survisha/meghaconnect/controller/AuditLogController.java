@@ -1,6 +1,7 @@
 package com.survisha.meghaconnect.controller;
 
-import com.survisha.meghaconnect.entity.AuditLog;
+import com.survisha.meghaconnect.dto.AuditLogDto;
+import com.survisha.meghaconnect.dto.AuditLogFilterRequest;
 import com.survisha.meghaconnect.service.AuditLogService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -20,22 +21,24 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/audit-logs")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
-@Tag(name = "Audit Logs", description = "System audit trail and activity logs (admin, HCM, OSD only)")
+@Tag(name = "Audit Logs", description = "System audit trail and activity logs (admin only)")
 @SecurityRequirement(name = "bearerAuth")
 public class AuditLogController {
 
     private final AuditLogService auditLogService;
 
-    @Operation(summary = "Get all audit logs", description = "Retrieve paginated audit logs (admin, HCM, OSD only)")
+    @Operation(summary = "Get all audit logs", description = "Retrieve paginated and filterable audit logs (admin only)")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Successfully retrieved audit logs",
-            content = @Content(mediaType = "application/json", schema = @Schema(implementation = AuditLog.class))),
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = AuditLogDto.class))),
         @ApiResponse(responseCode = "403", description = "Access denied - admin role required"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','HCM','OSD')")
-    public ResponseEntity<Page<AuditLog>> getAll(Pageable pageable) {
-        return ResponseEntity.ok(auditLogService.getAllAuditLogs(pageable));
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Page<AuditLogDto>> getAll(
+            Pageable pageable,
+            @ModelAttribute AuditLogFilterRequest filter) {
+        return ResponseEntity.ok(auditLogService.getAllAuditLogs(pageable, filter));
     }
 }

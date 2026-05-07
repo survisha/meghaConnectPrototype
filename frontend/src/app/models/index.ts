@@ -130,11 +130,23 @@ export interface Direction {
 
 export interface AuditEntry {
   id: number;
+  module?: string;
+  entity?: string;
   entityType: string;
   entityId: number;
   action: string;
+  user?: string;
   details: string;
+  description?: string;
   performedBy: string;
+  role?: string;
+  userRole?: string;
+  requestId?: string;
+  oldValue?: string;
+  newValue?: string;
+  status?: string;
+  ipAddress?: string;
+  endpoint?: string;
   timestamp: string;
 }
 

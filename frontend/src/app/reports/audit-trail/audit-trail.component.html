@@ -1,33 +1,190 @@
-<div>
-  <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem">
-    <button pButton icon="pi pi-arrow-left" class="p-button-text p-button-sm" routerLink="/reports"></button>
-    <h2 class="page-title" style="margin:0">📋 Audit Trail</h2>
-    <span style="margin-left:auto;color:#6b7280;font-size:0.85rem">Visible to Admin &amp; HCM only</span>
+<div class="audit-page">
+  <div class="audit-header">
+    <button mat-icon-button routerLink="/reports" matTooltip="Back">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <div>
+      <h2 class="page-title">Audit Trail</h2>
+      <div class="audit-subtitle">Admin view</div>
+    </div>
+    <button mat-stroked-button type="button" class="refresh-button" (click)="loadLogs(0)" [disabled]="loading">
+      <mat-icon>refresh</mat-icon>
+      Refresh
+    </button>
   </div>
 
-  <div class="section-card">
-    <div class="section-card-header"><i class="pi pi-history"></i> All System Actions</div>
-    <div class="section-card-body">
-      <input pInputText [(ngModel)]="search" placeholder="🔍 Filter by user, action, entity..." style="width:100%;margin-bottom:1rem"/>
-      <p-table [value]="filtered" styleClass="p-datatable-sm" [rowHover]="true" [paginator]="true" [rows]="15">
-        <ng-template pTemplate="header">
-          <tr>
-            <th style="width:60px">#</th><th>Timestamp</th><th>User</th>
-            <th>Entity</th><th>Entity ID</th><th>Action</th><th>Details</th>
-          </tr>
-        </ng-template>
-        <ng-template pTemplate="body" let-l>
-          <tr>
-            <td style="color:#9ca3af">{{ l.id }}</td>
-            <td style="font-size:0.82rem;white-space:nowrap">{{ l.timestamp | date:'d MMM y, HH:mm' }}</td>
-            <td style="font-weight:600;font-size:0.85rem">{{ l.performedBy }}</td>
-            <td style="font-size:0.85rem">{{ l.entityType }}</td>
-            <td style="font-size:0.85rem">{{ l.entityId }}</td>
-            <td><p-tag [value]="l.action" [severity]="getSeverity(l.action)" styleClass="text-xs"></p-tag></td>
-            <td style="font-size:0.82rem;color:#374151">{{ l.details }}</td>
-          </tr>
-        </ng-template>
-      </p-table>
+  <div class="audit-filters">
+    <mat-form-field appearance="outline">
+      <mat-label>From</mat-label>
+      <input matInput [matDatepicker]="fromPicker" [(ngModel)]="filters.from" (dateChange)="onFilterChange(true)">
+      <mat-datepicker-toggle matSuffix [for]="fromPicker"></mat-datepicker-toggle>
+      <mat-datepicker #fromPicker></mat-datepicker>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>To</mat-label>
+      <input matInput [matDatepicker]="toPicker" [(ngModel)]="filters.to" (dateChange)="onFilterChange(true)">
+      <mat-datepicker-toggle matSuffix [for]="toPicker"></mat-datepicker-toggle>
+      <mat-datepicker #toPicker></mat-datepicker>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Module</mat-label>
+      <mat-select [(ngModel)]="filters.module" (selectionChange)="onFilterChange(true)">
+        <mat-option value="">All</mat-option>
+        <mat-option *ngFor="let module of moduleOptions" [value]="module">{{ module }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Action</mat-label>
+      <mat-select [(ngModel)]="filters.action" (selectionChange)="onFilterChange(true)">
+        <mat-option value="">All</mat-option>
+        <mat-option *ngFor="let action of actionOptions" [value]="action">{{ action }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>User</mat-label>
+      <input matInput [(ngModel)]="filters.user" (ngModelChange)="onFilterChange()" placeholder="Username">
+      <mat-icon matSuffix>person_search</mat-icon>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Role</mat-label>
+      <mat-select [(ngModel)]="filters.role" (selectionChange)="onFilterChange(true)">
+        <mat-option value="">All</mat-option>
+        <mat-option *ngFor="let role of roleOptions" [value]="role">{{ role }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Request ID</mat-label>
+      <input matInput [(ngModel)]="filters.requestId" (ngModelChange)="onFilterChange()" placeholder="Request ID">
+      <mat-icon matSuffix>fingerprint</mat-icon>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Status</mat-label>
+      <mat-select [(ngModel)]="filters.status" (selectionChange)="onFilterChange(true)">
+        <mat-option value="">All</mat-option>
+        <mat-option *ngFor="let status of statusOptions" [value]="status">{{ status }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <button mat-button type="button" class="clear-button" (click)="clearFilters()">
+      <mat-icon>filter_alt_off</mat-icon>
+      Clear
+    </button>
+  </div>
+
+  <div *ngIf="errorMsg" class="audit-error">
+    <mat-icon>error</mat-icon>
+    <span>{{ errorMsg }}</span>
+  </div>
+
+  <div class="audit-table-shell">
+    <div *ngIf="loading" class="loading-overlay">
+      <mat-spinner diameter="34"></mat-spinner>
     </div>
+
+    <table mat-table [dataSource]="logs" [trackBy]="trackById" matSort [matSortActive]="sortActive" [matSortDirection]="sortDirection"
+           (matSortChange)="onSort($event)" multiTemplateDataRows class="audit-table">
+
+      <ng-container matColumnDef="timestamp">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Date/Time</th>
+        <td mat-cell *matCellDef="let row">{{ row.timestamp | date:'dd-MM-yyyy HH:mm:ss' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="module">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header="entityType">Module</th>
+        <td mat-cell *matCellDef="let row">
+          <span class="module-text">{{ displayModule(row) }}</span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="action">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Action</th>
+        <td mat-cell *matCellDef="let row">
+          <span class="action-badge" [ngClass]="actionClass(row.action)">{{ row.action || '-' }}</span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="user">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header="performedBy">User</th>
+        <td mat-cell *matCellDef="let row">{{ displayUser(row) }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="role">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Role</th>
+        <td mat-cell *matCellDef="let row">{{ row.role || row.userRole || '-' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="entityId">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Entity ID</th>
+        <td mat-cell *matCellDef="let row">{{ row.entityId || '-' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="description">
+        <th mat-header-cell *matHeaderCellDef>Description</th>
+        <td mat-cell *matCellDef="let row" class="description-cell">{{ shortText(displayDescription(row), 90) }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Status</th>
+        <td mat-cell *matCellDef="let row">{{ row.status || '-' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="requestId">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Request ID</th>
+        <td mat-cell *matCellDef="let row" class="request-id">{{ row.requestId || '-' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="expandedDetail">
+        <td mat-cell *matCellDef="let row" [attr.colspan]="displayedColumns.length" class="detail-cell">
+          <mat-expansion-panel *ngIf="isExpanded(row)" [expanded]="true" hideToggle class="detail-panel">
+            <div class="detail-grid">
+              <div>
+                <span>IP Address</span>
+                <strong>{{ row.ipAddress || '-' }}</strong>
+              </div>
+              <div>
+                <span>Endpoint</span>
+                <strong>{{ row.endpoint || '-' }}</strong>
+              </div>
+              <div>
+                <span>Request ID</span>
+                <strong>{{ row.requestId || '-' }}</strong>
+              </div>
+            </div>
+
+            <div class="json-grid">
+              <div>
+                <h3>Old Value</h3>
+                <pre>{{ prettyJson(row.oldValue) }}</pre>
+              </div>
+              <div>
+                <h3>New Value</h3>
+                <pre>{{ prettyJson(row.newValue) }}</pre>
+              </div>
+            </div>
+          </mat-expansion-panel>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns"
+          class="audit-row" [class.expanded]="isExpanded(row)" (click)="toggleRow(row)"></tr>
+      <tr mat-row *matRowDef="let row; columns: ['expandedDetail']" class="detail-row"></tr>
+    </table>
+
+    <div *ngIf="!loading && logs.length === 0" class="empty-state">
+      <mat-icon>history</mat-icon>
+      <p>No audit logs found.</p>
+    </div>
+
+    <mat-paginator [length]="totalElements" [pageIndex]="pageIndex" [pageSize]="pageSize"
+                   [pageSizeOptions]="[25, 50, 100, 200]" (page)="onPage($event)">
+    </mat-paginator>
   </div>
 </div>

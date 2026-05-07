@@ -544,14 +544,41 @@ class ApiService {
   }
 
   // Audit logs
-  static Future<Map<String, dynamic>> getAuditLogs(
-      {int page = 0, int size = 50}) async {
+  static Future<Map<String, dynamic>> getAuditLogs({
+    int page = 0,
+    int size = 100,
+    String? module,
+    String? action,
+    String? user,
+    String? role,
+    String? requestId,
+    String? from,
+    String? to,
+  }) async {
     try {
       final headers = await _headers();
+      final params = <String, String>{
+        'page': page.toString(),
+        'size': size.toString(),
+        'sort': 'timestamp,desc',
+      };
+      void addParam(String key, String? value) {
+        final trimmed = (value ?? '').trim();
+        if (trimmed.isNotEmpty) params[key] = trimmed;
+      }
+
+      addParam('module', module);
+      addParam('action', action);
+      addParam('user', user);
+      addParam('role', role);
+      addParam('requestId', requestId);
+      addParam('from', from);
+      addParam('to', to);
+
       final resp = await http
           .get(
-            Uri.parse(
-                '${AppConfig.apiV1BaseUrl}/audit-logs?page=$page&size=$size&sort=timestamp,desc'),
+            Uri.parse('${AppConfig.apiV1BaseUrl}/audit-logs')
+                .replace(queryParameters: params),
             headers: headers,
           )
           .timeout(const Duration(seconds: 20));

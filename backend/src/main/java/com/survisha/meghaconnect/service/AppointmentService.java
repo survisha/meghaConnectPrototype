@@ -227,11 +227,20 @@ public class AppointmentService {
                 .fullName(applicant.getFullName())
                 .phoneNumber(applicant.getPhoneNumber())
                 .epicNumber(applicant.getEpicNumber())
-                .aadhaarNumber(applicant.getAadhaarNumber())
+                .aadhaarNumber(maskAadhaarForResponse(applicant.getAadhaarNumber()))
                 .kycType(applicant.getKycType())
                 .kycVerified(applicant.getKycVerified())
+                .kycStatus(applicant.getKycStatus())
+                .dateOfBirth(applicant.getDateOfBirth())
+                .gender(applicant.getGender())
                 .designation(applicant.getDesignation())
+                .address(applicant.getAddress())
+                .fullAddress(applicant.getFullAddress())
+                .address1(applicant.getAddress1())
                 .addressLine(firstNonBlank(applicant.getAddressLine(), applicant.getAddress()))
+                .city(applicant.getCity())
+                .state(applicant.getState())
+                .pincode(applicant.getPincode())
                 .district(applicant.getDistrict())
                 .constituency(applicant.getConstituency())
                 .booth(applicant.getBooth())
@@ -242,6 +251,9 @@ public class AppointmentService {
                 .briefProfile(applicant.getBriefProfile())
                 .photoStoragePath(applicant.getPhotoStoragePath())
                 .livePhotoPath(applicant.getLivePhotoPath())
+                .photoPath(applicant.getPhotoPath())
+                .createdAt(applicant.getCreatedAt())
+                .updatedAt(applicant.getUpdatedAt())
                 .build();
 
         return AppointmentDto.builder()
@@ -359,6 +371,17 @@ public class AppointmentService {
             }
         }
         return null;
+    }
+
+    private String maskAadhaarForResponse(String aadhaarNumber) {
+        String normalized = trimToNull(aadhaarNumber);
+        if (normalized == null) {
+            return null;
+        }
+        if (normalized.length() <= 4) {
+            return "XXXX-XXXX-" + normalized;
+        }
+        return "XXXX-XXXX-" + normalized.substring(normalized.length() - 4);
     }
 
     private Visitor resolveAppointmentApplicant(Long applicantId, String applicantName,

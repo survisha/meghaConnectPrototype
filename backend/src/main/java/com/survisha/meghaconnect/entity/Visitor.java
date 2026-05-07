@@ -1,5 +1,6 @@
 package com.survisha.meghaconnect.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import javax.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
@@ -155,6 +156,7 @@ public class Visitor extends BaseEntity {
     @Column(length = 50)
     private String kycStatus;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "applicant", fetch = FetchType.LAZY)
     private List<Appointment> appointments;
 }

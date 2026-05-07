@@ -41,20 +41,38 @@
         <div class="profile-header-left">
           <i class="pi pi-id-card"></i> Visitor Profile
         </div>
-        <div class="profile-avatar" *ngIf="!loading && visitorProfile">
+        <button
+          type="button"
+          class="profile-avatar"
+          *ngIf="!loading && visitorProfile"
+          [class.has-photo]="canViewPhoto"
+          [disabled]="!canViewPhoto"
+          (click)="togglePhotoPreview()"
+          title="View citizen photo">
           <img
-            *ngIf="visitorPhotoUrl && !photoLoadFailed"
+            *ngIf="canViewPhoto"
             [src]="visitorPhotoUrl"
             alt="Visitor photo"
-            (error)="photoLoadFailed = true" />
-          <div *ngIf="!visitorPhotoUrl || photoLoadFailed" class="avatar-fallback" aria-label="Visitor avatar">
+            (error)="onPhotoLoadError()" />
+          <div *ngIf="!canViewPhoto" class="avatar-fallback" aria-label="Visitor avatar">
             <i class="pi pi-user"></i>
           </div>
-        </div>
+          <span *ngIf="canViewPhoto" class="avatar-view-label">View</span>
+        </button>
       </div>
       <div class="card-body">
         <div *ngIf="loading" class="empty-state">Loading profile…</div>
         <ng-container *ngIf="!loading && visitorProfile">
+          <div *ngIf="photoPreviewOpen && canViewPhoto" class="photo-preview-panel">
+            <div class="photo-preview-header">
+              <span>Citizen Photo</span>
+              <button type="button" class="photo-preview-close" (click)="closePhotoPreview()" aria-label="Close photo preview">
+                <i class="pi pi-times"></i>
+              </button>
+            </div>
+            <img [src]="visitorPhotoUrl" alt="Citizen photo preview" (error)="onPhotoLoadError()" />
+          </div>
+
           <div class="profile-row">
             <span class="profile-label">Full Name</span>
             <span class="profile-value">{{ visitorProfile.fullName }}</span>

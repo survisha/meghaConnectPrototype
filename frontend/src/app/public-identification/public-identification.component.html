@@ -4,7 +4,7 @@
     Public Identification
   </h2>
   <p style="color:#6b7280;font-size:0.9rem;margin-bottom:1.5rem">
-    Search for a person by phone, EPIC, name, or constituency. Supports facial recognition (plug-and-play API).
+    Search for a visitor by phone, EPIC, name, or district.
   </p>
 
   <!-- Search Panel -->
@@ -43,8 +43,8 @@
       </div>
       
       <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
-        <button mat-raised-button color="primary" (click)="search()">
-          <mat-icon>search</mat-icon> Search
+        <button mat-raised-button color="primary" (click)="search()" [disabled]="searching">
+          <mat-icon>search</mat-icon> {{ searching ? 'Searching...' : 'Search' }}
         </button>
         <button mat-stroked-button (click)="clearSearch()">
           <mat-icon>close</mat-icon> Clear
@@ -52,6 +52,11 @@
         <button mat-stroked-button disabled>
           <mat-icon>camera_alt</mat-icon> Identify by Face (API)
         </button>
+      </div>
+
+      <div *ngIf="errorMessage" class="inline-alert inline-alert-error">
+        <mat-icon>error_outline</mat-icon>
+        <span>{{ errorMessage }}</span>
       </div>
     </div>
   </div>
@@ -63,20 +68,24 @@
         <mat-icon>list</mat-icon> Results ({{ results.length }})
       </div>
       <div class="section-card-body" style="padding:0">
-        <div *ngIf="!searched" style="padding:2rem;text-align:center;color:#9ca3af;font-size:0.85rem">
+        <div *ngIf="searching" style="padding:2rem;text-align:center;color:#6b7280;font-size:0.85rem">
+          <mat-icon style="font-size:3rem;width:3rem;height:3rem;color:#9ca3af;margin-bottom:0.5rem">manage_search</mat-icon>
+          <p>Searching visitor records...</p>
+        </div>
+        <div *ngIf="!searching && !searched" style="padding:2rem;text-align:center;color:#9ca3af;font-size:0.85rem">
           <mat-icon style="font-size:3rem;width:3rem;height:3rem;color:#d1d5db;margin-bottom:0.5rem">info</mat-icon>
           <p>Enter search criteria and click Search.</p>
         </div>
-        <div *ngIf="searched && results.length===0" style="padding:2rem;text-align:center;color:#9ca3af">
+        <div *ngIf="!searching && searched && results.length===0 && !errorMessage" style="padding:2rem;text-align:center;color:#9ca3af">
           <mat-icon style="font-size:3rem;width:3rem;height:3rem;color:#d1d5db;margin-bottom:0.5rem">search_off</mat-icon>
           <p>No results found.</p>
         </div>
         <div *ngFor="let p of results" class="result-row" [class.selected]="selected?.id===p.id" (click)="select(p)">
-          <div class="mini-avatar">{{ p.fullName[0] }}</div>
+          <div class="mini-avatar">{{ initial(p.fullName) }}</div>
           <div style="flex:1">
-            <div style="font-weight:600;font-size:0.9rem;color:#1f2937">{{ p.fullName }}</div>
-            <div style="font-size:0.78rem;color:#6b7280">{{ p.designation }}</div>
-            <div style="font-size:0.75rem;color:#9ca3af">{{ p.constituency }}, {{ p.district }}</div>
+            <div style="font-weight:600;font-size:0.9rem;color:#1f2937">{{ displayValue(p.fullName) }}</div>
+            <div style="font-size:0.78rem;color:#6b7280">{{ displayValue(p.designation) }}</div>
+            <div style="font-size:0.75rem;color:#9ca3af">{{ displayValue(p.constituency) }}, {{ displayValue(p.district) }}</div>
           </div>
           <mat-icon style="color:#9ca3af">chevron_right</mat-icon>
         </div>
@@ -99,26 +108,52 @@
           </div>
           <div class="section-card-body">
             <div class="profile-top">
-              <div class="big-avatar">{{ selected.fullName[0] }}</div>
+              <button
+                type="button"
+                class="profile-photo-button"
+                [class.has-photo]="selectedPhotoUrl && !selectedPhotoLoadFailed"
+                [disabled]="!selectedPhotoUrl || selectedPhotoLoadFailed"
+                (click)="toggleSelectedPhotoPreview()"
+                title="View citizen photo">
+                <img
+                  *ngIf="selectedPhotoUrl && !selectedPhotoLoadFailed"
+                  [src]="selectedPhotoUrl"
+                  alt="Citizen photo"
+                  (error)="onSelectedPhotoError()" />
+                <span *ngIf="!selectedPhotoUrl || selectedPhotoLoadFailed" class="big-avatar">
+                  {{ initial(selected.fullName) }}
+                </span>
+                <span *ngIf="selectedPhotoUrl && !selectedPhotoLoadFailed" class="photo-view-label">View</span>
+              </button>
               <div>
-                <div style="font-size:1.2rem;font-weight:700;color:#1f2937">{{ selected.fullName }}</div>
-                <div style="color:#6b7280">{{ selected.designation }}</div>
+                <div style="font-size:1.2rem;font-weight:700;color:#1f2937">{{ displayValue(selected.fullName) }}</div>
+                <div style="color:#6b7280">{{ displayValue(selected.designation) }}</div>
                 <div style="margin-top:0.5rem;display:flex;gap:0.5rem;flex-wrap:wrap">
-                  <mat-chip class="status-chip status-success">Active Voter</mat-chip>
-                  <mat-chip class="status-chip status-info">EPIC Verified</mat-chip>
+                  <mat-chip *ngIf="selected.kycStatus" class="status-chip status-success">{{ selected.kycStatus }}</mat-chip>
+                  <mat-chip *ngIf="selected.epicNumber" class="status-chip status-info">EPIC Verified</mat-chip>
                 </div>
               </div>
+            </div>
+
+            <div *ngIf="selectedPhotoPreviewOpen && selectedPhotoUrl && !selectedPhotoLoadFailed" class="photo-preview-panel">
+              <div class="photo-preview-header">
+                <span>Citizen Photo</span>
+                <button type="button" class="photo-preview-close" (click)="closeSelectedPhotoPreview()" aria-label="Close photo preview">
+                  <mat-icon>close</mat-icon>
+                </button>
+              </div>
+              <img [src]="selectedPhotoUrl" alt="Citizen photo preview" (error)="onSelectedPhotoError()" />
             </div>
             
             <mat-divider style="margin: 1rem 0"></mat-divider>
             
             <div class="profile-grid">
-              <div><span>Phone</span><strong style="color:#1f2937">{{ selected.phoneNumber }}</strong></div>
-              <div><span>EPIC</span><strong style="color:#1f2937">{{ selected.epicNumber }}</strong></div>
-              <div><span>District</span><strong style="color:#1f2937">{{ selected.district }}</strong></div>
-              <div><span>Constituency</span><strong style="color:#1f2937">{{ selected.constituency }}</strong></div>
-              <div><span>Booth</span><strong style="color:#1f2937">{{ selected.booth }}</strong></div>
-              <div><span>Village</span><strong style="color:#1f2937">{{ selected.village || '–' }}</strong></div>
+              <div><span>Phone</span><strong style="color:#1f2937">{{ displayValue(selected.phoneNumber) }}</strong></div>
+              <div><span>EPIC</span><strong style="color:#1f2937">{{ displayValue(selected.epicNumber) }}</strong></div>
+              <div><span>District</span><strong style="color:#1f2937">{{ displayValue(selected.district) }}</strong></div>
+              <div><span>Constituency</span><strong style="color:#1f2937">{{ displayValue(selected.constituency) }}</strong></div>
+              <div><span>Booth</span><strong style="color:#1f2937">{{ displayValue(selected.booth) }}</strong></div>
+              <div><span>Village</span><strong style="color:#1f2937">{{ displayValue(selected.village) }}</strong></div>
             </div>
             
             <div *ngIf="selected.briefProfile" style="margin-top:0.75rem;padding:0.75rem;background:#f9fafb;border-radius:6px;font-size:0.85rem">
@@ -134,7 +169,8 @@
           <div class="section-card-body">
             <p style="font-weight:600;margin-bottom:0.5rem">Scheme History</p>
             <div style="margin-bottom:1rem">
-              <table mat-table [dataSource]="schemeHistory" class="history-table">
+              <div *ngIf="schemeHistory.length===0" class="empty-history">No scheme history found for this visitor.</div>
+              <table *ngIf="schemeHistory.length>0" mat-table [dataSource]="schemeHistory" class="history-table">
                 <ng-container matColumnDef="scheme">
                   <th mat-header-cell *matHeaderCellDef>Scheme</th>
                   <td mat-cell *matCellDef="let s">{{ s.scheme }}</td>
@@ -165,7 +201,8 @@
             <mat-divider style="margin: 1rem 0"></mat-divider>
             
             <p style="font-weight:600;margin-bottom:0.5rem">Meeting History</p>
-            <table mat-table [dataSource]="meetingHistory" class="history-table">
+            <div *ngIf="meetingHistory.length===0" class="empty-history">No meeting history found for this visitor.</div>
+            <table *ngIf="meetingHistory.length>0" mat-table [dataSource]="meetingHistory" class="history-table">
               <ng-container matColumnDef="date">
                 <th mat-header-cell *matHeaderCellDef>Date</th>
                 <td mat-cell *matCellDef="let m">{{ m.date }}</td>

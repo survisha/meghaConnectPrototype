@@ -28,6 +28,11 @@ export interface Visitor {
   phoneNumber: string;
   epicNumber: string;
   photoUrl?: string;
+  livePhotoBase64?: string;
+  photoBase64?: string;
+  livePhotoPath?: string;
+  photoStoragePath?: string;
+  photoPath?: string;
   designation: string;
   address?: string;
   fullAddress?: string;

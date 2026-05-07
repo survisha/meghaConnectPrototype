@@ -1,6 +1,8 @@
 package com.survisha.meghaconnect.dto;
 
 import lombok.*;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class VisitorDto {
@@ -13,6 +15,9 @@ public class VisitorDto {
     /** EPIC | AADHAR | NONE */
     private String kycType;
     private Boolean kycVerified;
+    private String kycStatus;
+    private LocalDate dateOfBirth;
+    private String gender;
     private String designation;
     private String address;
     private String fullAddress;
@@ -32,4 +37,7 @@ public class VisitorDto {
     /** Relative path/key in the file store (e.g. "visitors/42/photo.jpg"). */
     private String photoStoragePath;
     private String livePhotoPath;
+    private String photoPath;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

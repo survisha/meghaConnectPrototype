@@ -3,6 +3,7 @@ package com.survisha.meghaconnect.service;
 import com.survisha.meghaconnect.entity.Visitor;
 import com.survisha.meghaconnect.repository.VisitorRepository;
 import com.survisha.meghaconnect.dto.PublicRegistrationDto;
+import com.survisha.meghaconnect.dto.VisitorDto;
 import com.survisha.meghaconnect.exception.*;
 import com.survisha.meghaconnect.util.RequestContextUtil;
 import com.survisha.meghaconnect.util.ValidationConstants;
@@ -16,6 +17,7 @@ import java.time.format.DateTimeParseException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +30,30 @@ public class VisitorService {
 
     public Optional<Visitor> findByPhone(String phone) {
         return visitorRepository.findByPhoneNumber(phone).stream().findFirst();
+    }
+
+    public List<VisitorDto> searchDtos(String mobile, String epic, String referenceId) {
+        return toDtos(search(mobile, epic, referenceId));
+    }
+
+    public List<VisitorDto> findAllByPhoneDtos(String phone) {
+        return toDtos(findAllByPhone(phone));
+    }
+
+    public Optional<VisitorDto> findByEpicDto(String epic) {
+        return findByEpic(epic).map(this::toDto);
+    }
+
+    public List<VisitorDto> searchByNameDtos(String name) {
+        return toDtos(searchByName(name));
+    }
+
+    public List<VisitorDto> findByDistrictDtos(String district) {
+        return toDtos(findByDistrict(district));
+    }
+
+    public Optional<VisitorDto> findByIdDto(Long id) {
+        return findById(id).map(this::toDto);
     }
 
     public List<Visitor> findAllByPhone(String phone) {
@@ -75,6 +101,11 @@ public class VisitorService {
         return visitorRepository.save(visitor);
     }
 
+    @Transactional
+    public VisitorDto saveDto(Visitor visitor) {
+        return toDto(visitorRepository.save(visitor));
+    }
+
     public Optional<Visitor> findById(Long id) {
         return visitorRepository.findById(id);
     }
@@ -106,6 +137,53 @@ public class VisitorService {
             return visitorRepository.findByEpicNumber(normalizedEpic).map(visitor -> List.of(visitor)).orElse(Collections.emptyList());
         }
         return Collections.emptyList();
+    }
+
+    public VisitorDto toDto(Visitor visitor) {
+        if (visitor == null) {
+            return null;
+        }
+
+        return VisitorDto.builder()
+                .id(visitor.getId())
+                .fullName(visitor.getFullName())
+                .phoneNumber(visitor.getPhoneNumber())
+                .epicNumber(visitor.getEpicNumber())
+                .aadhaarNumber(maskAadhaarForResponse(visitor.getAadhaarNumber()))
+                .kycType(visitor.getKycType())
+                .kycVerified(visitor.getKycVerified())
+                .kycStatus(visitor.getKycStatus())
+                .dateOfBirth(visitor.getDateOfBirth())
+                .gender(visitor.getGender())
+                .designation(visitor.getDesignation())
+                .address(visitor.getAddress())
+                .fullAddress(visitor.getFullAddress())
+                .address1(visitor.getAddress1())
+                .addressLine(visitor.getAddressLine())
+                .city(visitor.getCity())
+                .state(visitor.getState())
+                .pincode(visitor.getPincode())
+                .district(visitor.getDistrict())
+                .constituency(visitor.getConstituency())
+                .booth(visitor.getBooth())
+                .boothVillage(visitor.getBoothVillage())
+                .village(visitor.getVillage())
+                .outsideMeghalaya(visitor.getOutsideMeghalaya())
+                .location(visitor.getLocation())
+                .briefProfile(visitor.getBriefProfile())
+                .photoStoragePath(visitor.getPhotoStoragePath())
+                .livePhotoPath(visitor.getLivePhotoPath())
+                .photoPath(visitor.getPhotoPath())
+                .createdAt(visitor.getCreatedAt())
+                .updatedAt(visitor.getUpdatedAt())
+                .build();
+    }
+
+    public List<VisitorDto> toDtos(List<Visitor> visitors) {
+        if (visitors == null || visitors.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return visitors.stream().map(this::toDto).collect(Collectors.toList());
     }
 
     @Transactional
@@ -324,6 +402,17 @@ public class VisitorService {
 
     private String maskAadhaar(String aadhaarNumber) {
         return "XXXX-XXXX-" + aadhaarNumber.substring(aadhaarNumber.length() - 4);
+    }
+
+    private String maskAadhaarForResponse(String aadhaarNumber) {
+        String normalized = trimToNull(aadhaarNumber);
+        if (normalized == null) {
+            return null;
+        }
+        if (normalized.length() <= 4) {
+            return "XXXX-XXXX-" + normalized;
+        }
+        return "XXXX-XXXX-" + normalized.substring(normalized.length() - 4);
     }
 
     private String trimToNull(String value) {

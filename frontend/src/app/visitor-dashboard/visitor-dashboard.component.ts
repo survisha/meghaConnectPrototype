@@ -18,6 +18,8 @@ interface VisitorProfile {
   kycStatus?: string;
   kycConfidence?: number;
   livePhotoPath?: string;
+  photoStoragePath?: string;
+  photoPath?: string;
   livePhotoBase64?: string;
   photoBase64?: string;
   photoUrl?: string;
@@ -43,6 +45,7 @@ export class VisitorDashboardComponent implements OnInit {
   visitorProfile: VisitorProfile | null = null;
   visitorPhotoUrl = '';
   photoLoadFailed = false;
+  photoPreviewOpen = false;
 
   totalVisits = 0;
 
@@ -130,6 +133,7 @@ export class VisitorDashboardComponent implements OnInit {
 
   private updateVisitorPhotoUrl() {
     this.photoLoadFailed = false;
+    this.photoPreviewOpen = false;
     const inlinePhoto = (
       this.visitorProfile?.livePhotoBase64
       || this.visitorProfile?.photoBase64
@@ -137,19 +141,57 @@ export class VisitorDashboardComponent implements OnInit {
       || ''
     ).trim();
     if (inlinePhoto) {
-      this.visitorPhotoUrl = inlinePhoto;
+      this.visitorPhotoUrl = this.normalizePhotoSource(inlinePhoto);
       return;
     }
 
-    const path = (this.visitorProfile?.livePhotoPath || '').trim();
+    const path = (
+      this.visitorProfile?.livePhotoPath
+      || this.visitorProfile?.photoStoragePath
+      || this.visitorProfile?.photoPath
+      || ''
+    ).trim();
     if (!path) {
       this.visitorPhotoUrl = '';
       return;
     }
 
+    this.visitorPhotoUrl = this.normalizePhotoSource(path);
+  }
+
+  private normalizePhotoSource(value: string): string {
+    const source = value.trim();
+    if (!source) {
+      return '';
+    }
+    if (source.startsWith('data:image/') || source.startsWith('blob:') || /^https?:\/\//i.test(source)) {
+      return source;
+    }
+
     // Best-effort: apiUrl is usually `${origin}/api/v1`, while uploads live at `${origin}/uploads`.
     const origin = environment.apiUrl.replace(/\/api\/v1\/?$/i, '');
-    this.visitorPhotoUrl = `${origin}/uploads/${path}`;
+    const cleanPath = source.replace(/^\/+/, '');
+    return `${origin}/${cleanPath.startsWith('uploads/') ? cleanPath : `uploads/${cleanPath}`}`;
+  }
+
+  get canViewPhoto(): boolean {
+    return !!this.visitorPhotoUrl && !this.photoLoadFailed;
+  }
+
+  togglePhotoPreview(): void {
+    if (!this.canViewPhoto) {
+      return;
+    }
+    this.photoPreviewOpen = !this.photoPreviewOpen;
+  }
+
+  closePhotoPreview(): void {
+    this.photoPreviewOpen = false;
+  }
+
+  onPhotoLoadError(): void {
+    this.photoLoadFailed = true;
+    this.photoPreviewOpen = false;
   }
 
   getStatusSeverity(s: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' | undefined {

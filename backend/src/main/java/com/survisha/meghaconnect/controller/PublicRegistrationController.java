@@ -38,6 +38,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 @Tag(name = "Public Registration", description = "Public citizen registration and onboarding workflows")
+@Deprecated
 public class PublicRegistrationController {
 
     private final RequestValidationService validationService;

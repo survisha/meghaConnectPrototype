@@ -1,8 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { VisitorSearchService } from '../services/visitor-search.service';
 import { Visitor } from '../models';
+import { environment } from '../../environments/environment';
 
 // Angular Material
 import { MatInputModule } from '@angular/material/input';
@@ -25,7 +26,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
   templateUrl: './public-identification.component.html',
   styleUrls: ['./public-identification.component.scss'],
 })
-export class PublicIdentificationComponent implements OnInit {
+export class PublicIdentificationComponent {
   searchPhone = '';
   searchEpic = '';
   searchName = '';
@@ -34,6 +35,9 @@ export class PublicIdentificationComponent implements OnInit {
   selected: Visitor | null = null;
   searched = false;
   searching = false;
+  errorMessage = '';
+  selectedPhotoLoadFailed = false;
+  selectedPhotoPreviewOpen = false;
 
   districts = ['East Khasi Hills','West Khasi Hills','Ri Bhoi','East Jaintia Hills','West Jaintia Hills','East Garo Hills','West Garo Hills','South Garo Hills','North Garo Hills'];
 
@@ -44,170 +48,58 @@ export class PublicIdentificationComponent implements OnInit {
 
   constructor(private visitorSearchService: VisitorSearchService) {}
 
-  ngOnInit() {
-    this.initializeDummyData();
-  }
-
-  initializeDummyData() {
-    // Create dummy person results
-    this.results = [
-      {
-        id: 1001,
-        fullName: 'Dr. Aidashisha Lyngdoh',
-        phoneNumber: '+91-9876543210',
-        epicNumber: 'EKH1234567',
-        designation: 'Medical Officer',
-        district: 'East Khasi Hills',
-        constituency: 'South Shillong',
-        booth: 'EKH/234',
-        village: 'Mawprem',
-        briefProfile: 'Community health advocate with 15+ years of experience. Active in maternal health programs and village health initiatives.',
-      },
-      {
-        id: 1002,
-        fullName: 'Shri Balajied Syiemlieh',
-        phoneNumber: '+91-8765432109',
-        epicNumber: 'RBH2345678',
-        designation: 'Farmer & Cooperative Leader',
-        district: 'Ri Bhoi',
-        constituency: 'Nongkrem',
-        booth: 'RBH/567',
-        village: 'Umsning',
-        briefProfile: 'President of local agricultural cooperative. Pioneer in organic farming and cold storage initiatives.',
-      },
-      {
-        id: 1003,
-        fullName: 'Kong Evaristarisha Warjri',
-        phoneNumber: '+91-7654321098',
-        epicNumber: 'WKH3456789',
-        designation: 'Self-Help Group Leader',
-        district: 'West Khasi Hills',
-        constituency: 'Mawshynrut',
-        booth: 'WKH/890',
-        village: 'Nongstoin',
-        briefProfile: 'Women empowerment activist. Runs skill training programs in weaving and handicrafts for 200+ women.',
-      },
-      {
-        id: 1004,
-        fullName: 'Shri Tengrik M. Sangma',
-        phoneNumber: '+91-6543210987',
-        epicNumber: 'EGH4567890',
-        designation: 'Village Headman (Nokma)',
-        district: 'East Garo Hills',
-        constituency: 'Williamnagar',
-        booth: 'EGH/345',
-        village: 'Samanda',
-        briefProfile: 'Traditional leader advocating for road connectivity and infrastructure development in remote villages.',
-      },
-      {
-        id: 1005,
-        fullName: 'Dr. Wallambok Nongkhlaw',
-        phoneNumber: '+91-5432109876',
-        epicNumber: 'WJH5678901',
-        designation: 'College Principal',
-        district: 'West Jaintia Hills',
-        constituency: 'Jowai',
-        booth: 'WJH/678',
-        village: 'Jowai Town',
-        briefProfile: 'Educator focused on digital literacy and modern education infrastructure. Serving for 25+ years in government institutions.',
-      },
-    ];
-
-    // Select first person by default and populate history
-    this.selected = this.results[0];
-    this.searched = true;
-    this.populateHistory();
-  }
-
   populateHistory() {
-    if (!this.selected) {
-      this.schemeHistory = [];
-      this.meetingHistory = [];
-      return;
-    }
-
-    // Populate scheme history based on selected person
-    this.schemeHistory = [
-      { scheme: 'CM Special Development Fund', year: '2023', amount: '₹8.5L', status: 'Approved' },
-      { scheme: 'Chief Minister\'s Special Grant', year: '2022', amount: '₹5.0L', status: 'Completed' },
-      { scheme: 'CM Care Fund', year: '2021', amount: '₹3.2L', status: 'Completed' },
-    ];
-
-    this.meetingHistory = [
-      { date: '2024-02-15', agenda: 'Healthcare infrastructure improvement', outcome: 'Approved for mobile medical unit' },
-      { date: '2023-11-08', agenda: 'Community health awareness program', outcome: 'Sanctioned ₹2.5L for awareness campaigns' },
-      { date: '2023-06-22', agenda: 'Village road connectivity', outcome: 'Forwarded to PWD for survey' },
-    ];
+    this.schemeHistory = [];
+    this.meetingHistory = [];
   }
 
   search() {
-    this.searched = true;
-    this.searching = true;
-    this.selected = null;
-
     const phone = this.searchPhone.trim();
     const epic = this.searchEpic.trim();
     const name = this.searchName.trim();
     const district = this.searchDistrict.trim();
 
-    // Try API first
+    this.searched = true;
+    this.searching = false;
+    this.errorMessage = '';
+    this.results = [];
+    this.selected = null;
+    this.populateHistory();
+
+    if (!phone && !epic && !name && !district) {
+      this.errorMessage = 'Enter at least one search criteria.';
+      return;
+    }
+
+    this.searching = true;
+
     if (phone) {
       this.visitorSearchService.searchByPhone(phone).subscribe({
-        next: p => {
-          if (p) this.results = [p];
-          this.searching = false;
-        },
-        error: () => {
-          // Fallback to dummy data
-          this.results = this.results.filter(r => r.phoneNumber.includes(phone));
-          this.searching = false;
-        }
+        next: visitors => this.setResults(visitors, { phone, epic, name, district }),
+        error: () => this.handleSearchError(),
       });
     } else if (epic) {
       this.visitorSearchService.searchByEpic(epic).subscribe({
-        next: p => {
-          if (p) this.results = [p];
-          this.searching = false;
-        },
-        error: () => {
-          // Fallback to dummy data
-          this.results = this.results.filter(r => r.epicNumber.toUpperCase().includes(epic.toUpperCase()));
-          this.searching = false;
-        }
+        next: visitor => this.setResults(visitor ? [visitor] : [], { phone, epic, name, district }),
+        error: () => this.handleSearchError(),
       });
     } else if (name) {
       this.visitorSearchService.searchByName(name).subscribe({
-        next: res => {
-          this.results = res;
-          this.searching = false;
-        },
-        error: () => {
-          // Fallback to dummy data
-          this.results = this.results.filter(r => r.fullName.toLowerCase().includes(name.toLowerCase()));
-          this.searching = false;
-        }
+        next: visitors => this.setResults(visitors, { phone, epic, name, district }),
+        error: () => this.handleSearchError(),
       });
     } else if (district) {
       this.visitorSearchService.searchByDistrict(district).subscribe({
-        next: res => {
-          this.results = res;
-          this.searching = false;
-        },
-        error: () => {
-          // Fallback to dummy data
-          this.results = this.results.filter(r => r.district === district);
-          this.searching = false;
-        }
+        next: visitors => this.setResults(visitors, { phone, epic, name, district }),
+        error: () => this.handleSearchError(),
       });
-    } else {
-      // Show all dummy data if no criteria
-      this.initializeDummyData();
-      this.searching = false;
     }
   }
 
   select(p: Visitor) {
     this.selected = p;
+    this.selectedPhotoLoadFailed = false;
+    this.selectedPhotoPreviewOpen = false;
     this.populateHistory();
   }
 
@@ -216,7 +108,133 @@ export class PublicIdentificationComponent implements OnInit {
     this.searchEpic = '';
     this.searchName = '';
     this.searchDistrict = '';
+    this.results = [];
+    this.selected = null;
     this.searched = false;
-    this.initializeDummyData();
+    this.searching = false;
+    this.errorMessage = '';
+    this.selectedPhotoLoadFailed = false;
+    this.selectedPhotoPreviewOpen = false;
+    this.populateHistory();
   }
+
+  initial(name?: string | null): string {
+    return (name?.trim().charAt(0) || '?').toUpperCase();
+  }
+
+  displayValue(value?: string | number | null): string {
+    const formatted = value?.toString().trim();
+    return formatted || '-';
+  }
+
+  get selectedPhotoUrl(): string {
+    return this.getVisitorPhotoUrl(this.selected);
+  }
+
+  toggleSelectedPhotoPreview(): void {
+    if (!this.selectedPhotoUrl || this.selectedPhotoLoadFailed) {
+      return;
+    }
+    this.selectedPhotoPreviewOpen = !this.selectedPhotoPreviewOpen;
+  }
+
+  closeSelectedPhotoPreview(): void {
+    this.selectedPhotoPreviewOpen = false;
+  }
+
+  onSelectedPhotoError(): void {
+    this.selectedPhotoLoadFailed = true;
+    this.selectedPhotoPreviewOpen = false;
+  }
+
+  private setResults(visitors: Visitor[], criteria: SearchCriteria): void {
+    this.results = (visitors || []).filter(visitor => this.matchesCriteria(visitor, criteria));
+    this.selected = this.results[0] || null;
+    this.selectedPhotoLoadFailed = false;
+    this.selectedPhotoPreviewOpen = false;
+    this.searching = false;
+    this.populateHistory();
+  }
+
+  private handleSearchError(): void {
+    this.results = [];
+    this.selected = null;
+    this.searching = false;
+    this.errorMessage = 'Unable to search visitor records right now. Please try again.';
+    this.selectedPhotoLoadFailed = false;
+    this.selectedPhotoPreviewOpen = false;
+    this.populateHistory();
+  }
+
+  private matchesCriteria(visitor: Visitor, criteria: SearchCriteria): boolean {
+    const phoneDigits = this.onlyDigits(criteria.phone);
+    const visitorPhoneDigits = this.onlyDigits(visitor.phoneNumber);
+    if (phoneDigits && !visitorPhoneDigits.includes(phoneDigits)) {
+      return false;
+    }
+
+    const epic = criteria.epic.toUpperCase();
+    if (epic && !this.text(visitor.epicNumber).toUpperCase().includes(epic)) {
+      return false;
+    }
+
+    const name = criteria.name.toLowerCase();
+    if (name && !this.text(visitor.fullName).toLowerCase().includes(name)) {
+      return false;
+    }
+
+    const district = criteria.district.toLowerCase();
+    if (district && this.text(visitor.district).toLowerCase() !== district) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private text(value?: string | null): string {
+    return (value || '').trim();
+  }
+
+  private onlyDigits(value?: string | null): string {
+    return (value || '').replace(/\D/g, '');
+  }
+
+  private getVisitorPhotoUrl(visitor?: Visitor | null): string {
+    if (!visitor) {
+      return '';
+    }
+
+    const inlinePhoto = this.firstNonBlank(visitor.livePhotoBase64, visitor.photoBase64, visitor.photoUrl);
+    if (inlinePhoto) {
+      return this.normalizePhotoSource(inlinePhoto);
+    }
+
+    const storedPath = this.firstNonBlank(visitor.livePhotoPath, visitor.photoStoragePath, visitor.photoPath);
+    return storedPath ? this.normalizePhotoSource(storedPath) : '';
+  }
+
+  private normalizePhotoSource(value: string): string {
+    const source = value.trim();
+    if (!source) {
+      return '';
+    }
+    if (source.startsWith('data:image/') || source.startsWith('blob:') || /^https?:\/\//i.test(source)) {
+      return source;
+    }
+
+    const origin = environment.apiUrl.replace(/\/api\/v1\/?$/i, '');
+    const path = source.replace(/^\/+/, '');
+    return `${origin}/${path.startsWith('uploads/') ? path : `uploads/${path}`}`;
+  }
+
+  private firstNonBlank(...values: Array<string | null | undefined>): string {
+    return values.map(value => value?.trim() || '').find(Boolean) || '';
+  }
+}
+
+interface SearchCriteria {
+  phone: string;
+  epic: string;
+  name: string;
+  district: string;
 }

@@ -343,7 +343,12 @@
         <ng-container *ngIf="currentStep === 'photo-capture'">
           <div class="section-title">{{ 'STEP_3_CAPTURE_PHOTO' | translate }}</div>
 
-          <div class="kyc-notice" style="background:#f0fdf4;border-color:#86efac">
+          <div *ngIf="hasAadhaarResidentImage" class="kyc-notice" style="background:#f0fdf4;border-color:#86efac">
+            <mat-icon style="color:#16a34a">check_circle</mat-icon>
+            Aadhaar resident image received. This photo will be used for registration.
+          </div>
+
+          <div *ngIf="!hasAadhaarResidentImage" class="kyc-notice" style="background:#f0fdf4;border-color:#86efac">
             <mat-icon style="color:#16a34a">check_circle</mat-icon>
             {{ 'CAPTURE_LIVE_PHOTO_NOTICE' | translate }}
           </div>
@@ -356,15 +361,19 @@
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
               <div>
                 <strong style="font-size:0.85rem;color:#374151">{{ 'NAME' | translate }}:</strong>
-                <div style="color:#1A237E;font-weight:600;padding:0.25rem">{{ form.fullName }}</div>
+                <div style="color:#1A237E;font-weight:600;padding:0.25rem">{{ form.fullName || 'N/A' }}</div>
               </div>
-              <div>
+              <div *ngIf="form.idType !== 'AADHAAR'">
                 <strong style="font-size:0.85rem;color:#374151">{{ 'DISTRICT' | translate }}:</strong>
                 <div style="color:#1A237E;font-weight:600;padding:0.25rem">{{ form.district || 'N/A' }}</div>
               </div>
+              <div *ngIf="form.idType === 'AADHAAR'">
+                <strong style="font-size:0.85rem;color:#374151">City / State:</strong>
+                <div style="color:#1A237E;font-weight:600;padding:0.25rem">{{ form.city || 'N/A' }}{{ form.state ? ', ' + form.state : '' }}</div>
+              </div>
               <div style="grid-column:span 2">
                 <strong style="font-size:0.85rem;color:#374151">{{ 'ADDRESS' | translate }}:</strong>
-                <div style="color:#1A237E;font-weight:600;padding:0.25rem">{{ form.address || 'N/A' }}</div>
+                <div style="color:#1A237E;font-weight:600;padding:0.25rem">{{ form.fullAddress || form.address || 'N/A' }}</div>
               </div>
             </div>
           </div>
@@ -384,19 +393,19 @@
           </div>
 
           <div style="display:flex;gap:1rem;margin-top:1rem;flex-wrap:wrap;align-items:center">
-            <button mat-stroked-button color="primary" style="white-space:nowrap" (click)="goBackToOtpVerification()">
+            <button mat-stroked-button color="primary" style="white-space:nowrap" (click)="goBackFromPhotoCapture()">
               <mat-icon>arrow_back</mat-icon> {{ 'PREVIOUS' | translate }}
             </button>
 
-            <button *ngIf="!isCameraActive && !capturedPhotoUrl" mat-raised-button color="primary" class="flex-1" (click)="openCamera()">
+            <button *ngIf="!hasAadhaarResidentImage && !isCameraActive && !capturedPhotoUrl" mat-raised-button color="primary" class="flex-1" (click)="openCamera()">
               <mat-icon>photo_camera</mat-icon> {{ 'OPEN_CAMERA' | translate }}
             </button>
 
-            <button *ngIf="isCameraActive" mat-raised-button color="primary" class="flex-1" (click)="capturePhoto()">
+            <button *ngIf="!hasAadhaarResidentImage && isCameraActive" mat-raised-button color="primary" class="flex-1" (click)="capturePhoto()">
               <mat-icon>photo_camera</mat-icon> {{ 'CAPTURE_PHOTO' | translate }}
             </button>
 
-            <button *ngIf="capturedPhotoUrl && !isCameraActive" mat-stroked-button color="primary" style="white-space:nowrap" (click)="retakePhoto()">
+            <button *ngIf="!hasAadhaarResidentImage && capturedPhotoUrl && !isCameraActive" mat-stroked-button color="primary" style="white-space:nowrap" (click)="retakePhoto()">
               <mat-icon>refresh</mat-icon> {{ 'RETAKE_PHOTO' | translate }}
             </button>
 
@@ -405,7 +414,7 @@
             </button>
           </div>
 
-          <small class="field-hint" style="display:block;text-align:center;margin-top:1rem">
+          <small *ngIf="!hasAadhaarResidentImage" class="field-hint" style="display:block;text-align:center;margin-top:1rem">
             <i class="pi pi-info-circle"></i> {{ 'CAMERA_LIGHTING_HINT' | translate }}
           </small>
         </ng-container>
@@ -436,9 +445,29 @@
                 <label>{{ 'DATE_OF_BIRTH' | translate }}</label>
                 <span>{{ form.dateOfBirth || 'N/A' }}</span>
               </div>
+              <div *ngIf="form.idType === 'AADHAAR'">
+                <label>{{ 'MOBILE_NUMBER' | translate }}</label>
+                <span>{{ form.phoneNumber || 'N/A' }}</span>
+              </div>
+              <div>
+                <label>{{ 'ADDRESS' | translate }}</label>
+                <span>{{ form.fullAddress || form.address || 'N/A' }}</span>
+              </div>
+              <div>
+                <label>Address Line 1</label>
+                <span>{{ form.address1 || form.addressLine || 'N/A' }}</span>
+              </div>
+              <div>
+                <label>City</label>
+                <span>{{ form.city || 'N/A' }}</span>
+              </div>
               <div>
                 <label>{{ 'STATE' | translate }}</label>
                 <span>{{ form.state || 'N/A' }}</span>
+              </div>
+              <div>
+                <label>Pincode</label>
+                <span>{{ form.pincode || 'N/A' }}</span>
               </div>
               <div>
                 <label>{{ 'DISTRICT' | translate }}</label>
@@ -473,6 +502,17 @@
                 <span>{{ form.aadhaarClientTxnId || 'N/A' }}</span>
               </div>
             </div>
+          </div>
+
+          <div *ngIf="hasAadhaarResidentImage && capturedPhotoUrl" class="aadhaar-photo-panel">
+            <div class="aadhaar-photo-copy">
+              <mat-icon>account_circle</mat-icon>
+              <div>
+                <strong>Aadhaar resident image</strong>
+                <span>Capture photo is not required for this Aadhaar flow.</span>
+              </div>
+            </div>
+            <img [src]="capturedPhotoUrl" alt="Aadhaar resident image" />
           </div>
 
           <div *ngIf="!verifiedKycData" class="status-msg error-msg">
@@ -515,6 +555,17 @@
             </mat-select>
           </mat-form-field>
 
+          <mat-form-field appearance="outline" class="full-width" *ngIf="form.idType === 'AADHAAR'">
+            <mat-label>{{ 'MOBILE_NUMBER' | translate }} *</mat-label>
+            <input
+              matInput
+              type="tel"
+              [(ngModel)]="form.phoneNumber"
+              [placeholder]="'ENTER_10_DIGIT_MOBILE' | translate"
+              maxlength="10"
+              (input)="sanitizeNumericInput('phoneNumber')" />
+          </mat-form-field>
+
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>{{ 'ADDRESS_HOUSE_COLONY' | translate }}</mat-label>
             <textarea
@@ -522,6 +573,7 @@
               rows="3"
               id="register_addressLineInput"
               [(ngModel)]="form.addressLine"
+              (ngModelChange)="form.address1 = $event"
               [placeholder]="'ADDRESS_HOUSE_COLONY_PLACEHOLDER' | translate"></textarea>
           </mat-form-field>
 
@@ -529,6 +581,39 @@
             <i class="pi pi-info-circle"></i>
             {{ 'AUTO_FILL_MISSING_DETAILS_HELPER' | translate }}
           </div>
+
+          <div class="form-row two-col">
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'STATE' | translate }}</mat-label>
+              <input
+                matInput
+                id="register_stateInput"
+                type="text"
+                [(ngModel)]="form.state"
+                placeholder="State" />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>City</mat-label>
+              <input
+                matInput
+                id="register_cityInput"
+                type="text"
+                [(ngModel)]="form.city"
+                placeholder="City" />
+            </mat-form-field>
+          </div>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Pincode</mat-label>
+            <input
+              matInput
+              id="register_pincodeInput"
+              type="text"
+              [(ngModel)]="form.pincode"
+              placeholder="Pincode"
+              maxlength="6"
+              (input)="sanitizePincode()" />
+          </mat-form-field>
 
           <div class="form-group outside-state-row">
             <mat-checkbox
@@ -558,6 +643,7 @@
                 type="text"
                 [(ngModel)]="form.constituency"
                 [placeholder]="'CONSTITUENCY_PLACEHOLDER' | translate" />
+              <mat-hint *ngIf="form.idType === 'AADHAAR'">Constituency is not available from Aadhaar. Please enter it manually.</mat-hint>
             </mat-form-field>
           </div>
 
@@ -590,7 +676,7 @@
           </mat-form-field>
 
           <div style="display:flex;gap:1rem;margin-top:1.5rem">
-            <button mat-stroked-button color="primary" (click)="currentStep = 'photo-capture'">
+            <button mat-stroked-button color="primary" (click)="goBackFromAdditionalDetails()">
               <i class="pi pi-arrow-left"></i> {{ 'BACK' | translate }}
             </button>
             <button mat-raised-button color="primary" class="flex-1" [disabled]="!canSubmitRegistration" (click)="submitRegistration()">

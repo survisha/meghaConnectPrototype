@@ -5,6 +5,8 @@ import java.io.Serializable;
 import java.util.Collections;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Immutable snapshot of one KYC outcome — either a successful set of disclosed
@@ -37,12 +39,19 @@ public class KycData implements Serializable {
     public static final String CLAIM_ADDRESS        = "address";
     public static final String CLAIM_REG_ADDRESS    = "regionalAddress";
 
+    private static final Pattern PINCODE_AT_END_PATTERN = Pattern.compile("\\b(\\d{6})\\b\\s*$");
+
     private boolean error;
     private String  errorCode;
     private String  errorMessage;
     private String  txnId;
     private Map<String, String> claims;
     private long receivedAtMillis;
+    private String address1 = "";
+    private String city = "";
+    private String state = "";
+    private String pincode = "";
+    private String fatherName = "";
 
     // Static factory methods
     public static KycData success(String txnId, Map<String, String> claims) {
@@ -59,6 +68,12 @@ public class KycData implements Serializable {
             ci.putAll(claims);
             data.claims = Collections.unmodifiableMap(ci);
         }
+        ParsedAddress parsedAddress = parseRegionalAddress(data.claims);
+        data.address1 = parsedAddress.address1;
+        data.city = parsedAddress.city;
+        data.state = parsedAddress.state;
+        data.pincode = parsedAddress.pincode;
+        data.fatherName = parsedAddress.fatherName;
         data.receivedAtMillis = System.currentTimeMillis();
         return data;
     }
@@ -70,6 +85,10 @@ public class KycData implements Serializable {
         data.errorMessage = errorMessage;
         data.txnId = txnId;
         data.claims = Collections.emptyMap();
+        data.address1 = "";
+        data.city = "";
+        data.state = "";
+        data.pincode = "";
         data.receivedAtMillis = System.currentTimeMillis();
         return data;
     }
@@ -126,6 +145,22 @@ public class KycData implements Serializable {
         return claims.getOrDefault(CLAIM_REG_ADDRESS, "");
     }
 
+    public String getAddress1() {
+        return address1 != null ? address1 : "";
+    }
+
+    public String getCity() {
+        return city != null ? city : "";
+    }
+
+    public String getState() {
+        return state != null ? state : "";
+    }
+
+    public String getPincode() {
+        return pincode != null ? pincode : "";
+    }
+
     /**
      * @return the Base64-encoded JPEG/PNG of the resident photo, or null if not disclosed.
      *         Callers should embed as {@code data:image/jpeg;base64,<value>}.
@@ -134,5 +169,92 @@ public class KycData implements Serializable {
         if (claims == null || claims.isEmpty()) return null;
         String v = claims.get(CLAIM_PHOTO);
         return (v == null || v.isBlank()) ? null : v;
+    }
+
+    private static ParsedAddress parseRegionalAddress(Map<String, String> claims) {
+        String rawAddress = claimValue(claims, CLAIM_REG_ADDRESS);
+        if (rawAddress.isBlank()) {
+            rawAddress = claimValue(claims, CLAIM_ADDRESS);
+        }
+        rawAddress = normalizeAddress(rawAddress);
+        if (rawAddress.isBlank()) {
+            return ParsedAddress.empty();
+        }
+        
+        String fatherName = "";
+        String address = "";
+        String city = "";
+        String state = "";
+        String pincode = "";
+
+        // Step 1: Extract Father Name (after C/O:)
+        Pattern fatherPattern = Pattern.compile("C/O:\\s*([A-Za-z ]+?)\\s\\d");
+        Matcher fatherMatcher = fatherPattern.matcher(rawAddress);
+
+        if (fatherMatcher.find()) {
+            fatherName = fatherMatcher.group(1).trim();
+        }
+
+        // Step 2: Extract Pincode (last 6 digits)
+        Pattern pinPattern = Pattern.compile("(\\d{6})$");
+        Matcher pinMatcher = pinPattern.matcher(rawAddress);
+
+        if (pinMatcher.find()) {
+            pincode = pinMatcher.group(1);
+        }
+
+        // Step 3: Remove father name part
+        String remaining = rawAddress.replaceFirst("C/O:\\s*" + fatherName, "").trim();
+
+        // Step 4: Remove pincode
+        remaining = remaining.replace(pincode, "").trim();
+
+        // Step 5: Extract state (last word before pincode)
+        String[] parts = remaining.split(" ");
+        state = parts[parts.length - 1];
+
+        // Step 6: Extract city (second last word)
+        city = parts[parts.length - 2];
+
+        // Step 7: Remaining is address
+        address = remaining.substring(0, remaining.lastIndexOf(city)).trim();
+
+
+        return new ParsedAddress(address, city, state, pincode,fatherName);
+    }
+
+    private static String claimValue(Map<String, String> claims, String claimName) {
+        if (claims == null || claims.isEmpty()) {
+            return "";
+        }
+        String value = claims.get(claimName);
+        return value == null ? "" : value;
+    }
+
+    private static String normalizeAddress(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replaceAll("\\s+", " ").trim();
+    }
+
+    private static final class ParsedAddress {
+        private final String address1;
+        private final String city;
+        private final String state;
+        private final String pincode;
+        private final String fatherName;
+
+        private ParsedAddress(String address1, String city, String state, String pincode, String fatherName) {
+            this.address1 = address1;
+            this.city = city;
+            this.state = state;
+            this.pincode = pincode;
+            this.fatherName = fatherName;
+        }
+
+        private static ParsedAddress empty() {
+            return new ParsedAddress("", "", "", "","");
+        }
     }
 }

@@ -230,7 +230,7 @@ public class KycController {
      *       "dob": "1990-05-15",
      *       "gender": "M",
      *       "mobile": "9876543210",
-     *       "address": "123 Main St, Bengaluru Karnataka 560001",
+     *       "regionalAddress": "123 Main St, Bengaluru Karnataka 560001",
      *       "residentImage": "base64-encoded-photo-jpeg"
      *     },
      *     "receivedAtMillis": 1629876543210
@@ -245,6 +245,7 @@ public class KycController {
     })
     public ResponseEntity<KycData> getKycResult(@PathVariable String txnId) {
         KycData result = ovseKycService.getKycResult(txnId);
+        
         if (result != null) {
             return ResponseEntity.ok(result);
         } else {

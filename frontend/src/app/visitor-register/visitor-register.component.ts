@@ -26,8 +26,12 @@ interface VisitorRegistrationForm {
   phoneNumber: string;
   email: string;
   address: string;
+  fullAddress: string;
+  address1: string;
   addressLine: string;
+  city: string;
   state: string;
+  pincode: string;
   district: string;
   constituency: string;
   booth: string;
@@ -81,6 +85,10 @@ interface VerifiedKycData {
   constituency?: string;
   boothVillage?: string;
   address?: string;
+  fullAddress?: string;
+  address1?: string;
+  city?: string;
+  pincode?: string;
   epicNumber?: string;
   maskedIdentityNumber?: string;
   houseNumber?: string;
@@ -125,8 +133,12 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     phoneNumber: '',
     email: '',
     address: '',
+    fullAddress: '',
+    address1: '',
     addressLine: '',
+    city: '',
     state: '',
+    pincode: '',
     district: '',
     constituency: '',
     booth: '',
@@ -164,6 +176,9 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   mobileCheckLoading = false;
   duplicateRegistrationBlocked = false;
   verifiedKycData: VerifiedKycData | null = null;
+  isAadhaarFlow = false;
+  hasAadhaarResidentImage = false;
+  aadhaarResidentImage = '';
   
   // KYC state
   idValidated = false;
@@ -460,7 +475,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       // Poll for result from OVSE callback
       this.kycService.getAadhaarKycResult(this.currentTxnId).subscribe({
         next: res => {
-          if (res && !res.error && (res.claims || res.claimData)) {
+          if (this.hasAadhaarKycPayload(res)) {
             // KYC verification successful.
             clearInterval(this.pollingInterval);
             this.successMsg = this.t('AADHAAR_VERIFICATION_SUCCESS_LOADING');
@@ -493,22 +508,29 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   handleAadhaarKycSuccess(kycData: any) {
     clearInterval(this.pollingInterval);
 
-    const claims = kycData.claimData || kycData.claims || {};
-    this.populateVisitorDetailsFromKycResponse(kycData, 'AADHAAR');
+    this.isAadhaarFlow = true;
+    this.populateVisitorDetailsFromAadhaarResponse(kycData);
 
-    this.form.livePhoto = claims.residentImage ? `data:image/jpeg;base64,${claims.residentImage}` : '';
-
-    // Set captured photo URL for display
-    if (claims.residentImage) {
-      this.capturedPhotoUrl = `data:image/jpeg;base64,${claims.residentImage}`;
+    this.aadhaarResidentImage = this.getAadhaarImage(kycData);
+    this.hasAadhaarResidentImage = !!this.aadhaarResidentImage;
+    if (this.hasAadhaarResidentImage) {
+      const residentPhotoDataUri = this.toImageDataUri(this.aadhaarResidentImage);
+      this.form.livePhoto = residentPhotoDataUri;
+      this.capturedPhotoUrl = residentPhotoDataUri;
       this.photoCaptured = true;
+      this.kycStatus = 'PHOTO_MATCHED';
+      this.kycConfidenceScore = 90;
+      this.kycConfidenceLabel = this.t('CONFIDENCE_VERIFIED');
+      this.form.kycStatus = 'PHOTO_MATCHED';
+    } else {
+      this.form.livePhoto = '';
+      this.capturedPhotoUrl = '';
+      this.photoCaptured = false;
+      this.kycStatus = '';
+      this.kycConfidenceScore = 75;
+      this.kycConfidenceLabel = this.t('CONFIDENCE_DEMOGRAPHIC');
+      this.form.kycStatus = '';
     }
-
-    // Set KYC status
-    this.kycStatus = 'PHOTO_MATCHED';
-    this.kycConfidenceScore = 90;
-    this.kycConfidenceLabel = this.t('CONFIDENCE_VERIFIED');
-    this.form.kycStatus = 'PHOTO_MATCHED';
 
     // Clear QR display
     this.showQrCode = false;
@@ -518,15 +540,31 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     // Move to next step
     this.cdr.detectChanges();
     setTimeout(() => {
-      this.currentStep = 'additional-details';
+      this.currentStep = 'photo-capture';
       this.cdr.detectChanges();
     }, 500);
   }
 
   populateVisitorDetailsFromKycResponse(response: any, kycType: 'EPIC' | 'AADHAAR') {
-    const verified = kycType === 'EPIC'
-      ? this.mapEpicKycResponse(response)
-      : this.mapAadhaarKycResponse(response);
+    if (kycType === 'AADHAAR') {
+      this.populateVisitorDetailsFromAadhaarResponse(response);
+      return;
+    }
+
+    const verified = this.mapEpicKycResponse(response);
+
+    if (!verified.kycVerified) {
+      this.verifiedKycData = null;
+      this.errorMsg = this.t('ERROR_KYC_INCOMPLETE');
+      return;
+    }
+
+    this.verifiedKycData = verified;
+    this.patchVisitorDetailsFromKyc(verified);
+  }
+
+  populateVisitorDetailsFromAadhaarResponse(response: any) {
+    const verified = this.mapAadhaarKycResponse(response);
 
     if (!verified.kycVerified) {
       this.verifiedKycData = null;
@@ -577,23 +615,32 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   }
 
   private mapAadhaarKycResponse(response: any): VerifiedKycData {
-    const claims = response?.claimData || response?.claims || {};
-    const mobile = claims.mobile || claims.maskedMobile || '';
-    const clientTxnId = response?.clientTxnId || response?.txnId || '';
+    const residentName = this.getAadhaarValue(response, 'residentName', 'localResidentName', 'name');
+    const mobile = this.getAadhaarValue(response, 'mobile', 'maskedMobile', 'phoneNumber');
+    const clientTxnId = this.cleanString(response?.clientTxnId || response?.txnId);
+    const fullAddress = this.getAadhaarValue(response, 'fullAddress', 'address', 'regionalAddress');
+    const address1 = this.getAadhaarValue(response, 'address1') || this.extractAddress1FromFullAddress(fullAddress);
+    const city = this.getAadhaarValue(response, 'city');
+    const state = this.getAadhaarValue(response, 'state');
+    const pincode = this.getAadhaarValue(response, 'pincode', 'pinCode', 'postalCode');
 
     return {
-      kycVerified: !response?.error && !!(claims.residentName || claims.localResidentName),
+      kycVerified: !response?.error && !!residentName,
       kycType: 'AADHAAR',
       kycReferenceId: clientTxnId,
-      visitorName: claims.residentName || claims.localResidentName || '',
+      visitorName: residentName,
       mobile,
-      gender: claims.gender || '',
-      dob: this.normalizeDate(claims.dob),
-      address: claims.address || claims.regionalAddress || '',
+      gender: this.getAadhaarValue(response, 'gender'),
+      dob: this.normalizeDate(this.getAadhaarValue(response, 'dob', 'dateOfBirth')),
+      address: fullAddress,
+      fullAddress,
+      address1,
+      city,
+      state,
+      pincode,
       maskedIdentityNumber: this.form.aadhaarNumber ? this.maskAadhaar(this.form.aadhaarNumber) : '',
       aadhaarClientTxnId: clientTxnId,
-      aadhaarAppId: response?.appId || '',
-      state: '',
+      aadhaarAppId: this.cleanString(response?.appId),
       district: '',
       constituency: '',
       boothVillage: '',
@@ -608,12 +655,16 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       gender: verified.gender || this.form.gender,
       dateOfBirth: verified.dob || this.form.dateOfBirth,
       state: verified.state || this.form.state,
+      city: verified.city || this.form.city,
+      pincode: verified.pincode || this.form.pincode,
       district: verified.district || this.form.district,
-      constituency: verified.constituency || this.form.constituency,
+      constituency: verified.kycType === 'AADHAAR' ? this.form.constituency : verified.constituency || this.form.constituency,
       booth: verified.boothVillage || this.form.booth,
       boothVillage: verified.boothVillage || this.form.boothVillage,
       address: verified.address || this.form.address,
-      addressLine: verified.houseNumber || this.form.addressLine,
+      fullAddress: verified.fullAddress || verified.address || this.form.fullAddress,
+      address1: verified.address1 || verified.houseNumber || this.form.address1,
+      addressLine: verified.address1 || verified.houseNumber || this.form.addressLine,
       epicNumber: verified.epicNumber || this.form.epicNumber,
       phoneNumber: this.form.idType === 'AADHAAR'
         ? this.extractUsableMobileFromAadhaar(verified) || this.form.phoneNumber
@@ -640,8 +691,84 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   }
 
   private extractUsableMobileFromAadhaar(verified: VerifiedKycData): string {
-    const mobile = verified.mobile || '';
-    return /^\d{10}$/.test(mobile) ? mobile : '';
+    const digits = this.cleanString(verified.mobile).replace(/\D/g, '');
+    if (digits.length === 10) {
+      return digits;
+    }
+    if (digits.length > 10) {
+      return digits.substring(digits.length - 10);
+    }
+    return '';
+  }
+
+  private hasAadhaarKycPayload(response: any): boolean {
+    return !!response
+      && !response.error
+      && !!(
+        this.getAadhaarValue(response, 'residentName', 'localResidentName', 'name')
+        || this.getAadhaarValue(response, 'address', 'regionalAddress', 'fullAddress')
+        || this.getAadhaarImage(response)
+      );
+  }
+
+  private getAadhaarImage(response: any): string {
+    return this.getAadhaarValue(
+      response,
+      'residentImage',
+      'photoBase64',
+      'residentPhotoBase64',
+      'residentPhoto',
+      'photo'
+    );
+  }
+
+  private getAadhaarValue(response: any, ...keys: string[]): string {
+    const sources = [
+      response?.claimData,
+      response?.claims,
+      response,
+    ];
+
+    for (const source of sources) {
+      const value = this.readObjectValue(source, keys);
+      const cleaned = this.cleanString(value);
+      if (cleaned) {
+        return cleaned;
+      }
+    }
+    return '';
+  }
+
+  private readObjectValue(source: any, keys: string[]): unknown {
+    if (!source || typeof source !== 'object') {
+      return '';
+    }
+
+    for (const key of keys) {
+      if (source[key] !== null && source[key] !== undefined) {
+        return source[key];
+      }
+    }
+
+    const lowerKeys = keys.map(key => key.toLowerCase());
+    const match = Object.keys(source).find(key => lowerKeys.includes(key.toLowerCase()));
+    return match ? source[match] : '';
+  }
+
+  private cleanString(value: unknown): string {
+    if (value === null || value === undefined) {
+      return '';
+    }
+    return String(value).trim();
+  }
+
+  private extractAddress1FromFullAddress(fullAddress: string): string {
+    return this.cleanString(fullAddress.split(',', 2)[0]);
+  }
+
+  private toImageDataUri(base64OrDataUri: string): string {
+    const image = this.cleanString(base64OrDataUri);
+    return image.startsWith('data:image/') ? image : `data:image/jpeg;base64,${image}`;
   }
 
   private composeEpicAddress(houseNumber: string, sectionNumber: string, district: string, state: string): string {
@@ -692,7 +819,10 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   }
 
   get canSubmitRegistration(): boolean {
+    const hasValidPhone = /^\d{10}$/.test(this.form.phoneNumber || '');
     return !this.loading
+      && !!this.form.fullName.trim()
+      && hasValidPhone
       && !!this.form.designation
       && !!this.form.livePhoto
       && (this.form.outsideState || !!this.form.district.trim());
@@ -836,6 +966,11 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       this.kycConfidenceLabel = this.manualVerification
         ? this.t('CONFIDENCE_MANUAL')
         : this.t('CONFIDENCE_DEMOGRAPHIC');
+    } else if (this.form.idType === 'AADHAAR' && !this.hasAadhaarResidentImage) {
+      this.kycStatus = 'DEMOGRAPHIC_MATCHED';
+      this.form.kycStatus = 'DEMOGRAPHIC_MATCHED';
+      this.kycConfidenceScore = this.kycConfidenceScore || 75;
+      this.kycConfidenceLabel = this.kycConfidenceLabel || this.t('CONFIDENCE_DEMOGRAPHIC');
     } else if (!this.form.kycStatus) {
       this.kycStatus = 'PHOTO_MATCHED';
       this.form.kycStatus = 'PHOTO_MATCHED';
@@ -922,16 +1057,21 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     }
 
     this.loading = true;
-    const addressLine = (this.form.addressLine || this.form.address || '').trim();
+    const addressLine = (this.form.addressLine || this.form.address1 || this.form.address || '').trim();
+    const fullAddress = (this.form.fullAddress || this.form.address || addressLine).trim();
     const boothVillage = (this.form.boothVillage || this.form.booth || '').trim();
     const payload: Record<string, string | boolean | number | null | undefined> = {
       fullName: this.form.fullName.trim(),
       phoneNumber: this.form.phoneNumber || this.maskedPhone.replace(/\*+/g, '').trim(),
       email: this.form.email.trim(),
-      address: addressLine,
+      address: fullAddress,
+      fullAddress,
+      address1: addressLine,
       addressLine,
       houseNoColony: addressLine,
       state: this.form.state.trim(),
+      city: this.form.city.trim(),
+      pincode: this.form.pincode.trim(),
       district: this.form.district.trim() || (this.form.outsideState ? 'NA' : ''),
       constituency: this.form.outsideState ? 'NA' : this.form.constituency.trim(),
       booth: this.form.outsideState ? 'NA' : boothVillage,
@@ -961,7 +1101,10 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     if (this.form.idType === 'EPIC') {
       payload['epicNumber'] = this.form.epicNumber.trim().toUpperCase();
     } else if (this.form.idType === 'AADHAAR') {
-      payload['aadhaarNumber'] = this.form.aadhaarNumber.trim();
+      const aadhaarNumber = this.form.aadhaarNumber.trim();
+      if (aadhaarNumber) {
+        payload['aadhaarNumber'] = aadhaarNumber;
+      }
     }
 
     if (this.form.livePhoto) {
@@ -1008,7 +1151,17 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   }
 
   goBackToOtpVerification() {
-    this.currentStep = 'otp-verification';
+    this.currentStep = this.form.idType === 'AADHAAR' ? 'id-entry' : 'otp-verification';
+    this.errorMsg = '';
+  }
+
+  goBackFromPhotoCapture() {
+    this.currentStep = this.form.idType === 'AADHAAR' ? 'id-entry' : 'otp-verification';
+    this.errorMsg = '';
+  }
+
+  goBackFromAdditionalDetails() {
+    this.currentStep = 'photo-capture';
     this.errorMsg = '';
   }
 
@@ -1029,6 +1182,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
    */
   onIdTypeChange(idType: VisitorRegistrationForm['idType']) {
     this.form.idType = idType;
+    this.isAadhaarFlow = idType === 'AADHAAR';
 
     // Clear error and success messages
     this.errorMsg = '';
@@ -1052,6 +1206,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.isCameraActive = false;
     this.capturedPhotoUrl = '';
     this.photoCaptured = false;
+    this.hasAadhaarResidentImage = false;
+    this.aadhaarResidentImage = '';
 
     // Clear AADHAAR QR-related state
     if (this.pollingInterval) {
@@ -1084,8 +1240,12 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     // Only reset fields that are auto-populated during KYC
     this.form.fullName = '';
     this.form.address = '';
+    this.form.fullAddress = '';
+    this.form.address1 = '';
     this.form.addressLine = '';
+    this.form.city = '';
     this.form.state = '';
+    this.form.pincode = '';
     this.form.district = '';
     this.form.constituency = '';
     this.form.booth = '';
@@ -1204,6 +1364,10 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.form[field] = this.form[field].replace(/\D/g, '');
   }
 
+  sanitizePincode() {
+    this.form.pincode = this.form.pincode.replace(/\D/g, '');
+  }
+
   sanitizeOtpInput() {
     this.otpCode = this.otpCode.replace(/\D/g, '');
   }
@@ -1233,6 +1397,9 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.otpVerified = false;
     this.photoCaptured = false;
     this.kycStatus = '';
+    this.isAadhaarFlow = false;
+    this.hasAadhaarResidentImage = false;
+    this.aadhaarResidentImage = '';
     this.manualPhone = '';
     this.manualVerification = false;
     this.mobileValidationMsg = '';
@@ -1245,8 +1412,12 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       phoneNumber: '',
       email: '',
       address: '',
+      fullAddress: '',
+      address1: '',
       addressLine: '',
+      city: '',
       state: '',
+      pincode: '',
       district: '',
       constituency: '',
       booth: '',

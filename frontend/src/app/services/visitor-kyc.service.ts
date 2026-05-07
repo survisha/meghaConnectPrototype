@@ -128,6 +128,21 @@ export interface KycDataResponse {
   appId?: string;
   clientTxnId?: string;
   txnId?: string;
+  residentName?: string;
+  localResidentName?: string;
+  dob?: string;
+  gender?: string;
+  mobile?: string;
+  maskedMobile?: string;
+  residentImage?: string;
+  photoBase64?: string;
+  regionalAddress?: string;
+  address?: string;
+  fullAddress?: string;
+  address1?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
   claimData?: {
     residentName?: string;
     localResidentName?: string;
@@ -138,8 +153,13 @@ export interface KycDataResponse {
     email?: string;
     maskedEmail?: string;
     residentImage?: string;
+    photoBase64?: string;
     address?: string;
     regionalAddress?: string;
+    address1?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
   };
   claims?: {
     residentName?: string;
@@ -151,8 +171,13 @@ export interface KycDataResponse {
     email?: string;
     maskedEmail?: string;
     residentImage?: string;  // Base64 JPEG
+    photoBase64?: string;
     address?: string;
     regionalAddress?: string;
+    address1?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
   };
   receivedAtMillis?: number;
 }

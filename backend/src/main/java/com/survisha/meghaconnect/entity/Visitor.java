@@ -91,7 +91,19 @@ public class Visitor extends BaseEntity {
     private String address;
 
     @Column(length = 500)
+    private String fullAddress;
+
+    @Column(length = 500)
+    private String address1;
+
+    @Column(length = 500)
     private String addressLine;
+
+    @Column(length = 100)
+    private String city;
+
+    @Column(length = 10)
+    private String pincode;
 
     private Boolean outsideMeghalaya;
 

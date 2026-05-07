@@ -14,7 +14,13 @@ public class VisitorDto {
     private String kycType;
     private Boolean kycVerified;
     private String designation;
+    private String address;
+    private String fullAddress;
+    private String address1;
     private String addressLine;
+    private String city;
+    private String state;
+    private String pincode;
     private String district;
     private String constituency;
     private String booth;

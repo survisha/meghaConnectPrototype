@@ -163,7 +163,9 @@ public class OvseKycService {
     @Cacheable(value = "kycResults", key = "#txnId")
     public KycData getKycResult(String txnId) {
         log.debug("Polling for KYC result txnId={}", txnId);
-        return kycResultStore.get(txnId);
+        KycData result = kycResultStore.get(txnId);
+        log.debug("Polling for KYC result {}", result);
+        return result;
     }
 
     /**

@@ -29,6 +29,13 @@ export interface Visitor {
   epicNumber: string;
   photoUrl?: string;
   designation: string;
+  address?: string;
+  fullAddress?: string;
+  address1?: string;
+  addressLine?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
   district: string;
   constituency: string;
   booth: string;

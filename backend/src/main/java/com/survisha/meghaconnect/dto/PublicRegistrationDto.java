@@ -56,9 +56,13 @@ public class PublicRegistrationDto {
     private String booth;
     private String boothVillage;
     private String village;
+    private String fullAddress;
+    private String address1;
     private String address;
     private String addressLine;
     private String houseNoColony;
+    private String city;
+    private String pincode;
     private Boolean outsideMeghalaya;
     private String location;
 

@@ -569,6 +569,51 @@ textarea.input-field { resize: vertical; }
   object-fit: contain;
 }
 
+.aadhaar-photo-panel {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  background: #f0fdf4;
+  margin-bottom: 1rem;
+}
+
+.aadhaar-photo-copy {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  min-width: 0;
+  flex: 1;
+  color: #166534;
+}
+
+.aadhaar-photo-copy mat-icon {
+  flex: 0 0 auto;
+  color: #16a34a;
+}
+
+.aadhaar-photo-copy strong,
+.aadhaar-photo-copy span {
+  display: block;
+}
+
+.aadhaar-photo-copy span {
+  color: #4b5563;
+  font-size: 0.8rem;
+  margin-top: 0.15rem;
+}
+
+.aadhaar-photo-panel img {
+  width: 88px;
+  height: 88px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 2px solid #ffffff;
+  background: #ffffff;
+}
+
 /* KYC Status Badge */
 .kyc-status-badge {
   display: flex;
@@ -714,4 +759,32 @@ mat-radio-group {
 // Form group styling
 .form-group {
   margin-bottom: 1rem;
+}
+
+@media (max-width: 720px) {
+  .register-left {
+    display: none;
+  }
+
+  .register-right {
+    padding: 1rem;
+  }
+
+  .register-card {
+    padding: 1.25rem;
+    border-radius: 12px;
+  }
+
+  .form-row.two-col {
+    grid-template-columns: 1fr;
+  }
+
+  .aadhaar-photo-panel {
+    align-items: flex-start;
+  }
+
+  .aadhaar-photo-panel img {
+    width: 72px;
+    height: 72px;
+  }
 }

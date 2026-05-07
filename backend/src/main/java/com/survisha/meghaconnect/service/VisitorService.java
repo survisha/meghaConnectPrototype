@@ -152,12 +152,6 @@ public class VisitorService {
                 ErrorCodeConstants.DUPLICATE_EPIC_MOBILE_REGISTRATION_MSG
             );
         }
-        log.info("Visitor final registration validation passed mobileExists={} hasEpic={} hasAadhaar={} phone={}",
-                mobileExists,
-                normalizedEpic != null,
-                dto.getAadhaarNumber() != null && !dto.getAadhaarNumber().trim().isEmpty(),
-                RequestContextUtil.maskPhone(normalizedPhone));
-
         // Validate Aadhaar format if provided
         String maskedAadhaar = null;
         if (dto.getAadhaarNumber() != null && !dto.getAadhaarNumber().trim().isEmpty()) {
@@ -171,11 +165,21 @@ public class VisitorService {
             maskedAadhaar = maskAadhaar(normalizedAadhaar);
         }
 
+        String aadhaarClientTxnId = trimToNull(dto.getAadhaarClientTxnId());
+        String aadhaarAppId = trimToNull(dto.getAadhaarAppId());
+        boolean hasAadhaarKycReference = maskedAadhaar != null || aadhaarClientTxnId != null || aadhaarAppId != null;
+
+        log.info("Visitor final registration validation passed mobileExists={} hasEpic={} hasAadhaarKyc={} phone={}",
+                mobileExists,
+                normalizedEpic != null,
+                hasAadhaarKycReference,
+                RequestContextUtil.maskPhone(normalizedPhone));
+
         // Determine KYC type
         String kycType = "NONE";
         if (normalizedEpic != null) {
             kycType = ValidationConstants.ID_TYPE_EPIC;
-        } else if (dto.getAadhaarNumber() != null && !dto.getAadhaarNumber().trim().isEmpty()) {
+        } else if (hasAadhaarKycReference) {
             kycType = ValidationConstants.ID_TYPE_AADHAAR;
         }
 
@@ -200,7 +204,8 @@ public class VisitorService {
         }
 
         String photoPath = resolveLivePhotoPath(dto);
-        String addressLine = firstNonBlank(dto.getAddressLine(), dto.getHouseNoColony(), dto.getAddress());
+        String fullAddress = firstNonBlank(dto.getFullAddress(), dto.getAddress(), dto.getAddressLine(), dto.getHouseNoColony());
+        String addressLine = firstNonBlank(dto.getAddress1(), dto.getAddressLine(), dto.getHouseNoColony(), fullAddress);
         String boothVillage = firstNonBlank(dto.getBoothVillage(), dto.getBooth());
         String location = outsideMeghalaya ? "NA" : trimToNull(dto.getLocation());
 
@@ -224,7 +229,11 @@ public class VisitorService {
                 .dateOfBirth(parseDate(dto.getDateOfBirth()))
                 .gender(trimToNull(dto.getGender()))
                 .state(trimToNull(dto.getState()))
-                .address(addressLine)
+                .city(trimToNull(dto.getCity()))
+                .pincode(trimToNull(dto.getPincode()))
+                .address(fullAddress)
+                .fullAddress(fullAddress)
+                .address1(addressLine)
                 .designation(dto.getDesignation())
                 .district(outsideMeghalaya ? firstNonBlank(dto.getDistrict(), "NA") : trimToNull(dto.getDistrict()))
                 .constituency(outsideMeghalaya ? firstNonBlank(dto.getConstituency(), "NA") : trimToNull(dto.getConstituency()))
@@ -245,8 +254,8 @@ public class VisitorService {
                 .voterIdVerificationCompletionTimestamp(trimToNull(dto.getVoterIdVerificationCompletionTimestamp()))
                 .nameMatchScore(dto.getNameMatchScore())
                 .idFound(dto.getIdFound())
-                .aadhaarClientTxnId(trimToNull(dto.getAadhaarClientTxnId()))
-                .aadhaarAppId(trimToNull(dto.getAadhaarAppId()))
+                .aadhaarClientTxnId(aadhaarClientTxnId)
+                .aadhaarAppId(aadhaarAppId)
                 .maskedIdentityNumber(trimToNull(dto.getMaskedIdentityNumber()))
                 .build();
 
@@ -255,7 +264,9 @@ public class VisitorService {
 
     private void validateKycCompletion(PublicRegistrationDto dto) {
         boolean hasIdentity = (dto.getEpicNumber() != null && !dto.getEpicNumber().trim().isEmpty())
-                || (dto.getAadhaarNumber() != null && !dto.getAadhaarNumber().trim().isEmpty());
+                || (dto.getAadhaarNumber() != null && !dto.getAadhaarNumber().trim().isEmpty())
+                || trimToNull(dto.getAadhaarClientTxnId()) != null
+                || trimToNull(dto.getAadhaarAppId()) != null;
         if (!hasIdentity) {
             return;
         }

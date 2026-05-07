@@ -239,7 +239,12 @@ public class VisitorAuthService {
         response.put("kycVerified", Boolean.TRUE.equals(visitor.getKycVerified()));
         response.put("kycStatus", visitor.getKycStatus() != null ? visitor.getKycStatus() : "PENDING");
         response.put("address", visitor.getAddress() != null ? visitor.getAddress() : "");
+        response.put("fullAddress", visitor.getFullAddress() != null ? visitor.getFullAddress() : "");
+        response.put("address1", visitor.getAddress1() != null ? visitor.getAddress1() : "");
         response.put("addressLine", visitor.getAddressLine() != null ? visitor.getAddressLine() : "");
+        response.put("city", visitor.getCity() != null ? visitor.getCity() : "");
+        response.put("state", visitor.getState() != null ? visitor.getState() : "");
+        response.put("pincode", visitor.getPincode() != null ? visitor.getPincode() : "");
         response.put("district", visitor.getDistrict() != null ? visitor.getDistrict() : "");
         response.put("constituency", visitor.getConstituency() != null ? visitor.getConstituency() : "");
         response.put("boothVillage", visitor.getBoothVillage() != null ? visitor.getBoothVillage() : "");

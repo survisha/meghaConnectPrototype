@@ -1,117 +1,208 @@
 <div class="login-page">
-  <div class="login-left">
-    <div class="state-map-bg"></div>
-    
-    <div class="brand-box">
-      <div class="logo-section">
-        <img src="/asserts/logo.png" alt="Meghalaya Government Logo" class="govt-logo">
-        <div class="logo-text">
-          <h1>MeghaConnect</h1>
-          <div class="govt-badge">
-            <i class="pi pi-shield"></i>
-            <span>{{ 'OFFICIAL_GOVERNMENT_PORTAL' | translate }}</span>
-          </div>
-        </div>
-      </div>
-      
-      <div class="cm-profile-section">
-        <div class="cm-photo-container">
-          <img src="/asserts/CM_Profile_Picture.jpg" alt="Chief Minister" class="cm-photo" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22%3E%3Crect fill=%22%23e0e7ff%22 width=%22100%22 height=%22100%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22Arial%22 font-size=%2224%22 fill=%22%234338ca%22%3ECM%3C/text%3E%3C/svg%3E'">
-          <div class="cm-badge">{{ 'HONBLE' | translate }}</div>
-        </div>
-        <div class="cm-info">
-          <p class="cm-name">Conrad Sangma</p>
-          <p class="cm-designation">{{ 'GOVERNMENT_OF_MEGHALAYA' | translate }}</p>
-          <div class="cm-office">
-            <i class="pi pi-building"></i>
-            <span>{{ 'CHIEF_MINISTERS_OFFICE' | translate }}</span>
-          </div>
-        </div>
-      </div>
+  <header class="home-header">
+    <button type="button" class="brand-link" (click)="setSection('home')" aria-label="MeghaConnect home">
+      <img src="/asserts/logo.png" alt="MeghaConnect logo" class="header-logo">
+      <span>
+        <strong>MeghaConnect</strong>
+        <small>{{ 'OFFICIAL_GOVERNMENT_PORTAL' | translate }}</small>
+      </span>
+    </button>
 
-      <div class="brand-features">
-        <div class="feature-header">
-          <i class="pi pi-star-fill"></i>
-          <span>{{ 'KEY_FEATURES' | translate }}</span>
-        </div>
-        <div class="feat"><i class="pi pi-calendar"></i> <span>{{ 'SMART_SCHEDULING' | translate }}</span></div>
-        <div class="feat"><i class="pi pi-users"></i> <span>{{ 'APPOINTMENT_MANAGEMENT' | translate }}</span></div>
-        <div class="feat"><i class="pi pi-briefcase"></i> <span>{{ 'CM_SCHEME_TRACKING' | translate }}</span></div>
-        <div class="feat"><i class="pi pi-map"></i> <span>{{ 'GEOGRAPHIC_HEATMAPS' | translate }}</span></div>
-        <div class="feat"><i class="pi pi-chart-bar"></i> <span>{{ 'ANALYTICS_REPORTS' | translate }}</span></div>
-      </div>
-    </div>
-  </div>
+    <nav class="home-nav" aria-label="Home navigation">
+      <button type="button" [class.active]="currentSection === 'about'" (click)="setSection('about')">{{ 'ABOUT' | translate }}</button>
+      <button type="button" [class.active]="currentSection === 'contact'" (click)="setSection('contact')">{{ 'CONTACT_US' | translate }}</button>
+      <button type="button" [class.active]="currentSection === 'faq'" (click)="setSection('faq')">{{ 'FAQ' | translate }}</button>
+      <button type="button" class="nav-login" [class.active]="currentSection === 'home'" (click)="setSection('home')">{{ 'LOGIN' | translate }}</button>
+    </nav>
 
-  <div class="login-right">
-    <div class="auth-language">
+    <div class="header-language">
       <app-language-selector></app-language-selector>
     </div>
-    <div class="login-card">
-      <div class="login-header">
-        <h2>{{ 'WELCOME_BACK' | translate }}</h2>
-        <p>{{ 'SIGN_IN_TO_CONTINUE' | translate }}</p>
+  </header>
+
+  <main class="home-main">
+    <section *ngIf="currentSection === 'home'" class="home-section hero-section">
+      <div class="hero-content">
+        <div class="hero-kicker">{{ 'OFFICIAL_GOVERNMENT_PORTAL' | translate }}</div>
+        <h1>{{ 'MEGHACONNECT_WELCOME_TITLE' | translate }}</h1>
+        <p>{{ 'MEGHACONNECT_WELCOME_TEXT' | translate }}</p>
+        <div class="hero-actions">
+          <button type="button" class="primary-cta" (click)="setSection('login')">
+            <i class="pi pi-sign-in"></i>
+            {{ 'LOGIN' | translate }}
+          </button>
+          <a routerLink="/register-visitor" class="secondary-cta">
+            <i class="pi pi-user-plus"></i>
+            {{ 'REGISTER_VISITOR' | translate }}
+          </a>
+        </div>
       </div>
 
-      <div class="mode-tabs">
-         <button id="login_citizenModeTab" [class.active]="isPublicMode" (click)="isPublicMode=true">
-          <i class="pi pi-users"></i>
-          <span>{{ 'PUBLIC_CITIZEN' | translate }}</span>
-        </button>
-        <button id="login_staffModeTab" [class.active]="!isPublicMode" (click)="isPublicMode=false">
-          <i class="pi pi-id-card"></i>
-          <span>{{ 'STAFF_LOGIN' | translate }}</span>
-        </button>
-       
+      <div class="hero-panel">
+        <div class="official-placeholder">
+          <img src="/asserts/CM_Profile_Picture.jpg" alt="Chief Minister official photo" class="official-photo">
+        </div>
+        <div class="hero-feature-grid">
+          <div><i class="pi pi-id-card"></i><span>{{ 'HOME_FEATURE_KYC' | translate }}</span></div>
+          <div><i class="pi pi-calendar"></i><span>{{ 'HOME_FEATURE_APPOINTMENT' | translate }}</span></div>
+          <div><i class="pi pi-shield"></i><span>{{ 'HOME_FEATURE_WORKFLOW' | translate }}</span></div>
+          <div><i class="pi pi-history"></i><span>{{ 'HOME_FEATURE_AUDIT' | translate }}</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section *ngIf="currentSection === 'about'" class="home-section content-section">
+      <div class="section-heading">
+        <span>{{ 'ABOUT' | translate }}</span>
+        <h2>{{ 'ABOUT_MEGHACONNECT_TITLE' | translate }}</h2>
+        <p>{{ 'ABOUT_MEGHACONNECT_TEXT' | translate }}</p>
       </div>
 
-      <ng-container *ngIf="!isPublicMode">
-        <div class="form-group">
-          <label>{{ 'QUICK_DEMO_ACCESS' | translate }}</label>
-          <div class="demo-chips">
-            <button id="login_demoChip_{{d.value}}" *ngFor="let d of demoCredentials" class="demo-chip" (click)="selectDemo(d.value)">
-              {{ d.label.split('(')[0].trim() }}
+      <div class="about-layout">
+        <div class="official-placeholder about-image">
+          <img src="/asserts/CM_Profile_Picture.jpg" alt="Chief Minister official photo" class="official-photo">
+        </div>
+        <div class="about-grid">
+          <article class="info-card"><i class="pi pi-id-card"></i><h3>{{ 'ABOUT_POINT_KYC_TITLE' | translate }}</h3><p>{{ 'ABOUT_POINT_KYC_TEXT' | translate }}</p></article>
+          <article class="info-card"><i class="pi pi-calendar-plus"></i><h3>{{ 'ABOUT_POINT_APPOINTMENT_TITLE' | translate }}</h3><p>{{ 'ABOUT_POINT_APPOINTMENT_TEXT' | translate }}</p></article>
+          <article class="info-card"><i class="pi pi-users"></i><h3>{{ 'ABOUT_POINT_VISITOR_TITLE' | translate }}</h3><p>{{ 'ABOUT_POINT_VISITOR_TEXT' | translate }}</p></article>
+          <article class="info-card"><i class="pi pi-check-circle"></i><h3>{{ 'ABOUT_POINT_WORKFLOW_TITLE' | translate }}</h3><p>{{ 'ABOUT_POINT_WORKFLOW_TEXT' | translate }}</p></article>
+          <article class="info-card"><i class="pi pi-history"></i><h3>{{ 'ABOUT_POINT_AUDIT_TITLE' | translate }}</h3><p>{{ 'ABOUT_POINT_AUDIT_TEXT' | translate }}</p></article>
+          <article class="info-card"><i class="pi pi-lock"></i><h3>{{ 'ABOUT_POINT_SECURE_TITLE' | translate }}</h3><p>{{ 'ABOUT_POINT_SECURE_TEXT' | translate }}</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section *ngIf="currentSection === 'faq'" class="home-section content-section narrow-section">
+      <div class="section-heading">
+        <span>{{ 'FAQ' | translate }}</span>
+        <h2>{{ 'FAQ_TITLE' | translate }}</h2>
+        <p>{{ 'FAQ_TEXT' | translate }}</p>
+      </div>
+
+      <div class="faq-list">
+        <details open>
+          <summary>{{ 'FAQ_Q_REGISTER' | translate }}</summary>
+          <p>{{ 'FAQ_A_REGISTER' | translate }}</p>
+        </details>
+        <details>
+          <summary>{{ 'FAQ_Q_EPIC' | translate }}</summary>
+          <p>{{ 'FAQ_A_EPIC' | translate }}</p>
+        </details>
+        <details>
+          <summary>{{ 'FAQ_Q_AADHAAR' | translate }}</summary>
+          <p>{{ 'FAQ_A_AADHAAR' | translate }}</p>
+        </details>
+        <details>
+          <summary>{{ 'FAQ_Q_SAME_MOBILE' | translate }}</summary>
+          <p>{{ 'FAQ_A_SAME_MOBILE' | translate }}</p>
+        </details>
+        <details>
+          <summary>{{ 'FAQ_Q_LOGIN' | translate }}</summary>
+          <p>{{ 'FAQ_A_LOGIN' | translate }}</p>
+        </details>
+        <details>
+          <summary>{{ 'FAQ_Q_MULTIPLE_REG' | translate }}</summary>
+          <p>{{ 'FAQ_A_MULTIPLE_REG' | translate }}</p>
+        </details>
+        <details>
+          <summary>{{ 'FAQ_Q_APPOINTMENT' | translate }}</summary>
+          <p>{{ 'FAQ_A_APPOINTMENT' | translate }}</p>
+        </details>
+        <details>
+          <summary>{{ 'FAQ_Q_NOTIFICATIONS' | translate }}</summary>
+          <p>{{ 'FAQ_A_NOTIFICATIONS' | translate }}</p>
+        </details>
+      </div>
+    </section>
+
+    <section *ngIf="currentSection === 'contact'" class="home-section content-section narrow-section">
+      <div class="section-heading">
+        <span>{{ 'CONTACT_US' | translate }}</span>
+        <h2>{{ 'CONTACT_TITLE' | translate }}</h2>
+        <p>{{ 'CONTACT_TEXT' | translate }}</p>
+      </div>
+
+      <div class="contact-card">
+        <div class="placeholder-note">{{ 'CONTACT_PLACEHOLDER_NOTE' | translate }}</div>
+        <div class="contact-row"><i class="pi pi-building"></i><span>{{ 'CONTACT_HELPDESK' | translate }}</span></div>
+        <div class="contact-row"><i class="pi pi-envelope"></i><span>{{ 'CONTACT_EMAIL' | translate }}</span></div>
+        <div class="contact-row"><i class="pi pi-phone"></i><span>{{ 'CONTACT_PHONE' | translate }}</span></div>
+        <div class="contact-row"><i class="pi pi-map-marker"></i><span>{{ 'CONTACT_ADDRESS' | translate }}</span></div>
+      </div>
+    </section>
+
+    <section *ngIf="currentSection === 'login'" class="home-section login-section">
+      <div class="login-right">
+        
+        <div class="login-card">
+          <div class="login-header">
+            <h2>{{ 'WELCOME_BACK' | translate }}</h2>
+            <p>{{ 'SIGN_IN_TO_CONTINUE' | translate }}</p>
+          </div>
+
+          <div class="mode-tabs">
+             <button id="login_citizenModeTab" [class.active]="isPublicMode" (click)="isPublicMode=true">
+              <i class="pi pi-users"></i>
+              <span>{{ 'PUBLIC_CITIZEN' | translate }}</span>
+            </button>
+            <button id="login_staffModeTab" [class.active]="!isPublicMode" (click)="isPublicMode=false">
+              <i class="pi pi-id-card"></i>
+              <span>{{ 'STAFF_LOGIN' | translate }}</span>
             </button>
           </div>
-        </div>
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>
-            <i class="pi pi-user"></i>
-            <span> {{ 'USERNAME' | translate }}</span>
-          </mat-label>
-          <input matInput id="login_usernameInput" [(ngModel)]="username" [placeholder]="'ENTER_USERNAME' | translate" />
-        </mat-form-field>
-        
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>
-            <i class="pi pi-lock"></i>
-            <span> {{ 'PASSWORD' | translate }}</span>
-          </mat-label>
-          <input matInput type="password" id="login_passwordInput" [(ngModel)]="password" [placeholder]="'ENTER_PASSWORD' | translate" (keyup.enter)="login()" />
-        </mat-form-field>
-        <div id="login_errorMsg" *ngIf="errorMsg" style="color:#dc2626;font-size:0.85rem;margin-bottom:0.75rem">
-          <mat-icon style="font-size:1rem;width:1rem;height:1rem;vertical-align:text-bottom">error</mat-icon>
-          {{ errorMsg }}
-        </div>
-        <button id="login_submitBtn" mat-raised-button color="primary" class="full-width" [disabled]="loading" (click)="login()">
-          <span *ngIf="!loading"><i class="pi pi-sign-in"></i> {{ 'SIGN_IN' | translate }}</span>
-          <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> {{ 'SIGNING_IN' | translate }}</span>
-        </button>
-      </ng-container>
 
-      <ng-container *ngIf="isPublicMode">
-        <div class="public-info">
-          <p><i class="pi pi-info-circle"></i> {{ 'CITIZENS_OTP_INFO' | translate }}</p>
+          <ng-container *ngIf="!isPublicMode">
+            <div class="form-group">
+              <label>{{ 'QUICK_DEMO_ACCESS' | translate }}</label>
+              <div class="demo-chips">
+                <button id="login_demoChip_{{d.value}}" *ngFor="let d of demoCredentials" class="demo-chip" (click)="selectDemo(d.value)">
+                  {{ d.label.split('(')[0].trim() }}
+                </button>
+              </div>
+            </div>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>
+                <i class="pi pi-user"></i>
+                <span> {{ 'USERNAME' | translate }}</span>
+              </mat-label>
+              <input matInput id="login_usernameInput" [(ngModel)]="username" [placeholder]="'ENTER_USERNAME' | translate" />
+            </mat-form-field>
+            
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>
+                <i class="pi pi-lock"></i>
+                <span> {{ 'PASSWORD' | translate }}</span>
+              </mat-label>
+              <input matInput type="password" id="login_passwordInput" [(ngModel)]="password" [placeholder]="'ENTER_PASSWORD' | translate" (keyup.enter)="login()" />
+            </mat-form-field>
+            <div id="login_errorMsg" *ngIf="errorMsg" style="color:#dc2626;font-size:0.85rem;margin-bottom:0.75rem">
+              <mat-icon style="font-size:1rem;width:1rem;height:1rem;vertical-align:text-bottom">error</mat-icon>
+              {{ errorMsg }}
+            </div>
+            <button id="login_submitBtn" mat-raised-button color="primary" class="full-width" [disabled]="loading" (click)="login()">
+              <span *ngIf="!loading"><i class="pi pi-sign-in"></i> {{ 'SIGN_IN' | translate }}</span>
+              <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> {{ 'SIGNING_IN' | translate }}</span>
+            </button>
+          </ng-container>
+
+          <ng-container *ngIf="isPublicMode">
+            <div class="public-info">
+              <p><i class="pi pi-info-circle"></i> {{ 'CITIZENS_OTP_INFO' | translate }}</p>
+            </div>
+            <a routerLink="/public-login" style="text-decoration:none;display:block">
+              <button id="login_citizenOtpBtn" mat-raised-button color="accent" class="full-width">
+                <i class="pi pi-users"></i> {{ 'CITIZEN_OTP_LOGIN' | translate }}
+              </button>
+            </a>
+            <div style="text-align:center;margin-top:0.75rem;font-size:0.85rem;color:#6b7280">
+              {{ 'NEW_VISITOR' | translate }} <a id="login_registerLink" routerLink="/register-visitor" style="color:#1a237e;font-weight:600">{{ 'REGISTER_HERE' | translate }}</a>
+            </div>
+          </ng-container>
         </div>
-        <a routerLink="/public-login" style="text-decoration:none;display:block">
-          <button id="login_citizenOtpBtn" mat-raised-button color="accent" class="full-width">
-            <i class="pi pi-users"></i> {{ 'CITIZEN_OTP_LOGIN' | translate }}
-          </button>
-        </a>
-        <div style="text-align:center;margin-top:0.75rem;font-size:0.85rem;color:#6b7280">
-          {{ 'NEW_VISITOR' | translate }} <a id="login_registerLink" routerLink="/register-visitor" style="color:#1a237e;font-weight:600">{{ 'REGISTER_HERE' | translate }}</a>
-        </div>
-      </ng-container>
-    </div>
-  </div>
+      </div>
+    </section>
+  </main>
+
+  <app-ai-chatbot></app-ai-chatbot>
 </div>

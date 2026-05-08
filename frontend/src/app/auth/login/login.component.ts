@@ -10,6 +10,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LanguageSelectorComponent } from '../../shared/language-selector/language-selector.component';
+import { AiChatbotComponent } from '../../ai-chatbot/ai-chatbot.component';
+
+type HomeSection = 'home' | 'about' | 'faq' | 'contact' | 'login';
 
 @Component({
   selector: 'app-login',
@@ -24,7 +27,8 @@ import { LanguageSelectorComponent } from '../../shared/language-selector/langua
     MatIconModule,
     MatProgressSpinnerModule,
     TranslateModule,
-    LanguageSelectorComponent
+    LanguageSelectorComponent,
+    AiChatbotComponent
   ],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss'],
@@ -37,11 +41,12 @@ export class LoginComponent {
   isPublicMode = true;
   otpSent = false;
   otp = '';
+  currentSection: HomeSection = 'home';
 
   demoCredentials = [
     { label: 'HCM (hcm / hcm123)', value: { u: 'hcm', p: 'hcm123' } },
     { label: 'Admin (admin / admin123)', value: { u: 'admin', p: 'admin123' } },
-    { label: 'Saidul OSD (saidul / osd123)', value: { u: 'saidul', p: 'osd123' } },
+    { label: 'OSD (saidul / osd123)', value: { u: 'saidul', p: 'osd123' } },
     { label: 'Jt Secretary (jtsecy / jts123)', value: { u: 'jtsecy', p: 'jts123' } },
     { label: 'CMO Officer (cmo / cmo123)', value: { u: 'cmo', p: 'cmo123' } },
     { label: 'DEO (deo1 / deo123)', value: { u: 'deo1', p: 'deo123' } },
@@ -58,6 +63,11 @@ export class LoginComponent {
   selectDemo(cred: { u: string; p: string }) {
     this.username = cred.u;
     this.password = cred.p;
+    this.currentSection = 'login';
+  }
+
+  setSection(section: HomeSection) {
+    this.currentSection = section;
   }
 
   login() {

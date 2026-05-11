@@ -27,8 +27,99 @@
   width: 28px; height: 28px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center; color: white;
 }
+.timeline-dot mat-icon {
+  color: white;
+  font-size: 0.95rem;
+  height: 0.95rem;
+  width: 0.95rem;
+}
+.inline-icon {
+  font-size: 1rem;
+  height: 1rem;
+  width: 1rem;
+}
+.direction-action {
+  min-height: 30px !important;
+  line-height: 30px !important;
+  padding: 0 10px !important;
+  font-size: 0.75rem !important;
+}
+.direction-action.green { background: #16a34a !important; color: white !important; }
+.direction-action.yellow { background: #ca8a04 !important; color: white !important; }
+.direction-action.blue { background: #2563eb !important; color: white !important; }
 .dir-legend { display: flex; flex-direction: column; gap: 4px; }
 .dir-legend-item { font-size: 0.82rem; padding: 4px 8px; border-radius: 4px; }
 .dir-legend-item.green { background: #dcfce7; }
 .dir-legend-item.yellow { background: #fef3c7; }
 .dir-legend-item.blue { background: #dbeafe; }
+
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.direction-dialog {
+  width: min(440px, 100%);
+  max-height: calc(100vh - 2rem);
+  overflow: visible;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.24);
+  display: flex;
+  flex-direction: column;
+}
+
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.dialog-header h2 {
+  margin: 0;
+  color: #1a237e;
+  font-size: 1.15rem;
+}
+
+.dialog-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+  overflow: visible;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+@media (max-width: 576px) {
+  .dialog-overlay {
+    align-items: flex-start;
+  }
+
+  .dialog-actions {
+    flex-direction: column-reverse;
+  }
+
+  .dialog-actions button {
+    width: 100%;
+  }
+}

@@ -156,6 +156,15 @@ select:hover {
   gap: 0.5rem;
 }
 
+.section-card-header mat-icon {
+  color: inherit;
+  flex: 0 0 auto;
+  font-size: 1.15rem;
+  height: 1.15rem;
+  line-height: 1.15rem;
+  width: 1.15rem;
+}
+
 .section-card-body {
   padding: 1.25rem;
   min-width: 0;
@@ -863,8 +872,7 @@ mat-form-field select {
 .mat-mdc-button,
 .mat-mdc-raised-button,
 .mat-mdc-unelevated-button,
-.mat-mdc-outlined-button,
-.mat-mdc-icon-button {
+.mat-mdc-outlined-button {
   // Critical: ensure button has height and is visible
   min-height: 36px !important;
   height: auto !important;
@@ -910,6 +918,51 @@ mat-form-field select {
   padding: 8px !important;
   line-height: 24px !important;
   border-radius: 50% !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0 !important;
+  overflow: visible !important;
+}
+
+.mat-mdc-icon-button.mat-primary {
+  color: #1a237e !important;
+}
+
+.mat-mdc-icon-button.mat-accent {
+  color: #00897b !important;
+}
+
+.mat-mdc-icon-button.mat-warn {
+  color: #dc2626 !important;
+}
+
+.mat-mdc-icon-button mat-icon,
+.mat-mdc-icon-button .mat-icon {
+  color: currentColor !important;
+  display: inline-block !important;
+  font-size: 24px !important;
+  height: 24px !important;
+  line-height: 24px !important;
+  width: 24px !important;
+}
+
+.mat-mdc-icon-button .mat-mdc-button-persistent-ripple,
+.mat-mdc-icon-button .mat-focus-indicator {
+  border-radius: inherit !important;
+  display: block !important;
+  inset: 0 !important;
+  position: absolute !important;
+}
+
+.mat-mdc-icon-button .mat-mdc-button-touch-target {
+  display: block !important;
+  height: 48px !important;
+  left: 50% !important;
+  position: absolute !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: 48px !important;
 }
 
 // Primary raised buttons - ensure VISIBLE background
@@ -1586,7 +1639,7 @@ body { font-family: Roboto, "Helvetica Neue", sans-serif; }
     }
     
     // Ensure dialog takes full space
-    .mdc-dialog,,
+    .mdc-dialog,
     .mat-dialog-container {
       max-width: 100% !important;
       max-height: 100% !important;

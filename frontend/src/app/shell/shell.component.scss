@@ -62,7 +62,14 @@
   border-left: 3px solid transparent;
   transition: all 0.15s;
   &:hover, &.active { background: rgba(255,255,255,0.12); color: white; border-left-color: #90caf9; }
-  i { width: 18px; text-align: center; flex-shrink: 0; }
+  mat-icon {
+    width: 20px;
+    height: 20px;
+    font-size: 20px;
+    line-height: 20px;
+    text-align: center;
+    flex-shrink: 0;
+  }
 }
 
 .nav-group-btn {
@@ -75,7 +82,12 @@
   padding: 0.45rem 0.85rem 0.45rem 2.1rem;
   color: rgba(255,255,255,0.75); text-decoration: none; font-size: 0.82rem;
   &:hover { color: white; background: rgba(255,255,255,0.08); }
-  i { font-size: 0.8rem; }
+  mat-icon {
+    width: 18px;
+    height: 18px;
+    font-size: 18px;
+    line-height: 18px;
+  }
 }
 
 .header-right {
@@ -89,7 +101,26 @@
   cursor: pointer; display: flex; align-items: center; justify-content: center;
   transition: background 0.15s;
   &:hover { background: rgba(255,255,255,0.2); }
-  i { font-size: 1.1rem; }
+  mat-icon {
+    width: 22px;
+    height: 22px;
+    font-size: 22px;
+    line-height: 22px;
+  }
+}
+.notification-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+}
+
+.notification-icon mat-icon {
+  width: 22px;
+  height: 22px;
+  font-size: 22px;
+  line-height: 22px;
 }
 .user-info { text-align: right; }
 .role-badge {

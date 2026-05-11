@@ -8,15 +8,30 @@ import { Tag } from 'primeng/tag';
 
 import { Timeline } from 'primeng/timeline';
 import { Steps } from 'primeng/steps';
-import { Dialog } from 'primeng/dialog';
-import { Textarea } from 'primeng/textarea';
 import { Divider } from 'primeng/divider';
 import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-appointment-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, Tag,  Timeline, Steps, Dialog, Textarea, Divider, MatIconModule],
+  imports: [
+    CommonModule,
+    RouterLink,
+    FormsModule,
+    Tag,
+    Timeline,
+    Steps,
+    Divider,
+    MatIconModule,
+    MatButtonModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatTooltipModule
+  ],
   templateUrl: './appointment-detail.component.html',
   styleUrls: ['./appointment-detail.component.scss'],
 })
@@ -34,10 +49,10 @@ export class AppointmentDetailComponent implements OnInit {
   currentStep = 3;
 
   timeline = [
-    { status: 'SUBMITTED', date: '14 Mar 09:00', icon: 'pi pi-send', color: '#4b5563', text: 'Application submitted by applicant' },
-    { status: 'CMO_REVIEW', date: '14 Mar 09:15', icon: 'pi pi-eye', color: '#b45309', text: 'CMO Officer reviewed – documents verified' },
-    { status: 'APPROVER_REVIEW', date: '14 Mar 11:30', icon: 'pi pi-check', color: '#1a237e', text: 'Forwarded to Jt Secretary for approval' },
-    { status: 'HCM_PENDING', date: '14 Mar 15:00', icon: 'pi pi-star', color: '#dc2626', text: 'Approver approved – awaiting HCM decision' },
+    { status: 'SUBMITTED', date: '14 Mar 09:00', icon: 'send', color: '#4b5563', text: 'Application submitted by applicant' },
+    { status: 'CMO_REVIEW', date: '14 Mar 09:15', icon: 'visibility', color: '#b45309', text: 'CMO Officer reviewed - documents verified' },
+    { status: 'APPROVER_REVIEW', date: '14 Mar 11:30', icon: 'check', color: '#1a237e', text: 'Forwarded to Jt Secretary for approval' },
+    { status: 'HCM_PENDING', date: '14 Mar 15:00', icon: 'star', color: '#dc2626', text: 'Approver approved - awaiting HCM decision' },
   ];
 
   constructor(private route: ActivatedRoute, private appointmentService: AppointmentService) {}

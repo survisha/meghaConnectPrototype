@@ -2,7 +2,7 @@
   <!-- Header -->
   <header class="megha-header" id="shell_header">
     <button id="shell_toggleSidebarBtn" class="icon-btn" (click)="sidebarOpen = !sidebarOpen">
-      <i class="pi pi-bars"></i>
+      <mat-icon>menu</mat-icon>
     </button>
     <span class="header-emblem">🏛️</span>
     <div class="header-brand">
@@ -11,7 +11,8 @@
     </div>
     <div class="header-right">
       <app-language-selector></app-language-selector>
-      <span id="shell_notificationIcon" class="pi pi-bell" style="font-size:1.2rem;cursor:pointer;position:relative">
+      <span id="shell_notificationIcon" class="notification-icon" style="cursor:pointer;position:relative">
+        <mat-icon>notifications</mat-icon>
         <span class="notif-dot"></span>
       </span>
       <div class="user-info">
@@ -19,7 +20,7 @@
         <div class="role-badge">{{ roleLabel }}</div>
       </div>
       <button id="shell_logoutBtn" class="icon-btn" (click)="logout()" [title]="'LOGOUT' | translate">
-        <i class="pi pi-sign-out"></i>
+        <mat-icon>logout</mat-icon>
       </button>
     </div>
   </header>
@@ -31,20 +32,20 @@
         <ng-container *ngFor="let item of menu; let i = index">
           <li *ngIf="!item.children" class="nav-item">
             <a [id]="'shell_navLink_' + i" [routerLink]="item.route" class="nav-link">
-              <i class="pi {{ item.icon }}"></i>
+              <mat-icon>{{ item.icon }}</mat-icon>
               <span *ngIf="sidebarOpen">{{ item.labelKey | translate }}</span>
             </a>
           </li>
           <li *ngIf="item.children" class="nav-group">
             <button [id]="'shell_navGroup_' + i" class="nav-link nav-group-btn" (click)="toggle(item)">
-              <i class="pi {{ item.icon }}"></i>
+              <mat-icon>{{ item.icon }}</mat-icon>
               <span *ngIf="sidebarOpen" style="flex:1;text-align:left">{{ item.labelKey | translate }}</span>
-              <i *ngIf="sidebarOpen" class="pi" [class.pi-chevron-down]="item.expanded" [class.pi-chevron-right]="!item.expanded"></i>
+              <mat-icon *ngIf="sidebarOpen">{{ item.expanded ? 'expand_more' : 'chevron_right' }}</mat-icon>
             </button>
             <ul *ngIf="item.expanded && sidebarOpen" class="nav-sub">
               <li *ngFor="let child of item.children; let j = index">
                 <a [id]="'shell_navSubLink_' + i + '_' + j" [routerLink]="child.route" class="nav-sub-link">
-                  <i class="pi {{ child.icon }}"></i> {{ child.labelKey | translate }}
+                  <mat-icon>{{ child.icon }}</mat-icon> {{ child.labelKey | translate }}
                 </a>
               </li>
             </ul>
@@ -55,8 +56,6 @@
 
     <!-- Main -->
     <main class="main-content" id="shell_mainContent">
-      <p-toast></p-toast>
-      <p-confirmDialog></p-confirmDialog>
       <router-outlet></router-outlet>
     </main>
   </div>

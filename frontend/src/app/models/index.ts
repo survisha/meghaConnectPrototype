@@ -165,11 +165,13 @@ export type GrievanceStatus =
 
 export interface Grievance {
   id: number;
+  visitorId?: number;
   ticketId: string;
   applicantName: string;
   phoneNumber: string;
   district: string;
   constituency?: string;
+  visitorDesignation?: string;
   category: GrievanceCategory;
   subject: string;
   description: string;

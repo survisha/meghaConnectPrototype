@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { catchError } from 'rxjs/operators';
 import { of } from 'rxjs';
+import { MatIconModule } from '@angular/material/icon';
 
 interface ChatMessage {
   role: 'user' | 'bot';
@@ -14,7 +15,7 @@ interface ChatMessage {
 @Component({
   selector: 'app-ai-chatbot',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, MatIconModule],
   templateUrl: './ai-chatbot.component.html',
   styleUrls: ['./ai-chatbot.component.scss'],
 })

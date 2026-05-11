@@ -14,7 +14,7 @@
       </div>
       <a routerLink="/visitor" style="text-decoration:none">
         <button id="appointment_backToDashboardBtn" mat-raised-button color="primary">
-          <i class="pi pi-home"></i> Back to Dashboard
+          <mat-icon>home</mat-icon> Back to Dashboard
         </button>
       </a>
     </div>
@@ -23,7 +23,7 @@
   <ng-container *ngIf="!submitted">
     <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem">
       <button id="appointment_backBtn" mat-icon-button routerLink="/visitor">
-        <i class="pi pi-arrow-left"></i>
+        <mat-icon>arrow_back</mat-icon>
       </button>
       <h2 class="page-title" style="margin:0">New Appointment Request</h2>
     </div>
@@ -61,7 +61,7 @@
 
     <!-- Step 0: Citizen/Applicant Info -->
     <div class="section-card" *ngIf="step===0">
-      <div class="section-card-header"><i class="pi pi-user"></i> {{ isPublicUser ? 'Logged-in Citizen' : 'Personal Information' }}</div>
+      <div class="section-card-header"><mat-icon>person</mat-icon> {{ isPublicUser ? 'Logged-in Citizen' : 'Personal Information' }}</div>
       <div class="section-card-body">
         <ng-container *ngIf="isPublicUser; else manualApplicantFields">
           <div *ngIf="visitorProfile" class="citizen-summary">
@@ -157,7 +157,7 @@
 
     <!-- Step 1: Agenda -->
     <div class="section-card" *ngIf="step===1">
-      <div class="section-card-header"><i class="pi pi-file-edit"></i> Appointment Agenda</div>
+      <div class="section-card-header"><mat-icon>description</mat-icon> Appointment Agenda</div>
       <div class="section-card-body">
         <div class="form-grid">
           <mat-form-field appearance="outline" class="form-group">
@@ -184,7 +184,7 @@
 
     <!-- Step 2: Scheme Details -->
     <div class="section-card" *ngIf="step===2">
-      <div class="section-card-header"><i class="pi pi-briefcase"></i> Scheme Details
+      <div class="section-card-header"><mat-icon>work</mat-icon> Scheme Details
         <span *ngIf="!isScheme" style="margin-left:0.5rem;font-weight:400;font-size:0.8rem;opacity:.8">(Skip if not scheme application)</span>
       </div>
       <div class="section-card-body">
@@ -272,7 +272,7 @@
 
     <!-- Step 3: Associate Visitors (R013) -->
     <div class="section-card" *ngIf="step===3">
-      <div class="section-card-header"><i class="pi pi-users"></i> Associate Visitors</div>
+      <div class="section-card-header"><mat-icon>groups</mat-icon> Associate Visitors</div>
       <div class="section-card-body">
         <!-- R013: Toggle for associate visitors -->
         <div class="associate-toggle">
@@ -319,7 +319,7 @@
               </mat-form-field>
             </div>
             <button mat-stroked-button (click)="addAssociate()" [disabled]="!newAssociate.name.trim()">
-              <i class="pi pi-plus"></i> Add Associate
+              <mat-icon>add</mat-icon> Add Associate
             </button>
           </div>
 
@@ -332,7 +332,7 @@
                 <div style="font-size:0.8rem;color:#6b7280">{{ a.phoneNumber || '–' }} · {{ a.designation || '–' }}</div>
               </div>
               <button mat-icon-button color="warn" (click)="removeAssociate(i)">
-                <i class="pi pi-trash"></i>
+                <mat-icon>delete</mat-icon>
               </button>
             </div>
           </div>
@@ -340,19 +340,19 @@
         </ng-container>
 
         <div *ngIf="!includeAssociates" class="info-box">
-          <i class="pi pi-info-circle"></i> No associate visitors will be included. Check the box above to add associates.
+          <mat-icon>info</mat-icon> No associate visitors will be included. Check the box above to add associates.
         </div>
       </div>
     </div>
 
     <!-- Step 4: Documents (R004/R005) -->
     <div class="section-card" *ngIf="step===4">
-      <div class="section-card-header"><i class="pi pi-paperclip"></i> Document Upload</div>
+      <div class="section-card-header"><mat-icon>attach_file</mat-icon> Document Upload</div>
       <div class="section-card-body">
 
         <!-- R004/R005: AI Document Analysis -->
         <div *ngIf="aiAnalysisLoading" class="ai-panel" style="text-align:center;padding:1.25rem">
-          <i class="pi pi-spin pi-spinner" style="font-size:1.5rem;color:#1a237e"></i>
+          <mat-icon class="spin-icon" style="font-size:1.5rem;color:#1a237e">sync</mat-icon>
           <div style="margin-top:0.5rem;font-size:0.88rem;color:#374151">
             <strong>AI is analysing your document…</strong><br>
             <small>Extracting project details, cost, and key information</small>
@@ -361,7 +361,7 @@
 
         <div *ngIf="aiExtracted && !aiAnalysisLoading" class="ai-panel">
           <div class="ai-panel-title">
-            <i class="pi pi-sparkles"></i> AI Document Analysis – Extracted Fields
+            <mat-icon>auto_awesome</mat-icon> AI Document Analysis - Extracted Fields
             <span style="margin-left:auto;font-size:0.75rem;font-weight:400;opacity:.8">(You can edit these values before submitting)</span>
           </div>
           <div class="ai-extracted-grid">
@@ -458,7 +458,7 @@
         <!-- R006: Duplicate Detection Warning -->
         <div *ngIf="duplicateWarning" class="duplicate-warning">
           <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem">
-            <i class="pi pi-exclamation-triangle" style="font-size:1.1rem;color:#b45309"></i>
+            <mat-icon style="font-size:1.1rem;color:#b45309">warning</mat-icon>
             <strong>Possible duplicate application detected.</strong>
           </div>
           <div style="font-size:0.83rem">
@@ -489,7 +489,7 @@
 
         <!-- R005: AI Summary -->
         <div *ngIf="aiSummary" class="ai-summary-box">
-          <div class="summary-title"><i class="pi pi-sparkles"></i> AI Document Summary</div>
+          <div class="summary-title"><mat-icon>auto_awesome</mat-icon> AI Document Summary</div>
           <pre style="margin:0;white-space:pre-wrap;font-family:inherit;font-size:0.83rem;color:#0c4a6e">{{ aiSummary }}</pre>
         </div>
 
@@ -502,15 +502,15 @@
     <!-- Navigation Buttons (R012) -->
     <div class="nav-buttons">
       <button id="appointment_backBtn" mat-stroked-button (click)="prevStep()" [disabled]="step===0">
-        <i class="pi pi-arrow-left"></i> Previous
+        <mat-icon>arrow_back</mat-icon> Previous
       </button>
       <button id="appointment_nextBtn" *ngIf="step < steps.length-1" mat-raised-button color="primary" (click)="nextStep()">
-        Next <i class="pi pi-arrow-right"></i>
+        Next <mat-icon>arrow_forward</mat-icon>
       </button>
       <button id="appointment_submitBtn" *ngIf="step === steps.length-1" mat-raised-button color="primary" [disabled]="loading" (click)="submit()">
         <mat-icon>check</mat-icon>
         <span *ngIf="!loading">Submit Application</span>
-        <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> Submitting…</span>
+        <span *ngIf="loading"><mat-icon class="spin-icon">sync</mat-icon> Submitting...</span>
       </button>
     </div>
   </ng-container>

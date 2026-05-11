@@ -6,11 +6,17 @@ import { Grievance, GrievanceCategory, GrievanceStatus } from '../models';
 import { environment } from '../../environments/environment';
 
 export interface CreateGrievanceRequest {
-  applicantName: string;
-  phoneNumber: string;
-  district: string;
+  applicantName?: string;
+  phoneNumber?: string;
+  district?: string;
   constituency?: string;
-  category: GrievanceCategory;
+  category?: GrievanceCategory;
+  visitorId?: number;
+  subject: string;
+  description: string;
+}
+
+export interface UpdateGrievanceRequest {
   subject: string;
   description: string;
 }
@@ -39,6 +45,15 @@ export class GrievanceService {
     );
   }
 
+  getByVisitor(visitorId: number, page = 0, size = 50): Observable<GrievancePage> {
+    const params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString());
+    return this.http.get<GrievancePage>(`${this.baseUrl}/visitor/${visitorId}`, { params }).pipe(
+      catchError(() => of({ content: [], totalElements: 0, totalPages: 0, size, number: page }))
+    );
+  }
+
   getById(id: number): Observable<Grievance | null> {
     return this.http.get<Grievance>(`${this.baseUrl}/${id}`).pipe(
       catchError(() => of(null))
@@ -47,6 +62,14 @@ export class GrievanceService {
 
   create(request: CreateGrievanceRequest): Observable<Grievance> {
     return this.http.post<Grievance>(this.baseUrl, request);
+  }
+
+  update(id: number, request: UpdateGrievanceRequest): Observable<Grievance> {
+    return this.http.put<Grievance>(`${this.baseUrl}/${id}`, request);
+  }
+
+  delete(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/${id}`);
   }
 
   updateStatus(id: number, status: GrievanceStatus, remarks?: string): Observable<Grievance> {

@@ -37,8 +37,26 @@ public class GrievanceController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping
-    public ResponseEntity<Page<Grievance>> getAll(Pageable pageable) {
+    public ResponseEntity<Page<Grievance>> getAll(Pageable pageable,
+                                                  @AuthenticationPrincipal UserDetails user) {
+        Long visitorId = resolveVisitorId(user);
+        if (visitorId != null) {
+            return ResponseEntity.ok(grievanceService.findByVisitorId(visitorId, pageable));
+        }
         return ResponseEntity.ok(grievanceService.findAll(pageable));
+    }
+
+    @Operation(summary = "Get visitor grievances", description = "Retrieve grievances linked to a visitor")
+    @GetMapping("/visitor/{visitorId}")
+    public ResponseEntity<Page<Grievance>> getByVisitor(
+            @PathVariable Long visitorId,
+            Pageable pageable,
+            @AuthenticationPrincipal UserDetails user) {
+        Long authenticatedVisitorId = resolveVisitorId(user);
+        if (authenticatedVisitorId != null && !authenticatedVisitorId.equals(visitorId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        return ResponseEntity.ok(grievanceService.findByVisitorId(visitorId, pageable));
     }
 
     @Operation(summary = "Get grievance by ID", description = "Retrieve a specific grievance by its ID")
@@ -49,8 +67,10 @@ public class GrievanceController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/{id}")
-    public ResponseEntity<Grievance> getById(@PathVariable Long id) {
-        return grievanceService.findById(id)
+    public ResponseEntity<Grievance> getById(@PathVariable Long id,
+                                             @AuthenticationPrincipal UserDetails user) {
+        Long visitorId = resolveVisitorId(user);
+        return (visitorId != null ? grievanceService.findByIdForVisitor(id, visitorId) : grievanceService.findById(id))
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -68,7 +88,40 @@ public class GrievanceController {
     public Grievance create(@RequestBody Grievance grievance,
                             @AuthenticationPrincipal UserDetails user) {
         String actor = user != null ? user.getUsername() : "anonymous";
+        Long visitorId = resolveVisitorId(user);
+        if (visitorId != null) {
+            return grievanceService.createForVisitor(grievance, visitorId, actor);
+        }
         return grievanceService.create(grievance, actor);
+    }
+
+    @Operation(summary = "Update grievance", description = "Update grievance details")
+    @PutMapping("/{id}")
+    public ResponseEntity<Grievance> update(
+            @PathVariable Long id,
+            @RequestBody Grievance grievance,
+            @AuthenticationPrincipal UserDetails user) {
+        String actor = user != null ? user.getUsername() : "anonymous";
+        Long visitorId = resolveVisitorId(user);
+        if (visitorId != null) {
+            return ResponseEntity.ok(grievanceService.updateForVisitor(id, visitorId, grievance, actor));
+        }
+        return ResponseEntity.ok(grievanceService.update(id, grievance, actor));
+    }
+
+    @Operation(summary = "Delete grievance", description = "Delete a grievance")
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails user) {
+        String actor = user != null ? user.getUsername() : "anonymous";
+        Long visitorId = resolveVisitorId(user);
+        if (visitorId != null) {
+            grievanceService.deleteForVisitor(id, visitorId, actor);
+        } else {
+            grievanceService.delete(id, actor);
+        }
+        return ResponseEntity.noContent().build();
     }
 
     @Operation(summary = "Update grievance status", description = "Update the status of a grievance")
@@ -84,7 +137,21 @@ public class GrievanceController {
             @PathVariable Long id,
             @RequestBody Map<String, String> body,
             @AuthenticationPrincipal UserDetails user) {
+        if (resolveVisitorId(user) != null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         String actor = user != null ? user.getUsername() : "anonymous";
         return ResponseEntity.ok(grievanceService.updateStatus(id, body, actor));
+    }
+
+    private Long resolveVisitorId(UserDetails user) {
+        if (user == null || user.getUsername() == null || !user.getUsername().startsWith("visitor_")) {
+            return null;
+        }
+        try {
+            return Long.parseLong(user.getUsername().substring("visitor_".length()));
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 }

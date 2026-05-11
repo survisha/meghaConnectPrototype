@@ -5,12 +5,15 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { AuthService } from '../services/auth.service';
 import { AppointmentService } from '../services/appointment.service';
+import { GrievanceService } from '../services/grievance.service';
 import { Tag } from 'primeng/tag';
 import { AiChatbotComponent } from '../ai-chatbot/ai-chatbot.component';
+import { MatIconModule } from '@angular/material/icon';
 
 interface VisitorProfile {
   fullName: string;
   phoneNumber: string;
+  designation?: string;
   kycType: string;
   kycVerified: boolean;
   address: string;
@@ -31,7 +34,7 @@ interface ListEntry { id: string; title: string; status: string; date: string; e
 @Component({
   selector: 'app-visitor-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, Tag, AiChatbotComponent],
+  imports: [CommonModule, RouterLink, Tag, AiChatbotComponent, MatIconModule],
   templateUrl: './visitor-dashboard.component.html',
   styleUrls: ['./visitor-dashboard.component.scss'],
 })
@@ -49,7 +52,12 @@ export class VisitorDashboardComponent implements OnInit {
 
   totalVisits = 0;
 
-  constructor(public auth: AuthService, private http: HttpClient, private appointmentService: AppointmentService) {}
+  constructor(
+    public auth: AuthService,
+    private http: HttpClient,
+    private appointmentService: AppointmentService,
+    private grievanceService: GrievanceService
+  ) {}
 
   ngOnInit() {
     const user = this.auth.user();
@@ -74,6 +82,7 @@ export class VisitorDashboardComponent implements OnInit {
     const visitorId = sessionStorage.getItem('megha_visitor_id');
     if (visitorId) {
       this.loadProfile(visitorId);
+      this.loadGrievances(Number(visitorId));
     }
     this.loadAppointments();
   }
@@ -115,12 +124,30 @@ export class VisitorDashboardComponent implements OnInit {
     });
   }
 
+  private loadGrievances(visitorId: number) {
+    this.grievanceService.getByVisitor(visitorId, 0, 100).subscribe({
+      next: page => {
+        this.myGrievances = page.content.map(g => ({
+          id: g.ticketId,
+          title: g.subject,
+          status: g.status,
+          date: this.formatDate(g.submittedAt),
+        }));
+        this.updateCards();
+      },
+      error: () => {
+        this.myGrievances = [];
+        this.updateCards();
+      }
+    });
+  }
+
   private updateCards() {
     this.cards = [
-      { label: 'My Appointments', value: this.myAppointments.length, icon: 'pi-calendar', color: '#1a237e', bg: '#e8eaf6' },
-      { label: 'Total Visits', value: this.totalVisits, icon: 'pi-map-marker', color: '#065f46', bg: '#d1fae5' },
-      { label: 'Active Schemes', value: this.mySchemes.length, icon: 'pi-briefcase', color: '#b45309', bg: '#fef3c7' },
-      { label: 'Grievances', value: this.myGrievances.length, icon: 'pi-comments', color: '#dc2626', bg: '#fee2e2' },
+      { label: 'My Appointments', value: this.myAppointments.length, icon: 'event', color: '#1a237e', bg: '#e8eaf6' },
+      { label: 'Total Visits', value: this.totalVisits, icon: 'place', color: '#065f46', bg: '#d1fae5' },
+      { label: 'Active Schemes', value: this.mySchemes.length, icon: 'work', color: '#b45309', bg: '#fef3c7' },
+      { label: 'Grievances', value: this.myGrievances.length, icon: 'chat', color: '#dc2626', bg: '#fee2e2' },
     ];
   }
 

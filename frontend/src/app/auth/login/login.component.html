@@ -28,11 +28,11 @@
         <p>{{ 'MEGHACONNECT_WELCOME_TEXT' | translate }}</p>
         <div class="hero-actions">
           <button type="button" class="primary-cta" (click)="setSection('login')">
-            <i class="pi pi-sign-in"></i>
+            <mat-icon>login</mat-icon>
             {{ 'LOGIN' | translate }}
           </button>
           <a routerLink="/register-visitor" class="secondary-cta">
-            <i class="pi pi-user-plus"></i>
+            <mat-icon>person_add</mat-icon>
             {{ 'REGISTER_VISITOR' | translate }}
           </a>
         </div>
@@ -43,10 +43,10 @@
           <img src="/asserts/CM_Profile_Picture.jpg" alt="Chief Minister official photo" class="official-photo">
         </div>
         <div class="hero-feature-grid">
-          <div><i class="pi pi-id-card"></i><span>{{ 'HOME_FEATURE_KYC' | translate }}</span></div>
-          <div><i class="pi pi-calendar"></i><span>{{ 'HOME_FEATURE_APPOINTMENT' | translate }}</span></div>
-          <div><i class="pi pi-shield"></i><span>{{ 'HOME_FEATURE_WORKFLOW' | translate }}</span></div>
-          <div><i class="pi pi-history"></i><span>{{ 'HOME_FEATURE_AUDIT' | translate }}</span></div>
+          <div><mat-icon>badge</mat-icon><span>{{ 'HOME_FEATURE_KYC' | translate }}</span></div>
+          <div><mat-icon>event</mat-icon><span>{{ 'HOME_FEATURE_APPOINTMENT' | translate }}</span></div>
+          <div><mat-icon>shield</mat-icon><span>{{ 'HOME_FEATURE_WORKFLOW' | translate }}</span></div>
+          <div><mat-icon>history</mat-icon><span>{{ 'HOME_FEATURE_AUDIT' | translate }}</span></div>
         </div>
       </div>
     </section>
@@ -63,12 +63,12 @@
           <img src="/asserts/CM_Profile_Picture.jpg" alt="Chief Minister official photo" class="official-photo">
         </div>
         <div class="about-grid">
-          <article class="info-card"><i class="pi pi-id-card"></i><h3>{{ 'ABOUT_POINT_KYC_TITLE' | translate }}</h3><p>{{ 'ABOUT_POINT_KYC_TEXT' | translate }}</p></article>
-          <article class="info-card"><i class="pi pi-calendar-plus"></i><h3>{{ 'ABOUT_POINT_APPOINTMENT_TITLE' | translate }}</h3><p>{{ 'ABOUT_POINT_APPOINTMENT_TEXT' | translate }}</p></article>
-          <article class="info-card"><i class="pi pi-users"></i><h3>{{ 'ABOUT_POINT_VISITOR_TITLE' | translate }}</h3><p>{{ 'ABOUT_POINT_VISITOR_TEXT' | translate }}</p></article>
-          <article class="info-card"><i class="pi pi-check-circle"></i><h3>{{ 'ABOUT_POINT_WORKFLOW_TITLE' | translate }}</h3><p>{{ 'ABOUT_POINT_WORKFLOW_TEXT' | translate }}</p></article>
-          <article class="info-card"><i class="pi pi-history"></i><h3>{{ 'ABOUT_POINT_AUDIT_TITLE' | translate }}</h3><p>{{ 'ABOUT_POINT_AUDIT_TEXT' | translate }}</p></article>
-          <article class="info-card"><i class="pi pi-lock"></i><h3>{{ 'ABOUT_POINT_SECURE_TITLE' | translate }}</h3><p>{{ 'ABOUT_POINT_SECURE_TEXT' | translate }}</p></article>
+          <article class="info-card"><mat-icon>badge</mat-icon><h3>{{ 'ABOUT_POINT_KYC_TITLE' | translate }}</h3><p>{{ 'ABOUT_POINT_KYC_TEXT' | translate }}</p></article>
+          <article class="info-card"><mat-icon>event_available</mat-icon><h3>{{ 'ABOUT_POINT_APPOINTMENT_TITLE' | translate }}</h3><p>{{ 'ABOUT_POINT_APPOINTMENT_TEXT' | translate }}</p></article>
+          <article class="info-card"><mat-icon>groups</mat-icon><h3>{{ 'ABOUT_POINT_VISITOR_TITLE' | translate }}</h3><p>{{ 'ABOUT_POINT_VISITOR_TEXT' | translate }}</p></article>
+          <article class="info-card"><mat-icon>check_circle</mat-icon><h3>{{ 'ABOUT_POINT_WORKFLOW_TITLE' | translate }}</h3><p>{{ 'ABOUT_POINT_WORKFLOW_TEXT' | translate }}</p></article>
+          <article class="info-card"><mat-icon>history</mat-icon><h3>{{ 'ABOUT_POINT_AUDIT_TITLE' | translate }}</h3><p>{{ 'ABOUT_POINT_AUDIT_TEXT' | translate }}</p></article>
+          <article class="info-card"><mat-icon>lock</mat-icon><h3>{{ 'ABOUT_POINT_SECURE_TITLE' | translate }}</h3><p>{{ 'ABOUT_POINT_SECURE_TEXT' | translate }}</p></article>
         </div>
       </div>
     </section>
@@ -125,10 +125,10 @@
 
       <div class="contact-card">
         <div class="placeholder-note">{{ 'CONTACT_PLACEHOLDER_NOTE' | translate }}</div>
-        <div class="contact-row"><i class="pi pi-building"></i><span>{{ 'CONTACT_HELPDESK' | translate }}</span></div>
-        <div class="contact-row"><i class="pi pi-envelope"></i><span>{{ 'CONTACT_EMAIL' | translate }}</span></div>
-        <div class="contact-row"><i class="pi pi-phone"></i><span>{{ 'CONTACT_PHONE' | translate }}</span></div>
-        <div class="contact-row"><i class="pi pi-map-marker"></i><span>{{ 'CONTACT_ADDRESS' | translate }}</span></div>
+        <div class="contact-row"><mat-icon>business</mat-icon><span>{{ 'CONTACT_HELPDESK' | translate }}</span></div>
+        <div class="contact-row"><mat-icon>mail</mat-icon><span>{{ 'CONTACT_EMAIL' | translate }}</span></div>
+        <div class="contact-row"><mat-icon>phone</mat-icon><span>{{ 'CONTACT_PHONE' | translate }}</span></div>
+        <div class="contact-row"><mat-icon>place</mat-icon><span>{{ 'CONTACT_ADDRESS' | translate }}</span></div>
       </div>
     </section>
 
@@ -143,11 +143,11 @@
 
           <div class="mode-tabs">
              <button id="login_citizenModeTab" [class.active]="isPublicMode" (click)="isPublicMode=true">
-              <i class="pi pi-users"></i>
+              <mat-icon>groups</mat-icon>
               <span>{{ 'PUBLIC_CITIZEN' | translate }}</span>
             </button>
             <button id="login_staffModeTab" [class.active]="!isPublicMode" (click)="isPublicMode=false">
-              <i class="pi pi-id-card"></i>
+              <mat-icon>badge</mat-icon>
               <span>{{ 'STAFF_LOGIN' | translate }}</span>
             </button>
           </div>
@@ -163,7 +163,7 @@
             </div>
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>
-                <i class="pi pi-user"></i>
+                <mat-icon>person</mat-icon>
                 <span> {{ 'USERNAME' | translate }}</span>
               </mat-label>
               <input matInput id="login_usernameInput" [(ngModel)]="username" [placeholder]="'ENTER_USERNAME' | translate" />
@@ -171,7 +171,7 @@
             
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>
-                <i class="pi pi-lock"></i>
+                <mat-icon>lock</mat-icon>
                 <span> {{ 'PASSWORD' | translate }}</span>
               </mat-label>
               <input matInput type="password" id="login_passwordInput" [(ngModel)]="password" [placeholder]="'ENTER_PASSWORD' | translate" (keyup.enter)="login()" />
@@ -181,18 +181,18 @@
               {{ errorMsg }}
             </div>
             <button id="login_submitBtn" mat-raised-button color="primary" class="full-width" [disabled]="loading" (click)="login()">
-              <span *ngIf="!loading"><i class="pi pi-sign-in"></i> {{ 'SIGN_IN' | translate }}</span>
-              <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> {{ 'SIGNING_IN' | translate }}</span>
+              <span *ngIf="!loading"><mat-icon>login</mat-icon> {{ 'SIGN_IN' | translate }}</span>
+              <span *ngIf="loading"><mat-icon class="spin-icon">sync</mat-icon> {{ 'SIGNING_IN' | translate }}</span>
             </button>
           </ng-container>
 
           <ng-container *ngIf="isPublicMode">
             <div class="public-info">
-              <p><i class="pi pi-info-circle"></i> {{ 'CITIZENS_OTP_INFO' | translate }}</p>
+              <p><mat-icon>info</mat-icon> {{ 'CITIZENS_OTP_INFO' | translate }}</p>
             </div>
             <a routerLink="/public-login" style="text-decoration:none;display:block">
               <button id="login_citizenOtpBtn" mat-raised-button color="accent" class="full-width">
-                <i class="pi pi-users"></i> {{ 'CITIZEN_OTP_LOGIN' | translate }}
+                <mat-icon>groups</mat-icon> {{ 'CITIZEN_OTP_LOGIN' | translate }}
               </button>
             </a>
             <div style="text-align:center;margin-top:0.75rem;font-size:0.85rem;color:#6b7280">

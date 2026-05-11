@@ -9,7 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { UIChart } from 'primeng/chart';
 import { AiInsightsDashboardComponent } from '../ai-insights-dashboard/ai-insights-dashboard.component';
 
-interface QuickAction { label: string; icon: string; matIcon?: string; route: string; severity: string; }
+interface QuickAction { label: string; matIcon: string; route: string; severity: string; }
 
 @Component({
   selector: 'app-dashboard',
@@ -211,17 +211,17 @@ export class DashboardComponent implements OnInit {
   private buildKpis() {
     const role = this.auth.user()?.role;
     const all = [
-      { label: "Today's Appointments", value: '–', icon: 'pi-calendar-plus', matIcon: 'event_available', color: '#1a237e', bg: '#e8eaf6',
+      { label: "Today's Appointments", value: '–', matIcon: 'event_available', color: '#1a237e', bg: '#e8eaf6',
         roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER','DATA_ENTRY_OPERATOR'] },
-      { label: 'Pending Approvals', value: '–', icon: 'pi-clock', matIcon: 'schedule', color: '#b45309', bg: '#fef3c7',
+      { label: 'Pending Approvals', value: '–', matIcon: 'schedule', color: '#b45309', bg: '#fef3c7',
         roles: ['HCM','ADMIN','OSD','APPROVER'] },
-      { label: 'Active Scheme Apps', value: '–', icon: 'pi-briefcase', matIcon: 'work', color: '#065f46', bg: '#d1fae5',
+      { label: 'Active Scheme Apps', value: '–', matIcon: 'work', color: '#065f46', bg: '#d1fae5',
         roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER'] },
-      { label: 'Pending Follow-ups', value: '–', icon: 'pi-exclamation-triangle', matIcon: 'warning', color: '#991b1b', bg: '#fee2e2',
+      { label: 'Pending Follow-ups', value: '–', matIcon: 'warning', color: '#991b1b', bg: '#fee2e2',
         roles: ['HCM','ADMIN','OSD'] },
-      { label: 'Walk-ins Today', value: '–', icon: 'pi-sign-in', matIcon: 'directions_walk', color: '#0369a1', bg: '#e0f2fe',
+      { label: 'Walk-ins Today', value: '–', matIcon: 'directions_walk', color: '#0369a1', bg: '#e0f2fe',
         roles: ['DATA_ENTRY_OPERATOR','ADMIN','OSD'] },
-      { label: 'CMO Reviews Due', value: '–', icon: 'pi-file-edit', matIcon: 'rate_review', color: '#7c3aed', bg: '#ede9fe',
+      { label: 'CMO Reviews Due', value: '–', matIcon: 'rate_review', color: '#7c3aed', bg: '#ede9fe',
         roles: ['CMO_OFFICER'] },
     ];
     this.kpis = all.filter(k => !role || k.roles.includes(role as any));
@@ -229,24 +229,24 @@ export class DashboardComponent implements OnInit {
 
   private buildQuickActions() {
     const role = this.auth.user()?.role;
-    const all: (QuickAction & { roles: string[], matIcon?: string })[] = [
-      { label: 'New Appointment', icon: 'pi pi-plus', matIcon: 'add', route: '/appointments/new', severity: '',
+    const all: (QuickAction & { roles: string[] })[] = [
+      { label: 'New Appointment', matIcon: 'add', route: '/appointments/new', severity: '',
         roles: ['ADMIN','OSD','DATA_ENTRY_OPERATOR'] },
-      { label: 'Walk-in Counter', icon: 'pi pi-sign-in', matIcon: 'login', route: '/appointments/walkin', severity: 'success',
+      { label: 'Walk-in Counter', matIcon: 'login', route: '/appointments/walkin', severity: 'success',
         roles: ['ADMIN','OSD','DATA_ENTRY_OPERATOR'] },
-      { label: 'Register Visitor', icon: 'pi pi-user-plus', matIcon: 'person_add', route: '/deo/register-visitor', severity: 'success',
+      { label: 'Register Visitor', matIcon: 'person_add', route: '/deo/register-visitor', severity: 'success',
         roles: ['DATA_ENTRY_OPERATOR','ADMIN','OSD'] },
-      { label: 'Apply for Scheme', icon: 'pi pi-briefcase', matIcon: 'work', route: '/schemes/apply', severity: 'warning',
+      { label: 'Apply for Scheme', matIcon: 'work', route: '/schemes/apply', severity: 'warning',
         roles: ['ADMIN','OSD'] },
-      { label: 'Identify Person', icon: 'pi pi-id-card', matIcon: 'badge', route: '/identify', severity: 'info',
+      { label: 'Identify Person', matIcon: 'badge', route: '/identify', severity: 'info',
         roles: ['HCM','ADMIN','OSD','DATA_ENTRY_OPERATOR'] },
-      { label: 'Scheme Heatmap', icon: 'pi pi-map', matIcon: 'map', route: '/reports/heatmap', severity: 'secondary',
+      { label: 'Scheme Heatmap', matIcon: 'map', route: '/reports/heatmap', severity: 'secondary',
         roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER'] },
-      { label: 'View Reports', icon: 'pi pi-chart-bar', matIcon: 'bar_chart', route: '/reports', severity: 'info',
+      { label: 'View Reports', matIcon: 'bar_chart', route: '/reports', severity: 'info',
         roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER'] },
-      { label: 'Manage Users', icon: 'pi pi-shield', matIcon: 'admin_panel_settings', route: '/admin/users', severity: 'secondary',
+      { label: 'Manage Users', matIcon: 'admin_panel_settings', route: '/admin/users', severity: 'secondary',
         roles: ['HCM','ADMIN','OSD'] },
-      { label: 'Audit Trail', icon: 'pi pi-history', matIcon: 'history', route: '/reports/audit', severity: 'secondary',
+      { label: 'Audit Trail', matIcon: 'history', route: '/reports/audit', severity: 'secondary',
         roles: ['ADMIN'] },
     ];
     this.quickActions = all.filter(a => !role || a.roles.includes(role));

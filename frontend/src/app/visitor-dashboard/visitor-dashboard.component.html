@@ -5,7 +5,7 @@
   <div class="kpi-grid">
     <div class="kpi-card" *ngFor="let c of cards">
       <div class="kpi-icon" [style.background]="c.color">
-        <i class="pi {{ c.icon }}" style="font-size:1.4rem;color:white"></i>
+        <mat-icon>{{ c.icon }}</mat-icon>
       </div>
       <div>
         <div class="kpi-value">{{ c.value }}</div>
@@ -18,17 +18,17 @@
   <div class="quick-actions-row">
     <a routerLink="/appointments/new">
       <button class="btn-action btn-primary-action">
-        <i class="pi pi-plus"></i> Book New Appointment
+        <mat-icon>add</mat-icon> Book New Appointment
       </button>
     </a>
     <a routerLink="/schemes/apply">
       <button class="btn-action btn-outline-action">
-        <i class="pi pi-briefcase"></i> Apply for Scheme
+        <mat-icon>work</mat-icon> Apply for Scheme
       </button>
     </a>
     <a routerLink="/grievances">
       <button class="btn-action btn-warn-action">
-        <i class="pi pi-comments"></i> Raise Grievance
+        <mat-icon>chat</mat-icon> Raise Grievance
       </button>
     </a>
   </div>
@@ -39,7 +39,7 @@
     <div class="section-card profile-card">
       <div class="section-card-header profile-header">
         <div class="profile-header-left">
-          <i class="pi pi-id-card"></i> Visitor Profile
+          <mat-icon>badge</mat-icon> Visitor Profile
         </div>
         <button
           type="button"
@@ -55,7 +55,7 @@
             alt="Visitor photo"
             (error)="onPhotoLoadError()" />
           <div *ngIf="!canViewPhoto" class="avatar-fallback" aria-label="Visitor avatar">
-            <i class="pi pi-user"></i>
+            <mat-icon>person</mat-icon>
           </div>
           <span *ngIf="canViewPhoto" class="avatar-view-label">View</span>
         </button>
@@ -67,7 +67,7 @@
             <div class="photo-preview-header">
               <span>Citizen Photo</span>
               <button type="button" class="photo-preview-close" (click)="closePhotoPreview()" aria-label="Close photo preview">
-                <i class="pi pi-times"></i>
+                <mat-icon>close</mat-icon>
               </button>
             </div>
             <img [src]="visitorPhotoUrl" alt="Citizen photo preview" (error)="onPhotoLoadError()" />
@@ -131,7 +131,7 @@
     <!-- My Appointments -->
     <div class="section-card">
       <div class="section-card-header">
-        <i class="pi pi-calendar"></i> Appointment History
+        <mat-icon>event</mat-icon> Appointment History
       </div>
       <div class="card-body">
         <div *ngFor="let a of myAppointments" class="list-item">
@@ -141,7 +141,7 @@
           </div>
           <div class="item-meta">
             <p-tag [value]="a.status | titlecase" [severity]="getStatusSeverity(a.status)"></p-tag>
-            <span class="item-date"><i class="pi pi-calendar"></i> {{ a.date }}</span>
+            <span class="item-date"><mat-icon>event</mat-icon> {{ a.date }}</span>
           </div>
         </div>
         <div *ngIf="myAppointments.length === 0" class="empty-state">No appointments yet.</div>
@@ -152,7 +152,7 @@
     <!-- Active Schemes -->
     <div class="section-card">
       <div class="section-card-header">
-        <i class="pi pi-briefcase"></i> Active Schemes
+        <mat-icon>work</mat-icon> Active Schemes
       </div>
       <div class="card-body">
         <div *ngFor="let s of mySchemes" class="list-item">
@@ -174,7 +174,7 @@
     <!-- Visit Count Analytics -->
     <div class="section-card">
       <div class="section-card-header">
-        <i class="pi pi-chart-bar"></i> Visit Count Analytics
+        <mat-icon>bar_chart</mat-icon> Visit Count Analytics
       </div>
       <div class="card-body">
         <div class="analytics-row">

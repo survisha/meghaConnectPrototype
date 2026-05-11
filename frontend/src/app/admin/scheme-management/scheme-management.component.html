@@ -13,7 +13,7 @@
 
   <!-- New Scheme Form Section -->
   <div class="section-card" *ngIf="showNewSchemeForm" style="margin-bottom:2rem">
-    <div class="section-card-header"><i class="pi pi-plus"></i> Add New Scheme</div>
+    <div class="section-card-header"><mat-icon>add</mat-icon> Add New Scheme</div>
     <div class="section-card-body">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
         <mat-form-field appearance="outline" style="width:100%">
@@ -42,7 +42,7 @@
 
   <!-- Schemes Table -->
   <div class="section-card" *ngIf="!loading">
-    <div class="section-card-header"><i class="pi pi-list"></i> All Schemes</div>
+    <div class="section-card-header"><mat-icon>list</mat-icon> All Schemes</div>
     <div class="section-card-body" style="overflow-x:auto">
       <table mat-table [dataSource]="schemes" class="full-width">
 
@@ -99,7 +99,7 @@
   <!-- Document Configuration Panel -->
   <div class="section-card" *ngIf="showDocumentConfig && selectedScheme" style="margin-top:2rem">
     <div class="section-card-header">
-      <i class="pi pi-file"></i> Configure Documents for {{ selectedScheme.schemeCode }}
+      <mat-icon>description</mat-icon> Configure Documents for {{ selectedScheme.schemeCode }}
     </div>
     <div class="section-card-body">
       <div style="overflow-x:auto;margin-bottom:1.5rem">

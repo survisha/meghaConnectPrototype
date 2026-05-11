@@ -239,6 +239,7 @@ public class VisitorAuthService {
         response.put("kycType", visitor.getKycType() != null ? visitor.getKycType() : "NONE");
         response.put("kycVerified", Boolean.TRUE.equals(visitor.getKycVerified()));
         response.put("kycStatus", visitor.getKycStatus() != null ? visitor.getKycStatus() : "PENDING");
+        response.put("designation", visitor.getDesignation() != null ? visitor.getDesignation() : "");
         response.put("address", visitor.getAddress() != null ? visitor.getAddress() : "");
         response.put("fullAddress", visitor.getFullAddress() != null ? visitor.getFullAddress() : "");
         response.put("address1", visitor.getAddress1() != null ? visitor.getAddress1() : "");

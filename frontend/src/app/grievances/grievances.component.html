@@ -2,12 +2,12 @@
   <div class="page-header">
     <div>
       <h1 class="page-title">
-        <i class="pi pi-comments"></i>
+        <mat-icon>chat_bubble_outline</mat-icon>
         {{ isPublic ? 'Submit Grievance' : 'Grievance Management' }}
       </h1>
       <p class="page-subtitle">{{ isPublic ? 'Submit and track your grievances' : 'Review and manage public grievances' }}</p>
     </div>
-    <button id="grievances_raiseGrievanceBtn" mat-raised-button color="primary" (click)="showForm = true" *ngIf="isPublic"><i class="pi pi-plus"></i> Raise Grievance</button>
+    <button id="grievances_raiseGrievanceBtn" mat-raised-button color="primary" (click)="openCreateForm()" *ngIf="isPublic"><mat-icon>add</mat-icon> Raise Grievance</button>
   </div>
 
   <!-- Filters and Table (Public and Staff) -->
@@ -25,7 +25,7 @@
           <mat-option *ngFor="let opt of statusOptions" [value]="opt.value">{{ opt.label }}</mat-option>
         </mat-select>
       </mat-form-field>
-      <mat-form-field appearance="outline" class="filter-select">
+      <mat-form-field appearance="outline" class="filter-select" *ngIf="isStaff">
         <mat-label>Filter by Category</mat-label>
         <mat-select id="grievances_categoryFilter" [(ngModel)]="filterCategory" (ngModelChange)="applyFilter()">
           <mat-option *ngFor="let opt of categoryOptions" [value]="opt.value">{{ opt.label }}</mat-option>
@@ -88,9 +88,17 @@
 
         <!-- Actions Column -->
         <ng-container matColumnDef="actions">
-          <th mat-header-cell *matHeaderCellDef style="width:80px">Action</th>
-          <td mat-cell *matCellDef="let g">
-            <button mat-icon-button (click)="openDetail(g)"><mat-icon>visibility</mat-icon></button>
+          <th mat-header-cell *matHeaderCellDef>Actions</th>
+          <td mat-cell *matCellDef="let g" class="actions-cell">
+            <button mat-icon-button color="accent" (click)="openDetail(g)" matTooltip="View Details" aria-label="View grievance">
+              <mat-icon>visibility</mat-icon>
+            </button>
+            <button mat-icon-button color="primary" *ngIf="canModify(g)" (click)="openEdit(g)" matTooltip="Edit" aria-label="Edit grievance">
+              <mat-icon>edit</mat-icon>
+            </button>
+            <button mat-icon-button color="warn" *ngIf="canModify(g)" (click)="deleteGrievance(g)" matTooltip="Delete" aria-label="Delete grievance">
+              <mat-icon>delete</mat-icon>
+            </button>
           </td>
         </ng-container>
 
@@ -109,17 +117,17 @@
 
   <!-- Logged out message -->
   <div *ngIf="!isPublic && !isStaff && !loading" style="text-align:center;padding:3rem;background:#f3f4f6;border-radius:12px;margin:2rem 0">
-    <i class="pi pi-info-circle" style="font-size:2rem;color:#6b7280;margin-bottom:1rem;display:block"></i>
+    <mat-icon style="font-size:2rem;color:#6b7280;margin-bottom:1rem;display:block">info</mat-icon>
     <p style="color:#6b7280;font-size:1rem;margin:0">Please log in to view and manage grievances.</p>
   </div>
 </div>
 
 <!-- Submit Grievance Dialog (Public only) -->
-<div class="dialog-overlay" *ngIf="showForm && isPublic" (click)="showForm = false"></div>
+<div class="dialog-overlay" *ngIf="showForm && isPublic" (click)="closeForm()"></div>
 <div class="dialog-container" *ngIf="showForm && isPublic">
   <div class="dialog-header">
-    <h2>Raise a Grievance</h2>
-    <button mat-icon-button (click)="showForm = false"><mat-icon>close</mat-icon></button>
+    <h2>{{ editingGrievance ? 'Edit Grievance' : 'Raise a Grievance' }}</h2>
+    <button type="button" mat-icon-button class="dialog-close" (click)="closeForm()" matTooltip="Close" aria-label="Close grievance form"><mat-icon>close</mat-icon></button>
   </div>
 
   <!-- Custom Material Stepper -->
@@ -143,41 +151,40 @@
 
   <mat-divider></mat-divider>
 
-  <div class="dialog-content">
+  <div class="dialog-content form-dialog-content">
     <!-- Step 0: Personal Info -->
     <div *ngIf="step === 0" class="form-step">
       <div class="form-row">
         <mat-form-field appearance="outline" class="half-width">
           <mat-label>Full Name *</mat-label>
-          <input matInput [(ngModel)]="form.applicantName" placeholder="Enter full name" />
+          <input matInput [(ngModel)]="form.applicantName" disabled />
         </mat-form-field>
         <mat-form-field appearance="outline" class="half-width">
           <mat-label>Mobile Number *</mat-label>
-          <input matInput [(ngModel)]="form.phoneNumber" placeholder="10-digit mobile number" />
+          <input matInput [(ngModel)]="form.phoneNumber" disabled />
         </mat-form-field>
       </div>
       <div class="form-row">
         <mat-form-field appearance="outline" class="half-width">
           <mat-label>District *</mat-label>
-          <mat-select [(ngModel)]="form.district">
-            <mat-option *ngFor="let d of districts" [value]="d">{{ d }}</mat-option>
-          </mat-select>
+          <input matInput [(ngModel)]="form.district" disabled />
         </mat-form-field>
         <mat-form-field appearance="outline" class="half-width">
           <mat-label>Constituency</mat-label>
-          <input matInput [(ngModel)]="form.constituency" placeholder="Enter constituency" />
+          <input matInput [(ngModel)]="form.constituency" disabled />
+        </mat-form-field>
+      </div>
+      <div class="form-row">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Designation</mat-label>
+          <input matInput [(ngModel)]="form.designation" disabled />
         </mat-form-field>
       </div>
     </div>
 
     <!-- Step 1: Grievance Details -->
     <div *ngIf="step === 1" class="form-step">
-      <mat-form-field appearance="outline" style="width:100%;margin-bottom:1rem">
-        <mat-label>Grievance Category *</mat-label>
-        <mat-select [(ngModel)]="form.category">
-          <mat-option *ngFor="let opt of categoryOptions.slice(1)" [value]="opt.value">{{ opt.label }}</mat-option>
-        </mat-select>
-      </mat-form-field>
+      
       <mat-form-field appearance="outline" style="width:100%;margin-bottom:1rem">
         <mat-label>Subject *</mat-label>
         <input matInput [(ngModel)]="form.subject" placeholder="Brief subject of grievance" />
@@ -197,17 +204,18 @@
           <div><span class="review-label">Mobile</span><span class="review-value">{{ form.phoneNumber }}</span></div>
           <div><span class="review-label">District</span><span class="review-value">{{ form.district }}</span></div>
           <div><span class="review-label">Constituency</span><span class="review-value">{{ form.constituency || '–' }}</span></div>
+          <div><span class="review-label">Designation</span><span class="review-value">{{ form.designation || '–' }}</span></div>
         </div>
       </div>
       <div class="review-section">
         <h4>Grievance Details</h4>
         <div class="review-grid">
-          <div><span class="review-label">Category</span><span class="review-value">{{ getCategoryLabel(form.category || 'OTHERS') }}</span></div>
+          <div><span class="review-label">Designation</span><span class="review-value">{{ form.designation || '–' }}</span></div>
           <div><span class="review-label">Subject</span><span class="review-value">{{ form.subject }}</span></div>
         </div>
         <div style="margin-top:0.75rem">
           <span class="review-label">Description</span>
-          <p style="margin:0.25rem 0 0;background:#f8fafc;padding:0.75rem;border-radius:6px;font-size:0.9rem">{{ form.description }}</p>
+          <p class="description-text">{{ form.description }}</p>
         </div>
       </div>
     </div>
@@ -215,9 +223,9 @@
 
   <mat-divider></mat-divider>
   <div class="dialog-actions">
-    <button mat-stroked-button (click)="prevStep()" *ngIf="step > 0"><i class="pi pi-chevron-left"></i> Back</button>
-    <button mat-raised-button color="primary" (click)="nextStep()" *ngIf="step < 2">Next <i class="pi pi-chevron-right"></i></button>
-    <button mat-raised-button color="accent" (click)="submitGrievance()" *ngIf="step === 2"><i class="pi pi-send"></i> Submit Grievance</button>
+    <button mat-stroked-button (click)="prevStep()" *ngIf="step > 0"><mat-icon>chevron_left</mat-icon> Back</button>
+    <button mat-raised-button color="primary" (click)="nextStep()" *ngIf="step < 2">Next <mat-icon>chevron_right</mat-icon></button>
+    <button mat-raised-button color="accent" (click)="submitGrievance()" *ngIf="step === 2"><mat-icon>send</mat-icon> {{ editingGrievance ? 'Update Grievance' : 'Submit Grievance' }}</button>
   </div>
 </div>
 
@@ -226,13 +234,13 @@
 <div class="dialog-container" *ngIf="showDetail && (isPublic || isStaff)" style="max-width:640px">
   <div class="dialog-header">
     <h2>{{ selectedGrievance?.ticketId || 'Grievance Detail' }}</h2>
-    <button mat-icon-button (click)="showDetail = false"><mat-icon>close</mat-icon></button>
+    <button type="button" mat-icon-button class="dialog-close" (click)="showDetail = false" matTooltip="Close" aria-label="Close grievance detail"><mat-icon>close</mat-icon></button>
   </div>
-  <div class="dialog-content" *ngIf="selectedGrievance">
+  <div class="dialog-content detail-dialog-content" *ngIf="selectedGrievance">
     <div class="detail-container">
       <div class="detail-header">
         <mat-chip [style.background-color]="getStatusColor(selectedGrievance.status)" [style.color]="'white'" class="detail-status-tag">{{ selectedGrievance.status | titlecase }}</mat-chip>
-        <span class="category-badge detail-cat">{{ getCategoryLabel(selectedGrievance.category) }}</span>
+        <span class="category-badge detail-cat">{{ selectedGrievance.visitorDesignation || getCategoryLabel(selectedGrievance.category) }}</span>
       </div>
 
       <h3 class="detail-subject">{{ selectedGrievance.subject }}</h3>
@@ -242,6 +250,7 @@
         <div><span class="review-label">Mobile</span><span class="review-value">{{ selectedGrievance.phoneNumber }}</span></div>
         <div><span class="review-label">District</span><span class="review-value">{{ selectedGrievance.district }}</span></div>
         <div><span class="review-label">Constituency</span><span class="review-value">{{ selectedGrievance.constituency || '–' }}</span></div>
+        <div *ngIf="selectedGrievance.visitorDesignation"><span class="review-label">Designation</span><span class="review-value">{{ selectedGrievance.visitorDesignation }}</span></div>
         <div><span class="review-label">Submitted</span><span class="review-value">{{ selectedGrievance.submittedAt | date:'dd MMM yyyy, hh:mm a' }}</span></div>
         <div *ngIf="selectedGrievance.resolvedAt"><span class="review-label">Resolved</span><span class="review-value">{{ selectedGrievance.resolvedAt | date:'dd MMM yyyy' }}</span></div>
         <div *ngIf="selectedGrievance.assignedDepartment"><span class="review-label">Assigned To</span><span class="review-value">{{ selectedGrievance.assignedDepartment }}</span></div>
@@ -250,12 +259,12 @@
       <mat-divider></mat-divider>
       <div>
         <span class="review-label">Description</span>
-        <p style="margin:0.5rem 0 0;background:#f8fafc;padding:0.75rem;border-radius:6px;font-size:0.9rem;line-height:1.6">{{ selectedGrievance.description }}</p>
+        <p class="description-text detail-description">{{ selectedGrievance.description }}</p>
       </div>
 
       <div *ngIf="selectedGrievance.remarks" style="margin-top:1rem">
         <span class="review-label">Remarks</span>
-        <p style="margin:0.5rem 0 0;background:#f0fdf4;padding:0.75rem;border-radius:6px;font-size:0.9rem">{{ selectedGrievance.remarks }}</p>
+        <p class="remarks-text">{{ selectedGrievance.remarks }}</p>
       </div>
 
       <div *ngIf="isStaff && selectedGrievance.status !== 'RESOLVED' && selectedGrievance.status !== 'CLOSED'" style="margin-top:1.5rem">
@@ -265,10 +274,10 @@
             <mat-icon>check</mat-icon> Acknowledge
           </button>
           <button mat-stroked-button color="accent" (click)="updateStatus(selectedGrievance, 'UNDER_REVIEW')" *ngIf="selectedGrievance.status === 'ACKNOWLEDGED'">
-            <i class="pi pi-search"></i> Mark Under Review
+            <mat-icon>search</mat-icon> Mark Under Review
           </button>
           <button mat-stroked-button (click)="updateStatus(selectedGrievance, 'FORWARDED')">
-            <i class="pi pi-arrow-right"></i> Forward to Dept
+            <mat-icon>arrow_forward</mat-icon> Forward to Dept
           </button>
           <button mat-raised-button color="primary" (click)="updateStatus(selectedGrievance, 'RESOLVED')">
             <mat-icon>check_circle</mat-icon> Mark Resolved

@@ -7,7 +7,7 @@
         <div class="logo-text">
           <h1>MeghaConnect</h1>
           <div class="govt-badge">
-            <i class="pi pi-shield"></i>
+            <mat-icon>shield</mat-icon>
             <span>{{ 'OFFICIAL_GOVERNMENT_PORTAL' | translate }}</span>
           </div>
         </div>
@@ -80,7 +80,7 @@
           
           <div class="step" [class.active]="currentStep === 'kyc-complete'">
             <div class="step-circle">
-              <i class="pi pi-verified"></i>
+              <mat-icon>verified</mat-icon>
             </div>
             <span class="step-label">{{ 'COMPLETE' | translate }}</span>
           </div>
@@ -105,10 +105,10 @@
             <label class="field-label">{{ 'ID_TYPE' | translate }} *</label>
             <mat-radio-group [ngModel]="form.idType" (ngModelChange)="onIdTypeChange($event)" class="full-width">
               <mat-radio-button value="EPIC">
-                <i class="pi pi-id-card"></i> {{ 'EPIC_VOTER_ID' | translate }}
+                <mat-icon>badge</mat-icon> {{ 'EPIC_VOTER_ID' | translate }}
               </mat-radio-button>
               <mat-radio-button value="AADHAAR">
-                <i class="pi pi-id-card"></i> {{ 'AADHAAR_CARD' | translate }}
+                <mat-icon>badge</mat-icon> {{ 'AADHAAR_CARD' | translate }}
               </mat-radio-button>
             </mat-radio-group>
           </div>
@@ -124,7 +124,7 @@
               maxlength="10"
               (input)="sanitizeEpicInput()"
             />
-            <mat-hint><i class="pi pi-info-circle"></i> {{ 'EPIC_FORMAT_HINT' | translate }}</mat-hint>
+            <mat-hint><mat-icon>info</mat-icon> {{ 'EPIC_FORMAT_HINT' | translate }}</mat-hint>
           </mat-form-field>
 
           <!-- Visitor Name Field (for EPIC verification) -->
@@ -138,7 +138,7 @@
               placeholder="e.g. MAREIAM MOSSANG"
               (input)="form.visitorName = form.visitorName.toUpperCase()"
             />
-            <mat-hint><i class="pi pi-info-circle"></i> {{ 'VISITOR_NAME_VOTER_CARD_HINT' | translate }}</mat-hint>
+            <mat-hint><mat-icon>info</mat-icon> {{ 'VISITOR_NAME_VOTER_CARD_HINT' | translate }}</mat-hint>
           </mat-form-field>
 
           
@@ -158,7 +158,7 @@
               style="text-align:center;font-size:1.5rem;letter-spacing:0.5rem;font-weight:600"
             />
             <mat-hint style="color:#16a34a">
-              <i class="pi pi-mobile"></i> {{ 'OTP_SENT_TO' | translate: { phone: maskedPhone } }}
+              <mat-icon>phone_iphone</mat-icon> {{ 'OTP_SENT_TO' | translate: { phone: maskedPhone } }}
             </mat-hint>
           </mat-form-field>
 
@@ -193,7 +193,7 @@
           <!-- OVSE QR Code Display (shown when idType === AADHAAR and Qr is generated) -->
           <div *ngIf="showQrCode && qrDataUri" class="qr-code-section" style="text-align:center;padding:1.5rem;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;margin:1rem 0">
             <div style="font-weight:700;margin-bottom:1rem;color:#1a237e">
-              <i class="pi pi-qrcode" style="font-size:1.5rem;margin-right:0.5rem"></i> {{ 'SCAN_QR_CODE_AADHAAR' | translate }}
+              <mat-icon style="font-size:1.5rem;width:1.5rem;height:1.5rem;margin-right:0.5rem">qr_code_scanner</mat-icon> {{ 'SCAN_QR_CODE_AADHAAR' | translate }}
             </div>
             <img [src]="qrDataUri" alt="OVSE QR Code" style="max-width:300px;width:100%;border:2px solid #1a237e;border-radius:8px;padding:1rem;background:white" />
             
@@ -216,7 +216,7 @@
               
               <!-- Countdown Timer -->
               <div style="display:flex;align-items:center;justify-content:center;gap:0.5rem;margin-top:0.5rem">
-                <i class="pi pi-hourglass" style="color:#1976d2;font-size:1rem"></i>
+                <mat-icon style="color:#1976d2;font-size:1rem;width:1rem;height:1rem">hourglass_empty</mat-icon>
                 <span style="font-weight:600;color:#1565c0">{{ pollingCountdown }}s</span>
                 <span style="font-size:0.85rem;color:#424242">{{ 'WAIT_REMAINING' | translate }}</span>
               </div>
@@ -231,7 +231,7 @@
           </div>
 
           <div class="kyc-notice" *ngIf="!otpSent && form.idType !== 'AADHAAR'">
-            <i class="pi pi-info-circle"></i>
+            <mat-icon>info</mat-icon>
             {{ 'WILL_VALIDATE_ID_SEND_OTP' | translate }}
           </div>
 
@@ -247,7 +247,7 @@
 
           <div style="display:flex;gap:1rem;margin-top:1.5rem">
             <button mat-stroked-button color="primary" (click)="goToLogin()">
-              <i class="pi pi-arrow-left"></i> {{ 'BACK_TO_LOGIN' | translate }}
+              <mat-icon>arrow_back</mat-icon> {{ 'BACK_TO_LOGIN' | translate }}
             </button>
             <button 
               *ngIf="!otpSent && !showQrCode && form.idType === 'EPIC'" 
@@ -256,8 +256,8 @@
               class="flex-1" 
               [disabled]="loading || !canSendEpicOtp" 
               (click)="validateId()">
-              <span *ngIf="!loading"><i class="pi pi-send"></i> {{ 'GENERATE_OTP' | translate }}</span>
-              <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> {{ 'LOADING' | translate }}</span>
+              <span *ngIf="!loading"><mat-icon>send</mat-icon> {{ 'GENERATE_OTP' | translate }}</span>
+              <span *ngIf="loading"><mat-icon class="spin-icon">sync</mat-icon> {{ 'LOADING' | translate }}</span>
             </button>
             <button 
               id="register_generateQrBtn"
@@ -267,8 +267,8 @@
               class="flex-1" 
               [disabled]="loading" 
               (click)="generateAadhaarQr()">
-              <span *ngIf="!loading"><i class="pi pi-qrcode"></i> {{ 'GENERATE_QR' | translate }}</span>
-              <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> {{ 'GENERATING' | translate }}</span>
+              <span *ngIf="!loading"><mat-icon>qr_code_2</mat-icon> {{ 'GENERATE_QR' | translate }}</span>
+              <span *ngIf="loading"><mat-icon class="spin-icon">sync</mat-icon> {{ 'GENERATING' | translate }}</span>
             </button>
             <button 
               id="register_cancelAadhaarBtn"
@@ -286,13 +286,13 @@
               [disabled]="loading || otpCode.length !== 6" 
               (click)="verifyOtp()">
               <span *ngIf="!loading"><mat-icon>check</mat-icon> {{ 'VERIFY_OTP' | translate }}</span>
-              <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> {{ 'VERIFYING' | translate }}</span>
+              <span *ngIf="loading"><mat-icon class="spin-icon">sync</mat-icon> {{ 'VERIFYING' | translate }}</span>
             </button>
           </div>
 
           <div *ngIf="otpSent && !showQrCode && form.idType === 'EPIC'" style="text-align:center;margin-top:1rem">
             <button mat-button color="primary" (click)="resendOtp()" [disabled]="loading">
-              <i class="pi pi-refresh"></i> {{ 'RESEND_OTP' | translate }}
+              <mat-icon>refresh</mat-icon> {{ 'RESEND_OTP' | translate }}
             </button>
           </div>
         </ng-container>
@@ -302,7 +302,7 @@
           <div class="section-title">{{ 'STEP_2_VERIFY_OTP' | translate }}</div>
 
           <div class="otp-info-box">
-            <i class="pi pi-mobile" style="font-size:2rem;color:#1565C0"></i>
+            <mat-icon style="font-size:2rem;width:2rem;height:2rem;color:#1565C0">phone_iphone</mat-icon>
             <p>{{ 'OTP_SENT_TO' | translate: { phone: maskedPhone } }}</p>
             <small>{{ 'PLEASE_ENTER_6_DIGIT_CODE' | translate }}</small>
           </div>
@@ -356,7 +356,7 @@
           <!-- Auto-populated demographics (read-only) -->
           <div style="padding:1rem;background:#F9FAFB;border-radius:8px;margin-bottom:1.5rem">
             <div style="font-size:0.9rem;color:#6b7280;margin-bottom:0.5rem">
-              <i class="pi pi-info-circle"></i> {{ 'AUTO_POPULATED_FROM_VERIFIED_ID' | translate }}
+              <mat-icon>info</mat-icon> {{ 'AUTO_POPULATED_FROM_VERIFIED_ID' | translate }}
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
               <div>
@@ -381,7 +381,7 @@
           <!-- Camera controls -->
           <div class="camera-section">
             <div *ngIf="!isCameraActive && !capturedPhotoUrl" class="camera-placeholder">
-              <i class="pi pi-camera" style="font-size:3rem;color:#9ca3af"></i>
+              <mat-icon style="font-size:3rem;width:3rem;height:3rem;color:#9ca3af">photo_camera</mat-icon>
               <p>{{ 'CLICK_BELOW_START_CAMERA' | translate }}</p>
             </div>
 
@@ -415,7 +415,7 @@
           </div>
 
           <small *ngIf="!hasAadhaarResidentImage" class="field-hint" style="display:block;text-align:center;margin-top:1rem">
-            <i class="pi pi-info-circle"></i> {{ 'CAMERA_LIGHTING_HINT' | translate }}
+            <mat-icon>info</mat-icon> {{ 'CAMERA_LIGHTING_HINT' | translate }}
           </small>
         </ng-container>
 
@@ -530,7 +530,7 @@
           <!-- R009: AI KYC Confidence Indicator -->
           <div *ngIf="kycConfidenceScore > 0" style="margin-bottom:1rem;padding:0.85rem 1rem;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px">
             <div style="font-weight:700;font-size:0.82rem;color:#374151;margin-bottom:0.5rem;display:flex;align-items:center;gap:0.4rem">
-              <i class="pi pi-sparkles" style="color:#1a237e"></i> {{ 'AI_KYC_CONFIDENCE_INDICATOR' | translate }}
+              <mat-icon style="color:#1a237e">auto_awesome</mat-icon> {{ 'AI_KYC_CONFIDENCE_INDICATOR' | translate }}
             </div>
             <div style="display:flex;justify-content:space-between;font-size:0.82rem;margin-bottom:0.35rem">
               <span>{{ 'PHOTO_MATCH_SCORE' | translate }}: <strong>{{ kycConfidenceScore }}%</strong></span>
@@ -578,7 +578,7 @@
           </mat-form-field>
 
           <div class="kyc-notice autofill-helper">
-            <i class="pi pi-info-circle"></i>
+            <mat-icon>info</mat-icon>
             {{ 'AUTO_FILL_MISSING_DETAILS_HELPER' | translate }}
           </div>
 
@@ -665,7 +665,7 @@
 
           <ng-container *ngIf="form.outsideState">
             <div class="kyc-notice">
-              <i class="pi pi-info-circle"></i>
+              <mat-icon>info</mat-icon>
               {{ 'LOCATION_FIELDS_NA' | translate }}
             </div>
           </ng-container>
@@ -677,11 +677,11 @@
 
           <div style="display:flex;gap:1rem;margin-top:1.5rem">
             <button mat-stroked-button color="primary" (click)="goBackFromAdditionalDetails()">
-              <i class="pi pi-arrow-left"></i> {{ 'BACK' | translate }}
+              <mat-icon>arrow_back</mat-icon> {{ 'BACK' | translate }}
             </button>
             <button mat-raised-button color="primary" class="flex-1" [disabled]="!canSubmitRegistration" (click)="submitRegistration()">
               <span *ngIf="!loading"><mat-icon>check</mat-icon> {{ 'COMPLETE_REGISTRATION' | translate }}</span>
-              <span *ngIf="loading"><i class="pi pi-spin pi-spinner"></i> {{ 'REGISTERING' | translate }}</span>
+              <span *ngIf="loading"><mat-icon class="spin-icon">sync</mat-icon> {{ 'REGISTERING' | translate }}</span>
             </button>
           </div>
         </ng-container>
@@ -712,7 +712,7 @@
               </p>
             </div>
             <button mat-raised-button color="primary" style="margin-top:1.5rem;width:auto;padding:0.7rem 2rem" (click)="goToLogin()">
-              <i class="pi pi-sign-in"></i> {{ 'GO_TO_LOGIN' | translate }}
+              <mat-icon>login</mat-icon> {{ 'GO_TO_LOGIN' | translate }}
             </button>
           </div>
         </ng-container>

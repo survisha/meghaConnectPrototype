@@ -637,9 +637,38 @@ textarea.input-field { resize: vertical; }
   color: #854d0e;
 }
 
-.kyc-status-badge i {
+.kyc-status-badge mat-icon {
   font-size: 2rem;
+  height: 2rem;
+  width: 2rem;
   flex-shrink: 0;
+}
+
+mat-hint mat-icon,
+button mat-icon,
+.info-box mat-icon,
+.phone-info mat-icon,
+.mobile-validation-msg mat-icon {
+  flex: 0 0 auto;
+  font-size: 1.05rem;
+  height: 1.05rem;
+  width: 1.05rem;
+  vertical-align: text-bottom;
+}
+
+button span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+}
+
+.spin-icon {
+  animation: material-spin 0.9s linear infinite;
+}
+
+@keyframes material-spin {
+  to { transform: rotate(360deg); }
 }
 
 .kyc-status-badge strong {

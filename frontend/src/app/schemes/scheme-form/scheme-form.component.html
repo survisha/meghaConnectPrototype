@@ -29,7 +29,7 @@
 
   <!-- Step 0 -->
   <div class="section-card" *ngIf="step===0" id="schemeForm_step0_schemeSelection">
-    <div class="section-card-header"><i class="pi pi-briefcase"></i> Scheme Selection</div>
+    <div class="section-card-header"><mat-icon>work</mat-icon> Scheme Selection</div>
     <div class="section-card-body">
       <div class="form-grid">
         <div class="form-group" style="grid-column:1/-1">
@@ -53,7 +53,7 @@
 
   <!-- Step 1 -->
   <div class="section-card" *ngIf="step===1" id="schemeForm_step1_projectDetails">
-    <div class="section-card-header"><i class="pi pi-file"></i> Project Details</div>
+    <div class="section-card-header"><mat-icon>description</mat-icon> Project Details</div>
     <div class="section-card-body">
       <div class="form-grid">
         <div class="form-group" style="grid-column:1/-1">
@@ -105,7 +105,7 @@
 
   <!-- Step 2 -->
   <div class="section-card" *ngIf="step===2">
-    <div class="section-card-header"><i class="pi pi-indian-rupee"></i> Financial Details (Item-wise)</div>
+    <div class="section-card-header"><mat-icon>currency_rupee</mat-icon> Financial Details (Item-wise)</div>
     <div class="section-card-body">
       <div class="items-table">
         <div class="item-header">
@@ -155,7 +155,7 @@
 
   <!-- Step 3 -->
   <div class="section-card" *ngIf="step===3">
-    <div class="section-card-header"><i class="pi pi-paperclip"></i> Required Documents</div>
+    <div class="section-card-header"><mat-icon>attach_file</mat-icon> Required Documents</div>
     <div class="section-card-body">
       <div class="doc-row">
         <div class="doc-label">Plans &amp; Estimates (3 nos) <span class="req">*</span></div>
@@ -212,8 +212,8 @@
   </div>
 
   <div style="display:flex;justify-content:space-between;margin-top:1.5rem">
-    <button mat-stroked-button (click)="prevStep()" [disabled]="step===0"><i class="pi pi-chevron-left"></i> Previous</button>
-    <button *ngIf="step < steps.length-1" mat-raised-button color="primary" (click)="nextStep()">Next <i class="pi pi-chevron-right"></i></button>
+    <button mat-stroked-button (click)="prevStep()" [disabled]="step===0"><mat-icon>chevron_left</mat-icon> Previous</button>
+    <button *ngIf="step < steps.length-1" mat-raised-button color="primary" (click)="nextStep()">Next <mat-icon>chevron_right</mat-icon></button>
     <button *ngIf="step===steps.length-1" mat-raised-button color="accent" (click)="submit()"><mat-icon>check</mat-icon> Submit Application</button>
   </div>
 </div>

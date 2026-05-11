@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
 import { DEFAULT_LANGUAGE, LanguageService, SUPPORTED_LANGUAGES } from '../../i18n/language.service';
+import { MatIconModule } from '@angular/material/icon';
 
 @Component({
   selector: 'app-language-selector',
   standalone: true,
-  imports: [CommonModule, TranslateModule],
+  imports: [CommonModule, TranslateModule, MatIconModule],
   templateUrl: './language-selector.component.html',
   styleUrls: ['./language-selector.component.scss'],
 })

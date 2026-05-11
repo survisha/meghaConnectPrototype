@@ -13,7 +13,6 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatDialog } from '@angular/material/dialog';
 
 interface ManagedUser {
   username: string;
@@ -56,7 +55,7 @@ export class UserManagementComponent {
     { label: 'Data Entry Operator', value: 'DATA_ENTRY_OPERATOR' },
   ];
 
-  constructor(public auth: AuthService, public dialog: MatDialog) {
+  constructor(public auth: AuthService) {
     this.users = this.auth.DEMO_USERS
       .filter((u: any) => u.role !== 'PUBLIC')
       .map((u: any) => ({ username: u.username, fullName: u.fullName, role: u.role, password: u.password }));

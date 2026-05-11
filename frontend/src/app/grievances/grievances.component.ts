@@ -2,8 +2,9 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { GrievanceService } from '../services/grievance.service';
+import { VisitorService } from '../services/visitor.service';
 import { AuthService } from '../services/auth.service';
-import { Grievance, GrievanceCategory, GrievanceStatus } from '../models';
+import { Grievance, GrievanceCategory, GrievanceStatus, Visitor } from '../models';
 import { MatTableModule } from '@angular/material/table';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -15,6 +16,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-grievances',
@@ -32,7 +34,8 @@ import { MatDividerModule } from '@angular/material/divider';
     MatIconModule,
     MatProgressSpinnerModule,
     MatChipsModule,
-    MatDividerModule
+    MatDividerModule,
+    MatTooltipModule
   ],
   templateUrl: './grievances.component.html',
   styleUrls: ['./grievances.component.scss'],
@@ -46,18 +49,22 @@ export class GrievancesComponent implements OnInit {
   loading = false;
 
   // Mat-table columns
-  displayedColumns: string[] = ['ticketId', 'applicant', 'district', 'category', 'subject', 'submitted', 'status', 'actions'];
+  private readonly staffColumns: string[] = ['ticketId', 'applicant', 'district', 'category', 'subject', 'submitted', 'status', 'actions'];
+  private readonly publicColumns: string[] = ['ticketId', 'subject', 'submitted', 'status', 'actions'];
+  displayedColumns: string[] = this.staffColumns;
 
   showForm = false;
   showDetail = false;
   selectedGrievance: Grievance | null = null;
+  editingGrievance: Grievance | null = null;
+  visitorProfile: Visitor | null = null;
+  visitorId: number | null = null;
 
   step = 0;
   formSteps = [{ label: 'Personal Info' }, { label: 'Grievance Details' }, { label: 'Review & Submit' }];
 
   form = {
-    applicantName: '', phoneNumber: '', district: '', constituency: '',
-    category: '' as GrievanceCategory | '',
+    applicantName: '', phoneNumber: '', district: '', constituency: '', designation: '',
     subject: '', description: '',
   };
 
@@ -89,10 +96,30 @@ export class GrievancesComponent implements OnInit {
 
   constructor(
     private grievanceService: GrievanceService,
+    private visitorService: VisitorService,
     public auth: AuthService
   ) {}
 
   ngOnInit() {
+    this.displayedColumns = this.isPublic ? this.publicColumns : this.staffColumns;
+    if (this.isPublic) {
+      this.visitorId = this.resolveVisitorId();
+      this.applyVisitorProfileToForm();
+      if (this.visitorId) {
+        this.loadVisitorProfile(this.visitorId);
+        this.loadVisitorGrievances(this.visitorId);
+      }
+      return;
+    }
+
+    if (!this.isStaff) {
+      return;
+    }
+
+    this.loadAllGrievances();
+  }
+
+  private loadAllGrievances() {
     this.loading = true;
     this.grievanceService.getAll(0, 100).subscribe({
       next: page => {
@@ -104,34 +131,81 @@ export class GrievancesComponent implements OnInit {
     });
   }
 
+  private loadVisitorGrievances(visitorId: number) {
+    this.loading = true;
+    this.grievanceService.getByVisitor(visitorId, 0, 100).subscribe({
+      next: page => {
+        this.grievances = page.content;
+        this.applyFilter();
+        this.loading = false;
+      },
+      error: () => { this.loading = false; }
+    });
+  }
+
+  private loadVisitorProfile(visitorId: number) {
+    this.visitorService.getById(visitorId).subscribe({
+      next: profile => {
+        this.visitorProfile = profile;
+        this.applyVisitorProfileToForm();
+      },
+      error: () => this.applyVisitorProfileToForm()
+    });
+  }
+
   applyFilter() {
     let data = this.grievances;
 
-    // For PUBLIC users: filter to show only their grievances
-    if (this.isPublic) {
-      const currentUser = this.auth.user();
-      if (currentUser) {
-        // Filter by applicantName matching logged-in user's fullName
-        data = data.filter(g => g.applicantName.toLowerCase() === currentUser.fullName.toLowerCase());
-      }
-    }
-
     // Apply search and filter criteria
+    const q = this.search.trim().toLowerCase();
     this.filtered = data.filter(g =>
-      (!this.search || g.applicantName.toLowerCase().includes(this.search.toLowerCase()) ||
-        g.ticketId.includes(this.search) || g.subject.toLowerCase().includes(this.search.toLowerCase())) &&
+      (!q || this.matchesSearch(g, q)) &&
       (!this.filterStatus || g.status === this.filterStatus) &&
       (!this.filterCategory || g.category === this.filterCategory)
     );
   }
 
-  openDetail(g: Grievance) { this.selectedGrievance = g; this.showDetail = true; }
+  openDetail(g: Grievance) {
+    this.grievanceService.getById(g.id).subscribe(detail => {
+      this.selectedGrievance = detail ?? g;
+      this.showDetail = true;
+    });
+  }
 
-  nextStep() {
-    if (this.step === 0 && (!this.form.applicantName.trim() || !this.form.phoneNumber.trim() || !this.form.district)) {
+  openCreateForm() {
+    this.editingGrievance = null;
+    this.step = 0;
+    this.resetForm();
+    this.showForm = true;
+  }
+
+  openEdit(g: Grievance) {
+    if (!this.canModify(g)) {
       return;
     }
-    if (this.step === 1 && (!this.form.category || !this.form.subject.trim() || !this.form.description.trim())) {
+    this.grievanceService.getById(g.id).subscribe(detail => {
+      const grievance = detail ?? g;
+      this.editingGrievance = grievance;
+      this.resetForm();
+      this.form.subject = grievance.subject;
+      this.form.description = grievance.description;
+      this.step = 1;
+      this.showForm = true;
+    });
+  }
+
+  closeForm() {
+    this.showForm = false;
+    this.editingGrievance = null;
+    this.step = 0;
+    this.resetForm();
+  }
+
+  nextStep() {
+    if (this.step === 0 && (!this.form.applicantName.trim() || !this.form.phoneNumber.trim())) {
+      return;
+    }
+    if (this.step === 1 && (!this.form.subject.trim() || !this.form.description.trim())) {
       return;
     }
     if (this.step < this.formSteps.length - 1) this.step++;
@@ -139,21 +213,30 @@ export class GrievancesComponent implements OnInit {
   prevStep() { if (this.step > 0) this.step--; }
 
   submitGrievance() {
-    this.grievanceService.create({
-      applicantName: this.form.applicantName,
-      phoneNumber: this.form.phoneNumber,
-      district: this.form.district,
-      constituency: this.form.constituency,
-      category: this.form.category as GrievanceCategory,
+    const request = {
+      visitorId: this.visitorId ?? undefined,
       subject: this.form.subject,
       description: this.form.description,
-    }).subscribe({
+    };
+
+    if (this.editingGrievance) {
+      this.grievanceService.update(this.editingGrievance.id, request).subscribe({
+        next: updated => {
+          const idx = this.grievances.findIndex(x => x.id === updated.id);
+          if (idx >= 0) this.grievances[idx] = updated;
+          this.applyFilter();
+          this.closeForm();
+        },
+        error: () => console.error('Failed to update grievance.')
+      });
+      return;
+    }
+
+    this.grievanceService.create(request).subscribe({
       next: newGrievance => {
         this.grievances = [newGrievance, ...this.grievances];
         this.applyFilter();
-        this.showForm = false;
-        this.step = 0;
-        this.form = { applicantName: '', phoneNumber: '', district: '', constituency: '', category: '', subject: '', description: '' };
+        this.closeForm();
       },
       error: () => console.error('Failed to submit grievance.')
     });
@@ -169,6 +252,23 @@ export class GrievancesComponent implements OnInit {
       },
       error: () => console.error('Failed to update status.')
     });
+  }
+
+  deleteGrievance(g: Grievance) {
+    if (!this.canModify(g) || !window.confirm(`Delete grievance ${g.ticketId}?`)) {
+      return;
+    }
+    this.grievanceService.delete(g.id).subscribe({
+      next: () => {
+        this.grievances = this.grievances.filter(x => x.id !== g.id);
+        this.applyFilter();
+      },
+      error: () => console.error('Failed to delete grievance.')
+    });
+  }
+
+  canModify(g: Grievance): boolean {
+    return this.isPublic && g.status !== 'RESOLVED' && g.status !== 'CLOSED';
   }
 
   getStatusSeverity(s: GrievanceStatus): 'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' | undefined {
@@ -191,13 +291,65 @@ export class GrievancesComponent implements OnInit {
     return colorMap[s] ?? '#6b7280';
   }
 
-  getCategoryLabel(c: GrievanceCategory): string {
+  getCategoryLabel(c?: GrievanceCategory | ''): string {
+    if (!c) return '—';
     const m: Record<GrievanceCategory, string> = {
       PUBLIC_SERVICES: 'Public Services', INFRASTRUCTURE: 'Infrastructure',
       HEALTH: 'Health', EDUCATION: 'Education', EMPLOYMENT: 'Employment',
       WELFARE_SCHEME: 'Welfare Scheme', LAW_ORDER: 'Law & Order', OTHERS: 'Others',
     };
     return m[c] ?? c;
+  }
+
+  private resolveVisitorId(): number | null {
+    const fromAuth = this.auth.user()?.visitorId;
+    if (fromAuth) {
+      return fromAuth;
+    }
+    const stored = sessionStorage.getItem('megha_visitor_id');
+    const parsed = stored ? Number(stored) : NaN;
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  }
+
+  private resetForm() {
+    this.form = {
+      applicantName: '',
+      phoneNumber: '',
+      district: '',
+      constituency: '',
+      designation: '',
+      subject: '',
+      description: '',
+    };
+    this.applyVisitorProfileToForm();
+  }
+
+  private applyVisitorProfileToForm() {
+    const subject = this.form.subject;
+    const description = this.form.description;
+    const user = this.auth.user();
+    this.form = {
+      applicantName: this.visitorProfile?.fullName || user?.fullName || '',
+      phoneNumber: this.visitorProfile?.phoneNumber || user?.username || '',
+      district: this.visitorProfile?.district || '',
+      constituency: this.visitorProfile?.constituency || '',
+      designation: this.visitorProfile?.designation || '',
+      subject,
+      description,
+    };
+  }
+
+  private matchesSearch(g: Grievance, q: string): boolean {
+    return [
+      g.applicantName,
+      g.phoneNumber,
+      g.ticketId,
+      g.subject,
+      g.description,
+      g.district,
+      g.constituency,
+      g.visitorDesignation,
+    ].some(value => (value ?? '').toLowerCase().includes(q));
   }
 
   get isStaff() { return this.auth.hasRole('HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER', 'DATA_ENTRY_OPERATOR'); }

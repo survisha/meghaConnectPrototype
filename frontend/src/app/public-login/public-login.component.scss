@@ -229,11 +229,20 @@
 }
 
 .status-line mat-icon,
-.success-msg mat-icon {
+.success-msg mat-icon,
+.phone-display mat-icon {
   flex: 0 0 auto;
   font-size: 1.1rem;
   width: 1.1rem;
   height: 1.1rem;
+}
+
+.spin-icon {
+  animation: material-spin 0.9s linear infinite;
+}
+
+@keyframes material-spin {
+  to { transform: rotate(360deg); }
 }
 
 .success-msg {
@@ -315,13 +324,16 @@
         white-space: nowrap !important;
       }
       
-      i {
+      mat-icon {
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
         line-height: 1;
         vertical-align: middle;
         flex-shrink: 0;
+        font-size: 1.1rem;
+        width: 1.1rem;
+        height: 1.1rem;
       }
       
       span {
@@ -336,7 +348,7 @@
         padding: 0.5rem 1rem;
         flex: 1;
         
-        i {
+        mat-icon {
           font-size: 1rem;
         }
       }

@@ -1,7 +1,7 @@
 <div class="chatbot-widget">
   <!-- Floating trigger button -->
   <button class="chatbot-trigger" (click)="toggleChat()" [attr.aria-label]="isOpen ? 'Close chat' : 'Open chat'">
-    <i class="pi" [class.pi-comments]="!isOpen" [class.pi-times]="isOpen"></i>
+    <mat-icon>{{ isOpen ? 'close' : 'chat' }}</mat-icon>
     <span *ngIf="!isOpen">Ask MeghaBot</span>
   </button>
 
@@ -9,7 +9,7 @@
   <div class="chatbot-window" *ngIf="isOpen">
     <div class="chatbot-header">
       <div style="display:flex;align-items:center;gap:0.5rem">
-        <div class="bot-avatar"><i class="pi pi-android"></i></div>
+        <div class="bot-avatar"><mat-icon>smart_toy</mat-icon></div>
         <div>
           <div style="font-weight:700;font-size:0.95rem">MeghaBot</div>
           <div style="font-size:0.72rem;opacity:.8">AI Citizen Assistant · Online</div>
@@ -41,7 +41,7 @@
         [disabled]="loading">
       </textarea>
       <button class="send-btn" (click)="sendMessage()" [disabled]="!inputText.trim() || loading">
-        <i class="pi pi-send"></i>
+        <mat-icon>send</mat-icon>
       </button>
     </div>
   </div>

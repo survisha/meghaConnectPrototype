@@ -13,7 +13,7 @@
 
   <!-- Appointment Types Table -->
   <div class="section-card" *ngIf="!loading" id="aptTypeMgmt_typesSection">
-    <div class="section-card-header"><i class="pi pi-calendar"></i> All Appointment Types</div>
+    <div class="section-card-header"><mat-icon>event</mat-icon> All Appointment Types</div>
     <div class="section-card-body" style="overflow-x:auto">
       <table mat-table [dataSource]="appointmentTypes" class="full-width">
 
@@ -97,7 +97,7 @@
   <!-- Edit Form Panel -->
   <div class="section-card" *ngIf="showEditForm && editFormData && selectedType" style="margin-top:2rem">
     <div class="section-card-header">
-      <i class="pi pi-pencil"></i> Edit Configuration - {{ selectedType.typeCode }}
+      <mat-icon>edit</mat-icon> Edit Configuration - {{ selectedType.typeCode }}
     </div>
     <div class="section-card-body">
       

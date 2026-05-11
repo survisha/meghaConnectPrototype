@@ -74,18 +74,20 @@ export class DashboardComponent implements OnInit {
       // Dummy data already initialized, no need to override if API returns data
     });
 
-    // Load recent activity from real audit log API, fallback to dummy if empty
-    this.auditLogService.getAll(0, 5).subscribe(page => {
-      if (page.content && page.content.length > 0) {
-        this.recentActivity = page.content.map(log => ({
-          matIcon: this.getAuditMatIcon(log.action),
-          color: this.getAuditColor(log.action),
-          text: `${log.action}: ${log.details ?? log.entityType + ' #' + log.entityId}`,
-          time: new Date(log.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }),
-        }));
-      }
-      // Dummy data already initialized
-    });
+    // Load recent activity from real audit log API for admins only.
+    if (this.auth.hasRole('ADMIN')) {
+      this.auditLogService.getAll(0, 5).subscribe(page => {
+        if (page.content && page.content.length > 0) {
+          this.recentActivity = page.content.map(log => ({
+            matIcon: this.getAuditMatIcon(log.action),
+            color: this.getAuditColor(log.action),
+            text: `${log.action}: ${log.details ?? log.entityType + ' #' + log.entityId}`,
+            time: new Date(log.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }),
+          }));
+        }
+        // Dummy data already initialized
+      });
+    }
   }
 
   private initializeDummyData() {

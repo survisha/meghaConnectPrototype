@@ -40,6 +40,8 @@ public class GrievanceService {
     public Grievance create(Grievance grievance, String createdBy) {
         grievance.setStatus(GrievanceStatus.SUBMITTED);
         grievance.setSubmittedAt(LocalDateTime.now());
+        grievance.setCreatedBy(createdBy);
+        grievance.setUpdatedBy(createdBy);
         // Temporary placeholder; replaced with DB-ID-based value after persist (no race condition)
         grievance.setTicketId("GRV-TMP-" + System.currentTimeMillis());
         Grievance saved = grievanceRepository.save(grievance);
@@ -71,6 +73,7 @@ public class GrievanceService {
         g.setStatus(newStatus);
         if (remarks != null) g.setRemarks(remarks);
         if (newStatus == GrievanceStatus.RESOLVED) g.setResolvedAt(LocalDateTime.now());
+        g.setUpdatedBy(updatedBy);
         Grievance saved = grievanceRepository.save(g);
         auditLogService.log("Grievance", saved.getId(), "STATUS_CHANGE",
                 "Status changed to " + newStatus, updatedBy);

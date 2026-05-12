@@ -116,6 +116,14 @@
                       matTooltipPosition="above">
                 <mat-icon>event</mat-icon>
               </button>
+              <button [id]="'approverWorkflow_followUpBtn_' + i" mat-mini-fab
+                      class="followup-btn"
+                      [disabled]="!canMarkFollowUp(appt) || followUpUpdatingId === appt.id"
+                      (click)="markFollowUp(appt)"
+                      matTooltip="Mark Follow-up"
+                      matTooltipPosition="above">
+                <mat-icon>follow_the_signs</mat-icon>
+              </button>
             </div>
           </td>
         </ng-container>

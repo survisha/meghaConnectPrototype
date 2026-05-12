@@ -54,6 +54,8 @@ export class ApproverWorkflowComponent implements OnInit {
   remarksText = '';
   rescheduleDate = '';
   pendingAction: 'APPROVE' | 'REJECT' | null = null;
+  followUpUpdatingId: number | null = null;
+  private readonly followUpReviewableStatuses = ['CREATED', 'SUBMITTED', 'PENDING_APPROVER_REVIEW', 'CMO_REVIEW', 'APPROVER_REVIEW'];
 
   constructor(private appointmentService: AppointmentService, private snackBar: MatSnackBar) {}
 
@@ -63,7 +65,7 @@ export class ApproverWorkflowComponent implements OnInit {
       next: page => {
         this.errorMsg = '';
         this.appointments = page.content.filter(a =>
-          ['SUBMITTED', 'PENDING_APPROVER_REVIEW', 'CMO_REVIEW', 'APPROVER_REVIEW', 'HCM_PENDING'].includes(a.status)
+          ['SUBMITTED', 'PENDING_APPROVER_REVIEW', 'CMO_REVIEW', 'APPROVER_REVIEW', 'HCM_PENDING', 'FOLLOWUP'].includes(a.status)
         );
         this.loading = false;
       },
@@ -200,13 +202,20 @@ export class ApproverWorkflowComponent implements OnInit {
       HCM_PENDING: 'secondary',
       HCM_ACCEPTED: 'success',
       HCM_REJECTED: 'danger',
+      FOLLOWUP: 'warn',
+      SELECTED_FOR_PUBLIC_DARBAR: 'warn',
       SCHEDULED: 'success',
     };
     return map[status] ?? 'info';
   }
 
   getStatusLabel(status: string): string {
+    if (status === 'FOLLOWUP' || status === 'SELECTED_FOR_PUBLIC_DARBAR') return 'FOLLOW-UP';
     return status.replace(/_/g, ' ');
+  }
+
+  canMarkFollowUp(appt: Appointment): boolean {
+    return appt.eventType === 'B1' && this.followUpReviewableStatuses.includes(appt.status);
   }
 
   openApprove(appt: Appointment) {
@@ -227,6 +236,22 @@ export class ApproverWorkflowComponent implements OnInit {
     this.selected = appt;
     this.rescheduleDate = '';
     this.showRescheduleDialog = true;
+  }
+
+  markFollowUp(appt: Appointment) {
+    if (!this.canMarkFollowUp(appt) || this.followUpUpdatingId) return;
+    this.followUpUpdatingId = appt.id;
+    this.appointmentService.markFollowUp(appt.id, 'Follow-up').subscribe({
+      next: () => {
+        this.snackBar.open(`${appt.applicationId} marked as follow-up.`, 'Close', { duration: 5000, panelClass: ['success-snackbar'] });
+        this.followUpUpdatingId = null;
+        this.ngOnInit();
+      },
+      error: error => {
+        this.followUpUpdatingId = null;
+        this.snackBar.open(apiErrorMessage(error, 'Failed to mark appointment as follow-up.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] });
+      }
+    });
   }
 
   confirmAction() {

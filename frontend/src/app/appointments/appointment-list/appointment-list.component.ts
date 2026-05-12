@@ -277,27 +277,39 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
       'Application ID',
       'Applicant',
       'Phone',
+      'EPIC Number',
       'Designation',
+      'Address',
       'District',
       'Constituency',
       'Agenda',
+      'Agenda Brief',
       'Event Type',
       'Location',
       'Status',
+      'Meeting Count Last 6 Months',
       'Submitted',
+      'Created At',
+      'Updated At',
     ];
     const rows = this.filtered.map(appointment => [
       appointment.applicationId,
       appointment.applicant?.fullName || appointment.applicantName || '',
       appointment.applicant?.phoneNumber || appointment.applicantPhone || '',
+      appointment.applicant?.epicNumber || '',
       appointment.applicant?.designation || '',
+      this.applicantAddress(appointment),
       appointment.applicant?.district || '',
       appointment.applicant?.constituency || '',
       appointment.agendaType || appointment.subject || '',
+      appointment.agendaBrief || '',
       appointment.eventType,
       appointment.requestedLocation,
       this.getStatusLabel(appointment.status),
+      appointment.meetingCountLast6Months ?? '',
       appointment.submittedAt || appointment.createdAt || '',
+      appointment.createdAt || '',
+      appointment.updatedAt || '',
     ]);
     const csv = [headers, ...rows].map(row => row.map(value => this.csvCell(value)).join(',')).join('\r\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
@@ -326,6 +338,13 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   private csvCell(value: unknown) {
     const text = value === null || value === undefined ? '' : String(value);
     return `"${text.replace(/"/g, '""')}"`;
+  }
+
+  private applicantAddress(appointment: Appointment) {
+    return appointment.applicant?.addressLine
+      || appointment.applicant?.fullAddress
+      || appointment.applicant?.address
+      || '';
   }
 
   openViewDetails(appointment: Appointment) {

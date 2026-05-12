@@ -94,6 +94,15 @@
         background-color: #1d4ed8 !important;
       }
     }
+
+    // Follow-up button - Amber
+    &.followup-btn {
+      background-color: #d97706 !important;
+
+      &:hover:not(:disabled) {
+        background-color: #b45309 !important;
+      }
+    }
   }
 }
 

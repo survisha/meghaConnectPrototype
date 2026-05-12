@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -13,6 +13,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { environment } from '../../../environments/environment';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { AiDocumentService, AiExtractedFields, AiDocumentAnalysisResponse, DuplicateCheckResponse } from '../../services/ai-document.service';
 import { SchemeService } from '../../services/scheme.service';
 import { VisitorService } from '../../services/visitor.service';
@@ -50,7 +51,8 @@ interface DocumentUpload {
     MatRadioModule,
     MatCheckboxModule,
     MatIconModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    MatTooltipModule
   ],
   templateUrl: './appointment-form.component.html',
   styleUrls: ['./appointment-form.component.scss'],
@@ -63,6 +65,7 @@ export class AppointmentFormComponent implements OnInit {
   submittedAppId = '';
   visitorId = '';
   visitorProfile: any | null = null;
+  isWalkInFlow = false;
 
   steps = [
     { label: 'Personal Info' }, { label: 'Agenda' },
@@ -144,6 +147,33 @@ export class AppointmentFormComponent implements OnInit {
   get isScheme() { return this.form.agendaType === 'Scheme availment (CM)'; }
   get isCmCare() { return this.form.schemeType === 'CM Care'; }
   get isPublicUser() { return this.auth.hasRole('PUBLIC'); }
+  get hasVisitorContext() { return this.isPublicUser || !!this.visitorId; }
+  get applicantSectionTitle() {
+    if (this.isPublicUser) return 'Logged-in Citizen';
+    if (this.isWalkInFlow) return 'Selected Walk-in Visitor';
+    if (this.visitorId) return 'Selected Visitor';
+    return 'Personal Information';
+  }
+  get applicantSummaryText() {
+    return this.isPublicUser
+      ? 'MeghaConnect profile details will be used for this appointment.'
+      : 'Selected visitor profile details will be used for this appointment.';
+  }
+  get applicantInfoText() {
+    return this.isPublicUser
+      ? 'Personal information is pulled from your logged-in visitor profile and is not collected again on this form.'
+      : 'Personal information is pulled from the visitor profile selected by the DEO and is not collected again on this form.';
+  }
+  get backRoute() {
+    if (this.isWalkInFlow) return '/appointments/walkin';
+    if (this.isPublicUser) return '/visitor';
+    return '/appointments';
+  }
+  get backLabel() {
+    if (this.isWalkInFlow) return 'Back to Walk-in Counter';
+    if (this.isPublicUser) return 'Back to Dashboard';
+    return 'Back to Appointments';
+  }
 
   get effectivePriority(): 'HIGH' | 'MEDIUM' | 'LOW' | '' {
     return this.aiPriorityOverridden ? this.overriddenPriority : this.aiPriorityLevel;
@@ -291,25 +321,32 @@ export class AppointmentFormComponent implements OnInit {
     this.overriddenPriority = '';
   }
 
-  constructor(private http: HttpClient, private aiDocumentService: AiDocumentService, private schemeService: SchemeService, private visitorService: VisitorService, private auth: AuthService) {}
+  constructor(
+    private http: HttpClient,
+    private aiDocumentService: AiDocumentService,
+    private schemeService: SchemeService,
+    private visitorService: VisitorService,
+    private auth: AuthService,
+    private route: ActivatedRoute
+  ) {}
 
   ngOnInit() {
-    if (this.isPublicUser) {
-      this.steps[0] = { label: 'Citizen Details' };
-    }
+    this.isWalkInFlow = this.route.snapshot.queryParamMap.get('source') === 'walkin'
+      || this.route.snapshot.queryParamMap.get('walkin') === 'true';
+    this.steps[0] = { label: this.isPublicUser ? 'Citizen Details' : this.isWalkInFlow ? 'Visitor Details' : 'Personal Info' };
     this.loadOrganizationTypes();
-    this.loadVisitorDataIfPublic();
+    this.loadVisitorProfileIfAvailable();
     // Initial visibility update based on default form values
     this.updateDocumentVisibility();
   }
 
-  private loadVisitorDataIfPublic() {
-    // Only auto-populate for PUBLIC users
-    if (!this.auth.hasRole('PUBLIC')) return;
-
-    const visitorId = sessionStorage.getItem('megha_visitor_id');
+  private loadVisitorProfileIfAvailable() {
+    const routeVisitorId = this.route.snapshot.queryParamMap.get('visitorId');
+    const visitorId = this.isPublicUser ? sessionStorage.getItem('megha_visitor_id') : routeVisitorId;
     if (!visitorId) {
-      this.errorMsg = 'Visitor session is missing. Please login again before creating an appointment.';
+      if (this.isPublicUser) {
+        this.errorMsg = 'Visitor session is missing. Please login again before creating an appointment.';
+      }
       return;
     }
     this.visitorId = visitorId;
@@ -325,6 +362,10 @@ export class AppointmentFormComponent implements OnInit {
         this.form.district = visitor.district || '';
         this.form.constituency = visitor.constituency || '';
         this.form.booth = visitor.booth || '';
+        this.form.address = visitor.fullAddress || visitor.address || visitor.addressLine || visitor.address1 || '';
+        if (this.isWalkInFlow) {
+          this.form.requestedLocation = 'Shillong';
+        }
         
         // Set KYC status and update document visibility
         this.visitorKycStatus = visitor.kycStatus as any || 'PENDING';
@@ -365,9 +406,11 @@ export class AppointmentFormComponent implements OnInit {
   submit() {
     this.errorMsg = '';
 
-    const visitorId = this.visitorId || sessionStorage.getItem('megha_visitor_id') || '';
-    if (this.isPublicUser && !visitorId) {
-      this.errorMsg = 'Visitor context is missing. Please login again before submitting an appointment.';
+    const visitorId = this.visitorId || (this.isPublicUser ? sessionStorage.getItem('megha_visitor_id') : '') || '';
+    if ((this.isPublicUser || this.isWalkInFlow) && !visitorId) {
+      this.errorMsg = this.isWalkInFlow
+        ? 'Visitor context is missing. Please return to Walk-in Counter and search the visitor again.'
+        : 'Visitor context is missing. Please login again before submitting an appointment.';
       return;
     }
     if (!this.form.agendaType || !this.form.requestedLocation || !this.form.agendaBrief.trim()) {
@@ -389,8 +432,10 @@ export class AppointmentFormComponent implements OnInit {
     const formData = new FormData();
 
     // Add form fields
-    formData.append('applicantId', visitorId);
-    if (!this.isPublicUser) {
+    if (visitorId) {
+      formData.append('applicantId', visitorId);
+    }
+    if (!this.hasVisitorContext) {
       formData.append('applicantName', this.form.fullName);
       formData.append('applicantPhone', this.form.phoneNumber);
       formData.append('epicNumber', this.form.epicNumber);
@@ -398,7 +443,8 @@ export class AppointmentFormComponent implements OnInit {
     formData.append('agendaType', this.form.agendaType);
     formData.append('agendaBrief', this.form.agendaBrief);
     formData.append('requestedLocation', this.form.requestedLocation?.toUpperCase() || 'OTHERS');
-    formData.append('eventType', 'A1');
+    formData.append('eventType', this.isWalkInFlow ? 'B2' : 'A1');
+    formData.append('isWalkIn', this.isWalkInFlow ? 'true' : 'false');
     formData.append('mlaMdcApproved', this.form.mlaMdcApproved ? 'true' : 'false');
     formData.append('schemeType', this.isScheme ? this.form.schemeType : '');
     formData.append('projectName', this.isScheme ? this.form.projectName : '');

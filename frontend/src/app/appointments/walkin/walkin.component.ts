@@ -1,9 +1,8 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { VisitorSearchService } from '../../services/visitor-search.service';
-import { AppointmentService } from '../../services/appointment.service';
 import { Visitor } from '../../models';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -46,7 +45,7 @@ export class WalkinComponent {
   ];
   locations = ['SHILLONG', 'TURA', 'DELHI', 'OTHERS'];
 
-  constructor(private visitorSearchService: VisitorSearchService, private appointmentService: AppointmentService) {}
+  constructor(private visitorSearchService: VisitorSearchService, private router: Router) {}
 
   search() {
     this.errorMsg = '';
@@ -69,33 +68,17 @@ export class WalkinComponent {
     });
   }
 
-  checkIn() {
+  continueToAppointmentForm() {
     this.errorMsg = '';
     if (!this.foundPerson?.id) {
-      this.errorMsg = 'Select an existing visitor before creating an appointment.';
+      this.errorMsg = 'Select an existing visitor before opening the appointment form.';
       return;
     }
-    if (!this.agendaType || !this.agendaBrief.trim()) {
-      this.errorMsg = 'Select agenda and enter the appointment purpose.';
-      return;
-    }
-    this.creating = true;
-    this.appointmentService.createAppointment({
-      applicantId: this.foundPerson.id,
-      eventType: 'B2',
-      agendaType: this.agendaType,
-      agendaBrief: this.agendaBrief,
-      requestedLocation: this.requestedLocation,
-      isWalkIn: true,
-    }).subscribe({
-      next: appointment => {
-        this.creating = false;
-        this.checkedIn = true;
-        this.ticketId = appointment.applicationId || 'WI-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random()*9000+1000));
-      },
-      error: err => {
-        this.creating = false;
-        this.errorMsg = err?.error?.message || 'Unable to create appointment. Please try again.';
+    this.router.navigate(['/appointments/new'], {
+      queryParams: {
+        visitorId: this.foundPerson.id,
+        source: 'walkin',
+        walkin: true,
       }
     });
   }

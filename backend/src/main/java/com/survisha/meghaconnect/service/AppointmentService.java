@@ -195,7 +195,7 @@ public class AppointmentService {
             .status(Appointment.AppointmentStatus.SUBMITTED)
             .requestedLocation(location)
             .mlaMdcApproved(safeForm.getMlaMdcApproved() != null && safeForm.getMlaMdcApproved())
-            .isWalkIn(false)
+            .isWalkIn(Boolean.TRUE.equals(safeForm.getIsWalkIn()))
             .aiDuplicateFlag(false)
             .meetingCountLast6Months(meetingCount)
             .build();

@@ -14,6 +14,7 @@ public class AppointmentMultipartRequest {
     private String applicantPhone;
     private String epicNumber;
     private String eventType;
+    private Boolean isWalkIn;
     private String agendaType;
     private String agendaBrief;
     private String requestedLocation;

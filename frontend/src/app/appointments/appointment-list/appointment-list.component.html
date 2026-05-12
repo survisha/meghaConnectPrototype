@@ -7,7 +7,7 @@
         <mat-icon>login</mat-icon> Walk-in
       </button>
       <button mat-raised-button color="primary" routerLink="/appointments/new"
-              *ngIf="auth.hasRole('ADMIN') || auth.hasRole('DATA_ENTRY_OPERATOR')">
+              *ngIf="auth.hasRole('ADMIN') || auth.hasRole('OSD')">
         <mat-icon>add</mat-icon> New Appointment
       </button>
     </div>

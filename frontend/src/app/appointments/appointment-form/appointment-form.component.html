@@ -12,9 +12,9 @@
           You will be contacted to schedule your appointment.
         </div>
       </div>
-      <a routerLink="/visitor" style="text-decoration:none">
+      <a [routerLink]="backRoute" style="text-decoration:none">
         <button id="appointment_backToDashboardBtn" mat-raised-button color="primary">
-          <mat-icon>home</mat-icon> Back to Dashboard
+          <mat-icon>home</mat-icon> {{ backLabel }}
         </button>
       </a>
     </div>
@@ -22,10 +22,10 @@
 
   <ng-container *ngIf="!submitted">
     <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem">
-      <button id="appointment_backBtn" mat-icon-button routerLink="/visitor">
+      <button id="appointment_backBtn" mat-icon-button [routerLink]="backRoute" [matTooltip]="backLabel">
         <mat-icon>arrow_back</mat-icon>
       </button>
-      <h2 class="page-title" style="margin:0">New Appointment Request</h2>
+      <h2 class="page-title" style="margin:0">{{ isWalkInFlow ? 'Walk-in Appointment Request' : 'New Appointment Request' }}</h2>
     </div>
 
     <div id="appointment_errorMsg" *ngIf="errorMsg" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.9rem">
@@ -61,14 +61,14 @@
 
     <!-- Step 0: Citizen/Applicant Info -->
     <div class="section-card" *ngIf="step===0">
-      <div class="section-card-header"><mat-icon>person</mat-icon> {{ isPublicUser ? 'Logged-in Citizen' : 'Personal Information' }}</div>
+      <div class="section-card-header"><mat-icon>person</mat-icon> {{ applicantSectionTitle }}</div>
       <div class="section-card-body">
-        <ng-container *ngIf="isPublicUser; else manualApplicantFields">
+        <ng-container *ngIf="hasVisitorContext; else manualApplicantFields">
           <div *ngIf="visitorProfile" class="citizen-summary">
             <div class="summary-avatar">{{ (form.fullName || 'V')[0] }}</div>
             <div class="summary-main">
-              <div class="summary-title">{{ form.fullName || 'Logged-in visitor' }}</div>
-              <div class="summary-subtitle">MeghaConnect profile details will be used for this appointment.</div>
+              <div class="summary-title">{{ form.fullName || 'Selected visitor' }}</div>
+              <div class="summary-subtitle">{{ applicantSummaryText }}</div>
             </div>
           </div>
           <div class="readonly-grid">
@@ -80,7 +80,7 @@
             <div><span>KYC Status</span><strong>{{ visitorKycStatus || 'PENDING' }}</strong></div>
           </div>
           <div class="info-box" style="margin-top:1rem">
-            Personal information is pulled from your logged-in visitor profile and is not collected again on this form.
+            {{ applicantInfoText }}
           </div>
         </ng-container>
 

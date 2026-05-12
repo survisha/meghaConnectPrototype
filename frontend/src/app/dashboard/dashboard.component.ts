@@ -231,7 +231,7 @@ export class DashboardComponent implements OnInit {
     const role = this.auth.user()?.role;
     const all: (QuickAction & { roles: string[] })[] = [
       { label: 'New Appointment', matIcon: 'add', route: '/appointments/new', severity: '',
-        roles: ['ADMIN','OSD','DATA_ENTRY_OPERATOR'] },
+        roles: ['ADMIN','OSD'] },
       { label: 'Walk-in Counter', matIcon: 'login', route: '/appointments/walkin', severity: 'success',
         roles: ['ADMIN','OSD','DATA_ENTRY_OPERATOR'] },
       { label: 'Register Visitor', matIcon: 'person_add', route: '/deo/register-visitor', severity: 'success',

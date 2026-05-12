@@ -9,6 +9,14 @@
     <mat-icon class="spinner">progress_activity</mat-icon> Loading AI insights…
   </div>
 
+  <div *ngIf="!loading && errorMsg" class="loading-state">
+    <mat-icon>error</mat-icon> {{ errorMsg }}
+  </div>
+
+  <div *ngIf="!loading && !errorMsg && !insights" class="loading-state">
+    <mat-icon>insights</mat-icon> No AI insights available.
+  </div>
+
   <ng-container *ngIf="!loading && insights">
     <!-- Total this month -->
     <div class="total-stat">

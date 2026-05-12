@@ -3,11 +3,13 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
+import { Appointment } from '../../models';
+import { AppointmentService } from '../../services/appointment.service';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
-import { MatDialogModule, MatDialog } from '@angular/material/dialog';
+import { MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatDatepickerModule } from '@angular/material/datepicker';
@@ -16,6 +18,34 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatBadgeModule } from '@angular/material/badge';
 import { apiErrorMessage } from '../../shared/api-error.util';
+
+interface HcmAppointmentCard {
+  id: number;
+  subject: string;
+  dateTime?: string;
+  location: string;
+  type: string;
+  category: string;
+  description?: string;
+}
+
+interface HcmActionDto {
+  id?: number;
+  appointmentId?: number;
+  actionType?: string;
+  actionStatus?: string;
+  acceptedDateTime?: string;
+  requestedEarlierDateTime?: string;
+  snoozeType?: string;
+  snoozeDurationDays?: number;
+  snoozedUntil?: string;
+  clarificationRequested?: string;
+  hcmRemarks?: string;
+  gestureType?: string;
+  originalDateTime?: string;
+  originalLocation?: string;
+  appointmentSubject?: string;
+}
 
 /**
  * HCM Dashboard Component
@@ -47,11 +77,14 @@ import { apiErrorMessage } from '../../shared/api-error.util';
 })
 export class HcmDashboardComponent implements OnInit {
   
-  appointments: any[] = [];
-  pendingWorkItems: any[] = [];
-  loading = false;
+  appointments: HcmAppointmentCard[] = [];
+  pendingWorkItems: HcmActionDto[] = [];
+  loadingAppointments = false;
+  loadingPendingWork = false;
+  submittingAction = false;
   pendingWorkCount = 0;
   errorMsg = '';
+  private apiErrors = new Map<string, string>();
   
   // Swipe tracking
   touchStartX = 0;
@@ -77,16 +110,10 @@ export class HcmDashboardComponent implements OnInit {
   
   constructor(
     private http: HttpClient,
-    private dialog: MatDialog
+    private appointmentService: AppointmentService,
   ) {}
   
   ngOnInit() {
-    // Initialize with dummy data first
-    this.appointments = this.getDummyAppointments();
-    this.pendingWorkItems = this.getDummyPendingWorkItems();
-    this.pendingWorkCount = this.getDummyPendingWorkItems().length;
-    
-    // Try to fetch from API (optional)
     this.loadAppointments();
     this.loadPendingWorkItems();
     this.getPendingWorkCount();
@@ -96,23 +123,21 @@ export class HcmDashboardComponent implements OnInit {
    * Load appointments for HCM
    */
   loadAppointments() {
-    this.loading = true;
-    this.http.get<any[]>(`${environment.apiUrl}/hcm/actions/pending-work`)
+    this.loadingAppointments = true;
+    this.appointmentService.getApproverAppointments(0, 1000)
       .subscribe({
-        next: (data) => {
-          // Only use API data if it has items, otherwise keep dummy data
-          if (data && data.length > 0) {
-            this.appointments = data;
-          }
-          this.errorMsg = '';
-          this.loading = false;
+        next: page => {
+          this.appointments = (page.content ?? [])
+            .filter(appointment => appointment.status === 'HCM_PENDING')
+            .map(appointment => this.mapAppointmentCard(appointment));
+          this.clearApiError('appointments');
+          this.loadingAppointments = false;
         },
-        error: (err) => {
-          console.error('Error loading appointments', err);
-          this.errorMsg = apiErrorMessage(err, 'Unable to load HCM appointments. Showing local sample data.');
-          // Keep the dummy data already loaded
-          this.loading = false;
-        }
+        error: err => {
+          this.appointments = [];
+          this.setApiError('appointments', err, 'Unable to load HCM appointments.');
+          this.loadingAppointments = false;
+        },
       });
   }
   
@@ -120,21 +145,21 @@ export class HcmDashboardComponent implements OnInit {
    * Load pending work items
    */
   loadPendingWorkItems() {
-    this.http.get<any[]>(`${environment.apiUrl}/hcm/actions/pending-work`)
+    this.loadingPendingWork = true;
+    this.http.get<unknown>(`${environment.apiUrl}/hcm/actions/pending-work`)
       .subscribe({
-        next: (data) => {
-          // Only use API data if it has items, otherwise keep dummy data
-          if (data && data.length > 0) {
-            this.pendingWorkItems = data;
-            this.pendingWorkCount = data.length;
-          }
-          this.errorMsg = '';
+        next: data => {
+          this.pendingWorkItems = this.normalizeActionList(data);
+          this.pendingWorkCount = this.pendingWorkItems.length;
+          this.clearApiError('pendingWork');
+          this.loadingPendingWork = false;
         },
-        error: (err) => {
-          console.error('Error loading pending work items', err);
-          this.errorMsg = apiErrorMessage(err, 'Unable to load pending work items. Showing local sample data.');
-          // Keep the dummy data already loaded
-        }
+        error: err => {
+          this.pendingWorkItems = [];
+          this.pendingWorkCount = 0;
+          this.setApiError('pendingWork', err, 'Unable to load pending work items.');
+          this.loadingPendingWork = false;
+        },
       });
   }
   
@@ -142,16 +167,13 @@ export class HcmDashboardComponent implements OnInit {
    * Get pending work count for badge
    */
   getPendingWorkCount() {
-    this.http.get<number>(`${environment.apiUrl}/hcm/actions/pending-work/count`)
+    this.http.get<unknown>(`${environment.apiUrl}/hcm/actions/pending-work/count`)
       .subscribe({
-        next: (count) => {
-          this.pendingWorkCount = count || this.getDummyPendingWorkItems().length;
+        next: count => {
+          this.pendingWorkCount = this.normalizeCount(count);
+          this.clearApiError('pendingWorkCount');
         },
-        error: (err) => {
-          console.error('Error getting pending work count', err);
-          this.errorMsg = apiErrorMessage(err, 'Unable to load pending work count. Showing local sample data.');
-          this.pendingWorkCount = this.getDummyPendingWorkItems().length;
-        }
+        error: err => this.setApiError('pendingWorkCount', err, 'Unable to load pending work count.'),
       });
   }
   
@@ -252,7 +274,8 @@ export class HcmDashboardComponent implements OnInit {
     if (!this.selectedAppointment) return;
     
     const payload = {
-      originalDateTime: this.selectedAppointment.dateTime,
+      acceptedDateTime: this.toApiDateTime(this.selectedAppointment.dateTime),
+      originalDateTime: this.toApiDateTime(this.selectedAppointment.dateTime),
       originalLocation: this.selectedAppointment.location,
       appointmentSubject: this.selectedAppointment.subject,
       hcmRemarks: this.actionFormData.remarks
@@ -268,8 +291,8 @@ export class HcmDashboardComponent implements OnInit {
     if (!this.selectedAppointment) return;
     
     const payload = {
-      requestedEarlierDateTime: this.actionFormData.modifiedDateTime,
-      originalDateTime: this.selectedAppointment.dateTime,
+      requestedEarlierDateTime: this.toApiDateTime(this.actionFormData.modifiedDateTime),
+      originalDateTime: this.toApiDateTime(this.selectedAppointment.dateTime),
       originalLocation: this.selectedAppointment.location,
       appointmentSubject: this.selectedAppointment.subject,
       hcmRemarks: this.actionFormData.remarks
@@ -288,8 +311,8 @@ export class HcmDashboardComponent implements OnInit {
     }
     
     const payload = {
-      acceptedDateTime: this.actionFormData.modifiedDateTime,
-      originalDateTime: this.selectedAppointment.dateTime,
+      acceptedDateTime: this.toApiDateTime(this.actionFormData.modifiedDateTime),
+      originalDateTime: this.toApiDateTime(this.selectedAppointment.dateTime),
       originalLocation: this.selectedAppointment.location,
       appointmentSubject: this.selectedAppointment.subject,
       hcmRemarks: this.actionFormData.remarks
@@ -306,7 +329,7 @@ export class HcmDashboardComponent implements OnInit {
     
     const payload = {
       snoozeType: this.actionFormData.snoozeType,
-      originalDateTime: this.selectedAppointment.dateTime,
+      originalDateTime: this.toApiDateTime(this.selectedAppointment.dateTime),
       originalLocation: this.selectedAppointment.location,
       appointmentSubject: this.selectedAppointment.subject,
       hcmRemarks: this.actionFormData.remarks
@@ -323,7 +346,7 @@ export class HcmDashboardComponent implements OnInit {
     
     const payload = {
       clarificationRequested: this.actionFormData.clarification,
-      originalDateTime: this.selectedAppointment.dateTime,
+      originalDateTime: this.toApiDateTime(this.selectedAppointment.dateTime),
       originalLocation: this.selectedAppointment.location,
       appointmentSubject: this.selectedAppointment.subject,
       hcmRemarks: this.actionFormData.remarks
@@ -336,11 +359,11 @@ export class HcmDashboardComponent implements OnInit {
    * Submit action to backend
    */
   submitAction(endpoint: string, payload: any) {
-    this.loading = true;
+    this.submittingAction = true;
     this.http.post(`${environment.apiUrl}/hcm/actions${endpoint}`, payload)
       .subscribe({
         next: () => {
-          this.errorMsg = '';
+          this.clearApiError('submitAction');
           alert('Action submitted successfully');
           this.resetActionForm();
           this.showActionMenu = false;
@@ -348,13 +371,12 @@ export class HcmDashboardComponent implements OnInit {
           this.loadAppointments();
           this.loadPendingWorkItems();
           this.getPendingWorkCount();
-          this.loading = false;
+          this.submittingAction = false;
         },
-        error: (err) => {
-          console.error('Error submitting action', err);
-          alert('Error submitting action: ' + apiErrorMessage(err, 'Unknown error'));
-          this.loading = false;
-        }
+        error: err => {
+          this.setApiError('submitAction', err, 'Error submitting action.');
+          this.submittingAction = false;
+        },
       });
   }
   
@@ -383,7 +405,7 @@ export class HcmDashboardComponent implements OnInit {
   /**
    * Get status badge color
    */
-  getStatusColor(status: string): string {
+  getStatusColor(status?: string): string {
     switch (status) {
       case 'PENDING': return '#ff9800';
       case 'CONFIRMED': return '#4caf50';
@@ -405,114 +427,84 @@ export class HcmDashboardComponent implements OnInit {
     }
   }
 
-  /**
-   * Get dummy appointments for demo
-   */
-  getDummyAppointments(): any[] {
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const nextWeek = new Date(today);
-    nextWeek.setDate(nextWeek.getDate() + 7);
-
-    return [
-      {
-        id: 1,
-        subject: 'Budget Review Meeting',
-        dateTime: tomorrow.toISOString(),
-        location: 'Conference Room A, State Secretariat',
-        type: 'Meeting',
-        category: 'Finance',
-        description: 'Quarterly budget review and allocation discussion'
-      },
-      {
-        id: 2,
-        subject: 'Cabinet Meeting',
-        dateTime: new Date(tomorrow.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-        location: 'Main Assembly Hall',
-        type: 'Meeting',
-        category: 'Administrative',
-        description: 'Weekly cabinet meeting for policy decisions'
-      },
-      {
-        id: 3,
-        subject: 'Public Health Initiative Discussion',
-        dateTime: nextWeek.toISOString(),
-        location: 'Health Ministry Office',
-        type: 'Discussion',
-        category: 'Health',
-        description: 'Discussion on new public health initiatives for the state'
-      },
-      {
-        id: 4,
-        subject: 'Education Sector Review',
-        dateTime: new Date(nextWeek.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-        location: 'Education Ministry',
-        type: 'Meeting',
-        category: 'Education',
-        description: 'Review of education sector performance and improvements'
-      },
-      {
-        id: 5,
-        subject: 'Tourism Development Committee',
-        dateTime: new Date(nextWeek.getTime() + 4 * 24 * 60 * 60 * 1000).toISOString(),
-        location: 'Tourism Board Office',
-        type: 'Committee',
-        category: 'Development',
-        description: 'Discussion on tourism development projects in Meghalaya'
-      }
-    ];
+  private mapAppointmentCard(appointment: Appointment): HcmAppointmentCard {
+    return {
+      id: appointment.id,
+      subject: appointment.subject || appointment.agendaType || appointment.applicationId || `Appointment #${appointment.id}`,
+      dateTime: appointment.scheduledDateTime || appointment.createdAt || appointment.submittedAt,
+      location: appointment.requestedLocation || 'Not specified',
+      type: appointment.appointmentType || appointment.eventType || 'Appointment',
+      category: appointment.department || appointment.agendaType || 'General',
+      description: appointment.agendaBrief || appointment.shortNotes || appointment.cmoRemarks || appointment.approverRemarks,
+    };
   }
 
-  /**
-   * Get dummy pending work items for demo
-   */
-  getDummyPendingWorkItems(): any[] {
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const nextWeek = new Date(today);
-    nextWeek.setDate(nextWeek.getDate() + 7);
-    const twoWeeks = new Date(today);
-    twoWeeks.setDate(twoWeeks.getDate() + 14);
+  private normalizeActionList(response: unknown): HcmActionDto[] {
+    const data = this.unwrapData<unknown>(response);
+    return Array.isArray(data) ? data.map(item => this.mapHcmAction(item)) : [];
+  }
 
-    return [
-      {
-        appointmentSubject: 'Budget Review Meeting',
-        actionType: 'MARK_IMPORTANT',
-        actionStatus: 'PENDING',
-        originalDateTime: tomorrow.toISOString(),
-        originalLocation: 'Conference Room A, State Secretariat',
-        requestedEarlierDateTime: new Date(today.getTime() + 6 * 60 * 60 * 1000).toISOString(),
-        hcmRemarks: 'Marked as important - requires earlier scheduling'
-      },
-      {
-        appointmentSubject: 'Cabinet Meeting',
-        actionType: 'ACCEPT_WITH_CHANGES',
-        actionStatus: 'CONFIRMED',
-        originalDateTime: new Date(tomorrow.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-        originalLocation: 'Main Assembly Hall',
-        acceptedDateTime: new Date(tomorrow.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-        hcmRemarks: 'Accepted with date modification as per convenience'
-      },
-      {
-        appointmentSubject: 'Public Health Initiative Discussion',
-        actionType: 'SNOOZE',
-        actionStatus: 'PENDING',
-        originalDateTime: nextWeek.toISOString(),
-        originalLocation: 'Health Ministry Office',
-        snoozedUntil: new Date(nextWeek.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        hcmRemarks: 'Snoozed for 7 days - to be revisited later'
-      },
-      {
-        appointmentSubject: 'Education Sector Review',
-        actionType: 'REJECT',
-        actionStatus: 'PENDING',
-        originalDateTime: new Date(nextWeek.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-        originalLocation: 'Education Ministry',
-        clarificationRequested: 'Please provide more details on the expected outcomes and participants. Also, need confirmation on time slot.',
-        hcmRemarks: 'Clarification requested - awaiting response from CMO'
-      }
-    ];
+  private mapHcmAction(item: unknown): HcmActionDto {
+    const raw: any = item ?? {};
+    return {
+      id: raw.id,
+      appointmentId: raw.appointmentId,
+      actionType: raw.actionType || 'PENDING',
+      actionStatus: raw.actionStatus || 'PENDING',
+      acceptedDateTime: raw.acceptedDateTime,
+      requestedEarlierDateTime: raw.requestedEarlierDateTime,
+      snoozeType: raw.snoozeType,
+      snoozeDurationDays: raw.snoozeDurationDays,
+      snoozedUntil: raw.snoozedUntil,
+      clarificationRequested: raw.clarificationRequested,
+      hcmRemarks: raw.hcmRemarks,
+      gestureType: raw.gestureType,
+      originalDateTime: raw.originalDateTime,
+      originalLocation: raw.originalLocation || 'Not specified',
+      appointmentSubject: raw.appointmentSubject || (raw.appointmentId ? `Appointment #${raw.appointmentId}` : 'Appointment'),
+    };
+  }
+
+  private normalizeCount(response: unknown): number {
+    const data = this.unwrapData<unknown>(response);
+    const count = Number(data);
+    return Number.isFinite(count) ? count : this.pendingWorkItems.length;
+  }
+
+  private unwrapData<T = unknown>(response: unknown): T {
+    const raw: any = response;
+    if (raw && typeof raw === 'object' && 'data' in raw && 'success' in raw) {
+      return raw.data as T;
+    }
+    return response as T;
+  }
+
+  private setApiError(key: string, error: unknown, fallbackMessage: string): void {
+    this.apiErrors.set(key, apiErrorMessage(error, fallbackMessage));
+    this.syncApiErrors();
+  }
+
+  private clearApiError(key: string): void {
+    if (this.apiErrors.delete(key)) {
+      this.syncApiErrors();
+    }
+  }
+
+  private syncApiErrors(): void {
+    this.errorMsg = Array.from(this.apiErrors.values()).join(' ');
+  }
+
+  private toApiDateTime(value: string | Date | null | undefined): string | null {
+    if (!value) {
+      return null;
+    }
+
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return null;
+    }
+
+    const pad = (part: number) => part.toString().padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
   }
 }

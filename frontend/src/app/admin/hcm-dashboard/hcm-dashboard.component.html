@@ -19,7 +19,7 @@
       <div class="tab-content">
         
         <!-- Loading indicator -->
-        <mat-spinner *ngIf="loading" diameter="40" class="spinner"></mat-spinner>
+        <mat-spinner *ngIf="loadingAppointments" diameter="40" class="spinner"></mat-spinner>
 
         <!-- Instructions -->
         <div class="gesture-instructions">
@@ -94,7 +94,7 @@
           </mat-card>
 
           <!-- Empty state -->
-          <div *ngIf="appointments.length === 0 && !loading" class="empty-state">
+          <div *ngIf="appointments.length === 0 && !loadingAppointments" class="empty-state">
             <mat-icon>inbox</mat-icon>
             <p>No appointments to review</p>
           </div>
@@ -109,8 +109,10 @@
         <span *ngIf="pendingWorkCount > 0" class="tab-badge">{{ pendingWorkCount }}</span>
       </ng-template>
       <div class="tab-content">
+
+        <mat-spinner *ngIf="loadingPendingWork" diameter="40" class="spinner"></mat-spinner>
         
-        <div class="pending-work-list" *ngIf="pendingWorkItems.length > 0; else noPending">
+        <div class="pending-work-list" *ngIf="!loadingPendingWork && pendingWorkItems.length > 0; else noPending">
           <mat-card *ngFor="let item of pendingWorkItems" class="pending-item-card">
             <mat-card-header>
               <mat-card-title>{{ item.appointmentSubject }}</mat-card-title>
@@ -158,7 +160,7 @@
         </div>
 
         <ng-template #noPending>
-          <div class="empty-state">
+          <div *ngIf="!loadingPendingWork" class="empty-state">
             <mat-icon>checklist</mat-icon>
             <p>No pending work items</p>
           </div>
@@ -260,27 +262,27 @@
 
       <!-- Modal footer with action buttons -->
       <div class="modal-footer">
-        <button mat-button (click)="closeActionMenu()">Cancel</button>
+        <button mat-button (click)="closeActionMenu()" [disabled]="submittingAction">Cancel</button>
         
         <!-- RIGHT SWIPE ACTIONS -->
         <ng-container *ngIf="selectedActionType === 'RIGHT_SWIPE'">
-          <button mat-raised-button color="primary" (click)="acceptAppointment()">
+          <button mat-raised-button color="primary" (click)="acceptAppointment()" [disabled]="submittingAction">
             <mat-icon>done_all</mat-icon> Accept
           </button>
-          <button mat-raised-button color="accent" (click)="markImportantAndReschedule()">
+          <button mat-raised-button color="accent" (click)="markImportantAndReschedule()" [disabled]="submittingAction">
             <mat-icon>star</mat-icon> Mark Important
           </button>
-          <button mat-raised-button (click)="modifyAppointmentDateTime()">
+          <button mat-raised-button (click)="modifyAppointmentDateTime()" [disabled]="submittingAction">
             <mat-icon>edit</mat-icon> Modify
           </button>
         </ng-container>
         
         <!-- LEFT SWIPE ACTIONS -->
         <ng-container *ngIf="selectedActionType === 'LEFT_SWIPE'">
-          <button mat-raised-button color="warn" (click)="snoozeAppointment()">
+          <button mat-raised-button color="warn" (click)="snoozeAppointment()" [disabled]="submittingAction">
             <mat-icon>schedule</mat-icon> Snooze
           </button>
-          <button mat-raised-button color="warn" (click)="rejectAndRequestClarification()">
+          <button mat-raised-button color="warn" (click)="rejectAndRequestClarification()" [disabled]="submittingAction">
             <mat-icon>cancel</mat-icon> Reject
           </button>
         </ng-container>

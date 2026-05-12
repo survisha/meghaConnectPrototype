@@ -46,4 +46,16 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long>,
 
     @Query("SELECT COUNT(a) FROM Appointment a WHERE a.createdAt >= :from")
     long countCreatedSince(@Param("from") java.time.LocalDateTime from);
+
+    @Query("SELECT a FROM Appointment a JOIN FETCH a.applicant " +
+        "WHERE a.scheduledDateTime IS NOT NULL " +
+        "ORDER BY a.scheduledDateTime ASC")
+    List<Appointment> findScheduledWithApplicant();
+
+    @Query("SELECT a FROM Appointment a JOIN FETCH a.applicant " +
+        "WHERE a.scheduledDateTime >= :start AND a.scheduledDateTime < :end " +
+        "ORDER BY a.scheduledDateTime ASC")
+    List<Appointment> findScheduledWithApplicantInRange(
+        @Param("start") java.time.LocalDateTime start,
+        @Param("end") java.time.LocalDateTime end);
 }

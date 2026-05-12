@@ -113,6 +113,13 @@
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef class="actions-header">Actions</th>
             <td mat-cell *matCellDef="let appt" class="actions-cell">
+              <button mat-icon-button
+                      color="primary"
+                      (click)="openViewDetails(appt)"
+                      matTooltip="View Details">
+                <mat-icon>visibility</mat-icon>
+              </button>
+
               <!-- CMO Review Button - Only for CMO_OFFICER and CMO_REVIEW status -->
               <button mat-icon-button
                       *ngIf="auth.hasRole('CMO_OFFICER') && appt.status === 'CMO_REVIEW'"
@@ -120,15 +127,6 @@
                       (click)="openCmoReview(appt)"
                       matTooltip="CMO Review">
                 <mat-icon>rate_review</mat-icon>
-              </button>
-              
-              <!-- View Button for other roles or non-CMO_REVIEW status -->
-              <button mat-icon-button
-                      *ngIf="!auth.hasRole('CMO_OFFICER') || appt.status !== 'CMO_REVIEW'"
-                      color="primary" 
-                      [routerLink]="['/appointments', appt.id]"
-                      matTooltip="View Details">
-                <mat-icon>visibility</mat-icon>
               </button>
             </td>
           </ng-container>
@@ -147,3 +145,128 @@
     </div>
   </div>
 </div>
+
+<ng-template #appointmentDetailsDialog>
+  <div class="details-dialog-title" mat-dialog-title *ngIf="selectedAppointment">
+    <div>
+      <span class="eyebrow">Appointment Details</span>
+      <h2>{{ selectedAppointment.applicationId }}</h2>
+    </div>
+    <button mat-icon-button aria-label="Close" (click)="closeViewDetails()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <mat-dialog-content class="details-dialog-content" *ngIf="selectedAppointment">
+    <div class="details-summary">
+      <mat-chip [class]="'status-chip status-' + getStatusSeverity(selectedAppointment.status)">
+        {{ getStatusLabel(selectedAppointment.status) }}
+      </mat-chip>
+      <span class="event-badge" [class]="'type-' + selectedAppointment.eventType">{{ selectedAppointment.eventType }}</span>
+      <span>{{ (selectedAppointment.submittedAt || selectedAppointment.createdAt) | date:'medium' }}</span>
+    </div>
+
+    <div class="details-grid">
+      <div>
+        <span class="field-label">Applicant</span>
+        <strong>{{ selectedAppointment.applicant.fullName || selectedAppointment.applicantName || '—' }}</strong>
+        <span>{{ selectedAppointment.applicant.designation || '—' }}</span>
+      </div>
+      <div>
+        <span class="field-label">Mobile</span>
+        <strong>{{ selectedAppointment.applicant.phoneNumber || selectedAppointment.applicantPhone || '—' }}</strong>
+        <span>EPIC: {{ selectedAppointment.applicant.epicNumber || '—' }}</span>
+      </div>
+      <div>
+        <span class="field-label">District</span>
+        <strong>{{ selectedAppointment.applicant.district || '—' }}</strong>
+        <span>{{ selectedAppointment.applicant.constituency || '—' }}</span>
+      </div>
+      <div>
+        <span class="field-label">Requested Location</span>
+        <strong>{{ selectedAppointment.requestedLocation || '—' }}</strong>
+        <span>MLA/MDC: {{ selectedAppointment.mlaMdcApproved ? 'Approved' : 'Not approved' }}</span>
+      </div>
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <section class="detail-section">
+      <h3>Agenda</h3>
+      <div class="detail-row">
+        <span>Type</span>
+        <strong>{{ selectedAppointment.agendaType || selectedAppointment.subject || '—' }}</strong>
+      </div>
+      <div class="description-box">
+        {{ selectedAppointment.agendaBrief || 'No description provided.' }}
+      </div>
+    </section>
+
+    <section class="detail-section" *ngIf="selectedAppointment.shortNotes">
+      <h3>Short Notes</h3>
+      <div class="description-box">{{ selectedAppointment.shortNotes }}</div>
+    </section>
+
+    <section class="detail-section" *ngIf="selectedAppointment.cmoRemarks">
+      <h3>CMO Remarks</h3>
+      <div class="description-box">{{ selectedAppointment.cmoRemarks }}</div>
+    </section>
+
+    <section class="detail-section" *ngIf="selectedAppointment.scheduledDateTime">
+      <h3>Schedule</h3>
+      <div class="detail-row">
+        <span>Date &amp; Time</span>
+        <strong>{{ selectedAppointment.scheduledDateTime | date:'medium' }}</strong>
+      </div>
+      <div class="detail-row">
+        <span>Duration</span>
+        <strong>{{ selectedAppointment.scheduledDurationMinutes || 0 }} minutes</strong>
+      </div>
+    </section>
+
+    <section class="detail-section">
+      <div class="documents-title">
+        <h3>Attached Documents</h3>
+        <span>{{ documents.length }} file(s)</span>
+      </div>
+
+      <div class="documents-loading" *ngIf="documentsLoading">
+        <mat-spinner diameter="28"></mat-spinner>
+        <span>Loading documents...</span>
+      </div>
+
+      <div class="documents-error" *ngIf="!documentsLoading && documentsError">
+        <mat-icon>error_outline</mat-icon>
+        {{ documentsError }}
+      </div>
+
+      <div class="documents-empty" *ngIf="!documentsLoading && !documentsError && documents.length === 0">
+        <mat-icon>folder_off</mat-icon>
+        No documents attached.
+      </div>
+
+      <div class="documents-list" *ngIf="!documentsLoading && documents.length > 0">
+        <div class="document-row" *ngFor="let doc of documents; trackBy: trackByDocumentId">
+          <mat-icon>description</mat-icon>
+          <div>
+            <strong>{{ doc.fileName }}</strong>
+            <span>{{ formatDocumentType(doc.documentType) }} · {{ fileSizeLabel(doc.fileSize) }} · {{ doc.uploadedAt | date:'short' }}</span>
+          </div>
+          <a *ngIf="doc.filePath" mat-icon-button [href]="getDocumentUrl(doc)" target="_blank" rel="noopener" matTooltip="Open document">
+            <mat-icon>open_in_new</mat-icon>
+          </a>
+        </div>
+      </div>
+    </section>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end" class="details-dialog-actions">
+    <button mat-stroked-button (click)="closeViewDetails()">Close</button>
+    <button mat-raised-button color="accent"
+            *ngIf="selectedAppointment && auth.hasRole('CMO_OFFICER') && selectedAppointment.status === 'CMO_REVIEW'"
+            (click)="openCmoReviewFromDetails()">
+      <mat-icon>rate_review</mat-icon>
+      CMO Review
+    </button>
+  </mat-dialog-actions>
+</ng-template>

@@ -103,6 +103,12 @@ export interface ScheduleEvent {
   isConflict?: boolean;
   description?: string;
   shortNotes?: string;
+  sourceType?: 'SCHEDULE_EVENT' | 'APPOINTMENT';
+  sourceId?: number;
+  appointmentId?: number;
+  appointment?: Appointment;
+  appointments?: Appointment[];
+  appointmentCount?: number;
 }
 
 export interface SchemeApplication {

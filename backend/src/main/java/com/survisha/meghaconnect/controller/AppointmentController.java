@@ -1,6 +1,7 @@
 package com.survisha.meghaconnect.controller;
 
 import com.survisha.meghaconnect.dto.AppointmentMultipartRequest;
+import com.survisha.meghaconnect.dto.AppointmentDocumentDto;
 import com.survisha.meghaconnect.dto.AppointmentDto;
 import com.survisha.meghaconnect.entity.Appointment;
 import com.survisha.meghaconnect.service.AppointmentService;
@@ -66,6 +67,14 @@ public class AppointmentController {
             .map(appointmentService::toDto)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
+    }
+
+    @Operation(summary = "Get appointment documents", description = "Retrieve documents attached to an appointment")
+    @GetMapping("/{id}/documents")
+    @PreAuthorize("hasAnyRole('CMO_OFFICER','APPROVER','HCM','OSD','ADMIN','DATA_ENTRY_OPERATOR')")
+    public ResponseEntity<List<AppointmentDocumentDto>> getDocuments(@PathVariable Long id) {
+        logEndpoint("/api/v1/appointments/{id}/documents");
+        return ResponseEntity.ok(appointmentService.findDocumentDtos(id));
     }
 
     @Operation(summary = "Get appointment by application ID", description = "Retrieve a specific appointment by its application ID")
@@ -167,6 +176,18 @@ public class AppointmentController {
             @AuthenticationPrincipal UserDetails user) {
         logEndpoint("/api/v1/appointments/{id}/status");
         return ResponseEntity.ok(appointmentService.toDto(appointmentService.updateStatus(id, body, user.getUsername())));
+    }
+
+    @Operation(summary = "Submit CMO review", description = "Persist CMO category/location review, missing information note, and forwarding status")
+    @PostMapping("/{id}/cmo-review")
+    @PreAuthorize("hasAnyRole('CMO_OFFICER','OSD','ADMIN')")
+    public ResponseEntity<AppointmentDto> submitCmoReview(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> body,
+            @AuthenticationPrincipal UserDetails user) {
+        logEndpoint("/api/v1/appointments/{id}/cmo-review");
+        String actor = user != null ? user.getUsername() : "system";
+        return ResponseEntity.ok(appointmentService.toDto(appointmentService.submitCmoReview(id, body, actor)));
     }
 
     @Operation(summary = "Schedule appointment", description = "Schedule an appointment with date and duration")

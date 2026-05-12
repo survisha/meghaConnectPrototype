@@ -1,11 +1,12 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, TemplateRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AppointmentService } from '../../services/appointment.service';
 import { AuthService } from '../../services/auth.service';
-import { Appointment, AppointmentStatus } from '../../models';
+import { Appointment, AppointmentDocument, AppointmentStatus } from '../../models';
 import { environment } from '../../../environments/environment';
+import { finalize } from 'rxjs/operators';
 import { MatTableModule } from '@angular/material/table';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatButtonModule } from '@angular/material/button';
@@ -17,6 +18,8 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatCardModule } from '@angular/material/card';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { CmoReviewModalComponent } from '../cmo-review-modal/cmo-review-modal.component';
 
 @Component({
@@ -36,14 +39,22 @@ import { CmoReviewModalComponent } from '../cmo-review-modal/cmo-review-modal.co
     MatChipsModule,
     MatDialogModule,
     MatCardModule,
-    MatTooltipModule
+    MatTooltipModule,
+    MatDividerModule,
+    MatProgressSpinnerModule
   ],
   templateUrl: './appointment-list.component.html',
   styleUrls: ['./appointment-list.component.scss'],
 })
 export class AppointmentListComponent implements OnInit {
+  @ViewChild('appointmentDetailsDialog') appointmentDetailsDialog!: TemplateRef<unknown>;
+
   appointments: Appointment[] = [];
   filtered: Appointment[] = [];
+  selectedAppointment: Appointment | null = null;
+  documents: AppointmentDocument[] = [];
+  documentsLoading = false;
+  documentsError = '';
   search = '';
   filterStatus = '';
   loading = false;
@@ -273,6 +284,65 @@ export class AppointmentListComponent implements OnInit {
 
   getStatusLabel(s: AppointmentStatus) {
     return s.replace(/_/g, ' ');
+  }
+
+  openViewDetails(appointment: Appointment) {
+    this.selectedAppointment = appointment;
+    this.loadDocuments(appointment.id);
+    this.dialog.open(this.appointmentDetailsDialog, {
+      width: '940px',
+      maxWidth: '96vw',
+      autoFocus: false,
+      panelClass: 'appointment-details-dialog-panel'
+    });
+  }
+
+  closeViewDetails() {
+    this.dialog.closeAll();
+    this.selectedAppointment = null;
+    this.documents = [];
+    this.documentsError = '';
+  }
+
+  private loadDocuments(appointmentId: number) {
+    this.documents = [];
+    this.documentsError = '';
+    this.documentsLoading = true;
+    this.appointmentService.getAppointmentDocuments(appointmentId)
+      .pipe(finalize(() => this.documentsLoading = false))
+      .subscribe({
+        next: documents => this.documents = documents,
+        error: () => this.documentsError = 'Unable to load attached documents.'
+      });
+  }
+
+  formatDocumentType(type?: string) {
+    return (type || 'Document').replace(/_/g, ' ').toLowerCase()
+      .replace(/\b\w/g, char => char.toUpperCase());
+  }
+
+  fileSizeLabel(size?: number) {
+    if (!size) return '—';
+    if (size < 1024 * 1024) return `${Math.max(1, Math.round(size / 1024))} KB`;
+    return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  getDocumentUrl(doc: AppointmentDocument) {
+    const cleanPath = (doc.filePath || '').replace(/^\/+/, '');
+    if (!cleanPath) return '#';
+    const origin = environment.apiUrl.replace(/\/api\/v1\/?$/, '');
+    return `${origin}/${cleanPath.startsWith('uploads/') ? cleanPath : `uploads/${cleanPath}`}`;
+  }
+
+  trackByDocumentId(index: number, doc: AppointmentDocument) {
+    return doc.id ?? index;
+  }
+
+  openCmoReviewFromDetails() {
+    if (!this.selectedAppointment) return;
+    const appointment = this.selectedAppointment;
+    this.closeViewDetails();
+    this.openCmoReview(appointment);
   }
 
   /**

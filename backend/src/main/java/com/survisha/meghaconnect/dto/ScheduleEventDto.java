@@ -3,6 +3,7 @@ package com.survisha.meghaconnect.dto;
 import com.survisha.meghaconnect.entity.Appointment;
 import lombok.*;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class ScheduleEventDto {
@@ -14,5 +15,12 @@ public class ScheduleEventDto {
     private Appointment.MeetingLocation location;
     private Integer travelTimeMinutes;
     private String description;
+    private String shortNotes;
     private boolean isConflict;
+    private String sourceType;
+    private Long sourceId;
+    private Long appointmentId;
+    private AppointmentDto appointment;
+    private List<AppointmentDto> appointments;
+    private Integer appointmentCount;
 }

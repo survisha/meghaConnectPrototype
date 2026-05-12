@@ -1,41 +1,29 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Observable } from 'rxjs';
 import { ScheduleEvent } from '../models';
 import { environment } from '../../environments/environment';
-import { MockDataService } from './mock-data.service';
 
 @Injectable({ providedIn: 'root' })
 export class ScheduleEventService {
 
   private readonly baseUrl = environment.apiUrl + '/schedule';
 
-  constructor(
-    private http: HttpClient,
-    private mockDataService: MockDataService
-  ) {}
+  constructor(private http: HttpClient) {}
 
-  getAll(): Observable<ScheduleEvent[]> {
-    return this.http.get<ScheduleEvent[]>(this.baseUrl).pipe(
-      map(events => {
-        // If API returns empty array or null, use dummy data for demo purposes
-        if (!events || events.length === 0) {
-          return this.mockDataService.scheduleEvents;
-        }
-        return events;
-      }),
-      catchError(err => {
-        console.error('[ScheduleEventService] API call failed, using dummy data for demo:', err);
-        return of(this.mockDataService.scheduleEvents);
-      })
-    );
+  getAll(range?: { start?: string; end?: string }): Observable<ScheduleEvent[]> {
+    let params = new HttpParams();
+    if (range?.start) {
+      params = params.set('start', range.start);
+    }
+    if (range?.end) {
+      params = params.set('end', range.end);
+    }
+    return this.http.get<ScheduleEvent[]>(this.baseUrl, { params });
   }
 
-  getById(id: number): Observable<ScheduleEvent | null> {
-    return this.http.get<ScheduleEvent>(`${this.baseUrl}/${id}`).pipe(
-      catchError(() => of(null))
-    );
+  getById(id: number): Observable<ScheduleEvent> {
+    return this.http.get<ScheduleEvent>(`${this.baseUrl}/${id}`);
   }
 
   create(event: Partial<ScheduleEvent>): Observable<ScheduleEvent> {

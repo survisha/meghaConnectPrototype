@@ -37,6 +37,9 @@ public class ScheduleEvent extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Column(columnDefinition = "TEXT")
+    private String shortNotes;
+
     private boolean isConflict = false;
 
     @OneToMany(mappedBy = "scheduleEvent", fetch = FetchType.LAZY)

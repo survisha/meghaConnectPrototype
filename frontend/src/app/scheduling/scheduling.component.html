@@ -25,6 +25,11 @@
     <span class="legend-item event-b2">B2: Walk-in</span>
   </div>
 
+  <div *ngIf="errorMsg" class="error-banner">
+    <mat-icon>error</mat-icon>
+    <span>{{ errorMsg }}</span>
+  </div>
+
   <!-- Calendar and Day View Layout -->
   <div style="display: grid; grid-template-columns: 320px 1fr; gap: 1rem; margin-bottom: 1rem;" *ngIf="viewMode==='day'">
     
@@ -59,7 +64,7 @@
       <div class="section-card-header">
         <mat-icon>event_note</mat-icon> {{ formatDate(selectedDate) }} – Daily Schedule
         <span style="font-size: 0.85rem; font-weight: normal; margin-left: 1rem; color: #6b7280;">
-          (Drag events to reschedule)
+          (Drag schedule events to reschedule)
         </span>
       </div>
       <div class="timeline-grid">
@@ -73,14 +78,16 @@
             <div *ngFor="let evt of getEventsForHour(hour)"
                  class="{{getEventClass(evt.eventType)}} timeline-event"
                  cdkDrag
+                 [cdkDragDisabled]="evt.sourceType === 'APPOINTMENT'"
                  [cdkDragData]="evt"
                  (click)="openEvent(evt)">
-              <div class="drag-handle" cdkDragHandle>
+              <div class="drag-handle" cdkDragHandle *ngIf="evt.sourceType !== 'APPOINTMENT'">
                 <mat-icon style="font-size: 1rem; color: #6b7280;">drag_indicator</mat-icon>
               </div>
               <div class="event-content">
                 <div class="event-title" style="color:#1f2937">
                   <span class="event-type-badge" [style.background]="getEventColor(evt.eventType)">{{ evt.eventType }}</span>
+                  <span *ngIf="evt.sourceType === 'APPOINTMENT'" class="source-pill">Appointment</span>
                   {{ evt.title }}
                 </div>
                 <div class="event-time" style="color:#374151">
@@ -115,6 +122,10 @@
               <span style="color: #9ca3af; font-size: 0.85rem;">No events</span>
             </div>
           </div>
+        </div>
+        <div *ngIf="!loading && getEventsForSelectedDate().length === 0" class="empty-day">
+          <mat-icon>event_busy</mat-icon>
+          <span>No schedule events or scheduled appointments for this date.</span>
         </div>
       </div>
     </div>
@@ -155,9 +166,9 @@
 
   <!-- Event Detail Dialog -->
   <div class="dialog-overlay" *ngIf="showDialog" (click)="showDialog=false"></div>
-  <div class="dialog-container" *ngIf="showDialog" style="max-width:480px">
+  <div class="dialog-container" *ngIf="showDialog" style="max-width:760px">
     <div class="dialog-header">
-      <h2>Event Details</h2>
+      <h2>{{ selectedEvent?.sourceType === 'APPOINTMENT' ? 'Appointment Details' : 'Event Details' }}</h2>
       <button mat-icon-button (click)="showDialog=false"><mat-icon>close</mat-icon></button>
     </div>
     <div class="dialog-content" *ngIf="selectedEvent">
@@ -166,26 +177,97 @@
           <div style="font-weight:700;font-size:1rem;color:#1f2937">{{ selectedEvent.title }}</div>
           <div style="font-size:0.85rem;color:#374151;margin-top:4px">{{ selectedEvent.description }}</div>
         </div>
-        <div class="detail-row"><span class="dl">Type</span><strong style="color:#1f2937">{{ selectedEvent.eventType }}</strong></div>
-        <div class="detail-row"><span class="dl">Start</span><span style="color:#1f2937">{{ formatTime(selectedEvent.startTime) }}</span></div>
-        <div class="detail-row"><span class="dl">End</span><span style="color:#1f2937">{{ formatTime(selectedEvent.endTime) }}</span></div>
-        <div class="detail-row"><span class="dl">Location</span><span style="color:#1f2937">{{ selectedEvent.location }}</span></div>
-        <div *ngIf="selectedEvent.travelTimeMinutes" class="detail-row">
-          <span class="dl">Travel Time</span>
-          <span style="color:#1f2937;display:flex;align-items:center;gap:0.3rem">
-            <mat-icon style="font-size:1.1rem">directions_car</mat-icon> {{ selectedEvent.travelTimeMinutes }} minutes
-          </span>
+
+        <div class="detail-section">
+          <h3><mat-icon>event_note</mat-icon> Schedule</h3>
+          <div class="detail-grid">
+            <div><span>Type</span><strong>{{ selectedEvent.eventType }}</strong></div>
+            <div><span>Source</span><strong>{{ selectedEvent.sourceType === 'APPOINTMENT' ? 'Appointment' : 'Schedule Event' }}</strong></div>
+            <div><span>Start</span><strong>{{ formatDateTime(selectedEvent.startTime) }}</strong></div>
+            <div><span>End</span><strong>{{ formatDateTime(selectedEvent.endTime) }}</strong></div>
+            <div><span>Location</span><strong>{{ selectedEvent.location }}</strong></div>
+            <div><span>Travel Time</span><strong>{{ selectedEvent.travelTimeMinutes ? selectedEvent.travelTimeMinutes + ' minutes' : '-' }}</strong></div>
+          </div>
         </div>
+
         <div *ngIf="selectedEvent.isConflict" class="conflict-warn" style="display:flex;align-items:center;gap:0.5rem">
           <mat-icon style="font-size:1.1rem">warning</mat-icon> This event has a scheduling conflict!
         </div>
         <div *ngIf="selectedEvent.shortNotes" style="padding:0.75rem;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;font-size:0.85rem;color:#1e40af">
           <strong><mat-icon style="font-size:1rem;vertical-align:middle;margin-right:4px">auto_awesome</mat-icon>AI Summary:</strong> {{ selectedEvent.shortNotes }}
         </div>
+
+        <ng-container *ngIf="selectedAppointment as appointment">
+          <div class="detail-section">
+            <h3><mat-icon>assignment</mat-icon> Appointment</h3>
+            <div class="detail-grid">
+              <div><span>Application ID</span><strong>{{ display(appointment.applicationId) }}</strong></div>
+              <div><span>Status</span><strong>{{ getStatusLabel(appointment.status) }}</strong></div>
+              <div><span>Agenda</span><strong>{{ display(appointment.agendaType) }}</strong></div>
+              <div><span>Subject</span><strong>{{ display(appointment.subject) }}</strong></div>
+              <div><span>Department</span><strong>{{ display(appointment.department) }}</strong></div>
+              <div><span>Appointment Type</span><strong>{{ display(appointment.appointmentType) }}</strong></div>
+              <div><span>Requested Location</span><strong>{{ display(appointment.requestedLocation) }}</strong></div>
+              <div><span>Scheduled Duration</span><strong>{{ appointment.scheduledDurationMinutes ? appointment.scheduledDurationMinutes + ' minutes' : '-' }}</strong></div>
+              <div><span>Walk-in</span><strong>{{ display(appointment.isWalkIn) }}</strong></div>
+              <div><span>MLA/MDC Approved</span><strong>{{ display(appointment.mlaMdcApproved) }}</strong></div>
+              <div><span>Meetings Last 6 Months</span><strong>{{ display(appointment.meetingCountLast6Months) }}</strong></div>
+              <div><span>Submitted</span><strong>{{ formatDateTime(appointment.createdAt || appointment.submittedAt) }}</strong></div>
+            </div>
+            <div class="long-text" *ngIf="appointment.agendaBrief">
+              <span>Agenda Brief</span>
+              <p>{{ appointment.agendaBrief }}</p>
+            </div>
+          </div>
+
+          <div class="detail-section" *ngIf="selectedVisitor as visitor">
+            <h3><mat-icon>person</mat-icon> Visitor</h3>
+            <div class="detail-grid">
+              <div><span>Name</span><strong>{{ display(visitor.fullName) }}</strong></div>
+              <div><span>Phone</span><strong>{{ display(visitor.phoneNumber) }}</strong></div>
+              <div><span>Designation</span><strong>{{ display(visitor.designation) }}</strong></div>
+              <div><span>EPIC</span><strong>{{ display(visitor.epicNumber) }}</strong></div>
+              <div><span>District</span><strong>{{ display(visitor.district) }}</strong></div>
+              <div><span>Constituency</span><strong>{{ display(visitor.constituency) }}</strong></div>
+              <div><span>Booth</span><strong>{{ display(visitor.booth) }}</strong></div>
+              <div><span>Village</span><strong>{{ display(visitor.village) }}</strong></div>
+              <div><span>KYC Status</span><strong>{{ display(visitor.kycStatus) }}</strong></div>
+            </div>
+            <div class="long-text" *ngIf="visitor.address || visitor.fullAddress || visitor.addressLine">
+              <span>Address</span>
+              <p>{{ visitor.fullAddress || visitor.addressLine || visitor.address }}</p>
+            </div>
+            <div class="long-text" *ngIf="visitor.briefProfile">
+              <span>Profile</span>
+              <p>{{ visitor.briefProfile }}</p>
+            </div>
+          </div>
+
+          <div class="detail-section" *ngIf="appointment.cmoRemarks || appointment.approverRemarks || appointment.hcmRemarks || appointment.shortNotes">
+            <h3><mat-icon>notes</mat-icon> Notes &amp; Remarks</h3>
+            <div class="remarks-list">
+              <div *ngIf="appointment.cmoRemarks"><span>CMO</span><p>{{ appointment.cmoRemarks }}</p></div>
+              <div *ngIf="appointment.approverRemarks"><span>Approver</span><p>{{ appointment.approverRemarks }}</p></div>
+              <div *ngIf="appointment.hcmRemarks"><span>HCM</span><p>{{ appointment.hcmRemarks }}</p></div>
+              <div *ngIf="appointment.shortNotes"><span>AI Notes</span><p>{{ appointment.shortNotes }}</p></div>
+            </div>
+          </div>
+        </ng-container>
+
+        <div class="detail-section" *ngIf="selectedAppointments.length > 1">
+          <h3><mat-icon>groups</mat-icon> Appointments in This Event</h3>
+          <div class="appointment-list">
+            <div *ngFor="let appointment of selectedAppointments">
+              <strong>{{ appointment.applicationId }}</strong>
+              <span>{{ appointment.applicant.fullName || appointment.applicantName || '-' }}</span>
+              <span>{{ getStatusLabel(appointment.status) }}</span>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="dialog-footer">
         <button mat-stroked-button (click)="showDialog=false">Close</button>
-        <button mat-raised-button color="primary"><mat-icon>edit</mat-icon> Edit Event</button>
+        <button mat-raised-button color="primary" *ngIf="selectedEvent.sourceType !== 'APPOINTMENT'"><mat-icon>edit</mat-icon> Edit Event</button>
       </div>
     </div>
   </div>
@@ -229,10 +311,20 @@
           <mat-label>Description</mat-label>
           <textarea matInput [(ngModel)]="newEvent.description" rows="2"></textarea>
         </mat-form-field>
+        <mat-form-field appearance="outline" style="width:100%">
+          <mat-label>Short Notes / AI Summary</mat-label>
+          <textarea matInput [(ngModel)]="newEvent.shortNotes" rows="2"></textarea>
+        </mat-form-field>
+        <mat-form-field appearance="outline" style="width:100%">
+          <mat-label>Travel Time (minutes)</mat-label>
+          <input matInput type="number" [(ngModel)]="newEvent.travelTimeMinutes" min="0"/>
+        </mat-form-field>
       </div>
       <div class="dialog-footer">
         <button mat-stroked-button (click)="showAddDialog=false">Cancel</button>
-        <button mat-raised-button color="primary" (click)="addEvent()"><mat-icon>check</mat-icon> Add Event</button>
+        <button mat-raised-button color="primary" (click)="addEvent()" [disabled]="!newEvent.title || !newEvent.eventType || !newEvent.startTime || !newEvent.endTime || !newEvent.location">
+          <mat-icon>check</mat-icon> Add Event
+        </button>
       </div>
     </div>
   </div>

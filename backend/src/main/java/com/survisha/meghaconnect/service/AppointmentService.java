@@ -1,6 +1,7 @@
 package com.survisha.meghaconnect.service;
 
 import com.survisha.meghaconnect.dto.AppointmentDto;
+import com.survisha.meghaconnect.dto.AppointmentDocumentDto;
 import com.survisha.meghaconnect.dto.AppointmentMultipartRequest;
 import com.survisha.meghaconnect.entity.Appointment;
 import com.survisha.meghaconnect.entity.DocumentUpload;
@@ -114,6 +115,16 @@ public class AppointmentService {
 
     public Page<AppointmentDto> findForApprover(Pageable pageable) {
         return appointmentRepository.findByStatusIn(APPROVER_VISIBLE_STATUSES, pageable).map(this::toDto);
+    }
+
+    public List<AppointmentDocumentDto> findDocumentDtos(Long appointmentId) {
+        if (!appointmentRepository.existsById(appointmentId)) {
+            throw new AppointmentNotFoundException(appointmentId);
+        }
+        return documentUploadRepository.findByAppointmentId(appointmentId)
+            .stream()
+            .map(this::toDocumentDto)
+            .toList();
     }
 
     @Transactional
@@ -313,6 +324,49 @@ public class AppointmentService {
     }
 
     @Transactional
+    public Appointment submitCmoReview(Long id, Map<String, Object> body, String updatedBy) {
+        Appointment appt = appointmentRepository.findById(id)
+            .orElseThrow(() -> new AppointmentNotFoundException(id));
+
+        Appointment.AppointmentStatus oldStatus = appt.getStatus();
+        Appointment.AppointmentStatus newStatus = validationService.requireEnum(
+                firstNonBlank(
+                        bodyValue(body, ValidationConstants.FIELD_STATUS),
+                        Appointment.AppointmentStatus.CMO_REVIEW.name()
+                ),
+                Appointment.AppointmentStatus.class,
+                ValidationConstants.FIELD_STATUS
+        );
+        String eventType = bodyValue(body, "eventType");
+        String requestedLocation = bodyValue(body, "requestedLocation");
+        String remarks = firstNonBlank(
+                bodyValue(body, "cmoRemarks"),
+                bodyValue(body, "remarks"),
+                bodyValue(body, "pendingInformation")
+        );
+
+        if (eventType != null && !eventType.trim().isEmpty()) {
+            appt.setEventType(parseEventType(eventType));
+        }
+        if (requestedLocation != null && !requestedLocation.trim().isEmpty()) {
+            appt.setRequestedLocation(parseMeetingLocation(requestedLocation));
+        }
+        if (remarks != null) {
+            appt.setCmoRemarks(remarks);
+        }
+        appt.setStatus(newStatus);
+        appt.setUpdatedBy(updatedBy);
+
+        Appointment saved = appointmentRepository.save(appt);
+        String action = newStatus == Appointment.AppointmentStatus.CMO_REVIEW
+                ? "MISSING_INFORMATION_REQUESTED"
+                : "CMO_REVIEW_SUBMITTED";
+        auditLogService.log("Appointment", saved.getId(), action,
+            "CMO review status: " + oldStatus + " -> " + newStatus, updatedBy);
+        return saved;
+    }
+
+    @Transactional
     public Appointment schedule(Long id, Map<String, Object> body, String updatedBy) {
         LocalDateTime dateTime = validationService.requireDateTime(
                 body != null ? body.get(ValidationConstants.FIELD_SCHEDULED_DATE_TIME) : null,
@@ -373,6 +427,14 @@ public class AppointmentService {
         return null;
     }
 
+    private String bodyValue(Map<String, Object> body, String key) {
+        if (body == null || key == null || !body.containsKey(key) || body.get(key) == null) {
+            return null;
+        }
+        String value = body.get(key).toString().trim();
+        return value.isEmpty() ? null : value;
+    }
+
     private String maskAadhaarForResponse(String aadhaarNumber) {
         String normalized = trimToNull(aadhaarNumber);
         if (normalized == null) {
@@ -382,6 +444,23 @@ public class AppointmentService {
             return "XXXX-XXXX-" + normalized;
         }
         return "XXXX-XXXX-" + normalized.substring(normalized.length() - 4);
+    }
+
+    private AppointmentDocumentDto toDocumentDto(DocumentUpload document) {
+        Appointment appointment = document.getAppointment();
+        return AppointmentDocumentDto.builder()
+            .id(document.getId())
+            .appointmentId(appointment != null ? appointment.getId() : null)
+            .documentType(document.getDocumentType())
+            .fileName(firstNonBlank(document.getOriginalFilename(), document.getDocumentType()))
+            .filePath(document.getFilePath())
+            .fileSize(document.getFileSizeBytes())
+            .mimeType(document.getMimeType())
+            .uploadedBy(document.getUploadedBy())
+            .uploadedAt(document.getCreatedAt())
+            .isRequired(false)
+            .status("UPLOADED")
+            .build();
     }
 
     private Visitor resolveAppointmentApplicant(Long applicantId, String applicantName,

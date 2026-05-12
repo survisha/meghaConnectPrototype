@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Appointment, Visitor, ScheduleEvent, SchemeApplication, AuditEntry, Grievance } from '../models';
+import { Appointment, Visitor, SchemeApplication, AuditEntry, Grievance } from '../models';
 
 @Injectable({ providedIn: 'root' })
 export class MockDataService {
@@ -61,15 +61,6 @@ export class MockDataService {
       cmoRemarks: 'Walk-in visitor. Transport permit request – CM Elevate eligible.',
       shortNotes: 'Young entrepreneur requesting transport permit under CM Elevate. No prior receipts. Walk-in. Docs submitted.',
     },
-  ];
-
-  scheduleEvents: ScheduleEvent[] = [
-    { id: 1, title: 'Cabinet Meeting', eventType: 'A1', startTime: '2024-03-15T09:00:00', endTime: '2024-03-15T11:00:00', location: 'SHILLONG', description: 'Monthly cabinet meeting' },
-    { id: 2, title: 'District Development Programme', eventType: 'A2', startTime: '2024-03-15T14:00:00', endTime: '2024-03-15T16:00:00', location: 'TURA', travelTimeMinutes: 45, description: 'Public programme at Tura' },
-    { id: 3, title: 'File Clearing', eventType: 'A3', startTime: '2024-03-16T08:00:00', endTime: '2024-03-16T09:00:00', location: 'SHILLONG', description: 'Routine file work' },
-    { id: 4, title: 'Individual Appointment - Ramsing Marak', eventType: 'A4', startTime: '2024-03-16T10:00:00', endTime: '2024-03-16T10:30:00', location: 'TURA', description: 'CMSDF application review', shortNotes: 'Ramsing Marak (West Garo Hills) – Scheme availment: CMSDF application for community hall. MLA approved. 2 prior meetings.' },
-    { id: 5, title: 'Public Durbar - West Garo Hills', eventType: 'B1', startTime: '2024-03-16T11:00:00', endTime: '2024-03-16T13:00:00', location: 'TURA', description: '15 applicants scheduled for this batch', shortNotes: 'Batch public contact session – 15 applicants from West Garo Hills. Mixed agenda: schemes, grievances, infrastructure.' },
-    { id: 6, title: 'Walk-in Hours', eventType: 'B2', startTime: '2024-03-17T10:00:00', endTime: '2024-03-17T12:00:00', location: 'SHILLONG', description: 'Open walk-in session' },
   ];
 
   schemeApplications: SchemeApplication[] = [

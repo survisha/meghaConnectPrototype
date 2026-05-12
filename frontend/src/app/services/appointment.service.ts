@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { Appointment } from '../models';
+import { Appointment, AppointmentDocument, EventType, Location } from '../models';
 import { environment } from '../../environments/environment';
 
 export interface CreateAppointmentRequest {
@@ -34,6 +34,17 @@ export interface AppointmentPage {
   totalPages: number;
   size: number;
   number: number;
+}
+
+export interface CmoReviewRequest {
+  appointmentId: number;
+  eventType?: EventType;
+  requestedLocation?: Location;
+  cmoRemarks?: string;
+  pendingInformation?: string;
+  status: string;
+  notifyApplicant?: boolean;
+  notifyDeo?: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -96,6 +107,16 @@ export class AppointmentService {
       .pipe(map(res => this.normalizeAppointment(this.unwrapData(res))));
   }
 
+  getAppointmentDocuments(id: number): Observable<AppointmentDocument[]> {
+    return this.http.get<unknown>(`${this.baseUrl}/${id}/documents`).pipe(
+      map(res => {
+        const data = this.unwrapData<unknown>(res);
+        const rows = Array.isArray(data) ? data : [];
+        return rows.map(row => this.normalizeDocument(row));
+      })
+    );
+  }
+
   approveAppointment(id: number, request: ApproveRejectRequest): Observable<Appointment> {
     return this.http.put<unknown>(`${this.baseUrl}/${id}/approve`, request)
       .pipe(map(res => this.normalizeAppointment(this.unwrapData(res))));
@@ -122,15 +143,10 @@ export class AppointmentService {
    * Submit CMO review with remarks about pending information
    * Notifies applicant and DEO of any missing information
    */
-  submitCmoReview(payload: {
-    appointmentId: number;
-    cmoRemarks: string;
-    pendingInformation: string;
-    status: string;
-    notifyApplicant: boolean;
-    notifyDeo: boolean;
-  }): Observable<Appointment> {
+  submitCmoReview(payload: CmoReviewRequest): Observable<Appointment> {
     return this.http.post<unknown>(`${this.baseUrl}/${payload.appointmentId}/cmo-review`, {
+      eventType: payload.eventType,
+      requestedLocation: payload.requestedLocation,
       cmoRemarks: payload.cmoRemarks,
       pendingInformation: payload.pendingInformation,
       status: payload.status,
@@ -207,5 +223,20 @@ export class AppointmentService {
       return raw.data as T;
     }
     return response as T;
+  }
+
+  private normalizeDocument(row: unknown): AppointmentDocument {
+    const raw: any = row ?? {};
+    return {
+      id: raw.id,
+      appointmentId: raw.appointmentId,
+      documentType: raw.documentType,
+      fileName: raw.fileName ?? raw.originalFilename ?? raw.documentType ?? 'Document',
+      filePath: raw.filePath ?? '',
+      fileSize: Number(raw.fileSize ?? raw.fileSizeBytes ?? 0),
+      uploadedAt: raw.uploadedAt ?? raw.createdAt,
+      isRequired: Boolean(raw.isRequired),
+      status: raw.status ?? 'UPLOADED',
+    } as AppointmentDocument;
   }
 }

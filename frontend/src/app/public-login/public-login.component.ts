@@ -13,6 +13,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { AiChatbotComponent } from '../ai-chatbot/ai-chatbot.component';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LanguageSelectorComponent } from '../shared/language-selector/language-selector.component';
+import { apiErrorMessage } from '../shared/api-error.util';
 
 type LoginStep = 'enter-mobile' | 'enter-otp';
 
@@ -120,7 +121,7 @@ export class PublicLoginComponent {
       },
       error: err => {
         this.loading = false;
-        this.errorMsg = err?.error?.message || this.translate.instant('ERROR_FAILED_SEND_OTP_TRY');
+        this.errorMsg = apiErrorMessage(err, this.translate.instant('ERROR_FAILED_SEND_OTP_TRY'));
       },
     });
   }
@@ -163,7 +164,7 @@ export class PublicLoginComponent {
       },
       error: err => {
         this.loading = false;
-        this.errorMsg = err?.error?.message || this.translate.instant('ERROR_OTP_VERIFICATION_FAILED_TRY');
+        this.errorMsg = apiErrorMessage(err, this.translate.instant('ERROR_OTP_VERIFICATION_FAILED_TRY'));
       },
     });
   }

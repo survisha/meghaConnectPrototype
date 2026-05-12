@@ -252,9 +252,21 @@
             <strong>{{ doc.fileName }}</strong>
             <span>{{ formatDocumentType(doc.documentType) }} · {{ fileSizeLabel(doc.fileSize) }} · {{ doc.uploadedAt | date:'short' }}</span>
           </div>
-          <a *ngIf="doc.filePath" mat-icon-button [href]="getDocumentUrl(doc)" target="_blank" rel="noopener" matTooltip="Open document">
-            <mat-icon>open_in_new</mat-icon>
-          </a>
+          <button *ngIf="doc.id"
+                  mat-icon-button
+                  color="primary"
+                  type="button"
+                  (click)="openDocumentPreview(doc)"
+                  matTooltip="Review document">
+            <mat-icon>visibility</mat-icon>
+          </button>
+          <button *ngIf="doc.id"
+                  mat-icon-button
+                  type="button"
+                  (click)="downloadDocument(doc)"
+                  matTooltip="Download document">
+            <mat-icon>download</mat-icon>
+          </button>
         </div>
       </div>
     </section>
@@ -268,5 +280,66 @@
       <mat-icon>rate_review</mat-icon>
       CMO Review
     </button>
+  </mat-dialog-actions>
+</ng-template>
+
+<ng-template #documentPreviewDialog>
+  <div class="document-preview-title" mat-dialog-title *ngIf="selectedDocument">
+    <div>
+      <span class="eyebrow">Document Review</span>
+      <h2>{{ selectedDocument.fileName }}</h2>
+    </div>
+    <button mat-icon-button aria-label="Close document preview" (click)="closeDocumentPreview()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <mat-dialog-content class="document-preview-content" *ngIf="selectedDocument">
+    <div class="document-preview-state" *ngIf="documentPreviewLoading">
+      <mat-spinner diameter="36"></mat-spinner>
+      <span>Loading document...</span>
+    </div>
+
+    <div class="document-preview-state error" *ngIf="!documentPreviewLoading && documentPreviewError">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ documentPreviewError }}</span>
+    </div>
+
+    <ng-container *ngIf="!documentPreviewLoading && !documentPreviewError">
+      <ng-container *ngIf="canInlinePreview(selectedDocument); else documentDownloadPanel">
+        <img *ngIf="isImageDocument(selectedDocument)"
+             class="document-preview-image"
+             [src]="selectedDocumentUrl"
+             [alt]="selectedDocument.fileName">
+
+        <iframe *ngIf="isPdfDocument(selectedDocument)"
+                class="document-preview-frame"
+                [src]="selectedDocumentPreviewUrl"
+                title="Document preview"></iframe>
+      </ng-container>
+    </ng-container>
+
+    <ng-template #documentDownloadPanel>
+      <div class="document-download-panel">
+        <mat-icon>draft</mat-icon>
+        <h3>{{ getDocumentKindLabel(selectedDocument) }} preview is not available in the browser</h3>
+        <p>
+          This file is attached to the appointment, but this browser cannot render it inside the review panel.
+          Use the button below to open or download the original document.
+        </p>
+        <button mat-raised-button color="primary" type="button" (click)="downloadDocument(selectedDocument)" [disabled]="documentDownloadLoading">
+          <mat-icon>download</mat-icon>
+          Download Document
+        </button>
+      </div>
+    </ng-template>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end" class="document-preview-actions">
+    <button mat-stroked-button type="button" (click)="downloadDocument(selectedDocument)" *ngIf="selectedDocument?.id" [disabled]="documentDownloadLoading">
+      <mat-icon>download</mat-icon>
+      Download
+    </button>
+    <button mat-raised-button color="primary" (click)="closeDocumentPreview()">Close</button>
   </mat-dialog-actions>
 </ng-template>

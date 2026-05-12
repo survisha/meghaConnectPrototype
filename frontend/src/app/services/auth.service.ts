@@ -1,7 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
+import { Observable, throwError } from 'rxjs';
 import { tap, map, catchError } from 'rxjs/operators';
 import { UserRole } from '../models';
 import { environment } from '../../environments/environment';
@@ -53,7 +53,7 @@ export class AuthService {
         sessionStorage.setItem('megha_token', res.token);
       }),
       map(() => true),
-      catchError(() => of(false))
+      catchError(err => throwError(() => err))
     );
   }
 

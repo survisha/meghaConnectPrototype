@@ -17,6 +17,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatStepperModule } from '@angular/material/stepper';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LanguageSelectorComponent } from '../shared/language-selector/language-selector.component';
+import { apiErrorMessage } from '../shared/api-error.util';
 
 type KycStep = 'id-entry' | 'otp-verification' | 'photo-capture' | 'additional-details' | 'kyc-complete';
 type MobileValidationType = 'warning' | 'error' | 'success' | '';
@@ -368,8 +369,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       },
       error: err => {
         this.loading = false;
-        const errorMsg = err?.error?.message || err?.message || this.t('ERROR_FAILED_VERIFY_EPIC_TRY');
-        this.errorMsg = errorMsg;
+        this.errorMsg = apiErrorMessage(err, this.t('ERROR_FAILED_VERIFY_EPIC_TRY'));
       }
     });
   }
@@ -409,7 +409,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       },
       error: err => {
         this.loading = false;
-        this.errorMsg = err?.error?.message || this.t('ERROR_FAILED_GENERATE_OTP_TRY');
+        this.errorMsg = apiErrorMessage(err, this.t('ERROR_FAILED_GENERATE_OTP_TRY'));
       }
     });
   }
@@ -446,7 +446,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       },
       error: err => {
         this.loading = false;
-        this.errorMsg = err?.error?.errorMessage || this.t('ERROR_QR_GENERATION_FAILED');
+        this.errorMsg = apiErrorMessage(err, this.t('ERROR_QR_GENERATION_FAILED'));
       },
     });
   }
@@ -875,7 +875,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       },
       error: err => {
         this.loading = false;
-        this.errorMsg = err?.error?.message || this.t('ERROR_OTP_VERIFICATION_FAILED');
+        this.errorMsg = apiErrorMessage(err, this.t('ERROR_OTP_VERIFICATION_FAILED'));
       },
     });
   }
@@ -1028,7 +1028,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       },
       error: err => {
         this.loading = false;
-        this.errorMsg = err?.error?.message || this.t('FACE_VALIDATION_FAILED');
+        this.errorMsg = apiErrorMessage(err, this.t('FACE_VALIDATION_FAILED'));
       },
     });
   }
@@ -1128,7 +1128,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       },
       error: err => {
         this.loading = false;
-        this.errorMsg = err?.error?.message || this.t('ERROR_REGISTRATION_FAILED');
+        this.errorMsg = apiErrorMessage(err, this.t('ERROR_REGISTRATION_FAILED'));
       },
     });
   }
@@ -1336,7 +1336,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
         this.mobileCheckLoading = false;
         this.loading = false;
         this.mobileValidationType = 'error';
-        this.mobileValidationMsg = err?.error?.message || this.t('ERROR_UNABLE_VALIDATE_MOBILE');
+        this.mobileValidationMsg = apiErrorMessage(err, this.t('ERROR_UNABLE_VALIDATE_MOBILE'));
       }
     });
   }

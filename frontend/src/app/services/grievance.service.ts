@@ -1,7 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { Observable } from 'rxjs';
 import { Grievance, GrievanceCategory, GrievanceStatus } from '../models';
 import { environment } from '../../environments/environment';
 
@@ -40,24 +39,18 @@ export class GrievanceService {
     const params = new HttpParams()
       .set('page', page.toString())
       .set('size', size.toString());
-    return this.http.get<GrievancePage>(this.baseUrl, { params }).pipe(
-      catchError(() => of({ content: [], totalElements: 0, totalPages: 0, size, number: page }))
-    );
+    return this.http.get<GrievancePage>(this.baseUrl, { params });
   }
 
   getByVisitor(visitorId: number, page = 0, size = 50): Observable<GrievancePage> {
     const params = new HttpParams()
       .set('page', page.toString())
       .set('size', size.toString());
-    return this.http.get<GrievancePage>(`${this.baseUrl}/visitor/${visitorId}`, { params }).pipe(
-      catchError(() => of({ content: [], totalElements: 0, totalPages: 0, size, number: page }))
-    );
+    return this.http.get<GrievancePage>(`${this.baseUrl}/visitor/${visitorId}`, { params });
   }
 
   getById(id: number): Observable<Grievance | null> {
-    return this.http.get<Grievance>(`${this.baseUrl}/${id}`).pipe(
-      catchError(() => of(null))
-    );
+    return this.http.get<Grievance>(`${this.baseUrl}/${id}`);
   }
 
   create(request: CreateGrievanceRequest): Observable<Grievance> {

@@ -146,7 +146,7 @@
 <ng-template #notFound>
   <div style="text-align:center;padding:4rem;color:#9ca3af">
     <mat-icon style="font-size:3rem;width:3rem;height:3rem">error</mat-icon>
-    <p>Appointment not found. <a routerLink="/appointments">Back to list</a></p>
+    <p>{{ errorMsg || 'Appointment not found.' }} <a routerLink="/appointments">Back to list</a></p>
   </div>
 </ng-template>
 

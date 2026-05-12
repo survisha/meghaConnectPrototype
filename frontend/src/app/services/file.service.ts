@@ -4,7 +4,13 @@ import { Observable } from 'rxjs';
 
 export interface FileUploadResponse {
   success: boolean;
-  filePath: string;
+  documentId?: number;
+  originalFileName?: string;
+  storedFileName?: string;
+  contentType?: string;
+  fileSize?: number;
+  previewUrl?: string;
+  downloadUrl?: string;
   visitorId: number;
   applicationId: string;
   summary?: string;
@@ -24,7 +30,7 @@ export class FileService {
 
   /**
    * Upload a file for a visitor's appointment.
-   * Stores under /uploads/{visitorId}/{applicationId}/
+   * The API stores the file server-side and returns only document metadata.
    */
   uploadFile(
     file: File,
@@ -67,10 +73,10 @@ export class FileService {
   }
 
   /**
-   * Get the download URL for a stored file.
+   * Get the authenticated download API URL for a stored document id.
    */
-  getDownloadUrl(visitorId: number, applicationId: string, filename: string): string {
-    return `${this.baseUrl}/download/${visitorId}/${applicationId}/${filename}`;
+  getDownloadUrl(documentId: number): string {
+    return `${this.baseUrl}/download/${documentId}`;
   }
 
   /**

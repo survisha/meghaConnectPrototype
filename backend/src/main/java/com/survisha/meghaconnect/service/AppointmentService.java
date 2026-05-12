@@ -453,11 +453,11 @@ public class AppointmentService {
             .appointmentId(appointment != null ? appointment.getId() : null)
             .documentType(document.getDocumentType())
             .fileName(firstNonBlank(document.getOriginalFilename(), document.getDocumentType()))
-            .filePath(document.getFilePath())
+            .filePath(null)
             .fileSize(document.getFileSizeBytes())
-            .mimeType(document.getMimeType())
+            .mimeType(firstNonBlank(document.getContentType(), document.getMimeType()))
             .uploadedBy(document.getUploadedBy())
-            .uploadedAt(document.getCreatedAt())
+            .uploadedAt(document.getUploadedDate() != null ? document.getUploadedDate() : document.getCreatedAt())
             .isRequired(false)
             .status("UPLOADED")
             .build();
@@ -517,19 +517,26 @@ public class AppointmentService {
                 }
 
                 String documentType = paramName.replace("documents_", "");
-                String filePath = fileStorageService.storeFile(file, applicant.getId(), applicationId);
+                FileStorageService.StoredFileMetadata storedFile =
+                        fileStorageService.storeFileSecure(file, applicant.getId(), applicationId);
+                LocalDateTime uploadedAt = LocalDateTime.now();
 
                 DocumentUpload docUpload = DocumentUpload.builder()
                         .appointment(appointment)
                         .visitor(applicant)
                         .documentType(documentType)
-                        .originalFilename(file.getOriginalFilename())
-                        .filePath(filePath)
-                        .fileSizeBytes(file.getSize())
-                        .mimeType(file.getContentType())
+                        .originalFilename(storedFile.getOriginalFileName())
+                        .storedFileName(storedFile.getStoredFileName())
+                        .filePath(storedFile.getEncryptedFilePath())
+                        .encryptedFilePath(storedFile.getEncryptedFilePath())
+                        .secureHash(storedFile.getSecureHash())
+                        .fileSizeBytes(storedFile.getFileSize())
+                        .mimeType(storedFile.getContentType())
+                        .contentType(storedFile.getContentType())
                         .uploadedBy(uploadedBy)
-                        .createdAt(LocalDateTime.now())
-                        .updatedAt(LocalDateTime.now())
+                        .uploadedDate(uploadedAt)
+                        .createdAt(uploadedAt)
+                        .updatedAt(uploadedAt)
                         .build();
                 documentUploadRepository.save(docUpload);
             }

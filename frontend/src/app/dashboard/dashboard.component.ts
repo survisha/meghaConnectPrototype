@@ -8,6 +8,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { UIChart } from 'primeng/chart';
 import { AiInsightsDashboardComponent } from '../ai-insights-dashboard/ai-insights-dashboard.component';
+import { apiErrorMessage } from '../shared/api-error.util';
 
 interface QuickAction { label: string; matIcon: string; route: string; severity: string; }
 
@@ -28,6 +29,7 @@ export class DashboardComponent implements OnInit {
 
   todaySchedule: any[] = [];
   recentActivity: any[] = [];
+  errorMsg = '';
 
   constructor(
     public auth: AuthService,
@@ -59,33 +61,43 @@ export class DashboardComponent implements OnInit {
     this.chartOptions = { plugins: { legend: { position: 'bottom' } }, responsive: true };
 
     // Load today's schedule from real API, fallback to dummy if empty
-    this.scheduleEventService.getAll().subscribe(events => {
-      const today = new Date().toDateString();
-      const todayEvents = events.filter(e => new Date(e.startTime).toDateString() === today);
-      if (todayEvents.length > 0) {
-        this.todaySchedule = todayEvents.map(e => ({
-          time: new Date(e.startTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false }),
-          title: e.title,
-          type: e.eventType,
-          location: e.location,
-          badge: this.getEventBadge(e.eventType),
-        }));
+    this.scheduleEventService.getAll().subscribe({
+      next: events => {
+        const today = new Date().toDateString();
+        const todayEvents = events.filter(e => new Date(e.startTime).toDateString() === today);
+        if (todayEvents.length > 0) {
+          this.todaySchedule = todayEvents.map(e => ({
+            time: new Date(e.startTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false }),
+            title: e.title,
+            type: e.eventType,
+            location: e.location,
+            badge: this.getEventBadge(e.eventType),
+          }));
+        }
+        // Dummy data already initialized, no need to override if API returns data
+      },
+      error: err => {
+        this.errorMsg = apiErrorMessage(err, 'Unable to load today schedule. Showing demo data.');
       }
-      // Dummy data already initialized, no need to override if API returns data
     });
 
     // Load recent activity from real audit log API for admins only.
     if (this.auth.hasRole('ADMIN')) {
-      this.auditLogService.getAll(0, 5).subscribe(page => {
-        if (page.content && page.content.length > 0) {
-          this.recentActivity = page.content.map(log => ({
-            matIcon: this.getAuditMatIcon(log.action),
-            color: this.getAuditColor(log.action),
-            text: `${log.action}: ${log.details ?? log.entityType + ' #' + log.entityId}`,
-            time: new Date(log.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }),
-          }));
+      this.auditLogService.getAll(0, 5).subscribe({
+        next: page => {
+          if (page.content && page.content.length > 0) {
+            this.recentActivity = page.content.map(log => ({
+              matIcon: this.getAuditMatIcon(log.action),
+              color: this.getAuditColor(log.action),
+              text: `${log.action}: ${log.details ?? log.entityType + ' #' + log.entityId}`,
+              time: new Date(log.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }),
+            }));
+          }
+          // Dummy data already initialized
+        },
+        error: err => {
+          this.errorMsg = apiErrorMessage(err, 'Unable to load recent activity. Showing demo data.');
         }
-        // Dummy data already initialized
       });
     }
   }

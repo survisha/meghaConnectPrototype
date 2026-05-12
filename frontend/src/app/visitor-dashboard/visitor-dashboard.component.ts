@@ -9,6 +9,7 @@ import { GrievanceService } from '../services/grievance.service';
 import { Tag } from 'primeng/tag';
 import { AiChatbotComponent } from '../ai-chatbot/ai-chatbot.component';
 import { MatIconModule } from '@angular/material/icon';
+import { apiErrorMessage } from '../shared/api-error.util';
 
 interface VisitorProfile {
   fullName: string;
@@ -44,6 +45,7 @@ export class VisitorDashboardComponent implements OnInit {
   mySchemes: ListEntry[] = [];
   myGrievances: ListEntry[] = [];
   loading = false;
+  errorMsg = '';
 
   visitorProfile: VisitorProfile | null = null;
   visitorPhotoUrl = '';
@@ -97,7 +99,10 @@ export class VisitorDashboardComponent implements OnInit {
           this.updateVisitorPhotoUrl();
         }
       },
-      error: () => { this.loading = false; }
+      error: err => {
+        this.errorMsg = apiErrorMessage(err, 'Unable to load visitor profile.');
+        this.loading = false;
+      }
     });
   }
 
@@ -115,7 +120,8 @@ export class VisitorDashboardComponent implements OnInit {
         this.updateCards();
         this.loading = false;
       },
-      error: () => {
+      error: err => {
+        this.errorMsg = apiErrorMessage(err, 'Unable to load your appointments.');
         this.myAppointments = [];
         this.totalVisits = 0;
         this.updateCards();
@@ -135,7 +141,8 @@ export class VisitorDashboardComponent implements OnInit {
         }));
         this.updateCards();
       },
-      error: () => {
+      error: err => {
+        this.errorMsg = apiErrorMessage(err, 'Unable to load your grievances.');
         this.myGrievances = [];
         this.updateCards();
       }

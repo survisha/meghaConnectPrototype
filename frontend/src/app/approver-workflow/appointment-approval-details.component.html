@@ -142,7 +142,9 @@
                 <div matListItemLine>
                   {{ doc.fileSize | number: '1.2-2' }} KB • {{ doc.uploadedDate | date: 'short' }}
                 </div>
-                <button mat-icon-button matListItemMeta (click)="downloadDocument(doc.id)">
+                <button mat-icon-button matListItemMeta
+                        (click)="downloadDocument(doc.id, doc.fileName)"
+                        [disabled]="downloadingDocumentId === doc.id">
                   <mat-icon>download</mat-icon>
                 </button>
               </mat-list-item>

@@ -17,6 +17,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { apiErrorMessage } from '../shared/api-error.util';
 
 @Component({
   selector: 'app-grievances',
@@ -47,6 +48,7 @@ export class GrievancesComponent implements OnInit {
   filterStatus = '';
   filterCategory = '';
   loading = false;
+  errorMsg = '';
 
   // Mat-table columns
   private readonly staffColumns: string[] = ['ticketId', 'applicant', 'district', 'category', 'subject', 'submitted', 'status', 'actions'];
@@ -125,9 +127,13 @@ export class GrievancesComponent implements OnInit {
       next: page => {
         this.grievances = page.content;
         this.applyFilter();
+        this.errorMsg = '';
         this.loading = false;
       },
-      error: () => { this.loading = false; }
+      error: err => {
+        this.errorMsg = apiErrorMessage(err, 'Unable to load grievances.');
+        this.loading = false;
+      }
     });
   }
 
@@ -137,9 +143,13 @@ export class GrievancesComponent implements OnInit {
       next: page => {
         this.grievances = page.content;
         this.applyFilter();
+        this.errorMsg = '';
         this.loading = false;
       },
-      error: () => { this.loading = false; }
+      error: err => {
+        this.errorMsg = apiErrorMessage(err, 'Unable to load your grievances.');
+        this.loading = false;
+      }
     });
   }
 
@@ -149,7 +159,10 @@ export class GrievancesComponent implements OnInit {
         this.visitorProfile = profile;
         this.applyVisitorProfileToForm();
       },
-      error: () => this.applyVisitorProfileToForm()
+      error: err => {
+        this.errorMsg = apiErrorMessage(err, 'Unable to load visitor profile.');
+        this.applyVisitorProfileToForm();
+      }
     });
   }
 
@@ -166,15 +179,20 @@ export class GrievancesComponent implements OnInit {
   }
 
   openDetail(g: Grievance) {
-    this.grievanceService.getById(g.id).subscribe(detail => {
-      this.selectedGrievance = detail ?? g;
-      this.showDetail = true;
+    this.grievanceService.getById(g.id).subscribe({
+      next: detail => {
+        this.selectedGrievance = detail ?? g;
+        this.errorMsg = '';
+        this.showDetail = true;
+      },
+      error: err => this.errorMsg = apiErrorMessage(err, 'Unable to load grievance details.')
     });
   }
 
   openCreateForm() {
     this.editingGrievance = null;
     this.step = 0;
+    this.errorMsg = '';
     this.resetForm();
     this.showForm = true;
   }
@@ -183,14 +201,18 @@ export class GrievancesComponent implements OnInit {
     if (!this.canModify(g)) {
       return;
     }
-    this.grievanceService.getById(g.id).subscribe(detail => {
-      const grievance = detail ?? g;
-      this.editingGrievance = grievance;
-      this.resetForm();
-      this.form.subject = grievance.subject;
-      this.form.description = grievance.description;
-      this.step = 1;
-      this.showForm = true;
+    this.grievanceService.getById(g.id).subscribe({
+      next: detail => {
+        const grievance = detail ?? g;
+        this.editingGrievance = grievance;
+        this.errorMsg = '';
+        this.resetForm();
+        this.form.subject = grievance.subject;
+        this.form.description = grievance.description;
+        this.step = 1;
+        this.showForm = true;
+      },
+      error: err => this.errorMsg = apiErrorMessage(err, 'Unable to load grievance details.')
     });
   }
 
@@ -225,9 +247,10 @@ export class GrievancesComponent implements OnInit {
           const idx = this.grievances.findIndex(x => x.id === updated.id);
           if (idx >= 0) this.grievances[idx] = updated;
           this.applyFilter();
+          this.errorMsg = '';
           this.closeForm();
         },
-        error: () => console.error('Failed to update grievance.')
+        error: err => this.errorMsg = apiErrorMessage(err, 'Failed to update grievance.')
       });
       return;
     }
@@ -236,9 +259,10 @@ export class GrievancesComponent implements OnInit {
       next: newGrievance => {
         this.grievances = [newGrievance, ...this.grievances];
         this.applyFilter();
+        this.errorMsg = '';
         this.closeForm();
       },
-      error: () => console.error('Failed to submit grievance.')
+      error: err => this.errorMsg = apiErrorMessage(err, 'Failed to submit grievance.')
     });
   }
 
@@ -248,9 +272,10 @@ export class GrievancesComponent implements OnInit {
         const idx = this.grievances.findIndex(x => x.id === updated.id);
         if (idx >= 0) this.grievances[idx] = updated;
         this.applyFilter();
+        this.errorMsg = '';
         this.showDetail = false;
       },
-      error: () => console.error('Failed to update status.')
+      error: err => this.errorMsg = apiErrorMessage(err, 'Failed to update status.')
     });
   }
 
@@ -262,8 +287,9 @@ export class GrievancesComponent implements OnInit {
       next: () => {
         this.grievances = this.grievances.filter(x => x.id !== g.id);
         this.applyFilter();
+        this.errorMsg = '';
       },
-      error: () => console.error('Failed to delete grievance.')
+      error: err => this.errorMsg = apiErrorMessage(err, 'Failed to delete grievance.')
     });
   }
 

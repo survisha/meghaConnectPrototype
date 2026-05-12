@@ -4,8 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs/operators';
 import { AppointmentService } from '../services/appointment.service';
+import { DocumentService } from '../services/document.service';
 import { Appointment, AppointmentDocument, EventType, Location } from '../models';
-import { environment } from '../../environments/environment';
+import { apiErrorMessage } from '../shared/api-error.util';
 
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatButtonModule } from '@angular/material/button';
@@ -56,6 +57,7 @@ export class CmoModerationComponent implements OnInit {
   documents: AppointmentDocument[] = [];
   documentsLoading = false;
   documentsError = '';
+  downloadingDocumentId: number | null = null;
   loading = false;
   saving = false;
 
@@ -102,6 +104,7 @@ export class CmoModerationComponent implements OnInit {
 
   constructor(
     private appointmentService: AppointmentService,
+    private documentService: DocumentService,
     private dialog: MatDialog,
     private snackBar: MatSnackBar
   ) {}
@@ -120,9 +123,9 @@ export class CmoModerationComponent implements OnInit {
             .filter(appt => this.cmoQueueStatuses.has(appt.status))
             .sort((a, b) => this.toTime(b.submittedAt ?? b.createdAt) - this.toTime(a.submittedAt ?? a.createdAt));
         },
-        error: () => {
+        error: error => {
           this.appointments = [];
-          this.snackBar.open('Failed to load CMO moderation appointments.', 'Close', {
+          this.snackBar.open(apiErrorMessage(error, 'Failed to load CMO moderation appointments.'), 'Close', {
             duration: 3000,
             horizontalPosition: 'end',
             verticalPosition: 'top',
@@ -199,8 +202,8 @@ export class CmoModerationComponent implements OnInit {
           this.closeDialogs();
           this.loadAppointments();
         },
-        error: () => {
-          this.snackBar.open('Failed to update appointment.', 'Close', {
+        error: error => {
+          this.snackBar.open(apiErrorMessage(error, 'Failed to update appointment.'), 'Close', {
             duration: 3000,
             horizontalPosition: 'end',
             verticalPosition: 'top',
@@ -239,8 +242,8 @@ export class CmoModerationComponent implements OnInit {
           this.closeDialogs();
           this.loadAppointments();
         },
-        error: () => {
-          this.snackBar.open('Failed to send missing information note.', 'Close', {
+        error: error => {
+          this.snackBar.open(apiErrorMessage(error, 'Failed to send missing information note.'), 'Close', {
             duration: 3000,
             horizontalPosition: 'end',
             verticalPosition: 'top',
@@ -269,8 +272,8 @@ export class CmoModerationComponent implements OnInit {
           });
           this.loadAppointments();
         },
-        error: () => {
-          this.snackBar.open('Failed to forward appointment.', 'Close', {
+        error: error => {
+          this.snackBar.open(apiErrorMessage(error, 'Failed to forward appointment.'), 'Close', {
             duration: 3000,
             horizontalPosition: 'end',
             verticalPosition: 'top',
@@ -287,7 +290,7 @@ export class CmoModerationComponent implements OnInit {
       .pipe(finalize(() => this.documentsLoading = false))
       .subscribe({
         next: documents => this.documents = documents,
-        error: () => this.documentsError = 'Unable to load attached documents.',
+        error: error => this.documentsError = apiErrorMessage(error, 'Unable to load attached documents.'),
       });
   }
 
@@ -327,11 +330,24 @@ export class CmoModerationComponent implements OnInit {
     return `${(size / (1024 * 1024)).toFixed(1)} MB`;
   }
 
-  getDocumentUrl(doc: AppointmentDocument): string {
-    const cleanPath = (doc.filePath || '').replace(/^\/+/, '');
-    if (!cleanPath) return '#';
-    const origin = environment.apiUrl.replace(/\/api\/v1\/?$/, '');
-    return `${origin}/${cleanPath.startsWith('uploads/') ? cleanPath : `uploads/${cleanPath}`}`;
+  downloadDocument(doc: AppointmentDocument): void {
+    if (!doc.id || this.downloadingDocumentId) {
+      return;
+    }
+
+    this.downloadingDocumentId = doc.id;
+    this.documentService.downloadDocument(doc.id)
+      .pipe(finalize(() => this.downloadingDocumentId = null))
+      .subscribe({
+        next: blob => this.triggerBlobDownload(blob, doc.fileName || 'document'),
+        error: error => {
+          this.snackBar.open(apiErrorMessage(error, 'Unable to download document.'), 'Close', {
+            duration: 3000,
+            horizontalPosition: 'end',
+            verticalPosition: 'top',
+          });
+        },
+      });
   }
 
   trackByAppointmentId(_: number, appt: Appointment): number {
@@ -344,5 +360,17 @@ export class CmoModerationComponent implements OnInit {
 
   private toTime(value?: string): number {
     return value ? new Date(value).getTime() : 0;
+  }
+
+  private triggerBlobDownload(blob: Blob, fileName: string): void {
+    const objectUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = fileName;
+    anchor.style.display = 'none';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
   }
 }

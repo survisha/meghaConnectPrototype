@@ -1,5 +1,6 @@
 package com.survisha.meghaconnect.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import javax.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -35,8 +36,20 @@ public class DocumentUpload extends BaseEntity {
     @Column(length = 300)
     private String originalFilename;
 
-    @Column(nullable = false, length = 500)
-    private String filePath;  // Relative path for storage service
+    @Column(length = 300)
+    private String storedFileName;
+
+    @Column(nullable = false, length = 1000)
+    @JsonIgnore
+    private String filePath;  // Legacy column; new rows store an encrypted path value.
+
+    @Column(length = 1000)
+    @JsonIgnore
+    private String encryptedFilePath;
+
+    @Column(length = 128)
+    @JsonIgnore
+    private String secureHash;
 
     private Long fileSizeBytes;
 
@@ -44,7 +57,12 @@ public class DocumentUpload extends BaseEntity {
     private String mimeType;
 
     @Column(length = 100)
+    private String contentType;
+
+    @Column(length = 100)
     private String uploadedBy;
+
+    private LocalDateTime uploadedDate;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -56,6 +74,9 @@ public class DocumentUpload extends BaseEntity {
     protected void onCreate() {
         if (createdAt == null) {
             createdAt = LocalDateTime.now();
+        }
+        if (uploadedDate == null) {
+            uploadedDate = createdAt;
         }
         if (updatedAt == null) {
             updatedAt = LocalDateTime.now();

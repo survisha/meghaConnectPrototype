@@ -16,6 +16,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatCardModule } from '@angular/material/card';
 import { MatExpansionModule } from '@angular/material/expansion';
+import { apiErrorMessage } from '../../shared/api-error.util';
 
 interface AppointmentType {
   id?: number;
@@ -67,6 +68,7 @@ export class AppointmentTypeManagementComponent implements OnInit {
   selectedType: AppointmentType | null = null;
   showEditForm = false;
   editFormData: AppointmentType | null = null;
+  errorMsg = '';
 
   categoryOptions = ['INDIVIDUAL', 'BATCH'];
 
@@ -82,10 +84,12 @@ export class AppointmentTypeManagementComponent implements OnInit {
       .subscribe({
         next: (data) => {
           this.appointmentTypes = data;
+          this.errorMsg = '';
           this.loading = false;
         },
         error: (err) => {
           console.error('Error loading appointment types', err);
+          this.errorMsg = apiErrorMessage(err, 'Unable to load appointment types.');
           this.loading = false;
         }
       });
@@ -110,11 +114,13 @@ export class AppointmentTypeManagementComponent implements OnInit {
         if (index > -1) {
           this.appointmentTypes[index] = updated;
         }
+        this.errorMsg = '';
         this.showEditForm = false;
         this.loading = false;
       },
       error: (err) => {
         console.error('Error updating appointment type', err);
+        this.errorMsg = apiErrorMessage(err, 'Unable to update appointment type.');
         this.loading = false;
       }
     });
@@ -131,10 +137,12 @@ export class AppointmentTypeManagementComponent implements OnInit {
         if (index > -1) {
           this.appointmentTypes[index] = updated;
         }
+        this.errorMsg = '';
         this.loading = false;
       },
       error: (err) => {
         console.error('Error toggling status', err);
+        this.errorMsg = apiErrorMessage(err, 'Unable to update appointment type status.');
         this.loading = false;
       }
     });

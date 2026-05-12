@@ -1,0 +1,9 @@
+file:
+  upload:
+    root-path: ${FILE_UPLOAD_ROOT:/tmp/meghaconnect/uploads/test}
+    crypto-key-path: ${FILE_UPLOAD_CRYPTO_KEY_PATH:/opt/meghaconnect/secure/crypto.key}
+
+meghaconnect:
+  storage:
+    base-path: ${file.upload.root-path}
+    crypto-key-path: ${file.upload.crypto-key-path}

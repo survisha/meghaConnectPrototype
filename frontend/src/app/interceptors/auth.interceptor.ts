@@ -1,7 +1,8 @@
 import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { catchError, throwError } from 'rxjs';
+import { catchError, from, mergeMap, throwError } from 'rxjs';
+import { apiErrorBodyMessage } from '../shared/api-error.util';
 
 /**
  * HTTP Interceptor:
@@ -22,24 +23,49 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(authReq).pipe(
     catchError((error: HttpErrorResponse) => {
-      if (error.status === 401) {
-        // Unauthorized – clear session and redirect to login
-        sessionStorage.removeItem('megha_user');
-        sessionStorage.removeItem('megha_token');
-        router.navigate(['/login']);
-        return throwError(() => new Error('Session expired. Please log in again.'));
-      }
-
-      if (error.status === 403) {
-        return throwError(() => new Error('You do not have permission to perform this action.'));
-      }
-
       if (error.status === 0) {
         return throwError(() => new Error('Unable to connect to the server. Please check your network.'));
       }
 
+      if (error.status === 401) {
+        const handleUnauthorized = () => {
+          sessionStorage.removeItem('megha_user');
+          sessionStorage.removeItem('megha_token');
+          if (!req.url.includes('/auth/login')) {
+            router.navigate(['/login']);
+          }
+        };
+        const fallback = 'Session expired. Please log in again.';
+        if (error.error instanceof Blob) {
+          return from(error.error.text()).pipe(
+            mergeMap(text => {
+              handleUnauthorized();
+              return throwError(() => new Error(apiErrorBodyMessage(text, fallback)));
+            })
+          );
+        }
+        handleUnauthorized();
+        return throwError(() => new Error(apiErrorBodyMessage(error.error, fallback)));
+      }
+
+      if (error.status === 403) {
+        const fallback = 'You do not have permission to perform this action.';
+        if (error.error instanceof Blob) {
+          return from(error.error.text()).pipe(
+            mergeMap(text => throwError(() => new Error(apiErrorBodyMessage(text, fallback))))
+          );
+        }
+        return throwError(() => new Error(apiErrorBodyMessage(error.error, fallback)));
+      }
+
+      if (error.error instanceof Blob) {
+        return from(error.error.text()).pipe(
+          mergeMap(text => throwError(() => new Error(apiErrorBodyMessage(text, error.message))))
+        );
+      }
+
       // Extract error message from API response body if available
-      const message = error.error?.message || error.error?.error || error.message || 'An unexpected error occurred.';
+      const message = apiErrorBodyMessage(error.error, error.message);
       return throwError(() => new Error(message));
     })
   );

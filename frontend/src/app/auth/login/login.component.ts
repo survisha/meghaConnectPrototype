@@ -11,6 +11,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LanguageSelectorComponent } from '../../shared/language-selector/language-selector.component';
 import { AiChatbotComponent } from '../../ai-chatbot/ai-chatbot.component';
+import { apiErrorMessage } from '../../shared/api-error.util';
 
 type HomeSection = 'home' | 'about' | 'faq' | 'contact' | 'login';
 
@@ -72,25 +73,37 @@ export class LoginComponent {
 
   login() {
     this.loading = true; this.errorMsg = '';
-    this.auth.login(this.username, this.password).subscribe(success => {
-      if (success) {
-        this.router.navigate(['/dashboard']);
-      } else {
-        this.errorMsg = this.translate.instant('ERROR_INVALID_USERNAME_PASSWORD');
+    this.auth.login(this.username, this.password).subscribe({
+      next: success => {
+        if (success) {
+          this.router.navigate(['/dashboard']);
+        } else {
+          this.errorMsg = this.translate.instant('ERROR_INVALID_USERNAME_PASSWORD');
+        }
+        this.loading = false;
+      },
+      error: err => {
+        this.errorMsg = apiErrorMessage(err, this.translate.instant('ERROR_INVALID_USERNAME_PASSWORD'));
+        this.loading = false;
       }
-      this.loading = false;
     });
   }
 
   publicLogin() {
     this.loading = true;
-    this.auth.login('public1', 'public123').subscribe(success => {
-      if (success) {
-        this.router.navigate(['/visitor']);
-      } else {
-        this.errorMsg = this.translate.instant('ERROR_OTP_VERIFICATION_FAILED');
+    this.auth.login('public1', 'public123').subscribe({
+      next: success => {
+        if (success) {
+          this.router.navigate(['/visitor']);
+        } else {
+          this.errorMsg = this.translate.instant('ERROR_OTP_VERIFICATION_FAILED');
+        }
+        this.loading = false;
+      },
+      error: err => {
+        this.errorMsg = apiErrorMessage(err, this.translate.instant('ERROR_OTP_VERIFICATION_FAILED'));
+        this.loading = false;
       }
-      this.loading = false;
     });
   }
 }

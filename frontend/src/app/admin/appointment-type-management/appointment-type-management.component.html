@@ -6,6 +6,10 @@
     </button>
   </div>
 
+  <div *ngIf="errorMsg" class="error-message" style="margin-bottom:1rem">
+    {{ errorMsg }}
+  </div>
+
   <!-- Loading Spinner -->
   <div *ngIf="loading" style="display:flex;justify-content:center;align-items:center;height:200px">
     <mat-spinner diameter="50"></mat-spinner>

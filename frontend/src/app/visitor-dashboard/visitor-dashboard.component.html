@@ -1,5 +1,7 @@
 <div class="visitor-wrapper">
-  
+  <div *ngIf="errorMsg" class="error-message" style="margin-bottom:1rem">
+    {{ errorMsg }}
+  </div>
 
   <!-- KPI Cards -->
   <div class="kpi-grid">

@@ -1,9 +1,11 @@
-import { Component, OnInit, TemplateRef, ViewChild } from '@angular/core';
+import { Component, OnDestroy, OnInit, TemplateRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { HttpErrorResponse } from '@angular/common/http';
 import { AppointmentService } from '../../services/appointment.service';
 import { AuthService } from '../../services/auth.service';
+import { DocumentService } from '../../services/document.service';
 import { Appointment, AppointmentDocument, AppointmentStatus } from '../../models';
 import { environment } from '../../../environments/environment';
 import { finalize } from 'rxjs/operators';
@@ -15,12 +17,14 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatCardModule } from '@angular/material/card';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { CmoReviewModalComponent } from '../cmo-review-modal/cmo-review-modal.component';
+import { apiErrorMessage } from '../../shared/api-error.util';
 
 @Component({
   selector: 'app-appointment-list',
@@ -46,12 +50,19 @@ import { CmoReviewModalComponent } from '../cmo-review-modal/cmo-review-modal.co
   templateUrl: './appointment-list.component.html',
   styleUrls: ['./appointment-list.component.scss'],
 })
-export class AppointmentListComponent implements OnInit {
+export class AppointmentListComponent implements OnInit, OnDestroy {
   @ViewChild('appointmentDetailsDialog') appointmentDetailsDialog!: TemplateRef<unknown>;
+  @ViewChild('documentPreviewDialog') documentPreviewDialog!: TemplateRef<unknown>;
 
   appointments: Appointment[] = [];
   filtered: Appointment[] = [];
   selectedAppointment: Appointment | null = null;
+  selectedDocument: AppointmentDocument | null = null;
+  selectedDocumentPreviewUrl: SafeResourceUrl | null = null;
+  selectedDocumentUrl = '';
+  documentPreviewLoading = false;
+  documentDownloadLoading = false;
+  documentPreviewError = '';
   documents: AppointmentDocument[] = [];
   documentsLoading = false;
   documentsError = '';
@@ -72,7 +83,15 @@ export class AppointmentListComponent implements OnInit {
     { label: 'Completed', value: 'COMPLETED' },
   ];
 
-  constructor(private appointmentService: AppointmentService, public auth: AuthService, private dialog: MatDialog) {}
+  private documentPreviewDialogRef?: MatDialogRef<unknown>;
+
+  constructor(
+    private appointmentService: AppointmentService,
+    private documentService: DocumentService,
+    public auth: AuthService,
+    private dialog: MatDialog,
+    private sanitizer: DomSanitizer
+  ) {}
 
   ngOnInit() {
     this.loading = true;
@@ -86,8 +105,8 @@ export class AppointmentListComponent implements OnInit {
         this.applyFilter();
         this.loading = false;
       },
-      error: () => {
-        this.errorMsg = 'Unable to load appointments from API. Please try again.';
+      error: error => {
+        this.errorMsg = apiErrorMessage(error, 'Unable to load appointments from API. Please try again.');
         if (this.allowDummyFallback) {
           // TODO: Remove dummy fallback after API stabilization.
           this.initializeDummyData();
@@ -98,6 +117,10 @@ export class AppointmentListComponent implements OnInit {
         this.loading = false;
       }
     });
+  }
+
+  ngOnDestroy() {
+    this.clearDocumentPreviewState();
   }
 
   private initializeDummyData() {
@@ -312,7 +335,7 @@ export class AppointmentListComponent implements OnInit {
       .pipe(finalize(() => this.documentsLoading = false))
       .subscribe({
         next: documents => this.documents = documents,
-        error: () => this.documentsError = 'Unable to load attached documents.'
+        error: error => this.documentsError = apiErrorMessage(error, 'Unable to load attached documents.')
       });
   }
 
@@ -327,11 +350,167 @@ export class AppointmentListComponent implements OnInit {
     return `${(size / (1024 * 1024)).toFixed(1)} MB`;
   }
 
-  getDocumentUrl(doc: AppointmentDocument) {
-    const cleanPath = (doc.filePath || '').replace(/^\/+/, '');
-    if (!cleanPath) return '#';
-    const origin = environment.apiUrl.replace(/\/api\/v1\/?$/, '');
-    return `${origin}/${cleanPath.startsWith('uploads/') ? cleanPath : `uploads/${cleanPath}`}`;
+  openDocumentPreview(doc: AppointmentDocument) {
+    this.clearDocumentPreviewState();
+
+    this.selectedDocument = doc;
+    this.documentPreviewLoading = Boolean(doc.id && this.canInlinePreview(doc));
+    this.documentPreviewError = doc.id ? '' : 'Document id is not available.';
+    this.documentPreviewDialogRef = this.dialog.open(this.documentPreviewDialog, {
+      width: '1040px',
+      maxWidth: '96vw',
+      height: '86vh',
+      maxHeight: '92vh',
+      autoFocus: false,
+      panelClass: 'document-preview-dialog-panel'
+    });
+    this.documentPreviewDialogRef.afterClosed().subscribe(() => {
+      this.documentPreviewDialogRef = undefined;
+      this.clearDocumentPreviewState();
+    });
+
+    if (!doc.id || !this.canInlinePreview(doc)) return;
+
+    this.documentService.getPreviewBlob(doc.id)
+      .pipe(finalize(() => this.documentPreviewLoading = false))
+      .subscribe({
+        next: blob => {
+          const objectUrl = URL.createObjectURL(blob);
+          if (this.selectedDocument !== doc) {
+            URL.revokeObjectURL(objectUrl);
+            return;
+          }
+          this.selectedDocumentObjectUrl = objectUrl;
+          this.selectedDocumentUrl = objectUrl;
+          this.selectedDocumentPreviewUrl = this.sanitizer.bypassSecurityTrustResourceUrl(objectUrl);
+        },
+        error: error => {
+          this.showDocumentApiError(error, 'Unable to load this document. Please try again.');
+        }
+    });
+  }
+
+  closeDocumentPreview() {
+    this.documentPreviewDialogRef?.close();
+  }
+
+  downloadDocument(doc: AppointmentDocument | null = this.selectedDocument) {
+    if (!doc?.id || this.documentDownloadLoading) {
+      return;
+    }
+
+    this.documentDownloadLoading = true;
+    this.documentService.downloadDocument(doc.id)
+      .pipe(finalize(() => this.documentDownloadLoading = false))
+      .subscribe({
+        next: blob => this.triggerBlobDownload(blob, doc.fileName || 'document'),
+        error: error => {
+          this.showDocumentApiError(error, 'Unable to download this document. Please try again.');
+        }
+      });
+  }
+
+  getDocumentExtension(doc: AppointmentDocument | null = this.selectedDocument) {
+    const source = (doc?.fileName || '').toLowerCase();
+    const match = source.match(/\.([a-z0-9]+)(?:\?.*)?$/);
+    return match?.[1] ?? '';
+  }
+
+  getDocumentKindLabel(doc: AppointmentDocument | null = this.selectedDocument) {
+    return this.getDocumentExtension(doc).toUpperCase() || 'DOCUMENT';
+  }
+
+  isImageDocument(doc: AppointmentDocument | null = this.selectedDocument) {
+    const mimeType = this.getDocumentMimeType(doc);
+    return mimeType.startsWith('image/')
+      || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(this.getDocumentExtension(doc));
+  }
+
+  isPdfDocument(doc: AppointmentDocument | null = this.selectedDocument) {
+    return this.getDocumentMimeType(doc) === 'application/pdf' || this.getDocumentExtension(doc) === 'pdf';
+  }
+
+  canInlinePreview(doc: AppointmentDocument | null = this.selectedDocument) {
+    return this.isImageDocument(doc) || this.isPdfDocument(doc);
+  }
+
+  private selectedDocumentObjectUrl = '';
+
+  private clearDocumentPreviewState() {
+    if (this.selectedDocumentObjectUrl) {
+      URL.revokeObjectURL(this.selectedDocumentObjectUrl);
+    }
+    this.selectedDocumentObjectUrl = '';
+    this.selectedDocument = null;
+    this.selectedDocumentPreviewUrl = null;
+    this.selectedDocumentUrl = '';
+    this.documentPreviewLoading = false;
+    this.documentDownloadLoading = false;
+    this.documentPreviewError = '';
+  }
+
+  private getDocumentMimeType(doc: AppointmentDocument | null = this.selectedDocument) {
+    return (doc?.mimeType || '').toLowerCase();
+  }
+
+  private showDocumentApiError(error: unknown, fallbackMessage: string) {
+    this.resolveDocumentApiErrorMessage(error, fallbackMessage)
+      .then(message => this.documentPreviewError = message);
+  }
+
+  private async resolveDocumentApiErrorMessage(error: unknown, fallbackMessage: string): Promise<string> {
+    const payload = await this.readApiErrorPayload(error);
+    const errorCode = this.stringValue(payload?.['errorCode']);
+    const message = this.stringValue(payload?.['message']) || this.stringValue(payload?.['error']);
+    if (errorCode && message) {
+      return `${errorCode}: ${message}`;
+    }
+    if (message) {
+      return message;
+    }
+    if (error instanceof Error && error.message) {
+      return error.message;
+    }
+    return fallbackMessage;
+  }
+
+  private async readApiErrorPayload(error: unknown): Promise<Record<string, unknown> | null> {
+    const responseError = error instanceof HttpErrorResponse ? error.error : error;
+    if (responseError instanceof Blob) {
+      try {
+        const text = await responseError.text();
+        return text ? JSON.parse(text) as Record<string, unknown> : null;
+      } catch {
+        return null;
+      }
+    }
+    if (typeof responseError === 'string') {
+      try {
+        return JSON.parse(responseError) as Record<string, unknown>;
+      } catch {
+        return { message: responseError };
+      }
+    }
+    if (responseError && typeof responseError === 'object' && !(responseError instanceof Error)) {
+      return responseError as Record<string, unknown>;
+    }
+    return null;
+  }
+
+  private stringValue(value: unknown) {
+    return typeof value === 'string' && value.trim() ? value.trim() : '';
+  }
+
+  private triggerBlobDownload(blob: Blob, fileName: string) {
+    const objectUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = fileName;
+    anchor.style.display = 'none';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
   }
 
   trackByDocumentId(index: number, doc: AppointmentDocument) {

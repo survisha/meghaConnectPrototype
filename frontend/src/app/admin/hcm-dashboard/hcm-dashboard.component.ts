@@ -15,6 +15,7 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatBadgeModule } from '@angular/material/badge';
+import { apiErrorMessage } from '../../shared/api-error.util';
 
 /**
  * HCM Dashboard Component
@@ -50,6 +51,7 @@ export class HcmDashboardComponent implements OnInit {
   pendingWorkItems: any[] = [];
   loading = false;
   pendingWorkCount = 0;
+  errorMsg = '';
   
   // Swipe tracking
   touchStartX = 0;
@@ -102,10 +104,12 @@ export class HcmDashboardComponent implements OnInit {
           if (data && data.length > 0) {
             this.appointments = data;
           }
+          this.errorMsg = '';
           this.loading = false;
         },
         error: (err) => {
           console.error('Error loading appointments', err);
+          this.errorMsg = apiErrorMessage(err, 'Unable to load HCM appointments. Showing local sample data.');
           // Keep the dummy data already loaded
           this.loading = false;
         }
@@ -124,9 +128,11 @@ export class HcmDashboardComponent implements OnInit {
             this.pendingWorkItems = data;
             this.pendingWorkCount = data.length;
           }
+          this.errorMsg = '';
         },
         error: (err) => {
           console.error('Error loading pending work items', err);
+          this.errorMsg = apiErrorMessage(err, 'Unable to load pending work items. Showing local sample data.');
           // Keep the dummy data already loaded
         }
       });
@@ -143,6 +149,7 @@ export class HcmDashboardComponent implements OnInit {
         },
         error: (err) => {
           console.error('Error getting pending work count', err);
+          this.errorMsg = apiErrorMessage(err, 'Unable to load pending work count. Showing local sample data.');
           this.pendingWorkCount = this.getDummyPendingWorkItems().length;
         }
       });
@@ -333,6 +340,7 @@ export class HcmDashboardComponent implements OnInit {
     this.http.post(`${environment.apiUrl}/hcm/actions${endpoint}`, payload)
       .subscribe({
         next: () => {
+          this.errorMsg = '';
           alert('Action submitted successfully');
           this.resetActionForm();
           this.showActionMenu = false;
@@ -344,7 +352,7 @@ export class HcmDashboardComponent implements OnInit {
         },
         error: (err) => {
           console.error('Error submitting action', err);
-          alert('Error submitting action: ' + (err.error?.message || err.message));
+          alert('Error submitting action: ' + apiErrorMessage(err, 'Unknown error'));
           this.loading = false;
         }
       });

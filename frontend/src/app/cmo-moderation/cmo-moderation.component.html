@@ -212,9 +212,14 @@
             <strong>{{ doc.fileName }}</strong>
             <span>{{ formatDocumentType(doc.documentType) }} · {{ fileSizeLabel(doc.fileSize) }} · {{ doc.uploadedAt | date:'short' }}</span>
           </div>
-          <a *ngIf="doc.filePath" mat-icon-button [href]="getDocumentUrl(doc)" target="_blank" rel="noopener" matTooltip="Open document">
-            <mat-icon>open_in_new</mat-icon>
-          </a>
+          <button *ngIf="doc.id"
+                  mat-icon-button
+                  type="button"
+                  (click)="downloadDocument(doc)"
+                  [disabled]="downloadingDocumentId === doc.id"
+                  matTooltip="Download document">
+            <mat-icon>download</mat-icon>
+          </button>
         </div>
       </div>
     </section>

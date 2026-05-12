@@ -4,6 +4,10 @@
     <h2 class="page-title" style="margin:0">New Scheme Application</h2>
   </div>
 
+  <div *ngIf="errorMsg" class="error-message" style="margin-bottom:1rem">
+    {{ errorMsg }}
+  </div>
+
   <div class="section-card" style="margin-bottom:1.5rem">
     <div class="section-card-body">
       <!-- Custom Material Stepper -->

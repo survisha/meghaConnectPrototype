@@ -5,6 +5,7 @@ import { RouterLink } from '@angular/router';
 import { SchemeService } from '../../services/scheme.service';
 import { MockDataService } from '../../services/mock-data.service';
 import { SchemeApplication } from '../../models';
+import { apiErrorMessage } from '../../shared/api-error.util';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -39,6 +40,7 @@ export class SchemeListComponent implements OnInit {
   showDetail = false;
   filterScheme = '';
   loading = false;
+  errorMsg = '';
   displayedColumns: string[] = ['applicant', 'scheme', 'project', 'category', 'estCost', 'hcmApproved', 'status', 'actions'];
 
   schemeOptions = [
@@ -78,10 +80,12 @@ export class SchemeListComponent implements OnInit {
         }
         
         this.calculateStats();
+        this.errorMsg = '';
         this.loading = false;
       },
       error: (err) => { 
         console.error('[SchemeListComponent] API call failed, using dummy data for demo:', err);
+        this.errorMsg = apiErrorMessage(err, 'Unable to load scheme applications. Showing demo data.');
         this.schemes = this.mockDataService.schemeApplications;
         this.calculateStats();
         this.loading = false;

@@ -7,6 +7,10 @@
     </span>
   </div>
 
+  <div *ngIf="errorMsg" class="error-message" style="margin-bottom:1rem">
+    {{ errorMsg }}
+  </div>
+
   <!-- KPI Cards -->
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-bottom:1.5rem">
     <div class="kpi-card" *ngFor="let k of kpis; let i = index" [id]="'dashboard_kpiCard_' + i">

@@ -17,6 +17,7 @@ import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuditLogFilters, AuditLogService } from '../../services/audit-log.service';
 import { AuditEntry } from '../../models';
+import { apiErrorMessage } from '../../shared/api-error.util';
 
 interface AuditFilters {
   from: Date | null;
@@ -115,7 +116,7 @@ export class AuditTrailComponent implements OnInit, OnDestroy {
       error: err => {
         this.logs = [];
         this.totalElements = 0;
-        this.errorMsg = err?.error?.message || 'Unable to load audit logs. Please try again.';
+        this.errorMsg = apiErrorMessage(err, 'Unable to load audit logs. Please try again.');
         this.loading = false;
       },
     });

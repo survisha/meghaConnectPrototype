@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { VisitorSearchService } from '../../services/visitor-search.service';
 import { Visitor } from '../../models';
+import { apiErrorMessage } from '../../shared/api-error.util';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -61,10 +62,17 @@ export class WalkinComponent {
       return;
     }
 
-    this.visitorSearchService.search({ mobile: phone, epic, referenceId }).subscribe(results => {
-      this.foundPerson = results[0] ?? null;
-      this.notFound = !this.foundPerson;
-      this.searching = false;
+    this.visitorSearchService.search({ mobile: phone, epic, referenceId }).subscribe({
+      next: results => {
+        this.foundPerson = results[0] ?? null;
+        this.notFound = !this.foundPerson;
+        this.searching = false;
+      },
+      error: err => {
+        this.errorMsg = apiErrorMessage(err, 'Unable to search visitor records.');
+        this.notFound = false;
+        this.searching = false;
+      }
     });
   }
 

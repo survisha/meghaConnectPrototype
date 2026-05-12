@@ -10,6 +10,10 @@
     <button id="grievances_raiseGrievanceBtn" mat-raised-button color="primary" (click)="openCreateForm()" *ngIf="isPublic"><mat-icon>add</mat-icon> Raise Grievance</button>
   </div>
 
+  <div *ngIf="errorMsg" class="error-message" style="margin-bottom:1rem">
+    {{ errorMsg }}
+  </div>
+
   <!-- Filters and Table (Public and Staff) -->
   <ng-container *ngIf="isPublic || isStaff">
     <!-- Filters -->

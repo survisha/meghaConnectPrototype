@@ -7,6 +7,10 @@
     </button>
   </div>
 
+  <div *ngIf="errorMsg" class="error-message">
+    {{ errorMsg }}
+  </div>
+
   <!-- Tabs: Appointments and Pending Work -->
   <mat-tab-group class="dashboard-tabs">
     

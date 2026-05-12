@@ -11,6 +11,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
 import { SchemeService } from '../../services/scheme.service';
+import { apiErrorMessage } from '../../shared/api-error.util';
 
 @Component({
   selector: 'app-scheme-form',
@@ -44,6 +45,7 @@ export class SchemeFormComponent implements OnInit {
   };
 
   schemeTypes: any[] = [];
+  errorMsg = '';
   projectCategories = ['Electricity','Road','House','School','Community hall','Retaining wall','Office','Travel','Medical','Musical instrument','Sports Equipment','Buses','Pickup Van','Computer lab upgradation','Repair','Others'];
   beneficiaryTypes = ['Individual','Community/Society','School/Youth Organisation','All of the above','Others'];
   beneficiaryCounts = ['1 TO 100','101 TO 500','501 TO 1000','Above 1000'];
@@ -55,9 +57,11 @@ export class SchemeFormComponent implements OnInit {
     this.schemeService.getSchemeTypes().subscribe({
       next: (data) => {
         this.schemeTypes = data.map(d => ({ label: d.value, value: d.code }));
+        this.errorMsg = '';
       },
       error: (err) => {
         console.error('Failed to load scheme types:', err);
+        this.errorMsg = apiErrorMessage(err, 'Unable to load scheme types.');
       }
     });
   }

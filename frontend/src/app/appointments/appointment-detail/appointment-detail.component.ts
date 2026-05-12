@@ -14,6 +14,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { apiErrorMessage } from '../../shared/api-error.util';
 
 @Component({
   selector: 'app-appointment-detail',
@@ -41,6 +42,7 @@ export class AppointmentDetailComponent implements OnInit {
   directionColor = 'GREEN';
   directionText = '';
   loading = false;
+  errorMsg = '';
 
   workflowSteps = [
     { label: 'Submitted' }, { label: 'CMO Review' }, { label: 'Approver Review' },
@@ -61,8 +63,15 @@ export class AppointmentDetailComponent implements OnInit {
     const id = Number(this.route.snapshot.paramMap.get('id'));
     this.loading = true;
     this.appointmentService.getAppointmentById(id).subscribe({
-      next: appt => { this.appointment = appt; this.loading = false; },
-      error: () => { this.loading = false; }
+      next: appt => {
+        this.appointment = appt;
+        this.errorMsg = '';
+        this.loading = false;
+      },
+      error: err => {
+        this.errorMsg = apiErrorMessage(err, 'Unable to load appointment details.');
+        this.loading = false;
+      }
     });
   }
 

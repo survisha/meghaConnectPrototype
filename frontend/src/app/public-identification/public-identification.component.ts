@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { VisitorSearchService } from '../services/visitor-search.service';
 import { Visitor } from '../models';
 import { environment } from '../../environments/environment';
+import { apiErrorMessage } from '../shared/api-error.util';
 
 // Angular Material
 import { MatInputModule } from '@angular/material/input';
@@ -76,22 +77,22 @@ export class PublicIdentificationComponent {
     if (phone) {
       this.visitorSearchService.searchByPhone(phone).subscribe({
         next: visitors => this.setResults(visitors, { phone, epic, name, district }),
-        error: () => this.handleSearchError(),
+        error: error => this.handleSearchError(error),
       });
     } else if (epic) {
       this.visitorSearchService.searchByEpic(epic).subscribe({
         next: visitor => this.setResults(visitor ? [visitor] : [], { phone, epic, name, district }),
-        error: () => this.handleSearchError(),
+        error: error => this.handleSearchError(error),
       });
     } else if (name) {
       this.visitorSearchService.searchByName(name).subscribe({
         next: visitors => this.setResults(visitors, { phone, epic, name, district }),
-        error: () => this.handleSearchError(),
+        error: error => this.handleSearchError(error),
       });
     } else if (district) {
       this.visitorSearchService.searchByDistrict(district).subscribe({
         next: visitors => this.setResults(visitors, { phone, epic, name, district }),
-        error: () => this.handleSearchError(),
+        error: error => this.handleSearchError(error),
       });
     }
   }
@@ -156,11 +157,11 @@ export class PublicIdentificationComponent {
     this.populateHistory();
   }
 
-  private handleSearchError(): void {
+  private handleSearchError(error: unknown): void {
     this.results = [];
     this.selected = null;
     this.searching = false;
-    this.errorMessage = 'Unable to search visitor records right now. Please try again.';
+    this.errorMessage = apiErrorMessage(error, 'Unable to search visitor records right now. Please try again.');
     this.selectedPhotoLoadFailed = false;
     this.selectedPhotoPreviewOpen = false;
     this.populateHistory();

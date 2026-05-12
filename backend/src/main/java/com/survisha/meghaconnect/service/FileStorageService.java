@@ -1,10 +1,15 @@
 package com.survisha.meghaconnect.service;
 
+import com.survisha.meghaconnect.entity.DocumentUpload;
 import com.survisha.meghaconnect.exception.ErrorCodeConstants;
+import com.survisha.meghaconnect.exception.MeghaConnectException;
 import com.survisha.meghaconnect.exception.VisitorRegistrationValidationException;
 import com.survisha.meghaconnect.util.RequestContextUtil;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -24,11 +29,15 @@ import java.util.regex.Pattern;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class FileStorageService {
 
     private static final Pattern DATA_URI_PATTERN = Pattern.compile("^data:image/(jpeg|jpg|png);base64,(.+)$", Pattern.CASE_INSENSITIVE);
+    private static final String ENCRYPTED_PATH_PREFIX = "enc:";
 
-    @Value("${meghaconnect.storage.base-path:/uploads}")
+    private final FilePathCryptoService filePathCryptoService;
+
+    @Value("${file.upload.root-path:${meghaconnect.storage.base-path:/uploads}}")
     private String basePath;
 
     @Value("${meghaconnect.storage.visitor-photo-path:visitor-photos}")
@@ -41,15 +50,24 @@ public class FileStorageService {
     private long maxFileSizeMb;
 
     /**
-     * Store file under /uploads/{visitorId}/{applicationId}/
-     * Returns the relative path stored in DB.
+     * Legacy helper retained for callers that only need the generated relative key.
+     * New document metadata writes should use storeFileSecure.
      */
     public String storeFile(MultipartFile file, Long visitorId, String applicationId) throws IOException {
+        return storeFileSecure(file, visitorId, applicationId).getRelativePath();
+    }
+
+    /**
+     * Stores a document as normal binary data and returns encrypted metadata for DB persistence.
+     */
+    public StoredFileMetadata storeFileSecure(MultipartFile file, Long visitorId, String applicationId) throws IOException {
         validateFile(file);
+        validatePathSegment(visitorId != null ? visitorId.toString() : null, "visitorId");
+        validatePathSegment(applicationId, "applicationId");
 
         String originalFilename = file.getOriginalFilename();
         String extension = getExtension(originalFilename);
-        String filename = UUID.randomUUID() + "." + extension;
+        String filename = UUID.randomUUID() + "." + extension.toLowerCase();
 
         String relativePath = visitorId + "/" + applicationId + "/" + filename;
         Path targetDir = Paths.get(basePath, visitorId.toString(), applicationId);
@@ -58,7 +76,19 @@ public class FileStorageService {
         Path targetFile = targetDir.resolve(filename);
         Files.copy(file.getInputStream(), targetFile, StandardCopyOption.REPLACE_EXISTING);
 
-        return relativePath;
+        String encryptedPath = filePathCryptoService.encryptPath(relativePath);
+        String secureHash = filePathCryptoService.hashPath(relativePath);
+        String contentType = resolveContentType(filename, file.getContentType());
+
+        return new StoredFileMetadata(
+                originalFilename,
+                filename,
+                contentType,
+                file.getSize(),
+                relativePath,
+                encryptedPath,
+                secureHash
+        );
     }
 
     /**
@@ -83,7 +113,30 @@ public class FileStorageService {
     }
 
     public Path resolveFilePath(String relativePath) {
-        return Paths.get(basePath).resolve(relativePath);
+        return resolveSafeRelativePath(relativePath);
+    }
+
+    public Path resolveDocumentPath(DocumentUpload document) {
+        if (document == null) {
+            throw documentUnavailable();
+        }
+
+        String relativePath = resolveStoredRelativePath(document);
+        if (document.getSecureHash() != null
+                && !document.getSecureHash().isBlank()
+                && !filePathCryptoService.verifyPathHash(relativePath, document.getSecureHash())) {
+            log.warn("Rejected document file because stored path hash did not match requestId={}",
+                    RequestContextUtil.getRequestId());
+            throw documentUnavailable();
+        }
+
+        Path target = resolveSafeRelativePath(relativePath);
+        if (!Files.isRegularFile(target) || !Files.isReadable(target)) {
+            log.warn("Stored document file is unavailable requestId={} documentId={}",
+                    RequestContextUtil.getRequestId(), document.getId());
+            throw documentUnavailable();
+        }
+        return target;
     }
 
     /**
@@ -145,9 +198,161 @@ public class FileStorageService {
         }
     }
 
+    private Path resolveSafeRelativePath(String relativePath) {
+        if (relativePath == null || relativePath.isBlank()) {
+            throw documentUnavailable();
+        }
+
+        String normalizedRelative = relativePath.trim().replace('\\', '/');
+        if (normalizedRelative.startsWith("/") || normalizedRelative.contains("../") || normalizedRelative.contains("..")) {
+            log.warn("Rejected unsafe stored document path requestId={}", RequestContextUtil.getRequestId());
+            throw documentUnavailable();
+        }
+
+        Path root = Paths.get(basePath).toAbsolutePath().normalize();
+        Path target = root.resolve(normalizedRelative).normalize();
+        if (!target.startsWith(root)) {
+            log.warn("Rejected stored document path outside upload root requestId={}", RequestContextUtil.getRequestId());
+            throw documentUnavailable();
+        }
+        return target;
+    }
+
+    private String resolveStoredRelativePath(DocumentUpload document) {
+        String encryptedPath = trimToNull(document.getEncryptedFilePath());
+        if (encryptedPath != null) {
+            return filePathCryptoService.decryptPath(encryptedPath);
+        }
+
+        String storedPath = trimToNull(document.getFilePath());
+        if (storedPath == null) {
+            throw documentUnavailable();
+        }
+        if (storedPath.startsWith(ENCRYPTED_PATH_PREFIX)) {
+            return filePathCryptoService.decryptPath(storedPath);
+        }
+        return storedPath;
+    }
+
+    private String resolveContentType(String filename, String declaredContentType) {
+        String contentType = trimToNull(declaredContentType);
+        if (contentType != null && !MediaType.APPLICATION_OCTET_STREAM_VALUE.equalsIgnoreCase(contentType)) {
+            return contentType;
+        }
+        return mediaTypeFromExtension(filename).toString();
+    }
+
+    public MediaType mediaTypeFromMetadata(DocumentUpload document, Path filePath) {
+        String contentType = trimToNull(document.getContentType());
+        if (contentType == null) {
+            contentType = trimToNull(document.getMimeType());
+        }
+        if (contentType == null || MediaType.APPLICATION_OCTET_STREAM_VALUE.equalsIgnoreCase(contentType)) {
+            contentType = probeContentType(filePath);
+        }
+        MediaType mediaType = parseMediaType(contentType);
+        if (MediaType.APPLICATION_OCTET_STREAM.equals(mediaType)) {
+            mediaType = mediaTypeFromExtension(firstNonBlank(
+                    document.getStoredFileName(),
+                    document.getOriginalFilename(),
+                    filePath != null && filePath.getFileName() != null ? filePath.getFileName().toString() : null
+            ));
+        }
+        return mediaType;
+    }
+
+    private String probeContentType(Path filePath) {
+        try {
+            return filePath != null ? Files.probeContentType(filePath) : null;
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
+    private MediaType parseMediaType(String contentType) {
+        if (contentType == null || contentType.isBlank()) {
+            return MediaType.APPLICATION_OCTET_STREAM;
+        }
+        try {
+            return MediaType.parseMediaType(contentType);
+        } catch (IllegalArgumentException e) {
+            return MediaType.APPLICATION_OCTET_STREAM;
+        }
+    }
+
+    private MediaType mediaTypeFromExtension(String filename) {
+        String lower = filename == null ? "" : filename.toLowerCase();
+        if (lower.endsWith(".pdf")) {
+            return MediaType.APPLICATION_PDF;
+        }
+        if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) {
+            return MediaType.IMAGE_JPEG;
+        }
+        if (lower.endsWith(".png")) {
+            return MediaType.IMAGE_PNG;
+        }
+        if (lower.endsWith(".gif")) {
+            return MediaType.IMAGE_GIF;
+        }
+        if (lower.endsWith(".webp")) {
+            return MediaType.parseMediaType("image/webp");
+        }
+        if (lower.endsWith(".txt")) {
+            return MediaType.TEXT_PLAIN;
+        }
+        if (lower.endsWith(".doc")) {
+            return MediaType.parseMediaType("application/msword");
+        }
+        if (lower.endsWith(".docx")) {
+            return MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+        }
+        if (lower.endsWith(".xls")) {
+            return MediaType.parseMediaType("application/vnd.ms-excel");
+        }
+        if (lower.endsWith(".xlsx")) {
+            return MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        }
+        return MediaType.APPLICATION_OCTET_STREAM;
+    }
+
+    private void validatePathSegment(String value, String fieldName) {
+        if (value == null
+                || value.isBlank()
+                || value.contains("/")
+                || value.contains("\\")
+                || value.contains("..")) {
+            throw new IllegalArgumentException(fieldName + " contains an unsafe path segment.");
+        }
+    }
+
     private String getExtension(String filename) {
         if (filename == null || !filename.contains(".")) return "";
         return filename.substring(filename.lastIndexOf('.') + 1);
+    }
+
+    private String trimToNull(String value) {
+        return value == null || value.trim().isEmpty() ? null : value.trim();
+    }
+
+    private String firstNonBlank(String... values) {
+        if (values == null) {
+            return null;
+        }
+        for (String value : values) {
+            String trimmed = trimToNull(value);
+            if (trimmed != null) {
+                return trimmed;
+            }
+        }
+        return null;
+    }
+
+    private MeghaConnectException documentUnavailable() {
+        return new MeghaConnectException(
+                ErrorCodeConstants.CONTENT_NOT_FOUND,
+                "Document file is unavailable.",
+                404
+        );
     }
 
     private DecodedImage decodeAndValidateImage(String livePhotoBase64) {
@@ -240,6 +445,33 @@ public class FileStorageService {
         private DecodedImage(byte[] bytes, String extension) {
             this.bytes = bytes;
             this.extension = extension;
+        }
+    }
+
+    @Getter
+    public static class StoredFileMetadata {
+        private final String originalFileName;
+        private final String storedFileName;
+        private final String contentType;
+        private final Long fileSize;
+        private final String relativePath;
+        private final String encryptedFilePath;
+        private final String secureHash;
+
+        private StoredFileMetadata(String originalFileName,
+                                   String storedFileName,
+                                   String contentType,
+                                   Long fileSize,
+                                   String relativePath,
+                                   String encryptedFilePath,
+                                   String secureHash) {
+            this.originalFileName = originalFileName;
+            this.storedFileName = storedFileName;
+            this.contentType = contentType;
+            this.fileSize = fileSize;
+            this.relativePath = relativePath;
+            this.encryptedFilePath = encryptedFilePath;
+            this.secureHash = secureHash;
         }
     }
 }

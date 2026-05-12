@@ -234,6 +234,7 @@ export class AppointmentService {
       fileName: raw.fileName ?? raw.originalFilename ?? raw.documentType ?? 'Document',
       filePath: raw.filePath ?? '',
       fileSize: Number(raw.fileSize ?? raw.fileSizeBytes ?? 0),
+      mimeType: raw.mimeType ?? raw.contentType,
       uploadedAt: raw.uploadedAt ?? raw.createdAt,
       isRequired: Boolean(raw.isRequired),
       status: raw.status ?? 'UPLOADED',

@@ -1,5 +1,6 @@
 package com.survisha.meghaconnect.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -18,6 +19,7 @@ public class AppointmentDocumentDto {
     private Long appointmentId;
     private String documentType;
     private String fileName;
+    @JsonIgnore
     private String filePath;
     private Long fileSize;
     private String mimeType;

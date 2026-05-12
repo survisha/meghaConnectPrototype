@@ -11,6 +11,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatDividerModule } from '@angular/material/divider';
 import { Appointment } from '../../models';
 import { AppointmentService } from '../../services/appointment.service';
+import { apiErrorMessage } from '../../shared/api-error.util';
 
 @Component({
   selector: 'app-cmo-review-modal',
@@ -79,7 +80,7 @@ export class CmoReviewModalComponent implements OnInit {
       },
       error: (err) => {
         this.isSubmitting = false;
-        alert('Error submitting CMO review: ' + (err.error?.message || err.message));
+        alert('Error submitting CMO review: ' + apiErrorMessage(err, 'Unknown error'));
         console.error('Error:', err);
       }
     });

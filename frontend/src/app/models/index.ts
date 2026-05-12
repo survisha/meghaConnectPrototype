@@ -54,8 +54,9 @@ export interface AppointmentDocument {
   appointmentId?: number;
   documentType: DocumentType;
   fileName: string;
-  filePath: string;
+  filePath?: string;
   fileSize: number;
+  mimeType?: string;
   uploadedAt?: string;
   isRequired: boolean;
   status: 'UPLOADED' | 'PENDING' | 'VERIFIED';

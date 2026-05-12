@@ -201,20 +201,27 @@ public class VisitorAppointmentController {
                             // Store file using FileStorageService
                             MultipartFile mfile = convertPartToMultipartFile(part);
                             if (mfile != null && !mfile.isEmpty()) {
-                                String filePath = fileStorageService.storeFile(mfile, applicant.getId(), appId);
+                                FileStorageService.StoredFileMetadata storedFile =
+                                        fileStorageService.storeFileSecure(mfile, applicant.getId(), appId);
+                                LocalDateTime uploadedAt = LocalDateTime.now();
 
                                 // Create and save DocumentUpload record
                                 DocumentUpload docUpload = DocumentUpload.builder()
                                         .appointment(saved)
                                         .visitor(applicant)
                                         .documentType(documentType)
-                                        .originalFilename(mfile.getOriginalFilename())
-                                        .filePath(filePath)
-                                        .fileSizeBytes(mfile.getSize())
-                                        .mimeType(mfile.getContentType())
+                                        .originalFilename(storedFile.getOriginalFileName())
+                                        .storedFileName(storedFile.getStoredFileName())
+                                        .filePath(storedFile.getEncryptedFilePath())
+                                        .encryptedFilePath(storedFile.getEncryptedFilePath())
+                                        .secureHash(storedFile.getSecureHash())
+                                        .fileSizeBytes(storedFile.getFileSize())
+                                        .mimeType(storedFile.getContentType())
+                                        .contentType(storedFile.getContentType())
                                         .uploadedBy("visitor_" + applicant.getId())
-                                        .createdAt(LocalDateTime.now())
-                                        .updatedAt(LocalDateTime.now())
+                                        .uploadedDate(uploadedAt)
+                                        .createdAt(uploadedAt)
+                                        .updatedAt(uploadedAt)
                                         .build();
 
                                 documentUploadRepository.save(docUpload);

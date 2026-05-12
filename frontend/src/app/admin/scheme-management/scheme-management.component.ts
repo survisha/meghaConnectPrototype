@@ -13,8 +13,9 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
+import { apiErrorMessage } from '../../shared/api-error.util';
 
 interface Scheme {
   id: number;
@@ -106,9 +107,9 @@ export class SchemeManagementComponent implements OnInit {
           this.schemes = data;
           this.loading = false;
         },
-        error: (err: HttpErrorResponse) => {
+        error: (err) => {
           console.error('Error loading schemes:', err);
-          alert('Error loading schemes: ' + (err.error?.message || err.message || 'Unknown error'));
+          alert('Error loading schemes: ' + apiErrorMessage(err, 'Unknown error'));
           this.loading = false;
         }
       });
@@ -145,9 +146,9 @@ export class SchemeManagementComponent implements OnInit {
           this.showNewSchemeForm = false;
           this.loading = false;
         },
-        error: (err: HttpErrorResponse) => {
+        error: (err) => {
           console.error('Error creating scheme:', err);
-          alert('Error creating scheme: ' + (err.error?.message || err.message || 'Unknown error'));
+          alert('Error creating scheme: ' + apiErrorMessage(err, 'Unknown error'));
           this.loading = false;
         }
       });
@@ -170,9 +171,9 @@ export class SchemeManagementComponent implements OnInit {
           alert(scheme.isActive ? 'Scheme activated' : 'Scheme marked as inactive');
           this.loading = false;
         },
-        error: (err: HttpErrorResponse) => {
+        error: (err) => {
           console.error('Error updating scheme:', err);
-          alert('Error updating scheme: ' + (err.error?.message || err.message || 'Unknown error'));
+          alert('Error updating scheme: ' + apiErrorMessage(err, 'Unknown error'));
           this.loading = false;
           // Revert the toggle
           event.source.checked = !newStatus;
@@ -195,9 +196,9 @@ export class SchemeManagementComponent implements OnInit {
           this.showDocumentConfig = true;
           this.loading = false;
         },
-        error: (err: HttpErrorResponse) => {
+        error: (err) => {
           console.error('Error loading scheme documents:', err);
-          alert('Error loading scheme documents: ' + (err.error?.message || err.message || 'Unknown error'));
+          alert('Error loading scheme documents: ' + apiErrorMessage(err, 'Unknown error'));
           this.loading = false;
         }
       });
@@ -244,9 +245,9 @@ export class SchemeManagementComponent implements OnInit {
         this.closeDocumentConfig();
         this.loading = false;
       },
-      error: (err: HttpErrorResponse) => {
+      error: (err) => {
         console.error('Error saving documents:', err);
-        alert('Error saving documents: ' + (err.error?.message || err.message || 'Unknown error'));
+        alert('Error saving documents: ' + apiErrorMessage(err, 'Unknown error'));
         this.loading = false;
       }
     });

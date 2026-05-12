@@ -12,6 +12,7 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule, provideNativeDateAdapter } from '@angular/material/core';
 import { MatCardModule } from '@angular/material/card';
 import { DragDropModule, CdkDragDrop } from '@angular/cdk/drag-drop';
+import { apiErrorMessage } from '../shared/api-error.util';
 
 @Component({
   selector: 'app-scheduling',
@@ -83,9 +84,9 @@ export class SchedulingComponent implements OnInit {
         }
         this.loading = false;
       },
-      error: () => {
+      error: error => {
         this.events = [];
-        this.errorMsg = 'Unable to load schedule events from API. Please try again.';
+        this.errorMsg = apiErrorMessage(error, 'Unable to load schedule events from API. Please try again.');
         this.loading = false;
       }
     });
@@ -186,7 +187,7 @@ export class SchedulingComponent implements OnInit {
           this.newEvent = {};
           this.showAddDialog = false;
         },
-        error: () => {}
+        error: error => this.errorMsg = apiErrorMessage(error, 'Unable to create schedule event.')
       });
     }
   }
@@ -225,7 +226,10 @@ export class SchedulingComponent implements OnInit {
       next: saved => {
         this.events = this.events.map(item => item.id === saved.id ? saved : item);
       },
-      error: () => this.loadEvents()
+      error: error => {
+        this.errorMsg = apiErrorMessage(error, 'Unable to update schedule event.');
+        this.loadEvents();
+      }
     });
   }
 

@@ -14,7 +14,9 @@ import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AppointmentApprovalService, AppointmentApproval } from '../services/appointment-approval.service';
+import { DocumentService } from '../services/document.service';
 import { MatDialog } from '@angular/material/dialog';
+import { apiErrorMessage } from '../shared/api-error.util';
 
 @Component({
   selector: 'app-appointment-approval-details',
@@ -43,6 +45,7 @@ export class AppointmentApprovalDetailsComponent implements OnInit {
   loading = false;
   submitting = false;
   appointmentId: number = 0;
+  downloadingDocumentId: number | null = null;
   
   approvalForm: FormGroup;
   rejectForm: FormGroup;
@@ -54,7 +57,8 @@ export class AppointmentApprovalDetailsComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private fb: FormBuilder,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private documentService: DocumentService
   ) {
     this.approvalForm = this.fb.group({
       remarks: ['', Validators.required]
@@ -81,6 +85,7 @@ export class AppointmentApprovalDetailsComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error loading appointment details:', err);
+        alert(apiErrorMessage(err, 'Error loading appointment details. Please try again.'));
         this.loading = false;
       }
     });
@@ -103,7 +108,7 @@ export class AppointmentApprovalDetailsComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error approving appointment:', err);
-        alert('Error approving appointment. Please try again.');
+        alert(apiErrorMessage(err, 'Error approving appointment. Please try again.'));
         this.submitting = false;
       }
     });
@@ -129,7 +134,7 @@ export class AppointmentApprovalDetailsComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error rejecting appointment:', err);
-        alert('Error rejecting appointment. Please try again.');
+        alert(apiErrorMessage(err, 'Error rejecting appointment. Please try again.'));
         this.submitting = false;
       }
     });
@@ -148,9 +153,23 @@ export class AppointmentApprovalDetailsComponent implements OnInit {
     this.router.navigate(['/appointments/pending-approvals']);
   }
 
-  downloadDocument(docId: string): void {
-    alert(`Downloading document: ${docId}`);
-    // Implement actual document download
+  downloadDocument(docId: string | number, fileName = 'document'): void {
+    const documentId = Number(docId);
+    if (!documentId || this.downloadingDocumentId) {
+      return;
+    }
+
+    this.downloadingDocumentId = documentId;
+    this.documentService.downloadDocument(documentId).subscribe({
+      next: blob => {
+        this.triggerBlobDownload(blob, fileName);
+        this.downloadingDocumentId = null;
+      },
+      error: error => {
+        this.downloadingDocumentId = null;
+        alert(apiErrorMessage(error, 'Unable to download document. Please try again.'));
+      },
+    });
   }
 
   getStatusColor(status: string): string {
@@ -162,5 +181,17 @@ export class AppointmentApprovalDetailsComponent implements OnInit {
       'SCHEDULED': '#059669'
     };
     return colors[status] || '#6b7280';
+  }
+
+  private triggerBlobDownload(blob: Blob, fileName: string): void {
+    const objectUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = fileName;
+    anchor.style.display = 'none';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
   }
 }

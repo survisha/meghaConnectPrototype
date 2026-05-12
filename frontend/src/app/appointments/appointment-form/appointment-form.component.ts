@@ -18,6 +18,7 @@ import { AiDocumentService, AiExtractedFields, AiDocumentAnalysisResponse, Dupli
 import { SchemeService } from '../../services/scheme.service';
 import { VisitorService } from '../../services/visitor.service';
 import { AuthService } from '../../services/auth.service';
+import { apiErrorMessage } from '../../shared/api-error.util';
 
 interface Associate {
   name: string;
@@ -373,7 +374,7 @@ export class AppointmentFormComponent implements OnInit {
       },
       error: (err) => {
         console.error('Failed to load visitor data:', err);
-        this.errorMsg = 'Could not load your visitor profile. Please refresh or login again.';
+        this.errorMsg = apiErrorMessage(err, 'Could not load your visitor profile. Please refresh or login again.');
         // Default to PENDING status if API fails
         this.visitorKycStatus = 'PENDING';
         this.updateDocumentVisibility();
@@ -486,7 +487,7 @@ export class AppointmentFormComponent implements OnInit {
       },
       error: err => {
         this.loading = false;
-        this.errorMsg = err?.error?.message || 'Submission failed. Please try again.';
+        this.errorMsg = apiErrorMessage(err, 'Submission failed. Please try again.');
       },
     });
   }

@@ -105,11 +105,17 @@ app:
     secret: ${JWT_SECRET:CHANGE_ME_MIN_256_BIT_SECRET_FOR_UAT_ONLY}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}
 
+file:
+  upload:
+    root-path: ${FILE_UPLOAD_ROOT:/opt/meghaconnect/uploads/dev}
+    crypto-key-path: ${FILE_UPLOAD_CRYPTO_KEY_PATH:/opt/meghaconnect/secure/crypto.key}
+
 meghaconnect:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:https://meghaconnect.cloud}
   storage:
-    base-path: ${FILE_UPLOAD_ROOT:/opt/meghaconnect/uploads/dev}
+    base-path: ${file.upload.root-path}
+    crypto-key-path: ${file.upload.crypto-key-path}
     base-url: ${STORAGE_BASE_URL:https://meghaconnect.cloud/api/uploads}
     visitor-photo-path: ${STORAGE_VISITOR_PHOTO_PATH:visitor-photos}
     allowed-types: ${STORAGE_ALLOWED_TYPES:pdf,jpg,jpeg,png,doc,docx}

@@ -6,6 +6,10 @@
     </button>
   </div>
 
+  <div *ngIf="errorMsg" class="error-message" style="margin-bottom:1rem">
+    {{ errorMsg }}
+  </div>
+
   <!-- Scheme Statistics Cards -->
   <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:1rem;margin-bottom:1.5rem">
     <div *ngFor="let stat of schemeStats; let i = index" [id]="'schemeList_statCard_' + i" class="scheme-stat-card">

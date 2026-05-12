@@ -16,6 +16,7 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Router } from '@angular/router';
 import { AppointmentApprovalService, AppointmentApproval } from '../services/appointment-approval.service';
+import { apiErrorMessage } from '../shared/api-error.util';
 
 @Component({
   selector: 'app-approver-inbox',
@@ -94,7 +95,7 @@ export class ApproverInboxComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error loading pending appointments:', err);
-        this.errorMsg = 'Unable to load appointment inbox from API. Please try again.';
+        this.errorMsg = apiErrorMessage(err, 'Unable to load appointment inbox from API. Please try again.');
         this.appointments = [];
         this.filteredAppointments = [];
         this.totalCount = 0;

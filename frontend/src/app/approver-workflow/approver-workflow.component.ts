@@ -15,6 +15,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { apiErrorMessage } from '../shared/api-error.util';
 
 type ChipSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary';
 
@@ -66,8 +67,8 @@ export class ApproverWorkflowComponent implements OnInit {
         );
         this.loading = false;
       },
-      error: () => {
-        this.errorMsg = 'Unable to load approver appointments from API. Please try again.';
+      error: error => {
+        this.errorMsg = apiErrorMessage(error, 'Unable to load approver appointments from API. Please try again.');
         if (this.allowDummyFallback) {
           // TODO: Remove dummy fallback after API stabilization.
           this.initializeDummyData();
@@ -243,7 +244,7 @@ export class ApproverWorkflowComponent implements OnInit {
         this.pendingAction = null;
         this.ngOnInit();
       },
-      error: () => this.snackBar.open('Failed to update appointment.', 'Close', { duration: 5000, panelClass: ['error-snackbar'] })
+      error: error => this.snackBar.open(apiErrorMessage(error, 'Failed to update appointment.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] })
     });
   }
 
@@ -256,7 +257,7 @@ export class ApproverWorkflowComponent implements OnInit {
       next: updated => {
         this.snackBar.open(`${updated.applicationId} rescheduled to ${this.rescheduleDate}.`, 'Close', { duration: 5000 });
       },
-      error: () => this.snackBar.open('Failed to reschedule.', 'Close', { duration: 5000, panelClass: ['error-snackbar'] })
+      error: error => this.snackBar.open(apiErrorMessage(error, 'Failed to reschedule.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] })
     });
     this.showRescheduleDialog = false;
     this.selected = null;

@@ -83,8 +83,7 @@
 }
 
 .home-nav .nav-login {
-  background: #1a237e;
-  color: #fff;
+  color: #1a237e;
 }
 
 .home-nav .nav-login:hover,
@@ -111,7 +110,9 @@
 }
 
 .hero-section {
-  min-height: calc(100vh - 72px);
+  min-height: calc(100svh - 72px);
+  box-sizing: border-box;
+  padding-block: clamp(0.75rem, 2vh, 1.5rem);
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
   align-items: center;
@@ -141,7 +142,7 @@
 .section-heading h2 {
   margin: 0;
   color: #101828;
-  font-size: clamp(2rem, 5vw, 4rem);
+  font-size: clamp(2rem, 4.4vw, 3.55rem);
   line-height: 1.05;
   font-weight: 900;
 }
@@ -202,11 +203,23 @@
 
 .hero-panel {
   min-width: 0;
-  border-radius: 18px;
-  padding: clamp(1rem, 2vw, 1.4rem);
+  width: min(100%, 470px);
+  justify-self: center;
+  border-radius: 14px;
+  padding: clamp(0.8rem, 1.4vw, 1.05rem);
   background: linear-gradient(135deg, #1a237e 0%, #1565c0 100%);
   color: #fff;
-  box-shadow: 0 24px 60px rgba(26, 35, 126, 0.25);
+  box-shadow: 0 18px 44px rgba(26, 35, 126, 0.22);
+}
+
+.hero-panel .official-placeholder {
+  height: clamp(300px, 48vh, 450px);
+  min-height: 0;
+  border-radius: 12px;
+}
+
+.hero-panel .official-photo {
+  min-height: 0;
 }
 
 .official-placeholder {
@@ -239,24 +252,31 @@
 .hero-feature-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
-  margin-top: 1rem;
+  gap: 0.65rem;
+  margin-top: 0.75rem;
 }
 
 .hero-feature-grid div {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.55rem;
   min-width: 0;
-  border-radius: 10px;
-  padding: 0.8rem;
+  min-height: 54px;
+  border-radius: 8px;
+  padding: 0.65rem;
   background: rgba(255, 255, 255, 0.12);
   color: #fff;
+  font-size: 0.9rem;
+  line-height: 1.25;
+  font-weight: 700;
 }
 
 .hero-feature-grid mat-icon {
   color: #fbbf24;
   flex: 0 0 auto;
+  font-size: 1.25rem;
+  width: 1.25rem;
+  height: 1.25rem;
 }
 
 .content-section {

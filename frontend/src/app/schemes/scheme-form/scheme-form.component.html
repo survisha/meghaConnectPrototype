@@ -7,6 +7,9 @@
   <div *ngIf="errorMsg" class="error-message" style="margin-bottom:1rem">
     {{ errorMsg }}
   </div>
+  <div *ngIf="successMsg" class="success-msg" style="margin-bottom:1rem">
+    {{ successMsg }}
+  </div>
 
   <div class="section-card" style="margin-bottom:1.5rem">
     <div class="section-card-body">
@@ -218,6 +221,9 @@
   <div style="display:flex;justify-content:space-between;margin-top:1.5rem">
     <button mat-stroked-button (click)="prevStep()" [disabled]="step===0"><mat-icon>chevron_left</mat-icon> Previous</button>
     <button *ngIf="step < steps.length-1" mat-raised-button color="primary" (click)="nextStep()">Next <mat-icon>chevron_right</mat-icon></button>
-    <button *ngIf="step===steps.length-1" mat-raised-button color="accent" (click)="submit()"><mat-icon>check</mat-icon> Submit Application</button>
+    <button *ngIf="step===steps.length-1" mat-raised-button color="accent" (click)="submit()" [disabled]="loading || submitted">
+      <mat-icon>{{ loading ? 'hourglass_empty' : 'check' }}</mat-icon>
+      {{ loading ? 'Submitting...' : submitted ? 'Submitted' : 'Submit Application' }}
+    </button>
   </div>
 </div>

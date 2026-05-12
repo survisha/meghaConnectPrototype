@@ -18,7 +18,7 @@ export interface ReferenceDataDto {
 }
 
 export interface CreateSchemeApplicationRequest {
-  applicantId: number;
+  applicantId?: number;
   appointmentId?: number;
   schemeType: string;
   projectName: string;
@@ -28,6 +28,13 @@ export interface CreateSchemeApplicationRequest {
   estimatedCost?: number;
   communityContribution?: number;
   justification?: string;
+  items?: SchemeApplicationItemRequest[];
+}
+
+export interface SchemeApplicationItemRequest {
+  description: string;
+  quantity: number;
+  unitCost: number;
 }
 
 export interface UpdateSchemeStatusRequest {
@@ -39,8 +46,8 @@ export interface UpdateSchemeStatusRequest {
 @Injectable({ providedIn: 'root' })
 export class SchemeService {
 
-  private readonly schemesUrl = `${environment.apiUrl}/api/schemes`;
-  private readonly applicationsUrl = `${environment.apiUrl}/api/scheme-applications`;
+  private readonly schemesUrl = `${environment.apiUrl}/admin/schemes`;
+  private readonly applicationsUrl = `${environment.apiUrl}/scheme-applications`;
 
   constructor(private http: HttpClient) {}
 
@@ -68,7 +75,7 @@ export class SchemeService {
   }
 
   getApplicationsByVisitor(visitorId: number): Observable<SchemeApplication[]> {
-    return this.http.get<SchemeApplication[]>(`${this.applicationsUrl}/${visitorId}`);
+    return this.http.get<SchemeApplication[]>(`${this.applicationsUrl}/visitor/${visitorId}`);
   }
 
   updateApplicationStatus(id: number, request: UpdateSchemeStatusRequest): Observable<SchemeApplication> {

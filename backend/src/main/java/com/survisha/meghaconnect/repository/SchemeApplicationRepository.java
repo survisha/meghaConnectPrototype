@@ -14,4 +14,6 @@ public interface SchemeApplicationRepository extends JpaRepository<SchemeApplica
             Long applicantId,
             SchemeApplication.SchemeType schemeType
     );
+
+    List<SchemeApplication> findByApplicant_IdOrderByCreatedAtDesc(Long applicantId);
 }

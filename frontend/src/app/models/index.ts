@@ -115,6 +115,8 @@ export interface ScheduleEvent {
 export interface SchemeApplication {
   id: number;
   appointmentId?: number;
+  applicantId?: number;
+  applicantName?: string;
   applicant: Visitor;
   schemeType: SchemeType;
   projectName: string;
@@ -127,6 +129,18 @@ export interface SchemeApplication {
   hcmDecision?: string;
   hcmApprovedCost?: number;
   status: string;
+  items?: SchemeApplicationItem[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface SchemeApplicationItem {
+  id?: number;
+  description: string;
+  quantity: number;
+  unitCost: number;
+  cmoModeratedUnitCost?: number;
+  hcmApprovedUnitCost?: number;
 }
 
 export interface Direction {

@@ -49,6 +49,33 @@
   }
 }
 
+.applicant-phone {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.applicant-phone mat-icon {
+  color: #db2777;
+  font-size: 0.9rem;
+  height: 0.9rem;
+  line-height: 0.9rem;
+  width: 0.9rem;
+}
+
+.actions-header,
+.actions-cell {
+  width: 120px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.actions-cell button {
+  margin: 0 2px;
+}
+
 // Status Chips
 mat-chip.status-chip {
   font-size: 0.75rem;

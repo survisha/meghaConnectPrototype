@@ -14,6 +14,16 @@ import { SchemeService } from '../../services/scheme.service';
 import { AuthService } from '../../services/auth.service';
 import { apiErrorMessage } from '../../shared/api-error.util';
 
+interface DocumentUpload {
+  type: 'PLANS_ESTIMATES' | 'BANK_DETAILS' | 'MLA_APPROVAL_LETTER' | 'CM_CARE_HOSPITAL' | 'ORG_REGISTRATION_CERTIFICATE';
+  label: string;
+  isRequired: boolean;
+  isVisible: boolean;
+  accept: string;
+  file?: File;
+  fileName?: string;
+}
+
 @Component({
   selector: 'app-scheme-form',
   standalone: true,
@@ -55,6 +65,13 @@ export class SchemeFormComponent implements OnInit {
   beneficiaryTypes = ['Individual','Community/Society','School/Youth Organisation','All of the above','Others'];
   beneficiaryCounts = ['1 TO 100','101 TO 500','501 TO 1000','Above 1000'];
   schemeHistoryOptions = ['CMSDF', 'CMSG', 'CM Care', 'CM Connect', 'CM Elevate', 'Focus+'];
+  documents: DocumentUpload[] = [
+    { type: 'PLANS_ESTIMATES', label: 'Plans & Estimates (3 nos)', isRequired: true, isVisible: true, accept: '.pdf' },
+    { type: 'BANK_DETAILS', label: 'Bank Account Details', isRequired: true, isVisible: true, accept: '.pdf,.jpg,.jpeg,.png' },
+    { type: 'MLA_APPROVAL_LETTER', label: 'MLA / MDC Letter', isRequired: false, isVisible: false, accept: '.pdf,.doc,.docx,.jpg,.jpeg,.png' },
+    { type: 'CM_CARE_HOSPITAL', label: 'Hospital / Medical Docs (CM Care)', isRequired: false, isVisible: false, accept: '.pdf,.doc,.docx,.jpg,.jpeg,.png' },
+    { type: 'ORG_REGISTRATION_CERTIFICATE', label: 'Organisation Registration Certificate', isRequired: false, isVisible: true, accept: '.pdf,.doc,.docx,.jpg,.jpeg,.png' },
+  ];
 
   constructor(
     private schemeService: SchemeService,
@@ -77,7 +94,55 @@ export class SchemeFormComponent implements OnInit {
 
   addItem() { this.form.items.push({ description: '', quantity: 1, unitCost: 0 }); }
   removeItem(i: number) { if (this.form.items.length > 1) this.form.items.splice(i, 1); }
-  get totalCost() { return this.form.items.reduce((sum: number, it: any) => sum + (it.quantity * it.unitCost), 0); }
+  get totalCost() {
+    return this.form.items.reduce((sum: number, it: any) => {
+      const quantity = Number(it.quantity) || 0;
+      const unitCost = Number(it.unitCost) || 0;
+      return sum + (quantity * unitCost);
+    }, 0);
+  }
+
+  get selectedSchemeLabel(): string {
+    const selected = this.schemeTypes.find(opt => opt.value === this.form.schemeType);
+    return selected?.label || this.displayValue(this.form.schemeType);
+  }
+
+  get isCmCare(): boolean {
+    return this.normalizeSchemeType(this.form.schemeType) === 'CM_CARE';
+  }
+
+  updateDocumentVisibility() {
+    const mlaDoc = this.documents.find(d => d.type === 'MLA_APPROVAL_LETTER');
+    if (mlaDoc) {
+      mlaDoc.isVisible = !!this.form.mlaMdcApproved;
+    }
+
+    const cmCareDoc = this.documents.find(d => d.type === 'CM_CARE_HOSPITAL');
+    if (cmCareDoc) {
+      cmCareDoc.isVisible = this.isCmCare;
+    }
+  }
+
+  onDocumentChange(event: Event, doc: DocumentUpload) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (file) {
+      doc.file = file;
+      doc.fileName = file.name;
+    }
+  }
+
+  displayValue(value: unknown): string {
+    if (value === null || value === undefined || value === '') {
+      return '–';
+    }
+    return String(value);
+  }
+
+  formatCurrency(value: unknown): string {
+    const amount = Number(value) || 0;
+    return `₹${amount.toLocaleString('en-IN')}`;
+  }
 
   isSchemeInHistory(scheme: string): boolean {
     return this.form.schemeHistoryList.includes(scheme);
@@ -120,19 +185,32 @@ export class SchemeFormComponent implements OnInit {
         unitCost: Number(item.unitCost) || 0,
       }));
 
+    const missingDocs = this.documents.filter(doc => doc.isVisible && doc.isRequired && !doc.fileName);
+    if (missingDocs.length > 0) {
+      this.errorMsg = `Please upload all required documents: ${missingDocs.map(doc => doc.label).join(', ')}`;
+      return;
+    }
+
+    const formData = new FormData();
+    this.appendFormValue(formData, 'applicantId', applicantId);
+    this.appendFormValue(formData, 'schemeType', this.form.schemeType);
+    this.appendFormValue(formData, 'projectName', this.form.projectName.trim());
+    this.appendFormValue(formData, 'projectCategory', this.form.projectCategory);
+    this.appendFormValue(formData, 'beneficiaryType', this.form.beneficiaryType);
+    this.appendFormValue(formData, 'beneficiaryCount', this.form.beneficiaryCount);
+    this.appendFormValue(formData, 'estimatedCost', this.totalCost || Number(this.form.estimatedCost) || '');
+    this.appendFormValue(formData, 'communityContribution', Number(this.form.communityContribution) || 0);
+    this.appendFormValue(formData, 'justification', this.form.justification?.trim() || '');
+    this.appendFormValue(formData, 'itemsJson', JSON.stringify(items));
+
+    this.documents.forEach(doc => {
+      if (doc.file) {
+        formData.append(`documents_${doc.type}`, doc.file, doc.fileName || doc.file.name);
+      }
+    });
+
     this.loading = true;
-    this.schemeService.createApplication({
-      applicantId,
-      schemeType: this.form.schemeType,
-      projectName: this.form.projectName.trim(),
-      projectCategory: this.form.projectCategory || undefined,
-      beneficiaryType: this.form.beneficiaryType || undefined,
-      beneficiaryCount: this.form.beneficiaryCount || undefined,
-      estimatedCost: this.totalCost || Number(this.form.estimatedCost) || undefined,
-      communityContribution: Number(this.form.communityContribution) || 0,
-      justification: this.form.justification?.trim() || undefined,
-      items,
-    }).subscribe({
+    this.schemeService.createApplication(formData).subscribe({
       next: application => {
         this.loading = false;
         this.submitted = true;
@@ -144,6 +222,24 @@ export class SchemeFormComponent implements OnInit {
         this.errorMsg = apiErrorMessage(err, 'Scheme application submission failed. Please try again.');
       }
     });
+  }
+
+  private appendFormValue(formData: FormData, key: string, value: string | number | boolean | null | undefined) {
+    if (value === null || value === undefined) {
+      return;
+    }
+    formData.append(key, String(value));
+  }
+
+  private normalizeSchemeType(value: string): string {
+    return (value || '')
+      .trim()
+      .toUpperCase()
+      .replace(/&/g, 'AND')
+      .replace(/\s+/g, '_')
+      .replace(/-+/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^CMCARE$/, 'CM_CARE');
   }
 
   private resolveApplicantId(): number | null {

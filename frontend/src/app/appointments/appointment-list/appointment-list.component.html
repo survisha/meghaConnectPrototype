@@ -23,6 +23,11 @@
           <input matInput [(ngModel)]="search" (ngModelChange)="applyFilter()" placeholder="Search by name or ID...">
           <mat-icon matPrefix>search</mat-icon>
         </mat-form-field>
+
+        <button mat-stroked-button type="button" (click)="exportFilteredToCsv()" [disabled]="filtered.length === 0">
+          <mat-icon>download</mat-icon>
+          Export CSV
+        </button>
         
         <mat-form-field appearance="outline" style="min-width:200px">
           <mat-label>Status Filter</mat-label>
@@ -32,6 +37,39 @@
             </mat-option>
           </mat-select>
         </mat-form-field>
+
+        <mat-form-field appearance="outline" style="min-width:200px">
+          <mat-label>Type Filter</mat-label>
+          <mat-select [(ngModel)]="filterEventType" (ngModelChange)="applyFilter()">
+            <mat-option *ngFor="let opt of eventTypeOptions" [value]="opt.value">
+              {{ opt.label }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" style="min-width:180px">
+          <mat-label>From Date</mat-label>
+          <input matInput [matDatepicker]="fromPicker" [(ngModel)]="filterFromDate" (dateChange)="applyFilter()">
+          <mat-datepicker-toggle matSuffix [for]="fromPicker"></mat-datepicker-toggle>
+          <mat-datepicker #fromPicker></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" style="min-width:180px">
+          <mat-label>To Date</mat-label>
+          <input matInput [matDatepicker]="toPicker" [(ngModel)]="filterToDate" (dateChange)="applyFilter()">
+          <mat-datepicker-toggle matSuffix [for]="toPicker"></mat-datepicker-toggle>
+          <mat-datepicker #toPicker></mat-datepicker>
+        </mat-form-field>
+
+        <button mat-raised-button
+                color="primary"
+                type="button"
+                *ngIf="auth.hasRole('APPROVER') || auth.hasRole('CMO_OFFICER') || auth.hasRole('OSD')"
+                (click)="markSelectedFollowUp()"
+                [disabled]="!canMarkSelectedFollowUp || bulkUpdating">
+          <mat-icon>follow_the_signs</mat-icon>
+          Mark Follow-up
+        </button>
       </div>
 
       <div *ngIf="errorMsg" style="background:#fef2f2;color:#991b1b;border:1px solid #fecaca;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.9rem">
@@ -43,47 +81,59 @@
         Loading appointments...
       </div>
 
-      <!-- Material Table -->
       <div class="table-container" *ngIf="!loading">
         <table mat-table [dataSource]="filtered" class="appointments-table">
-          
-          <!-- Applicant Column -->
+
+          <ng-container matColumnDef="select">
+            <th mat-header-cell *matHeaderCellDef class="select-cell">
+              <mat-checkbox
+                [checked]="areAllFilteredSelected()"
+                [indeterminate]="isSomeFilteredSelected()"
+                (change)="toggleAllFiltered($event.checked)"
+                aria-label="Select all filtered appointments">
+              </mat-checkbox>
+            </th>
+            <td mat-cell *matCellDef="let appt" class="select-cell">
+              <mat-checkbox
+                [checked]="isSelected(appt)"
+                (change)="toggleSelection(appt, $event.checked)"
+                [attr.aria-label]="'Select appointment ' + appt.applicationId">
+              </mat-checkbox>
+            </td>
+          </ng-container>
+
           <ng-container matColumnDef="applicant">
             <th mat-header-cell *matHeaderCellDef>Applicant</th>
             <td mat-cell *matCellDef="let appt">
-              <div style="font-weight:600">{{ appt.applicant?.fullName || appt.applicantName || '—' }}</div>
+              <div style="font-weight:600">{{ appt.applicant.fullName || appt.applicantName || '—' }}</div>
               <div class="applicant-phone">
                 <mat-icon>phone</mat-icon>
-                <span>{{ appt.applicant?.phoneNumber || appt.applicantPhone || '—' }}</span>
+                <span>{{ appt.applicant.phoneNumber || appt.applicantPhone || '—' }}</span>
               </div>
             </td>
           </ng-container>
 
-          <!-- Designation Column -->
           <ng-container matColumnDef="designation">
             <th mat-header-cell *matHeaderCellDef>Designation</th>
             <td mat-cell *matCellDef="let appt" style="font-size:0.85rem">
-              {{ appt.applicant?.designation || '—' }}
+              {{ appt.applicant.designation || '—' }}
             </td>
           </ng-container>
 
-          <!-- Constituency Column -->
           <ng-container matColumnDef="constituency">
             <th mat-header-cell *matHeaderCellDef>Constituency</th>
             <td mat-cell *matCellDef="let appt" style="font-size:0.85rem">
-              {{ appt.applicant?.constituency || '—' }}
+              {{ appt.applicant.constituency || '—' }}
             </td>
           </ng-container>
 
-          <!-- Agenda Column -->
           <ng-container matColumnDef="agenda">
             <th mat-header-cell *matHeaderCellDef>Agenda</th>
             <td mat-cell *matCellDef="let appt" style="font-size:0.85rem;max-width:180px">
-              {{ appt.agendaType }}
+              {{ appt.agendaType || appt.subject || '—' }}
             </td>
           </ng-container>
 
-          <!-- Event Type Column -->
           <ng-container matColumnDef="eventType">
             <th mat-header-cell *matHeaderCellDef>Type</th>
             <td mat-cell *matCellDef="let appt">
@@ -91,7 +141,6 @@
             </td>
           </ng-container>
 
-          <!-- Location Column -->
           <ng-container matColumnDef="location">
             <th mat-header-cell *matHeaderCellDef>Location</th>
             <td mat-cell *matCellDef="let appt" style="font-size:0.85rem">
@@ -99,7 +148,6 @@
             </td>
           </ng-container>
 
-          <!-- Status Column -->
           <ng-container matColumnDef="status">
             <th mat-header-cell *matHeaderCellDef>Status</th>
             <td mat-cell *matCellDef="let appt">
@@ -109,7 +157,6 @@
             </td>
           </ng-container>
 
-          <!-- Actions Column -->
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef class="actions-header">Actions</th>
             <td mat-cell *matCellDef="let appt" class="actions-cell">
@@ -120,7 +167,6 @@
                 <mat-icon>visibility</mat-icon>
               </button>
 
-              <!-- CMO Review Button - Only for CMO_OFFICER and CMO_REVIEW status -->
               <button mat-icon-button
                       *ngIf="auth.hasRole('CMO_OFFICER') && appt.status === 'CMO_REVIEW'"
                       color="accent"
@@ -133,8 +179,7 @@
 
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
           <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-          
-          <!-- Empty state -->
+
           <tr class="mat-row" *matNoDataRow>
             <td class="mat-cell" [attr.colspan]="displayedColumns.length" style="text-align:center;padding:2rem;color:#9ca3af">
               No appointments found.

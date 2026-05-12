@@ -34,6 +34,10 @@ export class ScheduleEventService {
     return this.http.put<ScheduleEvent>(`${this.baseUrl}/${id}`, event);
   }
 
+  assignAppointments(eventId: number, request: { appointmentIds: number[]; remarks?: string }): Observable<ScheduleEvent> {
+    return this.http.post<ScheduleEvent>(`${this.baseUrl}/${eventId}/appointments`, request);
+  }
+
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
   }

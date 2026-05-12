@@ -48,6 +48,7 @@ public class AppointmentService {
         Appointment.AppointmentStatus.CMO_REVIEW,
         Appointment.AppointmentStatus.APPROVER_REVIEW,
         Appointment.AppointmentStatus.HCM_PENDING,
+        Appointment.AppointmentStatus.FOLLOWUP,
         Appointment.AppointmentStatus.SELECTED_FOR_PUBLIC_DARBAR,
         Appointment.AppointmentStatus.APPROVED_WITH_DATE_TIME,
         Appointment.AppointmentStatus.SCHEDULED
@@ -60,6 +61,7 @@ public class AppointmentService {
         Appointment.AppointmentStatus.CMO_REVIEW,
         Appointment.AppointmentStatus.APPROVER_REVIEW,
         Appointment.AppointmentStatus.HCM_PENDING,
+        Appointment.AppointmentStatus.FOLLOWUP,
         Appointment.AppointmentStatus.SELECTED_FOR_PUBLIC_DARBAR,
         Appointment.AppointmentStatus.APPROVED_WITH_DATE_TIME,
         Appointment.AppointmentStatus.SCHEDULED

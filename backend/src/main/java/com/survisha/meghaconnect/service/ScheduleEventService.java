@@ -1,15 +1,20 @@
 package com.survisha.meghaconnect.service;
 
 import com.survisha.meghaconnect.dto.AppointmentDto;
+import com.survisha.meghaconnect.dto.ScheduleEventAppointmentAssignmentRequest;
 import com.survisha.meghaconnect.dto.ScheduleEventDto;
 import com.survisha.meghaconnect.entity.Appointment;
 import com.survisha.meghaconnect.entity.ScheduleEvent;
+import com.survisha.meghaconnect.exception.ErrorCodeConstants;
+import com.survisha.meghaconnect.exception.MeghaConnectException;
 import com.survisha.meghaconnect.repository.AppointmentRepository;
 import com.survisha.meghaconnect.repository.ScheduleEventRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -22,9 +27,15 @@ import java.util.Set;
 @Transactional(readOnly = true)
 public class ScheduleEventService {
 
+    private static final List<Appointment.AppointmentStatus> FOLLOWUP_STATUSES = List.of(
+        Appointment.AppointmentStatus.FOLLOWUP,
+        Appointment.AppointmentStatus.SELECTED_FOR_PUBLIC_DARBAR
+    );
+
     private final ScheduleEventRepository scheduleEventRepository;
     private final AppointmentRepository appointmentRepository;
     private final AppointmentService appointmentService;
+    private final AppointmentAuditService appointmentAuditService;
 
     public List<ScheduleEvent> findAll() {
         return scheduleEventRepository.findAll();
@@ -85,6 +96,91 @@ public class ScheduleEventService {
     @Transactional
     public ScheduleEvent update(ScheduleEvent event) {
         return scheduleEventRepository.save(event);
+    }
+
+    @Transactional
+    public ScheduleEventDto assignAppointments(Long eventId,
+                                               ScheduleEventAppointmentAssignmentRequest request,
+                                               String actor,
+                                               String actorRole) {
+        ScheduleEvent event = scheduleEventRepository.findById(eventId)
+            .orElseThrow(() -> workflowException(
+                ErrorCodeConstants.SCHEDULE_EVENT_NOT_FOUND,
+                ErrorCodeConstants.format(ErrorCodeConstants.SCHEDULE_EVENT_NOT_FOUND_MSG, eventId),
+                HttpStatus.NOT_FOUND
+            ));
+
+        if (event.getEventType() != Appointment.EventType.B1) {
+            throw workflowException(
+                ErrorCodeConstants.APPT_INVALID_STATUS,
+                "Only B1 Public Durbar events can invite follow-up appointments.",
+                HttpStatus.BAD_REQUEST
+            );
+        }
+
+        List<Long> appointmentIds = request != null && request.getAppointmentIds() != null
+            ? request.getAppointmentIds().stream().distinct().toList()
+            : List.of();
+        if (appointmentIds.isEmpty()) {
+            throw workflowException(
+                ErrorCodeConstants.MISSING_REQUIRED_FIELD,
+                ErrorCodeConstants.format(ErrorCodeConstants.MISSING_REQUIRED_FIELD_MSG, "appointmentIds"),
+                HttpStatus.BAD_REQUEST
+            );
+        }
+
+        List<Appointment> appointments = appointmentRepository.findAllById(appointmentIds);
+        if (appointments.size() != appointmentIds.size()) {
+            throw workflowException(
+                ErrorCodeConstants.APPOINTMENT_NOT_FOUND,
+                "One or more selected appointments were not found.",
+                HttpStatus.NOT_FOUND
+            );
+        }
+
+        String remarks = firstNonBlank(request != null ? request.getRemarks() : null, "Public Darbar");
+        int durationMinutes = Math.max(1, (int) ChronoUnit.MINUTES.between(event.getStartTime(), event.getEndTime()));
+
+        for (Appointment appointment : appointments) {
+            if (!FOLLOWUP_STATUSES.contains(appointment.getStatus())) {
+                throw workflowException(
+                    ErrorCodeConstants.APPT_INVALID_STATUS,
+                    "Only follow-up Public Durbar appointments can be assigned to an event.",
+                    HttpStatus.CONFLICT
+                );
+            }
+            if (appointment.getEventType() != Appointment.EventType.B1) {
+                throw workflowException(
+                    ErrorCodeConstants.INVALID_FIELD_VALUE,
+                    "Only B1 appointments can be assigned to a Public Durbar event.",
+                    HttpStatus.BAD_REQUEST
+                );
+            }
+
+            Appointment.AppointmentStatus oldStatus = appointment.getStatus();
+            appointment.setScheduleEvent(event);
+            appointment.setScheduledDateTime(event.getStartTime());
+            appointment.setScheduledDurationMinutes(durationMinutes);
+            appointment.setStatus(Appointment.AppointmentStatus.SCHEDULED_FOR_PUBLIC_DARBAR);
+            appointment.setApproverRemarks(remarks);
+            appointment.setApprovedBy(actor);
+            appointment.setUpdatedBy(actor);
+
+            Appointment saved = appointmentRepository.save(appointment);
+            appointmentAuditService.recordStatusChange(
+                saved,
+                oldStatus,
+                saved.getStatus(),
+                "SCHEDULED_FOR_PUBLIC_DARBAR_EVENT",
+                remarks,
+                actor,
+                actorRole
+            );
+        }
+
+        return scheduleEventRepository.findByIdWithAppointments(eventId)
+            .map(this::toDto)
+            .orElseGet(() -> toDto(event));
     }
 
     @Transactional
@@ -173,5 +269,9 @@ public class ScheduleEventService {
             }
         }
         return null;
+    }
+
+    private MeghaConnectException workflowException(String code, String message, HttpStatus status) {
+        return new MeghaConnectException(code, message, status.value());
     }
 }

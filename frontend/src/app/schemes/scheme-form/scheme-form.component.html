@@ -42,7 +42,7 @@
         <div class="form-group" style="grid-column:1/-1">
           <mat-form-field appearance="outline" style="width:100%">
             <mat-label>Scheme Type *</mat-label>
-            <mat-select id="schemeForm_schemeTypeSelect" [(ngModel)]="form.schemeType" placeholder="Select CM Scheme">
+            <mat-select id="schemeForm_schemeTypeSelect" [(ngModel)]="form.schemeType" (selectionChange)="updateDocumentVisibility()" placeholder="Select CM Scheme">
               <mat-option *ngFor="let opt of schemeTypes" [value]="opt.value">{{ opt.label }}</mat-option>
             </mat-select>
           </mat-form-field>
@@ -95,7 +95,7 @@
         </div>
         <div class="form-group">
           <label style="display:block;margin-bottom:0.5rem;font-weight:600;font-size:0.9rem">MLA / MDC Approved?</label>
-          <mat-radio-group id="schemeForm_mlaApprovedGroup" [(ngModel)]="form.mlaMdcApproved" style="display:flex;gap:1rem">
+          <mat-radio-group id="schemeForm_mlaApprovedGroup" [(ngModel)]="form.mlaMdcApproved" (change)="updateDocumentVisibility()" style="display:flex;gap:1rem">
             <mat-radio-button [value]="true">Yes</mat-radio-button>
             <mat-radio-button [value]="false">No</mat-radio-button>
           </mat-radio-group>
@@ -164,40 +164,45 @@
   <div class="section-card" *ngIf="step===3">
     <div class="section-card-header"><mat-icon>attach_file</mat-icon> Required Documents</div>
     <div class="section-card-body">
-      <div class="doc-row">
-        <div class="doc-label">Plans &amp; Estimates (3 nos) <span class="req">*</span></div>
-        <button mat-stroked-button>
-          <mat-icon>upload_file</mat-icon> Upload
-          <input type="file" accept=".pdf" style="position:absolute;opacity:0;width:100%;height:100%;cursor:pointer"/>
+      <div class="doc-row" *ngFor="let doc of documents" [hidden]="!doc.isVisible">
+        <div class="doc-label">
+          {{ doc.label }} <span *ngIf="doc.isRequired" class="req">*</span>
+          <small *ngIf="doc.fileName" class="doc-uploaded">
+            <mat-icon>check_circle</mat-icon>
+            Uploaded: {{ doc.fileName }}
+          </small>
+        </div>
+        <button mat-stroked-button type="button" (click)="docFileInput.click()">
+          <mat-icon>upload_file</mat-icon>
+          {{ doc.fileName ? 'Replace' : 'Upload' }}
+          <input #docFileInput type="file" [accept]="doc.accept" (change)="onDocumentChange($event, doc)" style="display:none"/>
         </button>
       </div>
-      <div class="doc-row">
-        <div class="doc-label">Bank Account Details <span class="req">*</span></div>
-        <button mat-stroked-button>
-          <mat-icon>upload_file</mat-icon> Upload
-          <input type="file" accept=".pdf,.jpg" style="position:absolute;opacity:0;width:100%;height:100%;cursor:pointer"/>
-        </button>
-      </div>
-      <div class="doc-row">
-        <div class="doc-label">MLA / MDC Letter (if applicable)</div>
-        <button mat-stroked-button>
-          <mat-icon>upload_file</mat-icon> Upload
-          <input type="file" accept=".pdf" style="position:absolute;opacity:0;width:100%;height:100%;cursor:pointer"/>
-        </button>
-      </div>
-      <div class="doc-row">
-        <div class="doc-label">Hospital / Medical Docs (CM Care)</div>
-        <button mat-stroked-button>
-          <mat-icon>upload_file</mat-icon> Upload
-          <input type="file" accept=".pdf" style="position:absolute;opacity:0;width:100%;height:100%;cursor:pointer"/>
-        </button>
-      </div>
-      <div class="doc-row">
-        <div class="doc-label">Organisation Registration Certificate</div>
-        <button mat-stroked-button>
-          <mat-icon>upload_file</mat-icon> Upload
-          <input type="file" accept=".pdf" style="position:absolute;opacity:0;width:100%;height:100%;cursor:pointer"/>
-        </button>
+
+      <div class="document-summary">
+        <div class="document-summary-title">Document Requirements Summary</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Document Type</th>
+              <th>Required</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let doc of documents" [hidden]="!doc.isVisible">
+              <td>{{ doc.label }}</td>
+              <td>{{ doc.isRequired ? 'Yes' : 'No' }}</td>
+              <td>
+                <span *ngIf="doc.fileName" class="doc-status uploaded">
+                  <mat-icon>check_circle</mat-icon> Uploaded
+                </span>
+                <span *ngIf="!doc.fileName && doc.isRequired" class="doc-status pending">Pending</span>
+                <span *ngIf="!doc.fileName && !doc.isRequired" class="doc-status optional">Optional</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -207,13 +212,24 @@
     <div class="section-card-header"><mat-icon>check_circle</mat-icon> Review &amp; Submit</div>
     <div class="section-card-body">
       <div class="review-grid">
-        <div><span>Scheme Type</span><strong>{{ form.schemeType || '–' }}</strong></div>
-        <div><span>Project Name</span><strong>{{ form.projectName || '–' }}</strong></div>
-        <div><span>Category</span><strong>{{ form.projectCategory || '–' }}</strong></div>
-        <div><span>Beneficiary Type</span><strong>{{ form.beneficiaryType || '–' }}</strong></div>
-        <div><span>Total Est. Cost</span><strong>₹{{ totalCost.toLocaleString() }}</strong></div>
-        <div><span>Community Contribution</span><strong>₹{{ form.communityContribution.toLocaleString() }}</strong></div>
+        <div><span>Scheme Type</span><strong>{{ selectedSchemeLabel }}</strong></div>
+        <div><span>Application Type</span><strong>{{ form.isReminder ? 'Reminder for Existing' : 'New Application' }}</strong></div>
+        <div><span>Project Name</span><strong>{{ displayValue(form.projectName) }}</strong></div>
+        <div><span>Category</span><strong>{{ displayValue(form.projectCategory) }}</strong></div>
+        <div><span>Beneficiary Type</span><strong>{{ displayValue(form.beneficiaryType) }}</strong></div>
+        <div><span>No. of Beneficiaries</span><strong>{{ displayValue(form.beneficiaryCount) }}</strong></div>
+        <div><span>Total Est. Cost</span><strong>{{ formatCurrency(totalCost) }}</strong></div>
+        <div><span>Community Contribution</span><strong>{{ formatCurrency(form.communityContribution) }}</strong></div>
         <div><span>MLA/MDC Approved</span><strong>{{ form.mlaMdcApproved ? 'Yes' : 'No' }}</strong></div>
+        <div style="grid-column:1/-1"><span>Justification</span><strong>{{ displayValue(form.justification) }}</strong></div>
+      </div>
+
+      <div class="review-documents">
+        <div class="review-documents-title">Documents</div>
+        <div class="review-document-row" *ngFor="let doc of documents" [hidden]="!doc.isVisible">
+          <span>{{ doc.label }}</span>
+          <strong [class.missing]="doc.isRequired && !doc.fileName">{{ doc.fileName || (doc.isRequired ? 'Pending' : 'Optional') }}</strong>
+        </div>
       </div>
     </div>
   </div>

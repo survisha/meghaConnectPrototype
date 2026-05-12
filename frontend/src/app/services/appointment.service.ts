@@ -139,6 +139,14 @@ export class AppointmentService {
       .pipe(map(res => this.normalizeAppointment(this.unwrapData(res))));
   }
 
+  markFollowUp(id: number, remarks = 'Follow-up'): Observable<unknown> {
+    return this.http.post<unknown>(`${this.baseUrl}/approver/${id}/mark-followup`, { remarks });
+  }
+
+  markForPublicDarbar(id: number, remarks = 'Follow-up'): Observable<unknown> {
+    return this.http.post<unknown>(`${this.baseUrl}/approver/${id}/select-public-darbar`, { remarks });
+  }
+
   /**
    * Submit CMO review with remarks about pending information
    * Notifies applicant and DEO of any missing information

@@ -7,9 +7,11 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import javax.servlet.http.HttpServletRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -30,7 +32,7 @@ public class SchemeApplicationController {
 
     private final SchemeApplicationService schemeApplicationService;
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasAnyRole('PUBLIC','ADMIN','OSD','DATA_ENTRY_OPERATOR')")
     public ResponseEntity<SchemeApplicationDto> create(
             @RequestBody CreateSchemeApplicationRequest request,
@@ -39,6 +41,18 @@ public class SchemeApplicationController {
         log.info("Scheme application create request actor={}", actor);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(schemeApplicationService.create(request, actor));
+    }
+
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyRole('PUBLIC','ADMIN','OSD','DATA_ENTRY_OPERATOR')")
+    public ResponseEntity<SchemeApplicationDto> createMultipart(
+            @ModelAttribute CreateSchemeApplicationRequest form,
+            HttpServletRequest request,
+            @AuthenticationPrincipal UserDetails user) {
+        String actor = user != null ? user.getUsername() : "anonymous";
+        log.info("Scheme application multipart create request actor={}", actor);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(schemeApplicationService.createMultipart(form, request, actor));
     }
 
     @GetMapping

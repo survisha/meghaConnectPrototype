@@ -1,10 +1,13 @@
 package com.survisha.meghaconnect.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.survisha.meghaconnect.dto.CreateSchemeApplicationRequest;
 import com.survisha.meghaconnect.dto.SchemeApplicationDto;
 import com.survisha.meghaconnect.dto.SchemeApplicationItemDto;
 import com.survisha.meghaconnect.dto.VisitorDto;
 import com.survisha.meghaconnect.entity.Appointment;
+import com.survisha.meghaconnect.entity.DocumentUpload;
 import com.survisha.meghaconnect.entity.SchemeApplication;
 import com.survisha.meghaconnect.entity.SchemeApplicationItem;
 import com.survisha.meghaconnect.entity.Visitor;
@@ -12,16 +15,23 @@ import com.survisha.meghaconnect.exception.ErrorCodeConstants;
 import com.survisha.meghaconnect.exception.MeghaConnectException;
 import com.survisha.meghaconnect.exception.RequestValidationException;
 import com.survisha.meghaconnect.exception.VisitorNotFoundException;
+import com.survisha.meghaconnect.repository.DocumentUploadRepository;
 import com.survisha.meghaconnect.repository.SchemeApplicationRepository;
 import com.survisha.meghaconnect.repository.VisitorRepository;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.Part;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -42,12 +52,35 @@ public class SchemeApplicationService {
 
     private final SchemeApplicationRepository schemeApplicationRepository;
     private final VisitorRepository visitorRepository;
+    private final DocumentUploadRepository documentUploadRepository;
     private final RequestValidationService validationService;
     private final AuditLogService auditLogService;
+    private final FileStorageService fileStorageService;
+    private final ObjectMapper objectMapper;
 
     @Transactional
     public SchemeApplicationDto create(CreateSchemeApplicationRequest request, String actor) {
         CreateSchemeApplicationRequest safeRequest = request != null ? request : new CreateSchemeApplicationRequest();
+        normalizeItems(safeRequest);
+        SchemeApplication saved = saveApplication(safeRequest, actor);
+        auditLogService.log("SchemeApplication", saved.getId(), "SUBMITTED",
+                "Scheme application submitted directly: " + formatSchemeType(saved.getSchemeType()), actor);
+        return toDto(saved);
+    }
+
+    @Transactional
+    public SchemeApplicationDto createMultipart(CreateSchemeApplicationRequest request, HttpServletRequest servletRequest,
+                                                String actor) {
+        CreateSchemeApplicationRequest safeRequest = request != null ? request : new CreateSchemeApplicationRequest();
+        normalizeItems(safeRequest);
+        SchemeApplication saved = saveApplication(safeRequest, actor);
+        saveSchemeApplicationDocuments(servletRequest, saved, actor);
+        auditLogService.log("SchemeApplication", saved.getId(), "SUBMITTED",
+                "Scheme application submitted directly: " + formatSchemeType(saved.getSchemeType()), actor);
+        return toDto(saved);
+    }
+
+    private SchemeApplication saveApplication(CreateSchemeApplicationRequest safeRequest, String actor) {
         Long applicantId = resolveApplicantId(safeRequest.getApplicantId(), actor);
         Visitor applicant = visitorRepository.findById(applicantId)
                 .orElseThrow(() -> new VisitorNotFoundException(applicantId));
@@ -77,9 +110,7 @@ public class SchemeApplicationService {
         }
 
         SchemeApplication saved = schemeApplicationRepository.save(application);
-        auditLogService.log("SchemeApplication", saved.getId(), "SUBMITTED",
-                "Scheme application submitted directly: " + formatSchemeType(schemeType), actor);
-        return toDto(saved);
+        return saved;
     }
 
     public Page<SchemeApplicationDto> findAll(String status, Pageable pageable) {
@@ -176,6 +207,125 @@ public class SchemeApplicationService {
             );
         }
         return applicantId;
+    }
+
+    private void normalizeItems(CreateSchemeApplicationRequest request) {
+        if (request == null || (request.getItems() != null && !request.getItems().isEmpty())
+                || !hasText(request.getItemsJson())) {
+            return;
+        }
+        try {
+            request.setItems(objectMapper.readValue(
+                    request.getItemsJson(),
+                    new TypeReference<List<SchemeApplicationItemDto>>() {
+                    }));
+        } catch (IOException e) {
+            throw new RequestValidationException(
+                    ErrorCodeConstants.INVALID_FIELD_VALUE,
+                    "Invalid scheme application items data."
+            );
+        }
+    }
+
+    private void saveSchemeApplicationDocuments(HttpServletRequest request, SchemeApplication application,
+                                                String uploadedBy) {
+        if (request == null || application == null || application.getApplicant() == null) {
+            return;
+        }
+        String applicationId = "SCHEME-" + application.getId();
+        Visitor applicant = application.getApplicant();
+        try {
+            for (Part part : request.getParts()) {
+                String paramName = part.getName();
+                if (!paramName.startsWith("documents_")) {
+                    continue;
+                }
+
+                MultipartFile file = convertPartToMultipartFile(part);
+                if (file == null || file.isEmpty()) {
+                    continue;
+                }
+
+                String documentType = paramName.replace("documents_", "");
+                FileStorageService.StoredFileMetadata storedFile =
+                        fileStorageService.storeFileSecure(file, applicant.getId(), applicationId);
+                LocalDateTime uploadedAt = LocalDateTime.now();
+
+                DocumentUpload docUpload = DocumentUpload.builder()
+                        .schemeApplication(application)
+                        .visitor(applicant)
+                        .documentType(documentType)
+                        .originalFilename(storedFile.getOriginalFileName())
+                        .storedFileName(storedFile.getStoredFileName())
+                        .filePath(storedFile.getEncryptedFilePath())
+                        .encryptedFilePath(storedFile.getEncryptedFilePath())
+                        .secureHash(storedFile.getSecureHash())
+                        .fileSizeBytes(storedFile.getFileSize())
+                        .mimeType(storedFile.getContentType())
+                        .contentType(storedFile.getContentType())
+                        .uploadedBy(uploadedBy)
+                        .uploadedDate(uploadedAt)
+                        .createdAt(uploadedAt)
+                        .updatedAt(uploadedAt)
+                        .build();
+                documentUploadRepository.save(docUpload);
+            }
+        } catch (ServletException | IOException e) {
+            auditLogService.log("SchemeApplication", application.getId(), "DOCUMENT_UPLOAD_ERROR",
+                    "Failed to process scheme application documents: " + e.getMessage(), uploadedBy);
+            throw new IllegalArgumentException("Failed to process uploaded documents.", e);
+        }
+    }
+
+    private MultipartFile convertPartToMultipartFile(Part part) throws IOException {
+        byte[] fileContent = part.getInputStream().readAllBytes();
+
+        return new MultipartFile() {
+            @Override
+            public String getName() {
+                return part.getName();
+            }
+
+            @Override
+            public String getOriginalFilename() {
+                return part.getSubmittedFileName();
+            }
+
+            @Override
+            public String getContentType() {
+                return part.getContentType();
+            }
+
+            @Override
+            public boolean isEmpty() {
+                return fileContent.length == 0;
+            }
+
+            @Override
+            public long getSize() {
+                return fileContent.length;
+            }
+
+            @Override
+            public byte[] getBytes() throws IOException {
+                return fileContent;
+            }
+
+            @Override
+            public java.io.InputStream getInputStream() throws IOException {
+                return new java.io.ByteArrayInputStream(fileContent);
+            }
+
+            @Override
+            public void transferTo(java.io.File dest) throws IOException, IllegalStateException {
+                java.nio.file.Files.write(dest.toPath(), fileContent);
+            }
+
+            @Override
+            public void transferTo(java.nio.file.Path dest) throws IOException, IllegalStateException {
+                java.nio.file.Files.write(dest, fileContent);
+            }
+        };
     }
 
     private List<SchemeApplicationItem> mapItems(List<SchemeApplicationItemDto> requestItems,

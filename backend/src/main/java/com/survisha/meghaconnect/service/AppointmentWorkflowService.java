@@ -42,6 +42,11 @@ public class AppointmentWorkflowService {
             Appointment.AppointmentStatus.APPROVER_REVIEW
     );
 
+    private static final List<Appointment.AppointmentStatus> FOLLOWUP_STATUSES = Arrays.asList(
+            Appointment.AppointmentStatus.FOLLOWUP,
+            Appointment.AppointmentStatus.SELECTED_FOR_PUBLIC_DARBAR
+    );
+
     private static final List<Appointment.AppointmentStatus> SCHEDULED_STATUSES = Arrays.asList(
             Appointment.AppointmentStatus.SCHEDULED,
             Appointment.AppointmentStatus.SCHEDULED_FOR_PUBLIC_DARBAR,
@@ -199,14 +204,26 @@ public class AppointmentWorkflowService {
                                                            MarkPublicDarbarRequest request,
                                                            String actor,
                                                            String actorRole) {
+        return markFollowUp(id, request, actor, actorRole);
+    }
+
+    @Transactional
+    public AppointmentWorkflowResponse markFollowUp(Long id,
+                                                    MarkPublicDarbarRequest request,
+                                                    String actor,
+                                                    String actorRole) {
         ensureApprover(actorRole);
         Appointment appointment = findAppointment(id);
-        ensureMutable(appointment, "SELECT_PUBLIC_DARBAR");
-        ensureStatusIn(appointment, "SELECT_PUBLIC_DARBAR", REVIEWABLE_STATUSES);
+        ensureMutable(appointment, "MARK_FOLLOWUP");
         ensureNotScheduled(appointment);
+        ensureB1Appointment(appointment, "Only B1 Public Durbar appointments can be marked for follow-up.");
+
+        if (!FOLLOWUP_STATUSES.contains(appointment.getStatus())) {
+            ensureStatusIn(appointment, "MARK_FOLLOWUP", REVIEWABLE_STATUSES);
+        }
 
         Appointment.AppointmentStatus oldStatus = appointment.getStatus();
-        appointment.setStatus(Appointment.AppointmentStatus.SELECTED_FOR_PUBLIC_DARBAR);
+        appointment.setStatus(Appointment.AppointmentStatus.FOLLOWUP);
         appointment.setSelectedForPublicDarbarBy(actor);
         appointment.setSelectedForPublicDarbarAt(LocalDateTime.now());
         appointment.setApproverRemarks(request != null ? RequestContextUtil.sanitizeForLog(request.getRemarks()) : null);
@@ -217,13 +234,13 @@ public class AppointmentWorkflowService {
                 saved,
                 oldStatus,
                 saved.getStatus(),
-                "SELECTED_FOR_PUBLIC_DARBAR",
+                "FOLLOWUP",
                 request != null ? request.getRemarks() : null,
                 actor,
                 actorRole
         );
         notificationService.appointmentSelectedForPublicDarbar(saved);
-        log.info("Appointment selected for Public Darbar appointmentId={} oldStatus={} newStatus={}",
+        log.info("Appointment marked for follow-up appointmentId={} oldStatus={} newStatus={}",
                 saved.getId(), oldStatus, saved.getStatus());
         return toResponse(saved);
     }
@@ -307,8 +324,9 @@ public class AppointmentWorkflowService {
 
     public List<AppointmentWorkflowResponse> getSelectedPublicDarbarAppointments(String actorRole) {
         ensureApprover(actorRole);
-        return appointmentRepository.findByStatusOrderByCreatedAtAsc(Appointment.AppointmentStatus.SELECTED_FOR_PUBLIC_DARBAR)
+        return appointmentRepository.findByStatusIn(FOLLOWUP_STATUSES)
                 .stream()
+                .sorted((left, right) -> left.getCreatedAt().compareTo(right.getCreatedAt()))
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }
@@ -499,6 +517,16 @@ public class AppointmentWorkflowService {
                     ErrorCodeConstants.APPT_ALREADY_SCHEDULED,
                     ErrorCodeConstants.APPT_ALREADY_SCHEDULED_MSG,
                     HttpStatus.CONFLICT
+            );
+        }
+    }
+
+    private void ensureB1Appointment(Appointment appointment, String message) {
+        if (appointment.getEventType() != Appointment.EventType.B1) {
+            throw workflowException(
+                    ErrorCodeConstants.INVALID_FIELD_VALUE,
+                    message,
+                    HttpStatus.BAD_REQUEST
             );
         }
     }

@@ -289,6 +289,58 @@
   font-size: 0.85rem;
 }
 
+.assignment-panel {
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.candidate-list {
+  display: grid;
+  gap: 0.5rem;
+  max-height: 260px;
+  overflow: auto;
+  padding: 0.2rem;
+
+  mat-checkbox {
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 0.55rem 0.7rem;
+    background: #f8fafc;
+  }
+
+  strong,
+  span,
+  em {
+    margin-right: 0.45rem;
+    font-style: normal;
+  }
+
+  em {
+    color: #64748b;
+    font-size: 0.8rem;
+  }
+}
+
+.assignment-empty,
+.assignment-error {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 6px;
+  padding: 0.75rem;
+  color: #64748b;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  font-size: 0.85rem;
+}
+
+.assignment-error {
+  color: #991b1b;
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
 .conflict-warn {
   background: #fee2e2; border: 1px solid #fca5a5;
   border-radius: 6px; padding: 0.5rem 0.75rem;
@@ -321,6 +373,37 @@
   max-height: 90vh;
   overflow-y: auto;
   cursor: default;
+}
+
+::ng-deep .cdk-overlay-container {
+  z-index: 2000 !important;
+}
+
+::ng-deep .schedule-select-panel,
+::ng-deep .schedule-select-panel.mat-mdc-select-panel {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 6px !important;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.18) !important;
+  color: #1f2937 !important;
+  max-height: 320px !important;
+  overflow-y: auto !important;
+}
+
+::ng-deep .schedule-select-panel .mat-mdc-option,
+::ng-deep .schedule-select-panel mat-option {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  color: #1f2937 !important;
+}
+
+::ng-deep .schedule-select-panel .mat-mdc-option:hover,
+::ng-deep .schedule-select-panel .mat-mdc-option.mdc-list-item--selected,
+::ng-deep .schedule-select-panel .mat-mdc-option.mat-mdc-option-active {
+  background: #eef2ff !important;
+  background-color: #eef2ff !important;
+  color: #1a237e !important;
 }
 
 .dialog-header {

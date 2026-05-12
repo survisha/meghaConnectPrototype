@@ -29,6 +29,7 @@ export interface CreateSchemeApplicationRequest {
   communityContribution?: number;
   justification?: string;
   items?: SchemeApplicationItemRequest[];
+  itemsJson?: string;
 }
 
 export interface SchemeApplicationItemRequest {
@@ -70,7 +71,7 @@ export class SchemeService {
   }
 
   // Scheme applications
-  createApplication(request: CreateSchemeApplicationRequest): Observable<SchemeApplication> {
+  createApplication(request: CreateSchemeApplicationRequest | FormData): Observable<SchemeApplication> {
     return this.http.post<SchemeApplication>(this.applicationsUrl, request);
   }
 

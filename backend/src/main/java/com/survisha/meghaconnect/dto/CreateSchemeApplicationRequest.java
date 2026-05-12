@@ -20,4 +20,5 @@ public class CreateSchemeApplicationRequest {
     private BigDecimal communityContribution;
     private String justification;
     private List<SchemeApplicationItemDto> items;
+    private String itemsJson;
 }

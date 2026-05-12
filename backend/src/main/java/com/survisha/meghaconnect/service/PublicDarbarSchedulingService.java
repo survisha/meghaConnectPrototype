@@ -24,6 +24,11 @@ import java.util.UUID;
 @Slf4j
 public class PublicDarbarSchedulingService {
 
+    private static final List<Appointment.AppointmentStatus> FOLLOWUP_STATUSES = List.of(
+            Appointment.AppointmentStatus.FOLLOWUP,
+            Appointment.AppointmentStatus.SELECTED_FOR_PUBLIC_DARBAR
+    );
+
     private final PublicDarbarService publicDarbarService;
     private final AppointmentRepository appointmentRepository;
     private final AppointmentAuditService appointmentAuditService;
@@ -43,9 +48,10 @@ public class PublicDarbarSchedulingService {
                                                          boolean failWhenNone) {
         String resolvedJobId = jobId != null ? jobId : "PD-" + UUID.randomUUID();
         PublicDarbar darbar = publicDarbarService.findActiveDarbar(publicDarbarId);
-        List<Appointment> selectedAppointments = appointmentRepository.findByStatusOrderByCreatedAtAsc(
-                Appointment.AppointmentStatus.SELECTED_FOR_PUBLIC_DARBAR
-        );
+        List<Appointment> selectedAppointments = appointmentRepository.findByStatusIn(FOLLOWUP_STATUSES)
+                .stream()
+                .sorted((left, right) -> left.getCreatedAt().compareTo(right.getCreatedAt()))
+                .toList();
 
         if (selectedAppointments.isEmpty() && failWhenNone) {
             throw workflowException(

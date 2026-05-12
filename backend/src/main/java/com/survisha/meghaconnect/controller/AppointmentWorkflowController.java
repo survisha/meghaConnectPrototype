@@ -125,8 +125,20 @@ public class AppointmentWorkflowController {
                                                                         Authentication authentication) {
         log.info("Approver select Public Darbar request received appointmentId={}", id);
         return ApiResponse.success(
-                "Appointment selected for Public Darbar",
-                appointmentWorkflowService.markForPublicDarbar(id, request, actor(authentication), role(authentication))
+                "Appointment marked for follow-up",
+                appointmentWorkflowService.markFollowUp(id, request, actor(authentication), role(authentication))
+        );
+    }
+
+    @PostMapping("/approver/{id}/mark-followup")
+    @PreAuthorize("hasAnyRole('CMO','CMO_OFFICER','OSD','APPROVER')")
+    public ApiResponse<AppointmentWorkflowResponse> markFollowUp(@PathVariable Long id,
+                                                                 @RequestBody(required = false) MarkPublicDarbarRequest request,
+                                                                 Authentication authentication) {
+        log.info("Approver mark follow-up request received appointmentId={}", id);
+        return ApiResponse.success(
+                "Appointment marked for follow-up",
+                appointmentWorkflowService.markFollowUp(id, request, actor(authentication), role(authentication))
         );
     }
 

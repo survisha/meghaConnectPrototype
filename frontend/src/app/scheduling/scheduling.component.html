@@ -11,18 +11,15 @@
         <button [class.active]="viewMode==='week'" (click)="viewMode='week'">Week</button>
         <button [class.active]="viewMode==='month'" (click)="viewMode='month'">Month</button>
       </div>
-      <button id="scheduling_addEventBtn" mat-raised-button color="primary" (click)="showAddDialog=true"><mat-icon>add</mat-icon> Add Event</button>
+      <button id="scheduling_addEventBtn" mat-raised-button color="primary" (click)="openAddEvent()"><mat-icon>add</mat-icon> Add Event</button>
     </div>
   </div>
 
   <!-- Legend -->
   <div class="legend-bar">
-    <span class="legend-item event-a1">A1: Cabinet/Flight</span>
-    <span class="legend-item event-a2">A2: Events</span>
-    <span class="legend-item event-a3">A3: Files</span>
-    <span class="legend-item event-a4">A4: Appointments</span>
-    <span class="legend-item event-b1">B1: Public Durbar</span>
-    <span class="legend-item event-b2">B2: Walk-in</span>
+    <span *ngFor="let type of eventTypes" class="legend-item" [ngClass]="getEventClass(type.value)">
+      {{ type.label }}
+    </span>
   </div>
 
   <div *ngIf="errorMsg" class="error-banner">
@@ -243,7 +240,7 @@
             </div>
           </div>
 
-          <div class="detail-section" *ngIf="appointment.cmoRemarks || appointment.approverRemarks || appointment.hcmRemarks || appointment.shortNotes">
+            <div class="detail-section" *ngIf="appointment.cmoRemarks || appointment.approverRemarks || appointment.hcmRemarks || appointment.shortNotes">
             <h3><mat-icon>notes</mat-icon> Notes &amp; Remarks</h3>
             <div class="remarks-list">
               <div *ngIf="appointment.cmoRemarks"><span>CMO</span><p>{{ appointment.cmoRemarks }}</p></div>
@@ -253,6 +250,57 @@
             </div>
           </div>
         </ng-container>
+
+        <div class="detail-section" *ngIf="canAssignPublicDarbarAppointments()">
+          <h3><mat-icon>how_to_reg</mat-icon> Public Durbar Invitations</h3>
+
+          <div class="appointment-list" *ngIf="selectedAppointments.length > 0">
+            <div *ngFor="let appointment of selectedAppointments">
+              <strong>{{ appointment.applicationId }}</strong>
+              <span>{{ appointment.applicant.fullName || appointment.applicantName || '-' }}</span>
+              <span>{{ getStatusLabel(appointment.status) }}</span>
+            </div>
+          </div>
+
+          <div class="assignment-panel">
+            <div *ngIf="publicDarbarAssignmentError" class="assignment-error">
+              <mat-icon>error_outline</mat-icon>
+              {{ publicDarbarAssignmentError }}
+            </div>
+
+            <div *ngIf="publicDarbarCandidatesLoading" class="assignment-empty">
+              Loading follow-up visitors...
+            </div>
+
+            <div *ngIf="!publicDarbarCandidatesLoading && publicDarbarCandidates.length === 0" class="assignment-empty">
+              No B1 follow-up visitors are available for assignment.
+            </div>
+
+            <div *ngIf="!publicDarbarCandidatesLoading && publicDarbarCandidates.length > 0" class="candidate-list">
+              <mat-checkbox *ngFor="let appointment of publicDarbarCandidates"
+                            [checked]="isPublicDarbarCandidateSelected(appointment.id)"
+                            (change)="togglePublicDarbarCandidate(appointment.id, $event.checked)">
+                <strong>{{ appointment.applicationId }}</strong>
+                <span>{{ appointment.applicant.fullName || appointment.applicantName || '-' }}</span>
+                <em>{{ appointment.applicant.constituency || appointment.requestedLocation || '-' }}</em>
+              </mat-checkbox>
+            </div>
+
+            <mat-form-field appearance="outline" style="width:100%;margin-top:0.75rem">
+              <mat-label>Remarks</mat-label>
+              <input matInput [(ngModel)]="publicDarbarRemarks">
+            </mat-form-field>
+
+            <button mat-raised-button
+                    color="primary"
+                    type="button"
+                    (click)="assignSelectedPublicDarbarAppointments()"
+                    [disabled]="publicDarbarCandidateIds.size === 0 || publicDarbarAssignmentLoading">
+              <mat-icon>group_add</mat-icon>
+              Assign Selected Visitors
+            </button>
+          </div>
+        </div>
 
         <div class="detail-section" *ngIf="selectedAppointments.length > 1">
           <h3><mat-icon>groups</mat-icon> Appointments in This Event</h3>
@@ -287,23 +335,37 @@
         </mat-form-field>
         <mat-form-field appearance="outline" style="width:100%">
           <mat-label>Event Type *</mat-label>
-          <mat-select [(ngModel)]="newEvent.eventType" placeholder="Select type">
+          <mat-select [(ngModel)]="newEvent.eventType" placeholder="Select type" panelClass="schedule-select-panel">
             <mat-option *ngFor="let type of eventTypes" [value]="type.value">{{ type.label }}</mat-option>
           </mat-select>
         </mat-form-field>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
           <mat-form-field appearance="outline">
-            <mat-label>Start Time</mat-label>
-            <input matInput [(ngModel)]="newEvent.startTime" placeholder="e.g. 2024-03-15T10:00:00"/>
+            <mat-label>Start Date</mat-label>
+            <input matInput [matDatepicker]="startPicker" [(ngModel)]="newEventStartDate" placeholder="Select date"/>
+            <mat-datepicker-toggle matSuffix [for]="startPicker"></mat-datepicker-toggle>
+            <mat-datepicker #startPicker></mat-datepicker>
           </mat-form-field>
           <mat-form-field appearance="outline">
-            <mat-label>End Time</mat-label>
-            <input matInput [(ngModel)]="newEvent.endTime" placeholder="e.g. 2024-03-15T11:00:00"/>
+            <mat-label>Start Clock Time</mat-label>
+            <input matInput type="time" [(ngModel)]="newEventStartTime"/>
+          </mat-form-field>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+          <mat-form-field appearance="outline">
+            <mat-label>End Date</mat-label>
+            <input matInput [matDatepicker]="endPicker" [(ngModel)]="newEventEndDate" placeholder="Select date"/>
+            <mat-datepicker-toggle matSuffix [for]="endPicker"></mat-datepicker-toggle>
+            <mat-datepicker #endPicker></mat-datepicker>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>End Clock Time</mat-label>
+            <input matInput type="time" [(ngModel)]="newEventEndTime"/>
           </mat-form-field>
         </div>
         <mat-form-field appearance="outline" style="width:100%">
           <mat-label>Location</mat-label>
-          <mat-select [(ngModel)]="newEvent.location" placeholder="Select location">
+          <mat-select [(ngModel)]="newEvent.location" placeholder="Select location" panelClass="schedule-select-panel">
             <mat-option *ngFor="let loc of locations" [value]="loc.value">{{ loc.label }}</mat-option>
           </mat-select>
         </mat-form-field>
@@ -322,7 +384,7 @@
       </div>
       <div class="dialog-footer">
         <button mat-stroked-button (click)="showAddDialog=false">Cancel</button>
-        <button mat-raised-button color="primary" (click)="addEvent()" [disabled]="!newEvent.title || !newEvent.eventType || !newEvent.startTime || !newEvent.endTime || !newEvent.location">
+        <button mat-raised-button color="primary" (click)="addEvent()" [disabled]="!canAddEvent">
           <mat-icon>check</mat-icon> Add Event
         </button>
       </div>

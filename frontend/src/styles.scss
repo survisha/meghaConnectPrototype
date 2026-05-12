@@ -171,6 +171,44 @@ select:hover {
   overflow-x: auto;
 }
 
+.error-message,
+.error-msg {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  background: #fef2f2 !important;
+  border: 1px solid #fecaca !important;
+  border-left: 4px solid #dc2626 !important;
+  border-radius: 8px;
+  color: #991b1b !important;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.45;
+  padding: 0.75rem 1rem;
+}
+
+.error-message mat-icon,
+.error-msg mat-icon {
+  color: #dc2626 !important;
+  flex: 0 0 auto;
+}
+
+.success-msg {
+  background: #ecfdf5 !important;
+  border: 1px solid #a7f3d0 !important;
+  border-left: 4px solid #059669 !important;
+  border-radius: 8px;
+  color: #065f46 !important;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.45;
+  padding: 0.75rem 1rem;
+}
+
+.success-msg mat-icon {
+  color: #059669 !important;
+}
+
 .dir-green  { color: #16a34a; font-weight: 600; }
 .dir-yellow { color: #ca8a04; font-weight: 600; }
 .dir-blue   { color: #2563eb; font-weight: 600; }

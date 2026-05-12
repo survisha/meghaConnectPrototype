@@ -2,7 +2,9 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ScheduleEventService } from '../services/schedule-event.service';
-import { Appointment, ScheduleEvent, EventType, Visitor } from '../models';
+import { AppointmentService } from '../services/appointment.service';
+import { ReferenceDataService } from '../services/reference-data.service';
+import { Appointment, AppointmentStatus, ScheduleEvent, EventType, Visitor } from '../models';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
@@ -11,6 +13,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule, provideNativeDateAdapter } from '@angular/material/core';
 import { MatCardModule } from '@angular/material/card';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { DragDropModule, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { apiErrorMessage } from '../shared/api-error.util';
 
@@ -28,6 +31,7 @@ import { apiErrorMessage } from '../shared/api-error.util';
     MatDatepickerModule,
     MatNativeDateModule,
     MatCardModule,
+    MatCheckboxModule,
     DragDropModule
   ],
   providers: [provideNativeDateAdapter()],
@@ -45,17 +49,21 @@ export class SchedulingComponent implements OnInit {
   errorMsg = '';
 
   newEvent: Partial<ScheduleEvent> = {};
+  newEventStartDate: Date | null = null;
+  newEventEndDate: Date | null = null;
+  newEventStartTime = '10:00';
+  newEventEndTime = '11:00';
+  publicDarbarCandidates: Appointment[] = [];
+  publicDarbarCandidateIds = new Set<number>();
+  publicDarbarCandidatesLoading = false;
+  publicDarbarAssignmentLoading = false;
+  publicDarbarAssignmentError = '';
+  publicDarbarRemarks = 'Public Darbar';
+  private readonly followUpStatuses: AppointmentStatus[] = ['FOLLOWUP', 'SELECTED_FOR_PUBLIC_DARBAR'];
 
   hours = Array.from({ length: 13 }, (_, i) => `${String(i + 8).padStart(2,'0')}:00`);
 
-  eventTypes = [
-    { label: 'A1 – Cabinet / Union Minister / Media / Flight', value: 'A1' },
-    { label: 'A2 – Event / Programme', value: 'A2' },
-    { label: 'A3 – File Clearing / Birthday', value: 'A3' },
-    { label: 'A4 – Individual Appointment', value: 'A4' },
-    { label: 'B1 – Public Durbar', value: 'B1' },
-    { label: 'B2 – Public Walk-in', value: 'B2' },
-  ];
+  eventTypes: Array<{ label: string; value: EventType }> = [];
 
   locations = [
     { label: 'Shillong', value: 'SHILLONG' },
@@ -64,10 +72,30 @@ export class SchedulingComponent implements OnInit {
     { label: 'Others', value: 'OTHERS' },
   ];
 
-  constructor(private scheduleEventService: ScheduleEventService) {}
+  constructor(
+    private scheduleEventService: ScheduleEventService,
+    private appointmentService: AppointmentService,
+    private referenceDataService: ReferenceDataService
+  ) {}
 
   ngOnInit() {
+    this.loadEventTypes();
     this.loadEvents();
+  }
+
+  private loadEventTypes() {
+    this.referenceDataService.getByType('APPOINMENT_TYPES').subscribe({
+      next: values => {
+        this.eventTypes = (values ?? []).map(item => ({
+          label: item.value,
+          value: item.code as EventType,
+        }));
+      },
+      error: error => {
+        this.eventTypes = [];
+        this.errorMsg = apiErrorMessage(error, 'Unable to load appointment types.');
+      }
+    });
   }
 
   private loadEvents() {
@@ -135,9 +163,25 @@ export class SchedulingComponent implements OnInit {
     return selectedDateEvents.filter(e => new Date(e.startTime).getHours() === h);
   }
 
-  openEvent(event: ScheduleEvent) { 
-    this.selectedEvent = event; 
-    this.showDialog = true; 
+  openEvent(event: ScheduleEvent) {
+    this.selectedEvent = event;
+    this.publicDarbarCandidates = [];
+    this.publicDarbarCandidateIds.clear();
+    this.publicDarbarAssignmentError = '';
+    this.publicDarbarRemarks = 'Public Darbar';
+    this.showDialog = true;
+    if (this.canAssignPublicDarbarAppointments(event)) {
+      this.loadPublicDarbarCandidates();
+    }
+  }
+
+  openAddEvent() {
+    this.newEvent = {};
+    this.newEventStartDate = new Date(this.selectedDate);
+    this.newEventEndDate = new Date(this.selectedDate);
+    this.newEventStartTime = '10:00';
+    this.newEventEndTime = '11:00';
+    this.showAddDialog = true;
   }
 
   formatTime(dt: string) {
@@ -168,6 +212,8 @@ export class SchedulingComponent implements OnInit {
   }
 
   getStatusLabel(status?: string): string {
+    if (status === 'FOLLOWUP' || status === 'SELECTED_FOR_PUBLIC_DARBAR') return 'FOLLOW-UP';
+    if (status === 'SCHEDULED_FOR_PUBLIC_DARBAR') return 'SCHEDULED FOR PUBLIC DURBAR';
     return status ? status.replace(/_/g, ' ') : '-';
   }
 
@@ -178,18 +224,114 @@ export class SchedulingComponent implements OnInit {
   }
 
   addEvent() {
-    if (this.newEvent.title && this.newEvent.eventType && this.newEvent.startTime && this.newEvent.endTime && this.newEvent.location) {
-      this.scheduleEventService.create(this.newEvent).subscribe({
+    const startTime = this.combineDateAndTime(this.newEventStartDate, this.newEventStartTime);
+    const endTime = this.combineDateAndTime(this.newEventEndDate, this.newEventEndTime);
+    if (this.newEvent.title && this.newEvent.eventType && startTime && endTime && this.newEvent.location) {
+      this.scheduleEventService.create({ ...this.newEvent, startTime, endTime }).subscribe({
         next: created => {
           this.events = [...this.events, created].sort((a, b) =>
             new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
           );
           this.newEvent = {};
+          this.newEventStartDate = null;
+          this.newEventEndDate = null;
           this.showAddDialog = false;
         },
         error: error => this.errorMsg = apiErrorMessage(error, 'Unable to create schedule event.')
       });
     }
+  }
+
+  get canAddEvent() {
+    return Boolean(
+      this.newEvent.title &&
+      this.newEvent.eventType &&
+      this.newEvent.location &&
+      this.combineDateAndTime(this.newEventStartDate, this.newEventStartTime) &&
+      this.combineDateAndTime(this.newEventEndDate, this.newEventEndTime)
+    );
+  }
+
+  getEventTypeLabel(value: string): string {
+    return this.eventTypes.find(type => type.value === value)?.label ?? value;
+  }
+
+  canAssignPublicDarbarAppointments(event: ScheduleEvent | null = this.selectedEvent): boolean {
+    return Boolean(event && event.eventType === 'B1' && event.sourceType !== 'APPOINTMENT');
+  }
+
+  loadPublicDarbarCandidates() {
+    if (!this.selectedEvent) return;
+    const assignedIds = new Set((this.selectedEvent.appointments ?? []).map(item => item.id));
+    this.publicDarbarCandidatesLoading = true;
+    this.publicDarbarAssignmentError = '';
+    this.appointmentService.getAllAppointments(0, 1000).subscribe({
+      next: page => {
+        this.publicDarbarCandidates = (page.content ?? [])
+          .filter(appointment => appointment.eventType === 'B1')
+          .filter(appointment => this.isFollowUpStatus(appointment.status))
+          .filter(appointment => !assignedIds.has(appointment.id));
+        this.publicDarbarCandidateIds.clear();
+        this.publicDarbarCandidatesLoading = false;
+      },
+      error: error => {
+        this.publicDarbarCandidates = [];
+        this.publicDarbarAssignmentError = apiErrorMessage(error, 'Unable to load Public Durbar follow-up visitors.');
+        this.publicDarbarCandidatesLoading = false;
+      }
+    });
+  }
+
+  isPublicDarbarCandidateSelected(id: number) {
+    return this.publicDarbarCandidateIds.has(id);
+  }
+
+  togglePublicDarbarCandidate(id: number, checked: boolean) {
+    if (checked) {
+      this.publicDarbarCandidateIds.add(id);
+    } else {
+      this.publicDarbarCandidateIds.delete(id);
+    }
+  }
+
+  assignSelectedPublicDarbarAppointments() {
+    if (!this.selectedEvent?.id || this.publicDarbarCandidateIds.size === 0) return;
+    this.publicDarbarAssignmentLoading = true;
+    this.publicDarbarAssignmentError = '';
+    this.scheduleEventService.assignAppointments(this.selectedEvent.id, {
+      appointmentIds: Array.from(this.publicDarbarCandidateIds),
+      remarks: this.publicDarbarRemarks || 'Public Darbar',
+    }).subscribe({
+      next: saved => {
+        this.selectedEvent = saved;
+        this.events = this.events.map(event => event.id === saved.id ? saved : event);
+        this.publicDarbarCandidateIds.clear();
+        this.loadPublicDarbarCandidates();
+        this.publicDarbarAssignmentLoading = false;
+      },
+      error: error => {
+        this.publicDarbarAssignmentError = apiErrorMessage(error, 'Unable to assign visitors to this Public Durbar event.');
+        this.publicDarbarAssignmentLoading = false;
+      }
+    });
+  }
+
+  private isFollowUpStatus(status: AppointmentStatus): boolean {
+    return this.followUpStatuses.includes(status);
+  }
+
+  private combineDateAndTime(date: Date | null, time: string | null | undefined): string | null {
+    if (!date || !time) return null;
+    const [hours, minutes] = time.split(':').map(part => Number(part));
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+    const value = new Date(date);
+    value.setHours(hours, minutes, 0, 0);
+    return this.toLocalDateTime(value);
+  }
+
+  private toLocalDateTime(date: Date): string {
+    const pad = (value: number) => value.toString().padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
   }
 
   // Drag and drop handler

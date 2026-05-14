@@ -8,8 +8,14 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { ReferenceDataDto, SchemeService } from '../../services/scheme.service';
 
 declare const L: any;
+
+interface SchemeOption {
+  label: string;
+  value: string;
+}
 
 @Component({
   selector: 'app-heatmap',
@@ -28,15 +34,8 @@ export class HeatmapComponent implements OnInit, AfterViewInit {
   leafletAvailable = false;
 
   selectedScheme = 'ALL';
-  schemeOptions = [
-    { label: 'All Schemes', value: 'ALL' },
-    { label: 'CMSDF', value: 'CMSDF' },
-    { label: 'CMSG', value: 'CMSG' },
-    { label: 'CM Care', value: 'CM_CARE' },
-    { label: 'CM Connect', value: 'CM_CONNECT' },
-    { label: 'CM Elevate', value: 'CM_ELEVATE' },
-    { label: 'Focus Plus', value: 'FOCUS_PLUS' },
-  ];
+  schemeOptionsLoading = false;
+  schemeOptions: SchemeOption[] = [{ label: 'All Schemes', value: 'ALL' }];
 
   // Comprehensive district data with scheme-wise breakdown
   private allDistrictData = [
@@ -198,6 +197,8 @@ export class HeatmapComponent implements OnInit, AfterViewInit {
 
   districtData: any[] = [];
 
+  constructor(private schemeService: SchemeService) {}
+
   // Computed properties for statistics
   get totalApplications(): number {
     return this.districtData.reduce((sum, d) => sum + d.applications, 0);
@@ -217,14 +218,50 @@ export class HeatmapComponent implements OnInit, AfterViewInit {
   }
 
   ngOnInit() {
+    this.loadSchemeOptions();
     this.updateDistrictData();
     // Check if Leaflet is available
     this.leafletAvailable = typeof L !== 'undefined';
   }
 
+  private loadSchemeOptions(): void {
+    this.schemeOptionsLoading = true;
+    this.schemeService.getSchemeTypes().subscribe({
+      next: (data) => {
+        const referenceOptions = this.toSchemeOptions(data);
+        this.schemeOptions = [{ label: 'All Schemes', value: 'ALL' }, ...referenceOptions];
+        if (!this.schemeOptions.some(option => option.value === this.selectedScheme)) {
+          this.selectedScheme = 'ALL';
+          this.addMarkers();
+        }
+        this.schemeOptionsLoading = false;
+      },
+      error: (err) => {
+        console.warn('[HeatmapComponent] Failed to load CM_SCHEME reference data:', err);
+        this.schemeOptionsLoading = false;
+      }
+    });
+  }
+
+  private toSchemeOptions(data: ReferenceDataDto[] | null | undefined): SchemeOption[] {
+    const unique = new Map<string, SchemeOption>();
+    (data ?? [])
+      .filter(item => item?.code)
+      .forEach(item => {
+        unique.set(item.code, {
+          value: item.code,
+          label: item.value || item.code,
+        });
+      });
+    return Array.from(unique.values());
+  }
+
   updateDistrictData() {
     this.districtData = this.allDistrictData.map(d => {
-      const schemeData = d.schemes[this.selectedScheme as keyof typeof d.schemes];
+      const schemeData = (d.schemes as Record<string, { applications: number; approved: number }>)[this.selectedScheme] ?? {
+        applications: 0,
+        approved: 0,
+      };
       const applications = schemeData.applications;
       const approved = schemeData.approved;
       
@@ -243,7 +280,7 @@ export class HeatmapComponent implements OnInit, AfterViewInit {
         applications,
         approved,
         color,
-        approvalRate: Math.round((approved / applications) * 100)
+        approvalRate: applications > 0 ? Math.round((approved / applications) * 100) : 0
       };
     }).sort((a, b) => b.applications - a.applications);
   }
@@ -296,7 +333,7 @@ export class HeatmapComponent implements OnInit, AfterViewInit {
     });
     
     // Find max applications for scaling
-    const maxApplications = Math.max(...this.districtData.map(d => d.applications));
+    const maxApplications = Math.max(...this.districtData.map(d => d.applications), 1);
     
     this.districtData.forEach(d => {
       const radius = 10 + (d.applications / maxApplications) * 25;

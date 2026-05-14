@@ -1,3 +1,10 @@
+.scheme-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
 .scheme-stat-card {
   background: white; border-radius: 10px; padding: 1rem;
   box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center;
@@ -66,8 +73,82 @@
   min-width: 160px; 
 }
 
+.scheme-list-header {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  min-height: 68px;
+  padding-bottom: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+.scheme-list-title {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.5rem;
+  min-width: 0;
+
+  mat-icon {
+    font-size: 1.1rem;
+    height: 1.1rem;
+    line-height: 1.1rem;
+    margin: 0;
+    width: 1.1rem;
+  }
+}
+
+.scheme-filter-wrap {
+  align-items: center;
+  display: flex;
+  margin-left: auto;
+  min-width: 180px;
+}
+
+.scheme-filter-field {
+  margin: 0;
+  width: 180px;
+}
+
 // Angular Material table overrides for white background
 ::ng-deep {
+  .scheme-filter-field {
+    .mat-mdc-text-field-wrapper {
+      background: #ffffff !important;
+      height: 52px;
+    }
+
+    .mat-mdc-form-field-flex {
+      align-items: center;
+      height: 52px;
+    }
+
+    .mat-mdc-form-field-infix {
+      min-height: 52px;
+      padding-bottom: 6px;
+      padding-top: 16px;
+      width: auto;
+    }
+
+    .mat-mdc-select-trigger {
+      align-items: center;
+      min-height: 22px;
+    }
+
+    .mat-mdc-floating-label {
+      background: #ffffff;
+      padding: 0 4px;
+    }
+
+    .mat-mdc-select-value {
+      color: #1f2937;
+      max-width: 132px;
+    }
+
+    .mat-mdc-form-field-subscript-wrapper {
+      display: none;
+    }
+  }
+
   .mat-mdc-table {
     background: white !important;
   }
@@ -143,4 +224,18 @@
   gap: 0.75rem;
   padding: 1rem 1.5rem;
   border-top: 1px solid #e5e7eb;
+}
+
+@media (max-width: 768px) {
+  .scheme-list-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .scheme-filter-wrap,
+  .scheme-filter-field {
+    margin-left: 0;
+    min-width: 0;
+    width: 100%;
+  }
 }

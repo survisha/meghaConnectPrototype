@@ -10,7 +10,7 @@
     <div style="margin-left:auto;display:flex;gap:0.75rem;align-items:center">
       <mat-form-field appearance="outline" style="width:180px">
         <mat-label>Scheme</mat-label>
-        <mat-select [(ngModel)]="selectedScheme" (ngModelChange)="addMarkers()">
+        <mat-select [(ngModel)]="selectedScheme" (ngModelChange)="addMarkers()" [disabled]="schemeOptionsLoading">
           <mat-option *ngFor="let opt of schemeOptions" [value]="opt.value">
             {{ opt.label }}
           </mat-option>

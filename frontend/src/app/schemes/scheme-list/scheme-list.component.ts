@@ -2,9 +2,9 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { SchemeService } from '../../services/scheme.service';
+import { ReferenceDataDto, SchemeService } from '../../services/scheme.service';
 import { MockDataService } from '../../services/mock-data.service';
-import { SchemeApplication } from '../../models';
+import { SchemeApplication, SchemeType } from '../../models';
 import { apiErrorMessage } from '../../shared/api-error.util';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
@@ -14,6 +14,11 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
+
+interface SchemeOption {
+  label: string;
+  value: '' | SchemeType | string;
+}
 
 @Component({
   selector: 'app-scheme-list',
@@ -40,26 +45,13 @@ export class SchemeListComponent implements OnInit {
   showDetail = false;
   filterScheme = '';
   loading = false;
+  schemeOptionsLoading = false;
   errorMsg = '';
   displayedColumns: string[] = ['applicant', 'scheme', 'project', 'category', 'estCost', 'hcmApproved', 'status', 'actions'];
 
-  schemeOptions = [
-    { label: 'All Schemes', value: '' },
-    { label: 'CMSDF', value: 'CMSDF' },
-    { label: 'CMSG', value: 'CMSG' },
-    { label: 'CM Care', value: 'CM_CARE' },
-    { label: 'CM Connect', value: 'CM_CONNECT' },
-    { label: 'CM Elevate', value: 'CM_ELEVATE' },
-    { label: 'Focus+', value: 'FOCUS_PLUS' },
-  ];
+  schemeOptions: SchemeOption[] = [{ label: 'All Schemes', value: '' }];
 
-  schemeStats = [
-    { name: 'CMSDF', total: 0, approved: 0, pending: 0, rejected: 0, budget: '–' },
-    { name: 'CMSG', total: 0, approved: 0, pending: 0, rejected: 0, budget: '–' },
-    { name: 'CM Care', total: 0, approved: 0, pending: 0, rejected: 0, budget: '–' },
-    { name: 'CM Connect', total: 0, approved: 0, pending: 0, rejected: 0, budget: '–' },
-    { name: 'CM Elevate', total: 0, approved: 0, pending: 0, rejected: 0, budget: '–' },
-  ];
+  schemeStats: Array<{ name: string; code: string; total: number; approved: number; pending: number; rejected: number; budget: string }> = [];
 
   constructor(
     private schemeService: SchemeService,
@@ -67,6 +59,11 @@ export class SchemeListComponent implements OnInit {
   ) {}
 
   ngOnInit() {
+    this.loadSchemeOptions();
+    this.loadApplications();
+  }
+
+  private loadApplications(): void {
     this.loading = true;
     this.schemeService.getAllApplications({ page: 0, size: 100 }).subscribe({
       next: (res: any) => {
@@ -93,17 +90,49 @@ export class SchemeListComponent implements OnInit {
     });
   }
 
+  private loadSchemeOptions(): void {
+    this.schemeOptionsLoading = true;
+    this.schemeService.getSchemeTypes().subscribe({
+      next: (data) => {
+        const referenceOptions = this.toSchemeOptions(data);
+        this.schemeOptions = [{ label: 'All Schemes', value: '' }, ...referenceOptions];
+        if (this.filterScheme && !referenceOptions.some(option => option.value === this.filterScheme)) {
+          this.filterScheme = '';
+        }
+        this.calculateStats();
+        this.schemeOptionsLoading = false;
+      },
+      error: (err) => {
+        console.warn('[SchemeListComponent] Failed to load CM_SCHEME reference data:', err);
+        this.calculateStats();
+        this.schemeOptionsLoading = false;
+      }
+    });
+  }
+
+  private toSchemeOptions(data: ReferenceDataDto[] | null | undefined): SchemeOption[] {
+    const unique = new Map<string, SchemeOption>();
+    (data ?? [])
+      .filter(item => item?.code)
+      .forEach(item => {
+        unique.set(item.code, {
+          value: item.code,
+          label: item.value || this.formatSchemeName(item.code),
+        });
+      });
+    return Array.from(unique.values());
+  }
+
   calculateStats() {
     // Calculate statistics from schemes data
     const stats = new Map<string, { total: number; approved: number; pending: number; rejected: number; totalCost: number }>();
     
     this.schemes.forEach(scheme => {
-      const schemeName = this.formatSchemeName(scheme.schemeType);
-      if (!stats.has(schemeName)) {
-        stats.set(schemeName, { total: 0, approved: 0, pending: 0, rejected: 0, totalCost: 0 });
+      if (!stats.has(scheme.schemeType)) {
+        stats.set(scheme.schemeType, { total: 0, approved: 0, pending: 0, rejected: 0, totalCost: 0 });
       }
       
-      const stat = stats.get(schemeName)!;
+      const stat = stats.get(scheme.schemeType)!;
       stat.total++;
       
       if (scheme.status === 'APPROVED' || scheme.hcmDecision === 'APPROVED') {
@@ -116,16 +145,18 @@ export class SchemeListComponent implements OnInit {
       }
     });
     
-    // Update schemeStats with calculated values
-    this.schemeStats.forEach(stat => {
-      const data = stats.get(stat.name);
-      if (data) {
-        stat.total = data.total;
-        stat.approved = data.approved;
-        stat.pending = data.pending;
-        stat.rejected = data.rejected;
-        stat.budget = data.totalCost > 0 ? `₹${(data.totalCost / 10000000).toFixed(2)}Cr` : '–';
-      }
+    const schemeCodes = this.getStatsSchemeCodes(stats);
+    this.schemeStats = schemeCodes.map(code => {
+      const data = stats.get(code) ?? { total: 0, approved: 0, pending: 0, rejected: 0, totalCost: 0 };
+      return {
+        code,
+        name: this.formatSchemeName(code),
+        total: data.total,
+        approved: data.approved,
+        pending: data.pending,
+        rejected: data.rejected,
+        budget: data.totalCost > 0 ? `₹${(data.totalCost / 10000000).toFixed(2)}Cr` : '–',
+      };
     });
   }
 
@@ -135,6 +166,14 @@ export class SchemeListComponent implements OnInit {
     if (schemeType === 'CM_ELEVATE') return 'CM Elevate';
     if (schemeType === 'FOCUS_PLUS') return 'Focus+';
     return schemeType;
+  }
+
+  private getStatsSchemeCodes(stats: Map<string, unknown>): string[] {
+    const referenceCodes = this.schemeOptions
+      .filter(option => option.value)
+      .map(option => option.value.toString());
+    const dataCodes = Array.from(stats.keys());
+    return Array.from(new Set([...referenceCodes, ...dataCodes]));
   }
 
   get filtered() {

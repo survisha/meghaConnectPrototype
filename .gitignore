@@ -8,6 +8,17 @@ frontend/node_modules/
 frontend/dist/
 frontend/.angular/
 
+# Flutter/Android scanner generated files
+meghaconnect_security_scanner/.dart_tool/
+meghaconnect_security_scanner/.flutter-plugins
+meghaconnect_security_scanner/.flutter-plugins-dependencies
+meghaconnect_security_scanner/.idea/
+meghaconnect_security_scanner/build/
+meghaconnect_security_scanner/android/.gradle/
+meghaconnect_security_scanner/android/app/build/
+meghaconnect_security_scanner/android/local.properties
+meghaconnect_security_scanner/devtools_options.yaml
+
 # Java build artifacts
 backend/target/
 backend/src/main/resources/static/
@@ -45,3 +56,7 @@ Thumbs.db
 # Env files
 *.env
 .env.local
+
+# Local scratch/untracked files
+docs/May PD Final.xlsx
+prabhu file path storage/

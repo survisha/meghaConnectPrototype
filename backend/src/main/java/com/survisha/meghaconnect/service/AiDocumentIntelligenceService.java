@@ -2,6 +2,7 @@ package com.survisha.meghaconnect.service;
 
 import com.survisha.meghaconnect.entity.Appointment;
 import com.survisha.meghaconnect.repository.AppointmentRepository;
+import com.survisha.meghaconnect.util.DateTimeUtil;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -405,7 +406,7 @@ public class AiDocumentIntelligenceService {
     public List<String> suggestSlots(String requestedLocation, String agendaType) {
         // Generate the next 3 available working days
         List<String> slots = new ArrayList<>();
-        LocalDate today = LocalDate.now();
+        LocalDate today = DateTimeUtil.currentDateIST();
         String location = requestedLocation != null ? requestedLocation : "SHILLONG";
         String locationLabel = toLocationLabel(location);
 
@@ -461,7 +462,7 @@ public class AiDocumentIntelligenceService {
         List<Appointment> all = appointmentRepository.findAll();
 
         // Count this month
-        java.time.LocalDateTime firstOfMonth = java.time.LocalDateTime.now()
+        java.time.LocalDateTime firstOfMonth = DateTimeUtil.nowIST()
                 .withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
         long thisMonth = appointmentRepository.countCreatedSince(firstOfMonth);
 

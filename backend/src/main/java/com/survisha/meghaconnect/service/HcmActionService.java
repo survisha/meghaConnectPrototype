@@ -6,6 +6,7 @@ import com.survisha.meghaconnect.entity.HcmAction;
 import com.survisha.meghaconnect.repository.AppointmentRepository;
 import com.survisha.meghaconnect.repository.HcmActionRepository;
 import com.survisha.meghaconnect.security.JwtUtils;
+import com.survisha.meghaconnect.util.DateTimeUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -61,7 +62,7 @@ public class HcmActionService {
         
         LocalDateTime acceptedDateTime = actionDto.getAcceptedDateTime() != null
             ? actionDto.getAcceptedDateTime()
-            : LocalDateTime.now();
+            : DateTimeUtil.nowIST();
 
         HcmAction action = HcmAction.builder()
             .appointmentId(appointmentId)
@@ -147,7 +148,7 @@ public class HcmActionService {
             }
         }
         
-        LocalDateTime snoozedUntil = LocalDateTime.now().plusDays(durationDays);
+        LocalDateTime snoozedUntil = DateTimeUtil.nowIST().plusDays(durationDays);
         
         HcmAction action = HcmAction.builder()
             .appointmentId(appointmentId)
@@ -206,7 +207,7 @@ public class HcmActionService {
      */
     public List<HcmActionDto> getRecentPendingActions(int days) {
         log.debug("Fetching pending actions from last {} days", days);
-        LocalDateTime since = LocalDateTime.now().minusDays(days);
+        LocalDateTime since = DateTimeUtil.nowIST().minusDays(days);
         return hcmActionRepository.findRecentPendingActions(since)
             .stream()
             .map(this::convertToDto)

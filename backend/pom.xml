@@ -232,7 +232,7 @@
                 <artifactId>flyway-maven-plugin</artifactId>
                 <version>8.5.13</version>
                 <configuration>
-                    <url>jdbc:mysql://localhost:3306/meghaconnect_db?useSSL=false&amp;serverTimezone=UTC&amp;allowPublicKeyRetrieval=true</url>
+                    <url>jdbc:mysql://localhost:3306/meghaconnect_db?useSSL=false&amp;connectionTimeZone=Asia/Kolkata&amp;forceConnectionTimeZoneToSession=true&amp;allowPublicKeyRetrieval=true</url>
                     <user>root</user>
                     <password>root</password>
                     <locations>

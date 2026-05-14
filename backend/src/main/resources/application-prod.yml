@@ -7,8 +7,8 @@ logging:
     org.hibernate.type.descriptor.sql: OFF
     org.hibernate.orm.jdbc.bind: OFF
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [requestId=%X{requestId:-}] [%thread] %logger{36} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [requestId=%X{requestId:-}] [%thread] %logger{36} - %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS,Asia/Kolkata} %-5level [requestId=%X{requestId:-}] [%thread] %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS,Asia/Kolkata} %-5level [requestId=%X{requestId:-}] [%thread] %logger{36} - %msg%n"
   file:
     name: ${LOG_FILE:logs/meghaconnect-prod.log}
   logback:
@@ -21,6 +21,14 @@ logging:
 spring:
   jpa:
     show-sql: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: Asia/Kolkata
+  jackson:
+    time-zone: Asia/Kolkata
+    serialization:
+      write-dates-as-timestamps: false
 
 file:
   upload:

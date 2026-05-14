@@ -12,6 +12,7 @@ import com.survisha.meghaconnect.repository.DocumentUploadRepository;
 import com.survisha.meghaconnect.repository.SchemeApplicationRepository;
 import com.survisha.meghaconnect.repository.VisitorRepository;
 import com.survisha.meghaconnect.exception.*;
+import com.survisha.meghaconnect.util.DateTimeUtil;
 import com.survisha.meghaconnect.util.ValidationConstants;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -135,7 +136,7 @@ public class AppointmentService {
             .orElseThrow(() -> new VisitorNotFoundException(dto.getApplicantId()));
 
         int meetingCount = appointmentRepository.countMeetingsLast6Months(
-            applicant.getId(), LocalDateTime.now().minusMonths(6)
+            applicant.getId(), DateTimeUtil.nowIST().minusMonths(6)
         );
 
         String appId = generateApplicationId();
@@ -205,7 +206,7 @@ public class AppointmentService {
         String appId = generatePublicApplicationId();
 
         int meetingCount = appointmentRepository.countMeetingsLast6Months(
-                applicant.getId(), LocalDateTime.now().minusMonths(6));
+                applicant.getId(), DateTimeUtil.nowIST().minusMonths(6));
 
         Appointment appt = Appointment.builder()
             .applicationId(appId)
@@ -433,7 +434,7 @@ public class AppointmentService {
 
     private String generateApplicationId() {
         long count = appointmentRepository.count() + 1;
-        return "MC-" + LocalDateTime.now().getYear() + "-" + String.format("%05d", count);
+        return "MC-" + DateTimeUtil.nowIST().getYear() + "-" + String.format("%05d", count);
     }
 
     private String firstNonBlank(String... values) {
@@ -540,7 +541,7 @@ public class AppointmentService {
                 String documentType = paramName.replace("documents_", "");
                 FileStorageService.StoredFileMetadata storedFile =
                         fileStorageService.storeFileSecure(file, applicant.getId(), applicationId);
-                LocalDateTime uploadedAt = LocalDateTime.now();
+                LocalDateTime uploadedAt = DateTimeUtil.nowIST();
 
                 DocumentUpload docUpload = DocumentUpload.builder()
                         .appointment(appointment)
@@ -802,7 +803,7 @@ public class AppointmentService {
     }
 
     private String generatePublicApplicationId() {
-        return "MC-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"))
+        return "MC-" + DateTimeUtil.nowIST().format(DateTimeFormatter.ofPattern("yyyyMMdd"))
                 + "-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
 }

@@ -8,6 +8,7 @@ import com.survisha.meghaconnect.exception.EpicNameMismatchException;
 import com.survisha.meghaconnect.exception.ErrorCodeConstants;
 import com.survisha.meghaconnect.exception.ExternalServiceException;
 import com.survisha.meghaconnect.exception.MeghaConnectException;
+import com.survisha.meghaconnect.util.DateTimeUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -167,7 +168,7 @@ public class EpicVerificationService {
                 .sourceInformation("government_website")
                 .pollingDetails(pollingDetails)
                 .voterIdVerificationRequestId(UUID.randomUUID().toString())
-                .voterIdVerificationCompletionTimestamp(java.time.LocalDateTime.now().toString())
+                .voterIdVerificationCompletionTimestamp(DateTimeUtil.nowIST().toString())
                 .build();
 
         return EpicVerificationResponse.builder()

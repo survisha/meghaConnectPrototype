@@ -1,5 +1,6 @@
 package com.survisha.meghaconnect.entity;
 
+import com.survisha.meghaconnect.util.DateTimeUtil;
 import javax.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -48,6 +49,6 @@ public class OtpTemp {
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
+        createdAt = DateTimeUtil.nowIST();
     }
 }

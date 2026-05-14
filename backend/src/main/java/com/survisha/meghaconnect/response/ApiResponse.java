@@ -1,8 +1,7 @@
 package com.survisha.meghaconnect.response;
 
+import com.survisha.meghaconnect.util.DateTimeUtil;
 import com.survisha.meghaconnect.util.RequestContextUtil;
-
-import java.time.LocalDateTime;
 
 public class ApiResponse<T> {
 
@@ -14,7 +13,7 @@ public class ApiResponse<T> {
 
     public ApiResponse() {
         this.requestId = RequestContextUtil.getRequestId();
-        this.timestamp = LocalDateTime.now().toString();
+        this.timestamp = DateTimeUtil.nowIST().toString();
     }
 
     public ApiResponse(boolean success, String message, T data) {

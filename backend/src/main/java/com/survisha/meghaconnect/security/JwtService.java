@@ -1,5 +1,6 @@
 package com.survisha.meghaconnect.security;
 
+import com.survisha.meghaconnect.util.DateTimeUtil;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -7,6 +8,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import javax.crypto.SecretKey;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -36,11 +39,15 @@ public class JwtService {
         // Also store the full authority for backward compatibility
         claims.put("authority", role);
         
+        LocalDateTime issuedAtIst = DateTimeUtil.nowIST();
+        Date issuedAt = toJwtDate(issuedAtIst);
+        Date expiresAt = toJwtDate(issuedAtIst.plus(Duration.ofMillis(jwtExpirationMs)));
+
         return Jwts.builder()
             .setClaims(claims)
             .setSubject(userDetails.getUsername())
-            .setIssuedAt(new Date())
-            .setExpiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
+            .setIssuedAt(issuedAt)
+            .setExpiration(expiresAt)
             .signWith(getSigningKey(), SignatureAlgorithm.HS256)
             .compact();
     }
@@ -56,10 +63,14 @@ public class JwtService {
 
     private boolean isTokenExpired(String token) {
         return Jwts.parserBuilder().setSigningKey(getSigningKey()).build()
-            .parseClaimsJws(token).getBody().getExpiration().before(new Date());
+            .parseClaimsJws(token).getBody().getExpiration().before(toJwtDate(DateTimeUtil.nowIST()));
     }
 
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret));
+    }
+
+    private Date toJwtDate(LocalDateTime istDateTime) {
+        return Date.from(istDateTime.atZone(DateTimeUtil.IST_ZONE).toInstant());
     }
 }

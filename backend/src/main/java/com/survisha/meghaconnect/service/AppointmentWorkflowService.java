@@ -8,6 +8,7 @@ import com.survisha.meghaconnect.exception.ErrorCodeConstants;
 import com.survisha.meghaconnect.exception.MeghaConnectException;
 import com.survisha.meghaconnect.repository.AppointmentRepository;
 import com.survisha.meghaconnect.repository.VisitorRepository;
+import com.survisha.meghaconnect.util.DateTimeUtil;
 import com.survisha.meghaconnect.util.RequestContextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -225,7 +226,7 @@ public class AppointmentWorkflowService {
         Appointment.AppointmentStatus oldStatus = appointment.getStatus();
         appointment.setStatus(Appointment.AppointmentStatus.FOLLOWUP);
         appointment.setSelectedForPublicDarbarBy(actor);
-        appointment.setSelectedForPublicDarbarAt(LocalDateTime.now());
+        appointment.setSelectedForPublicDarbarAt(DateTimeUtil.nowIST());
         appointment.setApproverRemarks(request != null ? RequestContextUtil.sanitizeForLog(request.getRemarks()) : null);
         appointment.setUpdatedBy(actor);
 
@@ -532,7 +533,7 @@ public class AppointmentWorkflowService {
     }
 
     private void validateScheduleDateTime(LocalDateTime scheduledDateTime) {
-        if (scheduledDateTime == null || scheduledDateTime.isBefore(LocalDateTime.now())) {
+        if (scheduledDateTime == null || scheduledDateTime.isBefore(DateTimeUtil.nowIST())) {
             throw workflowException(
                     ErrorCodeConstants.APPT_INVALID_SCHEDULE_DATE_TIME,
                     ErrorCodeConstants.APPT_INVALID_SCHEDULE_DATE_TIME_MSG,
@@ -543,7 +544,7 @@ public class AppointmentWorkflowService {
 
     private String generateApplicationId() {
         long count = appointmentRepository.count() + 1;
-        return "MC-" + LocalDate.now().getYear() + "-" + String.format("%06d", count);
+        return "MC-" + DateTimeUtil.currentDateIST().getYear() + "-" + String.format("%06d", count);
     }
 
     private String firstNonBlank(String primary, String fallback) {

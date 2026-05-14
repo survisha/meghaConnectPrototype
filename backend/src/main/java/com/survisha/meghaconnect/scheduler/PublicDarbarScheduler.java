@@ -3,6 +3,7 @@ package com.survisha.meghaconnect.scheduler;
 import com.survisha.meghaconnect.dto.PublicDarbarResponse;
 import com.survisha.meghaconnect.service.PublicDarbarSchedulingService;
 import com.survisha.meghaconnect.service.PublicDarbarService;
+import com.survisha.meghaconnect.util.DateTimeUtil;
 import com.survisha.meghaconnect.util.RequestContextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,7 +23,7 @@ public class PublicDarbarScheduler {
     private final PublicDarbarService publicDarbarService;
     private final PublicDarbarSchedulingService schedulingService;
 
-    @Scheduled(fixedDelayString = "${meghaconnect.public-darbar.scheduler-delay-ms:60000}")
+    @Scheduled(fixedDelayString = "${meghaconnect.public-darbar.scheduler-delay-ms:60000}", zone = DateTimeUtil.IST_ZONE_ID)
     public void scheduleSelectedAppointments() {
         String jobId = "PD-SCHED-" + RequestContextUtil.generateRequestId();
         RequestContextUtil.setRequestId(jobId);

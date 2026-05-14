@@ -6,6 +6,7 @@ import com.survisha.meghaconnect.repository.OtpTempRepository;
 import com.survisha.meghaconnect.repository.VisitorRepository;
 import com.survisha.meghaconnect.security.JwtService;
 import com.survisha.meghaconnect.exception.*;
+import com.survisha.meghaconnect.util.DateTimeUtil;
 import com.survisha.meghaconnect.util.RequestContextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -90,7 +91,7 @@ public class VisitorOtpService {
 
     private String generateOtpRecord(String phone, Long visitorId, String purpose) {
         // Rate-limit check
-        LocalDateTime windowStart = LocalDateTime.now().minusMinutes(RATE_WINDOW_MINUTES);
+        LocalDateTime windowStart = DateTimeUtil.nowIST().minusMinutes(RATE_WINDOW_MINUTES);
         int recentRequests = otpTempRepository.sumAttemptCountSince(phone, windowStart);
         if (recentRequests >= MAX_OTP_REQUESTS) {
             int waitTimeMinutes = RATE_WINDOW_MINUTES;
@@ -102,7 +103,7 @@ public class VisitorOtpService {
                 .phoneNumber(phone)
                 .visitorId(visitorId)
                 .otpCode(otpCode)
-                .expiresAt(LocalDateTime.now().plusMinutes(OTP_VALIDITY_MINUTES))
+                .expiresAt(DateTimeUtil.nowIST().plusMinutes(OTP_VALIDITY_MINUTES))
                 .consumed(false)
                 .attemptCount(0)
                 .build();
@@ -140,7 +141,7 @@ public class VisitorOtpService {
     public String validateOtpAndLogin(String phone, String submittedOtp, Long visitorId) {
         Optional<OtpTemp> optRecord =
                 otpTempRepository.findTopByPhoneNumberAndVisitorIdAndConsumedFalseAndExpiresAtAfterOrderByCreatedAtDesc(
-                        phone, visitorId, LocalDateTime.now());
+                        phone, visitorId, DateTimeUtil.nowIST());
 
         if (!optRecord.isPresent()) {
             throw new OtpExpiredException();
@@ -202,7 +203,7 @@ public class VisitorOtpService {
     @Transactional
     public String generateKycOtp(String phone) {
         // Rate-limit check (same logic as regular OTP)
-        LocalDateTime windowStart = LocalDateTime.now().minusMinutes(RATE_WINDOW_MINUTES);
+        LocalDateTime windowStart = DateTimeUtil.nowIST().minusMinutes(RATE_WINDOW_MINUTES);
         int recentRequests = otpTempRepository.sumAttemptCountSince(phone, windowStart);
         if (recentRequests >= MAX_OTP_REQUESTS) {
             int waitTimeMinutes = RATE_WINDOW_MINUTES;
@@ -216,7 +217,7 @@ public class VisitorOtpService {
                 .phoneNumber(phone)
                 .visitorId(null)
                 .otpCode(otpCode)
-                .expiresAt(LocalDateTime.now().plusMinutes(OTP_VALIDITY_MINUTES))
+                .expiresAt(DateTimeUtil.nowIST().plusMinutes(OTP_VALIDITY_MINUTES))
                 .consumed(false)
                 .attemptCount(0)
                 .build();
@@ -239,7 +240,7 @@ public class VisitorOtpService {
     public boolean validateKycOtp(String phone, String submittedOtp) {
         Optional<OtpTemp> optRecord =
                 otpTempRepository.findTopByPhoneNumberAndVisitorIdIsNullAndConsumedFalseAndExpiresAtAfterOrderByCreatedAtDesc(
-                        phone, LocalDateTime.now());
+                        phone, DateTimeUtil.nowIST());
 
         if (!optRecord.isPresent()) {
             throw new OtpExpiredException();

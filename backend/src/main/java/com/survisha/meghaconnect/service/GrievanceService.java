@@ -5,6 +5,7 @@ import com.survisha.meghaconnect.entity.Grievance.GrievanceStatus;
 import com.survisha.meghaconnect.entity.Visitor;
 import com.survisha.meghaconnect.repository.GrievanceRepository;
 import com.survisha.meghaconnect.repository.VisitorRepository;
+import com.survisha.meghaconnect.util.DateTimeUtil;
 import com.survisha.meghaconnect.util.ValidationConstants;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -53,14 +54,14 @@ public class GrievanceService {
     @Transactional
     public Grievance create(Grievance grievance, String createdBy) {
         grievance.setStatus(GrievanceStatus.SUBMITTED);
-        grievance.setSubmittedAt(LocalDateTime.now());
+        grievance.setSubmittedAt(DateTimeUtil.nowIST());
         grievance.setCreatedBy(createdBy);
         grievance.setUpdatedBy(createdBy);
         // Temporary placeholder; replaced with DB-ID-based value after persist (no race condition)
         grievance.setTicketId("GRV-TMP-" + System.currentTimeMillis());
         Grievance saved = grievanceRepository.save(grievance);
         grievanceRepository.flush();
-        String year = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy"));
+        String year = DateTimeUtil.nowIST().format(DateTimeFormatter.ofPattern("yyyy"));
         String ticketId = "GRV-" + year + "-" + String.format("%05d", saved.getId());
         saved.setTicketId(ticketId);
         saved = grievanceRepository.save(saved);
@@ -130,7 +131,7 @@ public class GrievanceService {
                 .orElseThrow(() -> new IllegalArgumentException("Grievance not found: " + id));
         g.setStatus(newStatus);
         if (remarks != null) g.setRemarks(remarks);
-        if (newStatus == GrievanceStatus.RESOLVED) g.setResolvedAt(LocalDateTime.now());
+        if (newStatus == GrievanceStatus.RESOLVED) g.setResolvedAt(DateTimeUtil.nowIST());
         g.setUpdatedBy(updatedBy);
         Grievance saved = grievanceRepository.save(g);
         auditLogService.log("Grievance", saved.getId(), "STATUS_CHANGE",

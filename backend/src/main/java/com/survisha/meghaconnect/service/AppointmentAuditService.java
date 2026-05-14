@@ -3,14 +3,13 @@ package com.survisha.meghaconnect.service;
 import com.survisha.meghaconnect.entity.Appointment;
 import com.survisha.meghaconnect.entity.AppointmentAudit;
 import com.survisha.meghaconnect.repository.AppointmentAuditRepository;
+import com.survisha.meghaconnect.util.DateTimeUtil;
 import com.survisha.meghaconnect.util.RequestContextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -36,7 +35,7 @@ public class AppointmentAuditService {
                 .performedBy(performedBy)
                 .performedRole(performedRole)
                 .requestId(RequestContextUtil.getRequestId())
-                .createdAt(LocalDateTime.now())
+                .createdAt(DateTimeUtil.nowIST())
                 .build();
         appointmentAuditRepository.save(audit);
         log.info("Appointment status audited appointmentId={} action={} oldStatus={} newStatus={}",

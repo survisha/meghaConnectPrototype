@@ -1,8 +1,7 @@
 package com.survisha.meghaconnect.response;
 
+import com.survisha.meghaconnect.util.DateTimeUtil;
 import com.survisha.meghaconnect.util.RequestContextUtil;
-
-import java.time.LocalDateTime;
 
 /**
  * Standard error response for API responses.
@@ -21,7 +20,7 @@ public class ErrorResponse {
     private Object details;
 
     public ErrorResponse() {
-        this.timestamp = LocalDateTime.now().toString();
+        this.timestamp = DateTimeUtil.nowIST().toString();
         this.requestId = RequestContextUtil.getRequestId();
     }
 

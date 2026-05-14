@@ -5,6 +5,7 @@ import com.survisha.meghaconnect.entity.Appointment;
 import com.survisha.meghaconnect.exception.ResourceNotFoundException;
 import com.survisha.meghaconnect.repository.AppointmentRepository;
 import com.survisha.meghaconnect.service.AppointmentService;
+import com.survisha.meghaconnect.util.DateTimeUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -132,7 +133,7 @@ public class AppointmentApprovalController {
             
             appointment.setCmoRemarks(request.getRemarks());
             appointment.setStatus(Appointment.AppointmentStatus.APPROVER_REVIEW);
-            appointment.setUpdatedAt(LocalDateTime.now());
+            appointment.setUpdatedAt(DateTimeUtil.nowIST());
             
             Appointment updated = appointmentRepository.save(appointment);
             return ResponseEntity.ok(convertToDTO(updated));
@@ -163,7 +164,7 @@ public class AppointmentApprovalController {
             
             appointment.setApproverRemarks(request.getRemarks());
             appointment.setStatus(Appointment.AppointmentStatus.HCM_PENDING);
-            appointment.setUpdatedAt(LocalDateTime.now());
+            appointment.setUpdatedAt(DateTimeUtil.nowIST());
             
             Appointment updated = appointmentRepository.save(appointment);
             return ResponseEntity.ok(convertToDTO(updated));
@@ -198,7 +199,7 @@ public class AppointmentApprovalController {
                 appointment.setApproverRemarks("REJECTED: " + request.getRejectReason());
             }
             
-            appointment.setUpdatedAt(LocalDateTime.now());
+            appointment.setUpdatedAt(DateTimeUtil.nowIST());
             Appointment updated = appointmentRepository.save(appointment);
             
             return ResponseEntity.ok(convertToDTO(updated));
@@ -229,7 +230,7 @@ public class AppointmentApprovalController {
             appointment.setScheduledDateTime(scheduledTime);
             appointment.setScheduledDurationMinutes(30);
             appointment.setStatus(Appointment.AppointmentStatus.SCHEDULED);
-            appointment.setUpdatedAt(LocalDateTime.now());
+            appointment.setUpdatedAt(DateTimeUtil.nowIST());
             
             if (request.getLocation() != null) {
                 try {
@@ -267,7 +268,7 @@ public class AppointmentApprovalController {
             
             LocalDateTime newTime = LocalDateTime.parse(request.getStartTime());
             appointment.setScheduledDateTime(newTime);
-            appointment.setUpdatedAt(LocalDateTime.now());
+            appointment.setUpdatedAt(DateTimeUtil.nowIST());
             
             String rescheduleNote = "Rescheduled. Reason: " +
                     (request.getRescheduledReason() != null ? request.getRescheduledReason() : "Not specified");

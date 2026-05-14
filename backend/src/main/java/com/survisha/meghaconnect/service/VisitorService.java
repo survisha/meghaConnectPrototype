@@ -5,6 +5,7 @@ import com.survisha.meghaconnect.repository.VisitorRepository;
 import com.survisha.meghaconnect.dto.PublicRegistrationDto;
 import com.survisha.meghaconnect.dto.VisitorDto;
 import com.survisha.meghaconnect.exception.*;
+import com.survisha.meghaconnect.util.DateTimeUtil;
 import com.survisha.meghaconnect.util.RequestContextUtil;
 import com.survisha.meghaconnect.util.ValidationConstants;
 import lombok.RequiredArgsConstructor;
@@ -402,7 +403,7 @@ public class VisitorService {
                 .aadhaarNumber(maskedAadhaar)
                 .kycType(kycType)
                 .kycVerified(kycVerified)
-                .kycVerifiedAt(kycVerified ? java.time.LocalDateTime.now() : null)
+                .kycVerifiedAt(kycVerified ? DateTimeUtil.nowIST() : null)
                 .kycStatus(kycStatus)
                 .dateOfBirth(parseDate(dto.getDateOfBirth()))
                 .gender(trimToNull(dto.getGender()))

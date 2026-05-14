@@ -6,6 +6,7 @@ import com.survisha.meghaconnect.entity.AuditLog;
 import com.survisha.meghaconnect.entity.User;
 import com.survisha.meghaconnect.repository.AuditLogRepository;
 import com.survisha.meghaconnect.repository.UserRepository;
+import com.survisha.meghaconnect.util.DateTimeUtil;
 import com.survisha.meghaconnect.util.RequestContextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,7 +43,7 @@ public class AuditLogService {
             .role(resolveRole(performedBy))
             .requestId(RequestContextUtil.getRequestId())
             .status("SUCCESS")
-            .timestamp(LocalDateTime.now())
+            .timestamp(DateTimeUtil.nowIST())
             .build();
         auditLogRepository.save(auditLog);
     }

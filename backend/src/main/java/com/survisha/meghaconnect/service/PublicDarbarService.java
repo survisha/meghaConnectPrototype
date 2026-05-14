@@ -8,6 +8,7 @@ import com.survisha.meghaconnect.exception.ErrorCodeConstants;
 import com.survisha.meghaconnect.exception.MeghaConnectException;
 import com.survisha.meghaconnect.repository.AppointmentRepository;
 import com.survisha.meghaconnect.repository.PublicDarbarRepository;
+import com.survisha.meghaconnect.util.DateTimeUtil;
 import com.survisha.meghaconnect.util.RequestContextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -75,7 +76,7 @@ public class PublicDarbarService {
 
         darbar.setStatus(PublicDarbar.DarbarStatus.ACTIVE);
         darbar.setActivatedBy(actor);
-        darbar.setActivatedAt(LocalDateTime.now());
+        darbar.setActivatedAt(DateTimeUtil.nowIST());
         darbar.setUpdatedBy(actor);
         PublicDarbar saved = publicDarbarRepository.save(darbar);
         log.info("Public Darbar activated publicDarbarId={} darbarDate={} location={}",
@@ -151,7 +152,7 @@ public class PublicDarbarService {
     }
 
     private void validateDarbarDate(LocalDate darbarDate) {
-        if (darbarDate == null || darbarDate.isBefore(LocalDate.now())) {
+        if (darbarDate == null || darbarDate.isBefore(DateTimeUtil.currentDateIST())) {
             throw workflowException(
                     ErrorCodeConstants.APPT_INVALID_SCHEDULE_DATE_TIME,
                     "Public Darbar date must be today or a future date",

@@ -9,6 +9,7 @@ import com.survisha.meghaconnect.repository.VisitorRepository;
 import com.survisha.meghaconnect.service.AISummaryService;
 import com.survisha.meghaconnect.service.DocumentFileService;
 import com.survisha.meghaconnect.service.FileStorageService;
+import com.survisha.meghaconnect.util.DateTimeUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -124,7 +125,7 @@ public class FileUploadController {
                                                 Authentication authentication) {
         Visitor visitor = visitorRepository.findById(visitorId).orElse(null);
         Appointment appointment = appointmentRepository.findByApplicationId(applicationId).orElse(null);
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = DateTimeUtil.nowIST();
         String uploadedBy = authentication != null && authentication.isAuthenticated()
                 ? authentication.getName()
                 : "visitor_" + visitorId;

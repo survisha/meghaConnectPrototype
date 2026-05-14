@@ -11,7 +11,7 @@
         <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
             <providers>
                 <timestamp>
-                    <timeZone>UTC</timeZone>
+                    <timeZone>Asia/Kolkata</timeZone>
                     <fieldName>timestamp</fieldName>
                 </timestamp>
                 <logLevel>
@@ -51,7 +51,7 @@
         <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
             <providers>
                 <timestamp>
-                    <timeZone>UTC</timeZone>
+                    <timeZone>Asia/Kolkata</timeZone>
                     <fieldName>timestamp</fieldName>
                 </timestamp>
                 <logLevel>

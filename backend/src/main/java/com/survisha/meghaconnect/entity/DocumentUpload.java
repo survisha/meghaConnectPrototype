@@ -1,6 +1,7 @@
 package com.survisha.meghaconnect.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.survisha.meghaconnect.util.DateTimeUtil;
 import javax.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -73,18 +74,18 @@ public class DocumentUpload extends BaseEntity {
     @PrePersist
     protected void onCreate() {
         if (createdAt == null) {
-            createdAt = LocalDateTime.now();
+            createdAt = DateTimeUtil.nowIST();
         }
         if (uploadedDate == null) {
             uploadedDate = createdAt;
         }
         if (updatedAt == null) {
-            updatedAt = LocalDateTime.now();
+            updatedAt = DateTimeUtil.nowIST();
         }
     }
 
     @PreUpdate
     protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
+        updatedAt = DateTimeUtil.nowIST();
     }
 }

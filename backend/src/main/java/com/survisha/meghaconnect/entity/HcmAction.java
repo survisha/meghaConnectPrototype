@@ -1,5 +1,6 @@
 package com.survisha.meghaconnect.entity;
 
+import com.survisha.meghaconnect.util.DateTimeUtil;
 import lombok.*;
 import javax.persistence.*;
 import java.time.LocalDateTime;
@@ -93,12 +94,12 @@ public class HcmAction {
     
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
+        createdAt = DateTimeUtil.nowIST();
+        updatedAt = DateTimeUtil.nowIST();
     }
     
     @PreUpdate
     protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
+        updatedAt = DateTimeUtil.nowIST();
     }
 }

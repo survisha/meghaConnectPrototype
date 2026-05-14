@@ -18,6 +18,7 @@ import com.survisha.meghaconnect.exception.VisitorNotFoundException;
 import com.survisha.meghaconnect.repository.DocumentUploadRepository;
 import com.survisha.meghaconnect.repository.SchemeApplicationRepository;
 import com.survisha.meghaconnect.repository.VisitorRepository;
+import com.survisha.meghaconnect.util.DateTimeUtil;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.Part;
@@ -249,7 +250,7 @@ public class SchemeApplicationService {
                 String documentType = paramName.replace("documents_", "");
                 FileStorageService.StoredFileMetadata storedFile =
                         fileStorageService.storeFileSecure(file, applicant.getId(), applicationId);
-                LocalDateTime uploadedAt = LocalDateTime.now();
+                LocalDateTime uploadedAt = DateTimeUtil.nowIST();
 
                 DocumentUpload docUpload = DocumentUpload.builder()
                         .schemeApplication(application)

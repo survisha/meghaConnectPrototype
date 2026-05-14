@@ -11,6 +11,7 @@ import com.survisha.meghaconnect.service.AuditLogService;
 import com.survisha.meghaconnect.service.FileStorageService;
 import com.survisha.meghaconnect.service.RequestValidationService;
 import com.survisha.meghaconnect.exception.MeghaConnectException;
+import com.survisha.meghaconnect.util.DateTimeUtil;
 import com.survisha.meghaconnect.util.ValidationConstants;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -159,12 +160,12 @@ public class VisitorAppointmentController {
             }
 
             // ── Generate application ID ─────────────────────────────────────────
-            String appId = "MC-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"))
+            String appId = "MC-" + DateTimeUtil.nowIST().format(DateTimeFormatter.ofPattern("yyyyMMdd"))
                     + "-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase();
 
             // ── Build and save Appointment ──────────────────────────────────────
             int meetingCount = appointmentRepository.countMeetingsLast6Months(
-                    applicant.getId(), LocalDateTime.now().minusMonths(6));
+                    applicant.getId(), DateTimeUtil.nowIST().minusMonths(6));
 
             Appointment appt = Appointment.builder()
                     .applicationId(appId)
@@ -203,7 +204,7 @@ public class VisitorAppointmentController {
                             if (mfile != null && !mfile.isEmpty()) {
                                 FileStorageService.StoredFileMetadata storedFile =
                                         fileStorageService.storeFileSecure(mfile, applicant.getId(), appId);
-                                LocalDateTime uploadedAt = LocalDateTime.now();
+                                LocalDateTime uploadedAt = DateTimeUtil.nowIST();
 
                                 // Create and save DocumentUpload record
                                 DocumentUpload docUpload = DocumentUpload.builder()

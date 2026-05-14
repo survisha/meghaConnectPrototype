@@ -4,6 +4,7 @@ import com.survisha.meghaconnect.entity.DocumentUpload;
 import com.survisha.meghaconnect.exception.ErrorCodeConstants;
 import com.survisha.meghaconnect.exception.MeghaConnectException;
 import com.survisha.meghaconnect.exception.VisitorRegistrationValidationException;
+import com.survisha.meghaconnect.util.DateTimeUtil;
 import com.survisha.meghaconnect.util.RequestContextUtil;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +19,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
@@ -99,7 +99,7 @@ public class FileStorageService {
         String requestId = RequestContextUtil.getRequestId();
         DecodedImage decoded = decodeAndValidateImage(livePhotoBase64);
 
-        String datePath = LocalDate.now().toString();
+        String datePath = DateTimeUtil.currentDateIST().toString();
         String safeRequestId = requestId.replaceAll("[^A-Za-z0-9._-]", "-");
         String filename = safeRequestId + "-" + UUID.randomUUID() + "." + decoded.extension;
         String relativePath = visitorPhotoPath + "/" + datePath + "/" + filename;

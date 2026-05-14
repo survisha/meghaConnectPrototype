@@ -1202,6 +1202,44 @@ button.full-width,
   pointer-events: none !important;
 }
 
+// Datepicker internal close button
+// Angular Material keeps this button visually hidden for screen-reader users.
+// The global button visibility rules above can accidentally reveal it below
+// every datepicker popup, so restore the CDK hidden treatment here.
+.cdk-overlay-container .mat-datepicker-content .mat-datepicker-close-button.cdk-visually-hidden,
+.cdk-overlay-container .mat-datepicker-content .mat-datepicker-close-button:not(:focus-visible) {
+  border: 0 !important;
+  clip: rect(0 0 0 0) !important;
+  height: 1px !important;
+  left: 0 !important;
+  line-height: 1px !important;
+  margin: -1px !important;
+  min-height: 1px !important;
+  min-width: 1px !important;
+  outline: 0 !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  position: absolute !important;
+  white-space: nowrap !important;
+  width: 1px !important;
+}
+
+.cdk-overlay-container .mat-datepicker-content .mat-datepicker-close-button:focus-visible {
+  clip: auto !important;
+  height: 36px !important;
+  left: 0 !important;
+  line-height: 36px !important;
+  margin: 8px 0 0 !important;
+  min-height: 36px !important;
+  min-width: 64px !important;
+  overflow: visible !important;
+  padding: 0 16px !important;
+  position: absolute !important;
+  top: 100% !important;
+  white-space: nowrap !important;
+  width: auto !important;
+}
+
 // ===================================
 // Material Radio Button Visibility & Styling
 // ===================================

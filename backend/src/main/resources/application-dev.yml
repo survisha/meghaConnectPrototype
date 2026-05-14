@@ -21,7 +21,8 @@ spring:
   cache:
     type: none
   datasource:
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:meghaconnect_db}?useSSL=false&connectionTimeZone=Asia/Kolkata&forceConnectionTimeZoneToSession=true&allowPublicKeyRetrieval=true
+    # Use +05:30 for the MySQL session because named zones require MySQL timezone tables.
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:meghaconnect_db}?useSSL=false&connectionTimeZone=%2B05:30&forceConnectionTimeZoneToSession=true&allowPublicKeyRetrieval=true
     username: ${DB_USERNAME:meghaconnect_user}
     password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver

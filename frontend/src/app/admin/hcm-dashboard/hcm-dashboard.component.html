@@ -56,6 +56,9 @@
             <mat-card-content>
               <div class="appointment-details">
                 <div class="detail-row">
+                  <strong>Applicant:</strong> {{ apt.applicantName }}
+                </div>
+                <div class="detail-row">
                   <strong>Location:</strong> {{ apt.location }}
                 </div>
                 <div class="detail-row">
@@ -80,6 +83,35 @@
                 <mat-icon>arrow_forward</mat-icon>
                 <span>Accept/Modify</span>
               </div>
+            </div>
+
+            <!-- Pilot web controls -->
+            <div class="pilot-arrow-controls" aria-label="Pilot appointment actions">
+              <button
+                mat-icon-button
+                type="button"
+                class="pilot-arrow-button pilot-left-button"
+                aria-label="Open reject or delay options"
+                (mousedown)="$event.stopPropagation()"
+                (mouseup)="$event.stopPropagation()"
+                (touchstart)="$event.stopPropagation()"
+                (touchend)="$event.stopPropagation()"
+                (click)="showLeftSwipeOptions(apt.id); $event.stopPropagation()">
+                <mat-icon>keyboard_arrow_left</mat-icon>
+              </button>
+
+              <button
+                mat-icon-button
+                type="button"
+                class="pilot-arrow-button pilot-right-button"
+                aria-label="Open accept or modify options"
+                (mousedown)="$event.stopPropagation()"
+                (mouseup)="$event.stopPropagation()"
+                (touchstart)="$event.stopPropagation()"
+                (touchend)="$event.stopPropagation()"
+                (click)="showRightSwipeOptions(apt.id); $event.stopPropagation()">
+                <mat-icon>keyboard_arrow_right</mat-icon>
+              </button>
             </div>
 
             <!-- Action buttons (visible on tap) -->

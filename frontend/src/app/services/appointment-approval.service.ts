@@ -8,6 +8,7 @@ export interface AppointmentApproval {
   appointmentId: number;
   applicantName: string;
   applicantPhone: string;
+  eventType: string;
   agendaType: string;
   requestedLocation: string;
   agendaBrief: string;
@@ -174,6 +175,7 @@ export class AppointmentApprovalService {
       appointmentId: Number(raw.appointmentId ?? raw.id ?? 0),
       applicantName: raw.applicantName ?? applicant.fullName ?? '—',
       applicantPhone: raw.applicantPhone ?? raw.applicantMobile ?? applicant.phoneNumber ?? '',
+      eventType: raw.eventType ?? 'A4',
       agendaType: raw.agendaType ?? raw.appointmentType ?? raw.subject ?? '',
       requestedLocation: raw.requestedLocation ?? 'OTHERS',
       agendaBrief: raw.agendaBrief ?? raw.description ?? '',

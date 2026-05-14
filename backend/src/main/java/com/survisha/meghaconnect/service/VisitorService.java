@@ -106,6 +106,106 @@ public class VisitorService {
         return toDto(visitorRepository.save(visitor));
     }
 
+    @Transactional
+    public VisitorDto updateVisitor(Long id, VisitorDto dto, String actor) {
+        Visitor visitor = visitorRepository.findById(id)
+                .orElseThrow(() -> new VisitorNotFoundException(id));
+
+        if (dto == null) {
+            return toDto(visitor);
+        }
+
+        String normalizedEpic = trimToNull(dto.getEpicNumber());
+        if (normalizedEpic != null) {
+            normalizedEpic = normalizedEpic.toUpperCase();
+            if (!normalizedEpic.matches(ValidationConstants.REGEX_EPIC)) {
+                throw new VisitorRegistrationValidationException(
+                        ErrorCodeConstants.INVALID_EPIC_FORMAT,
+                        ErrorCodeConstants.INVALID_EPIC_FORMAT_MSG
+                );
+            }
+            Optional<Visitor> existingEpicVisitor = visitorRepository.findByEpicNumber(normalizedEpic);
+            if (existingEpicVisitor.isPresent() && !existingEpicVisitor.get().getId().equals(id)) {
+                throw new VisitorRegistrationValidationException(
+                        ErrorCodeConstants.DUPLICATE_EPIC_MOBILE_REGISTRATION,
+                        ErrorCodeConstants.DUPLICATE_EPIC_MOBILE_REGISTRATION_MSG
+                );
+            }
+        }
+
+        if (dto.getFullName() != null) visitor.setFullName(firstNonBlank(dto.getFullName(), visitor.getFullName()));
+        if (dto.getPhoneNumber() != null) visitor.setPhoneNumber(trimToNull(dto.getPhoneNumber()));
+        if (dto.getEpicNumber() != null) visitor.setEpicNumber(normalizedEpic);
+        if (dto.getDesignation() != null) visitor.setDesignation(trimToNull(dto.getDesignation()));
+        if (dto.getAddress() != null) visitor.setAddress(trimToNull(dto.getAddress()));
+        if (dto.getFullAddress() != null) visitor.setFullAddress(trimToNull(dto.getFullAddress()));
+        if (dto.getAddress1() != null) visitor.setAddress1(trimToNull(dto.getAddress1()));
+        if (dto.getAddressLine() != null) visitor.setAddressLine(trimToNull(dto.getAddressLine()));
+        if (dto.getCity() != null) visitor.setCity(trimToNull(dto.getCity()));
+        if (dto.getState() != null) visitor.setState(trimToNull(dto.getState()));
+        if (dto.getPincode() != null) visitor.setPincode(trimToNull(dto.getPincode()));
+        if (dto.getDistrict() != null) visitor.setDistrict(trimToNull(dto.getDistrict()));
+        if (dto.getConstituency() != null) visitor.setConstituency(trimToNull(dto.getConstituency()));
+        if (dto.getBooth() != null) visitor.setBooth(trimToNull(dto.getBooth()));
+        if (dto.getBoothVillage() != null) visitor.setBoothVillage(trimToNull(dto.getBoothVillage()));
+        if (dto.getVillage() != null) visitor.setVillage(trimToNull(dto.getVillage()));
+        if (dto.getLocation() != null) visitor.setLocation(trimToNull(dto.getLocation()));
+        if (dto.getBriefProfile() != null) visitor.setBriefProfile(trimToNull(dto.getBriefProfile()));
+        if (dto.getGender() != null) visitor.setGender(trimToNull(dto.getGender()));
+        if (dto.getDateOfBirth() != null) visitor.setDateOfBirth(dto.getDateOfBirth());
+        if (dto.getOutsideMeghalaya() != null) visitor.setOutsideMeghalaya(dto.getOutsideMeghalaya());
+
+        String livePhotoBase64 = firstNonBlank(dto.getLivePhotoBase64(), dto.getPhotoBase64());
+        if (livePhotoBase64 != null) {
+            visitor.setLivePhotoPath(storeUpdatedVisitorPhoto(livePhotoBase64));
+            visitor.setPhotoStoragePath(visitor.getLivePhotoPath());
+        }
+
+        if (visitor.getEpicNumber() != null && !visitor.getEpicNumber().trim().isEmpty()) {
+            visitor.setKycType(ValidationConstants.ID_TYPE_EPIC);
+        } else if (visitor.getKycType() == null || visitor.getKycType().trim().isEmpty()) {
+            visitor.setKycType("NONE");
+        }
+        if (visitor.getKycVerified() == null) {
+            visitor.setKycVerified(false);
+        }
+        if (visitor.getKycStatus() == null || visitor.getKycStatus().trim().isEmpty()) {
+            visitor.setKycStatus("PENDING");
+        }
+        visitor.setUpdatedBy(firstNonBlank(actor, "visitor-update"));
+
+        return toDto(visitorRepository.save(visitor));
+    }
+
+    @Transactional
+    public Visitor registerPilotImportedVisitor(String fullName, String phoneNumber,
+                                                String addressLocation, String briefProfile,
+                                                String actor) {
+        String name = firstNonBlank(fullName, "Pilot Visitor");
+        String phone = trimToNull(phoneNumber);
+        String address = trimToNull(addressLocation);
+        String profile = trimToNull(briefProfile);
+        String importedBy = firstNonBlank(actor, "pilot-import");
+
+        Visitor visitor = Visitor.builder()
+                .fullName(name)
+                .phoneNumber(phone)
+                .address(address)
+                .fullAddress(address)
+                .address1(address)
+                .addressLine(address)
+                .location(address)
+                .briefProfile(profile)
+                .kycType("NONE")
+                .kycVerified(false)
+                .kycStatus("PENDING")
+                .outsideMeghalaya(false)
+                .build();
+        visitor.setCreatedBy(importedBy);
+        visitor.setUpdatedBy(importedBy);
+        return visitorRepository.save(visitor);
+    }
+
     public Optional<Visitor> findById(Long id) {
         return visitorRepository.findById(id);
     }
@@ -373,6 +473,21 @@ public class VisitorService {
 
         try {
             return fileStorageService.storeVisitorPhotoBase64(dto.getLivePhotoBase64());
+        } catch (VisitorRegistrationValidationException e) {
+            throw e;
+        } catch (IOException e) {
+            throw new MeghaConnectException(
+                    ErrorCodeConstants.FILE_UPLOAD_FAILED,
+                    "Visitor live photo storage failed.",
+                    500,
+                    e
+            );
+        }
+    }
+
+    private String storeUpdatedVisitorPhoto(String livePhotoBase64) {
+        try {
+            return fileStorageService.storeVisitorPhotoBase64(livePhotoBase64);
         } catch (VisitorRegistrationValidationException e) {
             throw e;
         } catch (IOException e) {

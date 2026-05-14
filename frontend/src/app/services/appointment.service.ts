@@ -47,6 +47,27 @@ export interface CmoReviewRequest {
   notifyDeo?: boolean;
 }
 
+export interface PilotImportRowResult {
+  rowNumber: number;
+  srNo?: string;
+  success: boolean;
+  name?: string;
+  phoneNumber?: string;
+  visitorId?: number;
+  appointmentId?: number;
+  applicationId?: string;
+  message?: string;
+}
+
+export interface PilotImportResult {
+  success: boolean;
+  totalRows: number;
+  importedCount: number;
+  failedCount: number;
+  message?: string;
+  rows: PilotImportRowResult[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class AppointmentService {
 
@@ -57,6 +78,13 @@ export class AppointmentService {
   createAppointment(request: CreateAppointmentRequest): Observable<Appointment> {
     return this.http.post<unknown>(this.baseUrl, request)
       .pipe(map(res => this.normalizeAppointment(this.unwrapData(res))));
+  }
+
+  importPilotAppointments(file: File): Observable<PilotImportResult> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<unknown>(`${this.baseUrl}/pilot-import`, formData)
+      .pipe(map(res => this.normalizePilotImportResult(this.unwrapData(res))));
   }
 
   getMyAppointments(): Observable<Appointment[]> {
@@ -185,6 +213,11 @@ export class AppointmentService {
       phoneNumber: applicantRaw.phoneNumber ?? raw.applicantPhone ?? raw.applicantMobile ?? '',
       epicNumber: applicantRaw.epicNumber ?? '',
       photoUrl: applicantRaw.photoUrl,
+      livePhotoBase64: applicantRaw.livePhotoBase64,
+      photoBase64: applicantRaw.photoBase64,
+      livePhotoPath: applicantRaw.livePhotoPath,
+      photoStoragePath: applicantRaw.photoStoragePath,
+      photoPath: applicantRaw.photoPath,
       designation: applicantRaw.designation ?? '',
       district: applicantRaw.district ?? raw.district ?? '',
       constituency: applicantRaw.constituency ?? '',
@@ -231,6 +264,29 @@ export class AppointmentService {
       return raw.data as T;
     }
     return response as T;
+  }
+
+  private normalizePilotImportResult(response: unknown): PilotImportResult {
+    const raw: any = response ?? {};
+    const rows = Array.isArray(raw.rows) ? raw.rows : [];
+    return {
+      success: Boolean(raw.success),
+      totalRows: Number(raw.totalRows ?? rows.length),
+      importedCount: Number(raw.importedCount ?? 0),
+      failedCount: Number(raw.failedCount ?? 0),
+      message: raw.message,
+      rows: rows.map((row: any) => ({
+        rowNumber: Number(row.rowNumber ?? 0),
+        srNo: row.srNo,
+        success: Boolean(row.success),
+        name: row.name,
+        phoneNumber: row.phoneNumber,
+        visitorId: row.visitorId != null ? Number(row.visitorId) : undefined,
+        appointmentId: row.appointmentId != null ? Number(row.appointmentId) : undefined,
+        applicationId: row.applicationId,
+        message: row.message,
+      })),
+    };
   }
 
   private normalizeDocument(row: unknown): AppointmentDocument {

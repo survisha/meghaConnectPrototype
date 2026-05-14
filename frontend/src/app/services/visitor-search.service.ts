@@ -52,6 +52,10 @@ export class VisitorSearchService {
     return this.http.post<Visitor>(this.baseUrl, visitor);
   }
 
+  update(id: number, visitor: Partial<Visitor> & { livePhotoBase64?: string; photoBase64?: string }): Observable<Visitor> {
+    return this.http.put<Visitor>(`${this.baseUrl}/${id}`, visitor);
+  }
+
   private nullOnNotFound(error: HttpErrorResponse): Observable<null> {
     if (error.status === 404) {
       return of(null);

@@ -8,6 +8,7 @@ import { AppointmentService } from '../../services/appointment.service';
 import { AuthService } from '../../services/auth.service';
 import { DocumentService } from '../../services/document.service';
 import { ReferenceDataService } from '../../services/reference-data.service';
+import { VisitorService } from '../../services/visitor.service';
 import { Appointment, AppointmentDocument, AppointmentStatus, EventType } from '../../models';
 import { finalize } from 'rxjs/operators';
 import { MatTableModule } from '@angular/material/table';
@@ -68,6 +69,9 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   selectedDocument: AppointmentDocument | null = null;
   selectedDocumentPreviewUrl: SafeResourceUrl | null = null;
   selectedDocumentUrl = '';
+  selectedVisitorPhotoUrl = '';
+  selectedVisitorPhotoLoading = false;
+  selectedVisitorPhotoError = '';
   documentPreviewLoading = false;
   documentDownloadLoading = false;
   documentPreviewError = '';
@@ -94,7 +98,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     { label: 'Follow-up', value: 'FOLLOWUP' },
     { label: 'Scheduled for Public Durbar', value: 'SCHEDULED_FOR_PUBLIC_DARBAR' },
     { label: 'HCM Pending', value: 'HCM_PENDING' },
-    { label: 'Approved with Date/Time', value: 'APPROVED_WITH_DATE_TIME' },
+    { label: 'HCM ACCEPTED', value: 'HCM_ACCEPTED' },
     { label: 'Scheduled', value: 'SCHEDULED' },
     { label: 'Completed', value: 'COMPLETED' },
   ];
@@ -113,6 +117,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     private appointmentService: AppointmentService,
     private documentService: DocumentService,
     private referenceDataService: ReferenceDataService,
+    private visitorService: VisitorService,
     public auth: AuthService,
     private dialog: MatDialog,
     private sanitizer: DomSanitizer
@@ -349,6 +354,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
 
   openViewDetails(appointment: Appointment) {
     this.selectedAppointment = appointment;
+    this.loadVisitorPhoto(appointment);
     this.loadDocuments(appointment.id);
     this.dialog.open(this.appointmentDetailsDialog, {
       width: '940px',
@@ -361,8 +367,58 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   closeViewDetails() {
     this.dialog.closeAll();
     this.selectedAppointment = null;
+    this.clearVisitorPhotoState();
     this.documents = [];
     this.documentsError = '';
+  }
+
+  private loadVisitorPhoto(appointment: Appointment) {
+    this.selectedVisitorPhotoUrl = this.resolveVisitorPhoto(appointment.applicant);
+    this.selectedVisitorPhotoError = '';
+    const visitorId = appointment.applicantId || appointment.applicant?.id;
+
+    if (!visitorId) {
+      this.selectedVisitorPhotoLoading = false;
+      if (!this.selectedVisitorPhotoUrl) {
+        this.selectedVisitorPhotoError = 'No photo captured.';
+      }
+      return;
+    }
+
+    this.selectedVisitorPhotoLoading = true;
+    this.visitorService.getById(visitorId)
+      .pipe(finalize(() => {
+        if (this.selectedAppointment?.id === appointment.id) {
+          this.selectedVisitorPhotoLoading = false;
+        }
+      }))
+      .subscribe({
+        next: visitor => {
+          if (this.selectedAppointment?.id !== appointment.id) return;
+          const photoUrl = this.resolveVisitorPhoto(visitor);
+          if (photoUrl) {
+            this.selectedVisitorPhotoUrl = photoUrl;
+          } else if (!this.selectedVisitorPhotoUrl) {
+            this.selectedVisitorPhotoError = 'No photo captured.';
+          }
+        },
+        error: error => {
+          if (this.selectedAppointment?.id !== appointment.id) return;
+          if (!this.selectedVisitorPhotoUrl) {
+            this.selectedVisitorPhotoError = apiErrorMessage(error, 'Photo unavailable.');
+          }
+        }
+      });
+  }
+
+  private resolveVisitorPhoto(visitor?: { photoUrl?: string; livePhotoBase64?: string; photoBase64?: string } | null) {
+    return visitor?.photoUrl || visitor?.livePhotoBase64 || visitor?.photoBase64 || '';
+  }
+
+  private clearVisitorPhotoState() {
+    this.selectedVisitorPhotoUrl = '';
+    this.selectedVisitorPhotoLoading = false;
+    this.selectedVisitorPhotoError = '';
   }
 
   private loadDocuments(appointmentId: number) {

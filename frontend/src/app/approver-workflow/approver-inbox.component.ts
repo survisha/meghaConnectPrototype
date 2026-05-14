@@ -10,7 +10,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatNativeDateModule } from '@angular/material/core';
+import { MatNativeDateModule, provideNativeDateAdapter } from '@angular/material/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -39,11 +39,12 @@ import { apiErrorMessage } from '../shared/api-error.util';
     MatBadgeModule,
     MatProgressSpinnerModule
   ],
+  providers: [provideNativeDateAdapter()],
   templateUrl: './approver-inbox.component.html',
   styleUrls: ['./approver-inbox.component.scss']
 })
 export class ApproverInboxComponent implements OnInit {
-  displayedColumns: string[] = ['applicantName', 'agendaType', 'location', 'submittedDate', 'status', 'actions'];
+  displayedColumns: string[] = ['applicantName', 'agendaType', 'eventType', 'location', 'submittedDate', 'status', 'actions'];
   appointments: AppointmentApproval[] = [];
   filteredAppointments: AppointmentApproval[] = [];
   
@@ -72,6 +73,7 @@ export class ApproverInboxComponent implements OnInit {
     this.filterForm = this.fb.group({
       searchText: [''],
       statusFilter: [''],
+      eventTypeFilter: [''],
       agendaFilter: [''],
       dateFromFilter: [''],
       dateToFilter: ['']
@@ -112,7 +114,7 @@ export class ApproverInboxComponent implements OnInit {
   }
 
   applyFilters(): void {
-    const { searchText, statusFilter, agendaFilter, dateFromFilter, dateToFilter } = this.filterForm.value;
+    const { searchText, statusFilter, eventTypeFilter, agendaFilter, dateFromFilter, dateToFilter } = this.filterForm.value;
 
     this.filteredAppointments = this.appointments.filter(appointment => {
       // Search by applicant name or phone
@@ -123,6 +125,9 @@ export class ApproverInboxComponent implements OnInit {
       // Filter by status
       const statusMatch = !statusFilter || appointment.status === statusFilter;
 
+      // Filter by appointment event type
+      const eventTypeMatch = !eventTypeFilter || appointment.eventType === eventTypeFilter;
+
       // Filter by agenda type
       const agendaMatch = !agendaFilter || appointment.agendaType === agendaFilter;
 
@@ -131,7 +136,7 @@ export class ApproverInboxComponent implements OnInit {
       const fromMatch = !dateFromFilter || appointmentDate >= new Date(dateFromFilter);
       const toMatch = !dateToFilter || appointmentDate <= new Date(dateToFilter);
 
-      return searchMatch && statusMatch && agendaMatch && fromMatch && toMatch;
+      return searchMatch && statusMatch && eventTypeMatch && agendaMatch && fromMatch && toMatch;
     });
 
     this.totalCount = this.filteredAppointments.length;
@@ -178,6 +183,11 @@ export class ApproverInboxComponent implements OnInit {
   getAgendaTypeOptions(): string[] {
     const agendas = new Set(this.appointments.map(a => a.agendaType));
     return Array.from(agendas).sort();
+  }
+
+  getEventTypeOptions(): string[] {
+    const types = new Set(this.appointments.map(a => a.eventType).filter(Boolean));
+    return Array.from(types).sort();
   }
 
   getUniqueStatuses(): string[] {

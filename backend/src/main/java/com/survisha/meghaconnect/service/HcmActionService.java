@@ -1,7 +1,9 @@
 package com.survisha.meghaconnect.service;
 
 import com.survisha.meghaconnect.dto.HcmActionDto;
+import com.survisha.meghaconnect.entity.Appointment;
 import com.survisha.meghaconnect.entity.HcmAction;
+import com.survisha.meghaconnect.repository.AppointmentRepository;
 import com.survisha.meghaconnect.repository.HcmActionRepository;
 import com.survisha.meghaconnect.security.JwtUtils;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +28,7 @@ import java.util.stream.Collectors;
 public class HcmActionService {
     
     private final HcmActionRepository hcmActionRepository;
+    private final AppointmentRepository appointmentRepository;
     private final JwtUtils jwtUtils;
     
     /**
@@ -56,12 +59,16 @@ public class HcmActionService {
     public HcmActionDto acceptAppointment(Long appointmentId, HcmActionDto actionDto, HttpServletRequest request) {
         log.info("HCM accepting appointment: {}", appointmentId);
         
+        LocalDateTime acceptedDateTime = actionDto.getAcceptedDateTime() != null
+            ? actionDto.getAcceptedDateTime()
+            : LocalDateTime.now();
+
         HcmAction action = HcmAction.builder()
             .appointmentId(appointmentId)
             .actionType("ACCEPT")
             .actionStatus("COMPLETED")
             .gestureType("RIGHT_SWIPE")
-            .acceptedDateTime(actionDto.getAcceptedDateTime() != null ? actionDto.getAcceptedDateTime() : LocalDateTime.now())
+            .acceptedDateTime(acceptedDateTime)
             .hcmRemarks(actionDto.getHcmRemarks())
             .originalDateTime(actionDto.getOriginalDateTime())
             .originalLocation(actionDto.getOriginalLocation())
@@ -69,6 +76,7 @@ public class HcmActionService {
             .build();
         
         HcmAction saved = hcmActionRepository.save(action);
+        updateAppointmentAfterHcmAcceptance(appointmentId, acceptedDateTime, actionDto.getHcmRemarks());
         log.info("Appointment accepted by HCM: appointmentId={}", appointmentId);
         return convertToDto(saved);
     }
@@ -267,5 +275,18 @@ public class HcmActionService {
             .createdAt(action.getCreatedAt())
             .updatedAt(action.getUpdatedAt())
             .build();
+    }
+
+    private void updateAppointmentAfterHcmAcceptance(Long appointmentId, LocalDateTime acceptedDateTime, String hcmRemarks) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+            .orElseThrow(() -> new IllegalArgumentException("Appointment not found: " + appointmentId));
+
+        appointment.setStatus(Appointment.AppointmentStatus.HCM_ACCEPTED);
+        appointment.setHcmRemarks(hcmRemarks);
+        appointment.setScheduledDateTime(acceptedDateTime);
+        if (appointment.getScheduledDurationMinutes() == null) {
+            appointment.setScheduledDurationMinutes(30);
+        }
+        appointmentRepository.save(appointment);
     }
 }

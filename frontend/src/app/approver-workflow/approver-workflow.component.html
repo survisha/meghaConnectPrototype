@@ -1,6 +1,6 @@
 <div class="page-title-row">
   <h2 class="page-title" id="approverWorkflow_title"><mat-icon style="margin-right:0.5rem">check_box</mat-icon>Approver Workflow – Jt. Secretary Review</h2>
-  <span class="badge-count">{{ appointments.length }} pending</span>
+  <span class="badge-count">{{ filtered.length }} / {{ appointments.length }} pending</span>
 </div>
 
 <div class="section-card" id="approverWorkflow_appointmentsSection">
@@ -9,6 +9,46 @@
   </div>
 
   <div class="section-card-body">
+    <div class="workflow-filters">
+      <mat-form-field appearance="outline" class="search-filter">
+        <mat-label>Search</mat-label>
+        <input matInput [(ngModel)]="search" (ngModelChange)="applyFilter()" placeholder="Search by name or ID...">
+        <mat-icon matPrefix>search</mat-icon>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Status Filter</mat-label>
+        <mat-select [(ngModel)]="filterStatus" (ngModelChange)="applyFilter()">
+          <mat-option *ngFor="let opt of statusOptions" [value]="opt.value">
+            {{ opt.label }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Type Filter</mat-label>
+        <mat-select [(ngModel)]="filterEventType" (ngModelChange)="applyFilter()">
+          <mat-option *ngFor="let opt of eventTypeOptions" [value]="opt.value">
+            {{ opt.label }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>From Date</mat-label>
+        <input matInput [matDatepicker]="approverFromPicker" [(ngModel)]="filterFromDate" (dateChange)="applyFilter()">
+        <mat-datepicker-toggle matSuffix [for]="approverFromPicker"></mat-datepicker-toggle>
+        <mat-datepicker #approverFromPicker></mat-datepicker>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>To Date</mat-label>
+        <input matInput [matDatepicker]="approverToPicker" [(ngModel)]="filterToDate" (dateChange)="applyFilter()">
+        <mat-datepicker-toggle matSuffix [for]="approverToPicker"></mat-datepicker-toggle>
+        <mat-datepicker #approverToPicker></mat-datepicker>
+      </mat-form-field>
+    </div>
+
     <div *ngIf="errorMsg" style="background:#fef2f2;color:#991b1b;border:1px solid #fecaca;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.9rem">
       <mat-icon style="font-size:18px;width:18px;height:18px;vertical-align:middle;margin-right:0.35rem">error</mat-icon>
       {{ errorMsg }}
@@ -19,7 +59,7 @@
     </div>
 
     <div class="table-container" *ngIf="!loading">
-      <table mat-table [dataSource]="appointments" class="approver-table">
+      <table mat-table [dataSource]="filtered" class="approver-table">
         
         <!-- App ID Column -->
         <ng-container matColumnDef="applicationId">
@@ -135,7 +175,7 @@
         <tr class="mat-row" *matNoDataRow>
           <td class="mat-cell" [attr.colspan]="displayedColumns.length" style="text-align:center;padding:2rem;color:#9ca3af">
             <mat-icon style="font-size:2rem;width:2rem;height:2rem">inbox</mat-icon>
-            <p>No appointments pending review.</p>
+            <p>No appointments pending review for the selected filters.</p>
           </td>
         </tr>
       </table>

@@ -3,7 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AppointmentService } from '../services/appointment.service';
-import { Appointment } from '../models';
+import { ReferenceDataService } from '../services/reference-data.service';
+import { Appointment, AppointmentStatus, EventType } from '../models';
 import { environment } from '../../environments/environment';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
@@ -11,6 +12,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule, provideNativeDateAdapter } from '@angular/material/core';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatBadgeModule } from '@angular/material/badge';
@@ -32,22 +36,46 @@ type ChipSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary';
     MatDialogModule,
     MatFormFieldModule,
     MatInputModule,
+    MatSelectModule,
+    MatDatepickerModule,
+    MatNativeDateModule,
     MatChipsModule,
     MatSnackBarModule,
     MatBadgeModule,
     MatTooltipModule
   ],
+  providers: [provideNativeDateAdapter()],
   templateUrl: './approver-workflow.component.html',
   styleUrls: ['./approver-workflow.component.scss'],
 })
 export class ApproverWorkflowComponent implements OnInit {
 
   appointments: Appointment[] = [];
+  filtered: Appointment[] = [];
   selected: Appointment | null = null;
   loading = false;
   errorMsg = '';
+  search = '';
+  filterStatus = '';
+  filterEventType = '';
+  filterFromDate: Date | null = null;
+  filterToDate: Date | null = null;
   private readonly allowDummyFallback = !environment.production || environment.appName.includes('[UAT]');
   displayedColumns: string[] = ['applicationId', 'applicant', 'district', 'agenda', 'eventType', 'location', 'status', 'aiNotes', 'actions'];
+
+  eventTypeOptions: Array<{ label: string; value: EventType | '' }> = [{ label: 'All Types', value: '' }];
+
+  statusOptions: Array<{ label: string; value: AppointmentStatus | '' }> = [
+    { label: 'All Statuses', value: '' },
+    { label: 'Submitted', value: 'SUBMITTED' },
+    { label: 'CMO Review', value: 'CMO_REVIEW' },
+    { label: 'Approver Review', value: 'APPROVER_REVIEW' },
+    { label: 'Follow-up', value: 'FOLLOWUP' },
+    { label: 'HCM Pending', value: 'HCM_PENDING' },
+    { label: 'Approved with Date/Time', value: 'APPROVED_WITH_DATE_TIME' },
+    { label: 'Scheduled', value: 'SCHEDULED' },
+    { label: 'Completed', value: 'COMPLETED' },
+  ];
 
   showRemarksDialog = false;
   showRescheduleDialog = false;
@@ -55,11 +83,35 @@ export class ApproverWorkflowComponent implements OnInit {
   rescheduleDate = '';
   pendingAction: 'APPROVE' | 'REJECT' | null = null;
   followUpUpdatingId: number | null = null;
-  private readonly followUpReviewableStatuses = ['CREATED', 'SUBMITTED', 'PENDING_APPROVER_REVIEW', 'CMO_REVIEW', 'APPROVER_REVIEW'];
+  private readonly followUpStatuses: AppointmentStatus[] = ['FOLLOWUP', 'SELECTED_FOR_PUBLIC_DARBAR'];
+  private readonly followUpReviewableStatuses: AppointmentStatus[] = ['CREATED', 'SUBMITTED', 'PENDING_APPROVER_REVIEW', 'CMO_REVIEW', 'APPROVER_REVIEW'];
 
-  constructor(private appointmentService: AppointmentService, private snackBar: MatSnackBar) {}
+  constructor(
+    private appointmentService: AppointmentService,
+    private referenceDataService: ReferenceDataService,
+    private snackBar: MatSnackBar
+  ) {}
 
   ngOnInit() {
+    this.loadAppointmentTypes();
+    this.loadAppointments();
+  }
+
+  private loadAppointmentTypes() {
+    this.referenceDataService.getByType('APPOINMENT_TYPES').subscribe({
+      next: values => {
+        this.eventTypeOptions = [
+          { label: 'All Types', value: '' },
+          ...(values ?? []).map(item => ({ label: item.value, value: item.code as EventType })),
+        ];
+      },
+      error: error => {
+        this.errorMsg = apiErrorMessage(error, 'Unable to load appointment types.');
+      }
+    });
+  }
+
+  private loadAppointments() {
     this.loading = true;
     this.appointmentService.getApproverAppointments(0, 100).subscribe({
       next: page => {
@@ -67,6 +119,7 @@ export class ApproverWorkflowComponent implements OnInit {
         this.appointments = page.content.filter(a =>
           ['SUBMITTED', 'PENDING_APPROVER_REVIEW', 'CMO_REVIEW', 'APPROVER_REVIEW', 'HCM_PENDING', 'FOLLOWUP'].includes(a.status)
         );
+        this.applyFilter();
         this.loading = false;
       },
       error: error => {
@@ -76,6 +129,7 @@ export class ApproverWorkflowComponent implements OnInit {
           this.initializeDummyData();
         } else {
           this.appointments = [];
+          this.applyFilter();
         }
         this.loading = false;
       }
@@ -193,6 +247,60 @@ export class ApproverWorkflowComponent implements OnInit {
         updatedAt: '2024-03-17T11:45:00'
       }
     ];
+    this.applyFilter();
+  }
+
+  applyFilter() {
+    const searchValue = this.search.trim().toLowerCase();
+    this.filtered = this.appointments.filter(appt => {
+      const createdDate = this.parseAppointmentDate(appt);
+      return this.matchesSearch(appt, searchValue) &&
+        (!this.filterStatus || this.matchesStatusFilter(appt.status, this.filterStatus)) &&
+        (!this.filterEventType || appt.eventType === this.filterEventType) &&
+        (!this.filterFromDate || (createdDate && createdDate >= this.startOfDay(this.filterFromDate))) &&
+        (!this.filterToDate || (createdDate && createdDate < this.nextDay(this.filterToDate)));
+    });
+  }
+
+  private matchesSearch(appt: Appointment, searchValue: string) {
+    if (!searchValue) return true;
+    return [
+      appt.applicationId,
+      appt.applicant?.fullName,
+      appt.applicantName,
+      appt.applicant?.phoneNumber,
+      appt.applicantPhone,
+      appt.applicant?.district,
+      appt.agendaType,
+      appt.agendaBrief,
+      appt.requestedLocation,
+    ].some(value => String(value ?? '').toLowerCase().includes(searchValue));
+  }
+
+  private matchesStatusFilter(status: AppointmentStatus, filterStatus: string) {
+    if (filterStatus === 'FOLLOWUP') {
+      return this.followUpStatuses.includes(status);
+    }
+    return status === filterStatus;
+  }
+
+  private parseAppointmentDate(appt: Appointment): Date | null {
+    const value = appt.submittedAt || appt.createdAt || appt.updatedAt || appt.scheduledDateTime;
+    if (!value) return null;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  private startOfDay(date: Date) {
+    const value = new Date(date);
+    value.setHours(0, 0, 0, 0);
+    return value;
+  }
+
+  private nextDay(date: Date) {
+    const value = this.startOfDay(date);
+    value.setDate(value.getDate() + 1);
+    return value;
   }
 
   getSeverity(status: string): ChipSeverity {
@@ -210,7 +318,7 @@ export class ApproverWorkflowComponent implements OnInit {
   }
 
   getStatusLabel(status: string): string {
-    if (status === 'FOLLOWUP' || status === 'SELECTED_FOR_PUBLIC_DARBAR') return 'FOLLOW-UP';
+    if (this.followUpStatuses.includes(status as AppointmentStatus)) return 'FOLLOW-UP';
     return status.replace(/_/g, ' ');
   }
 
@@ -245,7 +353,7 @@ export class ApproverWorkflowComponent implements OnInit {
       next: () => {
         this.snackBar.open(`${appt.applicationId} marked as follow-up.`, 'Close', { duration: 5000, panelClass: ['success-snackbar'] });
         this.followUpUpdatingId = null;
-        this.ngOnInit();
+        this.loadAppointments();
       },
       error: error => {
         this.followUpUpdatingId = null;
@@ -267,7 +375,7 @@ export class ApproverWorkflowComponent implements OnInit {
         this.showRemarksDialog = false;
         this.selected = null;
         this.pendingAction = null;
-        this.ngOnInit();
+        this.loadAppointments();
       },
       error: error => this.snackBar.open(apiErrorMessage(error, 'Failed to update appointment.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] })
     });

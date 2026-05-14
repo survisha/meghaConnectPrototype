@@ -3,11 +3,98 @@
     <button mat-icon-button routerLink="/appointments" matTooltip="Back to Appointments">
       <mat-icon>arrow_back</mat-icon>
     </button>
-    <h2 class="page-title">Walk-in Counter (Type B2)</h2>
+    <h2 class="page-title">DEO Counter</h2>
   </div>
 
   <ng-container *ngIf="!checkedIn">
     <div class="walkin-stack">
+      <div class="section-card import-card">
+        <div class="section-card-header import-header">
+          <mat-icon>upload_file</mat-icon>
+          Pilot Excel Import (Type B1)
+        </div>
+        <div class="section-card-body">
+          <input
+            #pilotFileInput
+            type="file"
+            accept=".xlsx,.xls"
+            hidden
+            (change)="onPilotFileSelected($event)"
+          />
+
+          <div class="import-actions">
+            <button mat-stroked-button type="button" (click)="pilotFileInput.click()" [disabled]="pilotImporting">
+              <mat-icon>attach_file</mat-icon>
+              Choose Excel
+            </button>
+
+            <div class="selected-file" [class.empty-file]="!pilotFile">
+              {{ pilotFile?.name || 'No file selected' }}
+            </div>
+
+            <button
+              mat-raised-button
+              color="primary"
+              type="button"
+              (click)="uploadPilotSheet(pilotFileInput)"
+              [disabled]="!pilotFile || pilotImporting"
+            >
+              <mat-icon>cloud_upload</mat-icon>
+              {{ pilotImporting ? 'Importing...' : 'Import' }}
+            </button>
+
+            <button
+              mat-icon-button
+              type="button"
+              matTooltip="Clear import"
+              (click)="resetPilotImport(pilotFileInput)"
+              [disabled]="pilotImporting && !pilotFile && !pilotImportResult"
+            >
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+
+          <div *ngIf="pilotImportError" class="error-banner">
+            <mat-icon>error</mat-icon>
+            {{ pilotImportError }}
+          </div>
+
+          <div
+            *ngIf="pilotImportResult"
+            class="import-summary"
+            [class.import-summary-warning]="pilotImportResult.failedCount > 0"
+          >
+            <div class="summary-item">
+              <span>Total Rows</span>
+              <strong>{{ pilotImportResult.totalRows }}</strong>
+            </div>
+            <div class="summary-item">
+              <span>Imported</span>
+              <strong>{{ pilotImportResult.importedCount }}</strong>
+            </div>
+            <div class="summary-item">
+              <span>Failed</span>
+              <strong>{{ pilotImportResult.failedCount }}</strong>
+            </div>
+          </div>
+
+          <div *ngIf="pilotImportResult?.rows?.length" class="import-results">
+            <div *ngFor="let row of pilotImportResult?.rows | slice:0:8" class="import-row">
+              <mat-icon [class.success-icon-small]="row.success" [class.error-icon-small]="!row.success">
+                {{ row.success ? 'check_circle' : 'error' }}
+              </mat-icon>
+              <div class="import-row-main">
+                <div class="import-row-title">{{ row.name || 'Imported visitor' }}</div>
+                <span>{{ row.phoneNumber || 'No phone' }}</span>
+              </div>
+              <div class="import-row-ref">
+                {{ row.applicationId || row.message }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="section-card lookup-card">
         <div class="section-card-header">
           <mat-icon>search</mat-icon>
@@ -115,6 +202,124 @@
                 Create Appointment
               </button>
             </div>
+          </div>
+
+          <div class="visitor-update-panel">
+            <div class="visitor-update-header">
+              <mat-icon>manage_accounts</mat-icon>
+              Update Missing Visitor Details
+            </div>
+
+            <div class="visitor-update-grid">
+              <mat-form-field appearance="outline">
+                <mat-label>Visitor Name</mat-label>
+                <input matInput [(ngModel)]="visitorUpdateForm.fullName" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Phone Number</mat-label>
+                <input matInput maxlength="10" [(ngModel)]="visitorUpdateForm.phoneNumber" (input)="sanitizeVisitorPhone()" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>EPIC / Voter ID</mat-label>
+                <input matInput maxlength="10" placeholder="ABC1234567" [(ngModel)]="visitorUpdateForm.epicNumber" (input)="sanitizeVisitorEpic()" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Designation</mat-label>
+                <input matInput [(ngModel)]="visitorUpdateForm.designation" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="span-2">
+                <mat-label>Address / Location</mat-label>
+                <textarea matInput rows="2" [(ngModel)]="visitorUpdateForm.addressLine"></textarea>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>District</mat-label>
+                <input matInput [(ngModel)]="visitorUpdateForm.district" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Constituency</mat-label>
+                <input matInput [(ngModel)]="visitorUpdateForm.constituency" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Booth / Village</mat-label>
+                <input matInput [(ngModel)]="visitorUpdateForm.boothVillage" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Location</mat-label>
+                <input matInput [(ngModel)]="visitorUpdateForm.location" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>City</mat-label>
+                <input matInput [(ngModel)]="visitorUpdateForm.city" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>State</mat-label>
+                <input matInput [(ngModel)]="visitorUpdateForm.state" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Pincode</mat-label>
+                <input matInput maxlength="6" [(ngModel)]="visitorUpdateForm.pincode" (input)="sanitizeVisitorPincode()" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="span-2">
+                <mat-label>Brief Profile</mat-label>
+                <textarea matInput rows="2" [(ngModel)]="visitorUpdateForm.briefProfile"></textarea>
+              </mat-form-field>
+            </div>
+
+            <div class="photo-update-area">
+              <div class="photo-frame">
+                <video *ngIf="visitorCameraActive" id="deo-camera-preview" autoplay playsinline></video>
+                <img *ngIf="visitorUpdatePhoto && !visitorCameraActive" [src]="visitorUpdatePhoto" alt="Captured visitor photo" />
+                <div *ngIf="!visitorCameraActive && !visitorUpdatePhoto" class="photo-placeholder">
+                  <mat-icon>photo_camera</mat-icon>
+                  <span>Capture visitor photo</span>
+                </div>
+              </div>
+
+              <div class="photo-actions">
+                <button *ngIf="!visitorCameraActive && !visitorUpdatePhoto" mat-stroked-button type="button" (click)="openVisitorCamera()">
+                  <mat-icon>photo_camera</mat-icon>
+                  Open Camera
+                </button>
+                <button *ngIf="visitorCameraActive" mat-raised-button color="primary" type="button" (click)="captureVisitorPhoto()">
+                  <mat-icon>camera</mat-icon>
+                  Capture
+                </button>
+                <button *ngIf="visitorUpdatePhoto && !visitorCameraActive" mat-stroked-button type="button" (click)="retakeVisitorPhoto()">
+                  <mat-icon>refresh</mat-icon>
+                  Retake
+                </button>
+                <button *ngIf="visitorCameraActive" mat-icon-button type="button" matTooltip="Close camera" (click)="stopVisitorCamera()">
+                  <mat-icon>videocam_off</mat-icon>
+                </button>
+              </div>
+            </div>
+
+            <div *ngIf="visitorUpdateError" class="error-banner">
+              <mat-icon>error</mat-icon>
+              {{ visitorUpdateError }}
+            </div>
+
+            <div *ngIf="visitorUpdateMsg" class="success-banner-inline">
+              <mat-icon>check_circle</mat-icon>
+              {{ visitorUpdateMsg }}
+            </div>
+
+            <button mat-raised-button color="primary" class="save-visitor-action" (click)="saveVisitorUpdates()" [disabled]="savingVisitorUpdate">
+              <mat-icon>save</mat-icon>
+              {{ savingVisitorUpdate ? 'Saving...' : 'Save Visitor Updates' }}
+            </button>
           </div>
         </div>
       </div>

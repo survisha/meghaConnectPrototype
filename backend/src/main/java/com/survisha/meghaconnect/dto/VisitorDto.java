@@ -38,6 +38,8 @@ public class VisitorDto {
     private String photoStoragePath;
     private String livePhotoPath;
     private String photoPath;
+    private String livePhotoBase64;
+    private String photoBase64;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

@@ -211,6 +211,31 @@
       <span>{{ (selectedAppointment.submittedAt || selectedAppointment.createdAt) | date:'medium' }}</span>
     </div>
 
+    <div class="details-profile-panel">
+      <div class="visitor-photo-frame">
+        <img *ngIf="selectedVisitorPhotoUrl"
+             [src]="selectedVisitorPhotoUrl"
+             [alt]="(selectedAppointment.applicant.fullName || selectedAppointment.applicantName || 'Visitor') + ' photo'">
+        <div class="visitor-photo-placeholder" *ngIf="!selectedVisitorPhotoUrl && !selectedVisitorPhotoLoading">
+          <mat-icon>account_circle</mat-icon>
+        </div>
+        <div class="visitor-photo-loading" *ngIf="selectedVisitorPhotoLoading">
+          <mat-spinner diameter="28"></mat-spinner>
+        </div>
+      </div>
+
+      <div class="details-profile-copy">
+        <span class="field-label">Visitor Photo</span>
+        <h3>{{ selectedAppointment.applicant.fullName || selectedAppointment.applicantName || '—' }}</h3>
+        <div class="details-profile-meta">
+          <span>{{ selectedAppointment.applicant.phoneNumber || selectedAppointment.applicantPhone || '—' }}</span>
+          <span>EPIC: {{ selectedAppointment.applicant.epicNumber || '—' }}</span>
+          <span>{{ selectedAppointment.applicant.designation || '—' }}</span>
+        </div>
+        <span class="photo-error" *ngIf="selectedVisitorPhotoError">{{ selectedVisitorPhotoError }}</span>
+      </div>
+    </div>
+
     <div class="details-grid">
       <div>
         <span class="field-label">Applicant</span>
@@ -252,9 +277,25 @@
       <div class="description-box">{{ selectedAppointment.shortNotes }}</div>
     </section>
 
-    <section class="detail-section" *ngIf="selectedAppointment.cmoRemarks">
-      <h3>CMO Remarks</h3>
-      <div class="description-box">{{ selectedAppointment.cmoRemarks }}</div>
+    <section class="detail-section"
+             *ngIf="selectedAppointment.cmoRemarks || selectedAppointment.approverRemarks || selectedAppointment.hcmRemarks">
+      <h3>Remarks</h3>
+      <div class="remarks-list">
+        <div class="remark-card" *ngIf="selectedAppointment.cmoRemarks">
+          <span class="field-label">CMO Remarks</span>
+          <div class="description-box">{{ selectedAppointment.cmoRemarks }}</div>
+        </div>
+
+        <div class="remark-card" *ngIf="selectedAppointment.approverRemarks">
+          <span class="field-label">Approver Remarks</span>
+          <div class="description-box">{{ selectedAppointment.approverRemarks }}</div>
+        </div>
+
+        <div class="remark-card" *ngIf="selectedAppointment.hcmRemarks">
+          <span class="field-label">HCM Remarks</span>
+          <div class="description-box">{{ selectedAppointment.hcmRemarks }}</div>
+        </div>
+      </div>
     </section>
 
     <section class="detail-section" *ngIf="selectedAppointment.scheduledDateTime">

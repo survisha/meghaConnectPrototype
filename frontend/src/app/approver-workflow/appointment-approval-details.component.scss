@@ -68,6 +68,20 @@
           text-transform: uppercase;
         }
 
+        .type-badge {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 46px;
+          min-height: 34px;
+          padding: 0.35rem 0.8rem;
+          border-radius: 6px;
+          background: #e0f2fe;
+          color: #075985;
+          font-size: 0.9rem;
+          font-weight: 800;
+        }
+
         .appointment-title {
           h2 {
             margin: 0;

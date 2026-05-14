@@ -14,10 +14,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -123,6 +126,16 @@ public class VisitorController {
     public ResponseEntity<VisitorDto> create(@RequestBody Visitor visitor) {
         logEndpoint("/api/v1/visitors");
         return ResponseEntity.ok(visitorService.saveDto(visitor));
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO_OFFICER','APPROVER')")
+    public ResponseEntity<VisitorDto> update(@PathVariable Long id,
+                                             @RequestBody VisitorDto dto,
+                                             @AuthenticationPrincipal UserDetails user) {
+        logEndpoint("/api/v1/visitors/{id}");
+        String actor = user != null ? user.getUsername() : "visitor-update";
+        return ResponseEntity.ok(visitorService.updateVisitor(id, dto, actor));
     }
 
     private void logEndpoint(String endpoint) {

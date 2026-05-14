@@ -58,6 +58,17 @@
         </mat-select>
       </mat-form-field>
 
+      <!-- Type Filter -->
+      <mat-form-field appearance="outline" class="filter-field">
+        <mat-label>Type Filter</mat-label>
+        <mat-select id="approverInbox_eventTypeFilter" formControlName="eventTypeFilter">
+          <mat-option value="">All Types</mat-option>
+          <mat-option *ngFor="let type of getEventTypeOptions()" [value]="type">
+            {{ type }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
       <!-- Date Range Filter -->
       <mat-form-field appearance="outline" class="filter-field">
         <mat-label>From Date</mat-label>
@@ -116,6 +127,14 @@
           <th mat-header-cell *matHeaderCellDef>Agenda</th>
           <td mat-cell *matCellDef="let element">
             <span class="agenda-badge">{{ element.agendaType }}</span>
+          </td>
+        </ng-container>
+
+        <!-- Event Type Column -->
+        <ng-container matColumnDef="eventType">
+          <th mat-header-cell *matHeaderCellDef>Type</th>
+          <td mat-cell *matCellDef="let element">
+            <span class="event-type-badge" [class]="'type-' + element.eventType">{{ element.eventType }}</span>
           </td>
         </ng-container>
 

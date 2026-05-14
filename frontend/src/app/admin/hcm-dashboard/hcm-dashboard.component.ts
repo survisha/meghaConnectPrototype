@@ -22,6 +22,7 @@ import { apiErrorMessage } from '../../shared/api-error.util';
 interface HcmAppointmentCard {
   id: number;
   subject: string;
+  applicantName: string;
   dateTime?: string;
   location: string;
   type: string;
@@ -431,6 +432,7 @@ export class HcmDashboardComponent implements OnInit {
     return {
       id: appointment.id,
       subject: appointment.subject || appointment.agendaType || appointment.applicationId || `Appointment #${appointment.id}`,
+      applicantName: appointment.applicant?.fullName || appointment.applicantName || 'Not specified',
       dateTime: appointment.scheduledDateTime || appointment.createdAt || appointment.submittedAt,
       location: appointment.requestedLocation || 'Not specified',
       type: appointment.appointmentType || appointment.eventType || 'Appointment',

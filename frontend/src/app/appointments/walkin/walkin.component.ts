@@ -1,8 +1,9 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { VisitorSearchService } from '../../services/visitor-search.service';
+import { AppointmentService, PilotImportResult } from '../../services/appointment.service';
 import { Visitor } from '../../models';
 import { apiErrorMessage } from '../../shared/api-error.util';
 import { MatButtonModule } from '@angular/material/button';
@@ -21,7 +22,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
   templateUrl: './walkin.component.html',
   styleUrls: ['./walkin.component.scss'],
 })
-export class WalkinComponent {
+export class WalkinComponent implements OnDestroy {
   phoneNumber = '';
   epicNumber = '';
   referenceId = '';
@@ -36,6 +37,17 @@ export class WalkinComponent {
   associates: Visitor[] = [];
   searching = false;
   creating = false;
+  pilotFile: File | null = null;
+  pilotImporting = false;
+  pilotImportResult: PilotImportResult | null = null;
+  pilotImportError = '';
+  visitorUpdateForm = this.emptyVisitorUpdateForm();
+  visitorUpdatePhoto = '';
+  visitorUpdateMsg = '';
+  visitorUpdateError = '';
+  savingVisitorUpdate = false;
+  visitorCameraStream: MediaStream | null = null;
+  visitorCameraActive = false;
 
   agendaTypes = [
     { label: 'Scheme availment (CM)', value: 'Scheme availment (CM)' },
@@ -46,7 +58,15 @@ export class WalkinComponent {
   ];
   locations = ['SHILLONG', 'TURA', 'DELHI', 'OTHERS'];
 
-  constructor(private visitorSearchService: VisitorSearchService, private router: Router) {}
+  constructor(
+    private visitorSearchService: VisitorSearchService,
+    private appointmentService: AppointmentService,
+    private router: Router
+  ) {}
+
+  ngOnDestroy() {
+    this.stopVisitorCamera();
+  }
 
   search() {
     this.errorMsg = '';
@@ -66,6 +86,12 @@ export class WalkinComponent {
       next: results => {
         this.foundPerson = results[0] ?? null;
         this.notFound = !this.foundPerson;
+        this.visitorUpdateMsg = '';
+        this.visitorUpdateError = '';
+        this.stopVisitorCamera();
+        if (this.foundPerson) {
+          this.initVisitorUpdateForm(this.foundPerson);
+        }
         this.searching = false;
       },
       error: err => {
@@ -93,5 +119,200 @@ export class WalkinComponent {
 
   addAssociate() {
     // No-op without a real search; user must search separately
+  }
+
+  sanitizeVisitorEpic() {
+    this.visitorUpdateForm.epicNumber = this.visitorUpdateForm.epicNumber.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  }
+
+  sanitizeVisitorPhone() {
+    this.visitorUpdateForm.phoneNumber = this.visitorUpdateForm.phoneNumber.replace(/\D/g, '').slice(0, 10);
+  }
+
+  sanitizeVisitorPincode() {
+    this.visitorUpdateForm.pincode = this.visitorUpdateForm.pincode.replace(/\D/g, '').slice(0, 6);
+  }
+
+  async openVisitorCamera() {
+    try {
+      this.visitorUpdateError = '';
+      this.visitorCameraStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
+      });
+      this.visitorCameraActive = true;
+      setTimeout(() => {
+        const video = document.getElementById('deo-camera-preview') as HTMLVideoElement;
+        if (video && this.visitorCameraStream) {
+          video.srcObject = this.visitorCameraStream;
+          video.play();
+        }
+      }, 100);
+    } catch {
+      this.visitorUpdateError = 'Camera access was blocked. Please allow camera permission and try again.';
+    }
+  }
+
+  captureVisitorPhoto() {
+    const video = document.getElementById('deo-camera-preview') as HTMLVideoElement;
+    if (!video) {
+      this.visitorUpdateError = 'Camera is not ready yet.';
+      return;
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const context = canvas.getContext('2d');
+    if (!context) {
+      this.visitorUpdateError = 'Unable to capture photo.';
+      return;
+    }
+
+    context.drawImage(video, 0, 0);
+    this.visitorUpdatePhoto = canvas.toDataURL('image/jpeg', 0.8);
+    this.stopVisitorCamera();
+    this.visitorUpdateMsg = 'Photo captured. Save updates to attach it to this visitor.';
+  }
+
+  retakeVisitorPhoto() {
+    this.visitorUpdatePhoto = '';
+    this.openVisitorCamera();
+  }
+
+  stopVisitorCamera() {
+    if (this.visitorCameraStream) {
+      this.visitorCameraStream.getTracks().forEach(track => track.stop());
+      this.visitorCameraStream = null;
+    }
+    this.visitorCameraActive = false;
+  }
+
+  saveVisitorUpdates() {
+    this.visitorUpdateMsg = '';
+    this.visitorUpdateError = '';
+    if (!this.foundPerson?.id) {
+      this.visitorUpdateError = 'Search and select a visitor before saving updates.';
+      return;
+    }
+
+    this.savingVisitorUpdate = true;
+    const addressLine = this.visitorUpdateForm.addressLine.trim();
+    const payload = {
+      fullName: this.visitorUpdateForm.fullName.trim(),
+      phoneNumber: this.visitorUpdateForm.phoneNumber.trim(),
+      epicNumber: this.visitorUpdateForm.epicNumber.trim(),
+      designation: this.visitorUpdateForm.designation.trim(),
+      address: addressLine,
+      fullAddress: addressLine,
+      address1: addressLine,
+      addressLine,
+      district: this.visitorUpdateForm.district.trim(),
+      constituency: this.visitorUpdateForm.constituency.trim(),
+      booth: this.visitorUpdateForm.booth.trim(),
+      boothVillage: this.visitorUpdateForm.boothVillage.trim(),
+      village: this.visitorUpdateForm.village.trim(),
+      location: this.visitorUpdateForm.location.trim(),
+      city: this.visitorUpdateForm.city.trim(),
+      state: this.visitorUpdateForm.state.trim(),
+      pincode: this.visitorUpdateForm.pincode.trim(),
+      briefProfile: this.visitorUpdateForm.briefProfile.trim(),
+      livePhotoBase64: this.visitorUpdatePhoto || undefined,
+    };
+
+    this.visitorSearchService.update(this.foundPerson.id, payload).subscribe({
+      next: updated => {
+        this.foundPerson = {
+          ...this.foundPerson,
+          ...updated,
+          photoBase64: this.visitorUpdatePhoto || this.foundPerson?.photoBase64,
+          livePhotoBase64: this.visitorUpdatePhoto || this.foundPerson?.livePhotoBase64,
+        } as Visitor;
+        this.initVisitorUpdateForm(this.foundPerson);
+        this.visitorUpdatePhoto = '';
+        this.visitorUpdateMsg = 'Visitor details updated.';
+        this.savingVisitorUpdate = false;
+      },
+      error: err => {
+        this.visitorUpdateError = apiErrorMessage(err, 'Unable to update visitor details.');
+        this.savingVisitorUpdate = false;
+      }
+    });
+  }
+
+  onPilotFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.pilotImportError = '';
+    this.pilotImportResult = null;
+    this.pilotFile = input.files?.[0] ?? null;
+  }
+
+  uploadPilotSheet(fileInput: HTMLInputElement) {
+    this.pilotImportError = '';
+    this.pilotImportResult = null;
+    if (!this.pilotFile) {
+      this.pilotImportError = 'Select an Excel file before importing.';
+      return;
+    }
+
+    this.pilotImporting = true;
+    this.appointmentService.importPilotAppointments(this.pilotFile).subscribe({
+      next: result => {
+        this.pilotImportResult = result;
+        this.pilotImporting = false;
+        this.pilotFile = null;
+        fileInput.value = '';
+      },
+      error: err => {
+        this.pilotImportError = apiErrorMessage(err, 'Unable to import the pilot Excel sheet.');
+        this.pilotImporting = false;
+      }
+    });
+  }
+
+  resetPilotImport(fileInput: HTMLInputElement) {
+    this.pilotFile = null;
+    this.pilotImportResult = null;
+    this.pilotImportError = '';
+    fileInput.value = '';
+  }
+
+  private initVisitorUpdateForm(visitor: Visitor) {
+    this.visitorUpdateForm = {
+      fullName: visitor.fullName ?? '',
+      phoneNumber: visitor.phoneNumber ?? '',
+      epicNumber: visitor.epicNumber ?? '',
+      designation: visitor.designation ?? '',
+      addressLine: visitor.addressLine ?? visitor.address1 ?? visitor.fullAddress ?? visitor.address ?? '',
+      district: visitor.district ?? '',
+      constituency: visitor.constituency ?? '',
+      booth: visitor.booth ?? '',
+      boothVillage: visitor.boothVillage ?? visitor.booth ?? '',
+      village: visitor.village ?? '',
+      location: visitor.location ?? '',
+      city: visitor.city ?? '',
+      state: visitor.state ?? '',
+      pincode: visitor.pincode ?? '',
+      briefProfile: visitor.briefProfile ?? '',
+    };
+  }
+
+  private emptyVisitorUpdateForm() {
+    return {
+      fullName: '',
+      phoneNumber: '',
+      epicNumber: '',
+      designation: '',
+      addressLine: '',
+      district: '',
+      constituency: '',
+      booth: '',
+      boothVillage: '',
+      village: '',
+      location: '',
+      city: '',
+      state: '',
+      pincode: '',
+      briefProfile: '',
+    };
   }
 }

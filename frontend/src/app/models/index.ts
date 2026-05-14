@@ -44,8 +44,13 @@ export interface Visitor {
   district: string;
   constituency: string;
   booth: string;
+  boothVillage?: string;
   village?: string;
+  location?: string;
   briefProfile?: string;
+  gender?: string;
+  dateOfBirth?: string;
+  outsideMeghalaya?: boolean;
   kycStatus?: KycStatus;
 }
 

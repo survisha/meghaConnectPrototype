@@ -36,6 +36,24 @@ export interface AppointmentPage {
   number: number;
 }
 
+export type AiNotesStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+
+export interface AppointmentDocumentAiNotes {
+  id: number;
+  appointmentId: number;
+  documentId: number;
+  fileName: string;
+  aiSummary: string;
+  importantDetails: string;
+  missingInfo: string;
+  riskFlags: string;
+  status: AiNotesStatus;
+  errorMessage?: string;
+  modelName?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface CmoReviewRequest {
   appointmentId: number;
   eventType?: EventType;
@@ -143,6 +161,21 @@ export class AppointmentService {
         return rows.map(row => this.normalizeDocument(row));
       })
     );
+  }
+
+  getAiNotesByAppointment(appointmentId: number): Observable<AppointmentDocumentAiNotes[]> {
+    return this.http.get<unknown>(`${this.baseUrl}/${appointmentId}/ai-notes`).pipe(
+      map(res => {
+        const data = this.unwrapData<unknown>(res);
+        const rows = Array.isArray(data) ? data : [];
+        return rows.map(row => this.normalizeAiNotes(row));
+      })
+    );
+  }
+
+  regenerateAiNotes(documentId: number): Observable<AppointmentDocumentAiNotes> {
+    return this.http.post<unknown>(`${this.baseUrl}/documents/${documentId}/ai-notes/regenerate`, {})
+      .pipe(map(res => this.normalizeAiNotes(this.unwrapData(res))));
   }
 
   approveAppointment(id: number, request: ApproveRejectRequest): Observable<Appointment> {
@@ -303,5 +336,24 @@ export class AppointmentService {
       isRequired: Boolean(raw.isRequired),
       status: raw.status ?? 'UPLOADED',
     } as AppointmentDocument;
+  }
+
+  private normalizeAiNotes(row: unknown): AppointmentDocumentAiNotes {
+    const raw: any = row ?? {};
+    return {
+      id: Number(raw.id ?? 0),
+      appointmentId: Number(raw.appointmentId ?? 0),
+      documentId: Number(raw.documentId ?? 0),
+      fileName: raw.fileName ?? 'Document',
+      aiSummary: raw.aiSummary ?? '',
+      importantDetails: raw.importantDetails ?? '',
+      missingInfo: raw.missingInfo ?? '',
+      riskFlags: raw.riskFlags ?? '',
+      status: raw.status ?? 'PENDING',
+      errorMessage: raw.errorMessage,
+      modelName: raw.modelName,
+      createdAt: raw.createdAt,
+      updatedAt: raw.updatedAt,
+    };
   }
 }

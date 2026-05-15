@@ -3,14 +3,14 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
-import { forkJoin } from 'rxjs';
-import { AppointmentService } from '../../services/appointment.service';
+import { forkJoin, of } from 'rxjs';
+import { AppointmentDocumentAiNotes, AiNotesStatus, AppointmentService } from '../../services/appointment.service';
 import { AuthService } from '../../services/auth.service';
 import { DocumentService } from '../../services/document.service';
 import { ReferenceDataService } from '../../services/reference-data.service';
 import { VisitorService } from '../../services/visitor.service';
 import { Appointment, AppointmentDocument, AppointmentStatus, EventType } from '../../models';
-import { finalize } from 'rxjs/operators';
+import { catchError, finalize } from 'rxjs/operators';
 import { MatTableModule } from '@angular/material/table';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatButtonModule } from '@angular/material/button';
@@ -66,6 +66,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   @ViewChild('documentPreviewDialog') documentPreviewDialog!: TemplateRef<unknown>;
   @ViewChild('appointmentRemarksDialog') appointmentRemarksDialog!: TemplateRef<unknown>;
   @ViewChild('appointmentRescheduleDialog') appointmentRescheduleDialog!: TemplateRef<unknown>;
+  @ViewChild('aiNotesDialog') aiNotesDialog!: TemplateRef<unknown>;
 
   appointments: Appointment[] = [];
   filtered: Appointment[] = [];
@@ -95,6 +96,12 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   rescheduleDate = '';
   pendingAction: 'APPROVE' | 'REJECT' | null = null;
   followUpUpdatingId: number | null = null;
+  aiNotesByAppointmentId = new Map<number, AppointmentDocumentAiNotes[]>();
+  aiNotesLoadingAppointmentIds = new Set<number>();
+  aiNotesFailedAppointmentIds = new Set<number>();
+  aiNotesRegeneratingDocumentIds = new Set<number>();
+  selectedAiNotesAppointment: Appointment | null = null;
+  selectedAiNotes: AppointmentDocumentAiNotes[] = [];
   selectedAppointmentIds = new Set<number>();
   eventTypeOptions: Array<{ label: string; value: EventType | '' }> = [{ label: 'All Types', value: '' }];
   displayedColumns: string[] = ['select', 'applicant', 'designation', 'constituency', 'agenda', 'eventType', 'location', 'status', 'aiNotes', 'actions'];
@@ -115,6 +122,8 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   private documentPreviewDialogRef?: MatDialogRef<unknown>;
   private appointmentRemarksDialogRef?: MatDialogRef<unknown>;
   private appointmentRescheduleDialogRef?: MatDialogRef<unknown>;
+  private aiNotesDialogRef?: MatDialogRef<unknown>;
+  private aiNotesPollTimers = new Map<number, number>();
   private readonly followUpStatuses: AppointmentStatus[] = ['FOLLOWUP', 'SELECTED_FOR_PUBLIC_DARBAR'];
   private readonly followUpReviewableStatuses: AppointmentStatus[] = [
     'CREATED',
@@ -164,6 +173,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
         this.errorMsg = '';
         this.appointments = page.content ?? [];
         this.applyFilter();
+        this.loadAiNotesForAppointments(this.appointments);
         this.loading = false;
       },
       error: error => {
@@ -177,6 +187,8 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.clearDocumentPreviewState();
+    this.aiNotesPollTimers.forEach(timerId => window.clearTimeout(timerId));
+    this.aiNotesPollTimers.clear();
   }
 
   applyFilter() {
@@ -272,6 +284,178 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
         },
         error: error => this.errorMsg = apiErrorMessage(error, 'Unable to mark selected appointments for Public Durbar follow-up.')
       });
+  }
+
+  canViewAiNotes() {
+    return this.auth.hasRole('HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER');
+  }
+
+  canManageAiNotes() {
+    return this.canViewAiNotes();
+  }
+
+  getAiNotes(appointment: Appointment) {
+    return this.aiNotesByAppointmentId.get(appointment.id) ?? [];
+  }
+
+  isAiNotesLoading(appointment: Appointment) {
+    return this.aiNotesLoadingAppointmentIds.has(appointment.id);
+  }
+
+  hasAiNotesLoadFailed(appointment: Appointment) {
+    return this.aiNotesFailedAppointmentIds.has(appointment.id);
+  }
+
+  getAiNotesStatus(appointment: Appointment): AiNotesStatus | 'LOADING' | 'NONE' | 'UNAVAILABLE' {
+    if (!this.canViewAiNotes()) return 'UNAVAILABLE';
+    if (this.isAiNotesLoading(appointment)) return 'LOADING';
+    const notes = this.getAiNotes(appointment);
+    if (notes.some(note => note.status === 'PROCESSING')) return 'PROCESSING';
+    if (notes.some(note => note.status === 'PENDING')) return 'PENDING';
+    if (notes.some(note => note.status === 'COMPLETED')) return 'COMPLETED';
+    if (notes.some(note => note.status === 'FAILED')) return 'FAILED';
+    return 'NONE';
+  }
+
+  getAiNotesStatusLabel(appointment: Appointment) {
+    switch (this.getAiNotesStatus(appointment)) {
+      case 'LOADING': return 'Loading AI notes...';
+      case 'PENDING': return 'AI notes pending';
+      case 'PROCESSING': return 'Generating notes...';
+      case 'COMPLETED': return 'AI notes ready';
+      case 'FAILED': return 'AI notes failed';
+      case 'UNAVAILABLE': return 'AI notes unavailable';
+      default: return 'No AI notes';
+    }
+  }
+
+  getAiNotesStatusClass(appointment: Appointment) {
+    return `ai-status-${this.getAiNotesStatus(appointment).toString().toLowerCase()}`;
+  }
+
+  getAiNotesPreview(appointment: Appointment) {
+    const completed = this.getAiNotes(appointment).find(note => note.status === 'COMPLETED' && note.aiSummary);
+    if (!completed) return '';
+    return this.compactText(completed.aiSummary, 90);
+  }
+
+  hasAiNotes(appointment: Appointment) {
+    return this.getAiNotes(appointment).length > 0;
+  }
+
+  getRegeneratableAiNote(appointment: Appointment) {
+    return this.getAiNotes(appointment).find(note => note.documentId && note.status === 'FAILED')
+      ?? this.getAiNotes(appointment).find(note => note.documentId);
+  }
+
+  openAiNotesDialog(appointment: Appointment) {
+    this.selectedAiNotesAppointment = appointment;
+    this.selectedAiNotes = this.getAiNotes(appointment);
+    this.aiNotesDialogRef = this.dialog.open(this.aiNotesDialog, {
+      width: '760px',
+      maxWidth: '96vw',
+      autoFocus: false,
+      panelClass: 'ai-notes-dialog-panel'
+    });
+    this.aiNotesDialogRef.afterClosed().subscribe(() => {
+      this.aiNotesDialogRef = undefined;
+      this.selectedAiNotesAppointment = null;
+      this.selectedAiNotes = [];
+    });
+  }
+
+  closeAiNotesDialog() {
+    this.aiNotesDialogRef?.close();
+  }
+
+  regenerateAiNotes(note: AppointmentDocumentAiNotes, appointment?: Appointment, event?: Event) {
+    event?.stopPropagation();
+    if (!this.canManageAiNotes() || !note.documentId || this.aiNotesRegeneratingDocumentIds.has(note.documentId)) {
+      return;
+    }
+
+    this.aiNotesRegeneratingDocumentIds.add(note.documentId);
+    this.appointmentService.regenerateAiNotes(note.documentId)
+      .pipe(finalize(() => this.aiNotesRegeneratingDocumentIds.delete(note.documentId)))
+      .subscribe({
+        next: updated => {
+          this.replaceAiNote(updated);
+          if (appointment) {
+            this.loadAiNotesForAppointments([appointment], true);
+          }
+          this.snackBar.open('AI notes regeneration queued.', 'Close', { duration: 4000, panelClass: ['success-snackbar'] });
+        },
+        error: error => this.snackBar.open(apiErrorMessage(error, 'Unable to regenerate AI notes.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] })
+      });
+  }
+
+  isAiNoteRegenerating(note: AppointmentDocumentAiNotes) {
+    return !!note.documentId && this.aiNotesRegeneratingDocumentIds.has(note.documentId);
+  }
+
+  private loadAiNotesForAppointments(appointments: Appointment[], force = false) {
+    if (!this.canViewAiNotes()) return;
+    const uniqueAppointments = appointments.filter((appointment, index, rows) =>
+      appointment.id && rows.findIndex(row => row.id === appointment.id) === index
+    );
+
+    uniqueAppointments.forEach(appointment => {
+      if (!force && (this.aiNotesByAppointmentId.has(appointment.id) || this.aiNotesLoadingAppointmentIds.has(appointment.id))) {
+        return;
+      }
+      this.aiNotesLoadingAppointmentIds.add(appointment.id);
+      this.aiNotesFailedAppointmentIds.delete(appointment.id);
+      this.appointmentService.getAiNotesByAppointment(appointment.id)
+        .pipe(
+          catchError(() => {
+            this.aiNotesFailedAppointmentIds.add(appointment.id);
+            return of([]);
+          }),
+          finalize(() => this.aiNotesLoadingAppointmentIds.delete(appointment.id))
+        )
+        .subscribe(notes => {
+          this.aiNotesByAppointmentId.set(appointment.id, notes);
+          if (this.selectedAiNotesAppointment?.id === appointment.id) {
+            this.selectedAiNotes = notes;
+          }
+          this.scheduleAiNotesRefreshIfNeeded(appointment, notes);
+        });
+    });
+  }
+
+  private scheduleAiNotesRefreshIfNeeded(appointment: Appointment, notes: AppointmentDocumentAiNotes[]) {
+    const shouldRefresh = notes.some(note => note.status === 'PENDING' || note.status === 'PROCESSING');
+    const existingTimer = this.aiNotesPollTimers.get(appointment.id);
+    if (existingTimer) {
+      window.clearTimeout(existingTimer);
+      this.aiNotesPollTimers.delete(appointment.id);
+    }
+    if (!shouldRefresh) return;
+    const timerId = window.setTimeout(() => {
+      this.aiNotesPollTimers.delete(appointment.id);
+      this.loadAiNotesForAppointments([appointment], true);
+    }, 7000);
+    this.aiNotesPollTimers.set(appointment.id, timerId);
+  }
+
+  private replaceAiNote(updated: AppointmentDocumentAiNotes) {
+    const notes = this.aiNotesByAppointmentId.get(updated.appointmentId) ?? [];
+    const index = notes.findIndex(note => note.id === updated.id || note.documentId === updated.documentId);
+    const nextNotes = [...notes];
+    if (index >= 0) {
+      nextNotes[index] = updated;
+    } else {
+      nextNotes.push(updated);
+    }
+    this.aiNotesByAppointmentId.set(updated.appointmentId, nextNotes);
+    if (this.selectedAiNotesAppointment?.id === updated.appointmentId) {
+      this.selectedAiNotes = nextNotes;
+    }
+  }
+
+  private compactText(value: string, maxLength: number) {
+    const normalized = value.replace(/\s+/g, ' ').trim();
+    return normalized.length > maxLength ? `${normalized.substring(0, maxLength)}...` : normalized;
   }
 
   private canAppointmentBeMarkedFollowUp(appointment: Appointment) {

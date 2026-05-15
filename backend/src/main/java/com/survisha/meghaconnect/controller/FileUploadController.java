@@ -7,13 +7,16 @@ import com.survisha.meghaconnect.repository.AppointmentRepository;
 import com.survisha.meghaconnect.repository.DocumentUploadRepository;
 import com.survisha.meghaconnect.repository.VisitorRepository;
 import com.survisha.meghaconnect.service.AISummaryService;
+import com.survisha.meghaconnect.service.AppointmentDocumentAiNotesService;
 import com.survisha.meghaconnect.service.DocumentFileService;
 import com.survisha.meghaconnect.service.FileStorageService;
 import com.survisha.meghaconnect.util.DateTimeUtil;
+import com.survisha.meghaconnect.util.RequestContextUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -47,11 +50,13 @@ import java.util.Map;
 @CrossOrigin(origins = "*")
 @Tag(name = "File Upload", description = "File upload, preview, and download operations")
 @SecurityRequirement(name = "bearerAuth")
+@Slf4j
 public class FileUploadController {
 
     private final FileStorageService fileStorageService;
     private final DocumentFileService documentFileService;
     private final AISummaryService aiSummaryService;
+    private final AppointmentDocumentAiNotesService appointmentDocumentAiNotesService;
     private final DocumentUploadRepository documentUploadRepository;
     private final VisitorRepository visitorRepository;
     private final AppointmentRepository appointmentRepository;
@@ -73,6 +78,7 @@ public class FileUploadController {
             FileStorageService.StoredFileMetadata storedFile =
                     fileStorageService.storeFileSecure(file, visitorId, applicationId);
             DocumentUpload document = saveDocumentMetadata(storedFile, visitorId, applicationId, documentType, authentication);
+            queueAiNotes(document);
 
             String summary = generateSummary ? aiSummaryService.generateShortSummary(file) : "";
 
@@ -148,6 +154,18 @@ public class FileUploadController {
                 .updatedAt(now)
                 .build();
         return documentUploadRepository.save(document);
+    }
+
+    private void queueAiNotes(DocumentUpload document) {
+        try {
+            appointmentDocumentAiNotesService.queueGeneration(document);
+        } catch (Exception e) {
+            log.warn("Unable to queue AI notes requestId={} appointmentId={} documentId={}",
+                    RequestContextUtil.getRequestId(),
+                    document.getAppointment() != null ? document.getAppointment().getId() : null,
+                    document.getId(),
+                    e);
+        }
     }
 
     private ResponseEntity<Resource> streamDocument(DocumentFileService.StoredDocumentResource document,

@@ -1,9 +1,11 @@
 package com.survisha.meghaconnect.controller;
 
 import com.survisha.meghaconnect.dto.AppointmentMultipartRequest;
+import com.survisha.meghaconnect.dto.AppointmentDocumentAiNotesDto;
 import com.survisha.meghaconnect.dto.AppointmentDocumentDto;
 import com.survisha.meghaconnect.dto.AppointmentDto;
 import com.survisha.meghaconnect.entity.Appointment;
+import com.survisha.meghaconnect.service.AppointmentDocumentAiNotesService;
 import com.survisha.meghaconnect.service.AppointmentService;
 import com.survisha.meghaconnect.util.RequestContextUtil;
 import io.swagger.v3.oas.annotations.Operation;
@@ -39,6 +41,7 @@ import java.util.Map;
 public class AppointmentController {
 
     private final AppointmentService appointmentService;
+    private final AppointmentDocumentAiNotesService appointmentDocumentAiNotesService;
 
     @Operation(summary = "Get all appointments", description = "Retrieve paginated list of all appointments")
     @ApiResponses(value = {
@@ -75,6 +78,22 @@ public class AppointmentController {
     public ResponseEntity<List<AppointmentDocumentDto>> getDocuments(@PathVariable Long id) {
         logEndpoint("/api/v1/appointments/{id}/documents");
         return ResponseEntity.ok(appointmentService.findDocumentDtos(id));
+    }
+
+    @Operation(summary = "Get AI notes for appointment documents", description = "Retrieve officer-facing AI notes generated from uploaded appointment documents")
+    @GetMapping("/{id}/ai-notes")
+    @PreAuthorize("hasAnyRole('CMO_OFFICER','APPROVER','HCM','OSD','ADMIN')")
+    public ResponseEntity<List<AppointmentDocumentAiNotesDto>> getAiNotes(@PathVariable Long id) {
+        logEndpoint("/api/v1/appointments/{id}/ai-notes");
+        return ResponseEntity.ok(appointmentDocumentAiNotesService.getNotesForAppointment(id));
+    }
+
+    @Operation(summary = "Regenerate AI notes for a document", description = "Queue AI note regeneration for an uploaded appointment document")
+    @PostMapping("/documents/{documentId}/ai-notes/regenerate")
+    @PreAuthorize("hasAnyRole('CMO_OFFICER','APPROVER','HCM','OSD','ADMIN')")
+    public ResponseEntity<AppointmentDocumentAiNotesDto> regenerateAiNotes(@PathVariable Long documentId) {
+        logEndpoint("/api/v1/appointments/documents/{documentId}/ai-notes/regenerate");
+        return ResponseEntity.ok(appointmentDocumentAiNotesService.regenerate(documentId));
     }
 
     @Operation(summary = "Get appointment by application ID", description = "Retrieve a specific appointment by its application ID")

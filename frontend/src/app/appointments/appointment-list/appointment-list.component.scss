@@ -77,30 +77,91 @@
 }
 
 .ai-notes-cell {
-  max-width: 250px;
+  min-width: 230px;
+  max-width: 280px;
 }
 
-.ai-notes-chip {
+.ai-notes-stack {
+  display: grid;
+  gap: 0.35rem;
+  justify-items: start;
+}
+
+.ai-status-chip {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: #eff6ff;
-  color: #1e40af;
-  border: 1px solid #bfdbfe;
   border-radius: 6px;
   padding: 3px 8px;
   font-size: 0.78rem;
-  max-width: 200px;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  font-weight: 700;
 
   mat-icon {
-    color: #9333ea;
     font-size: 14px;
     height: 14px;
     line-height: 14px;
     width: 14px;
+  }
+
+  &.ai-status-completed {
+    background: #ecfdf5;
+    border: 1px solid #bbf7d0;
+    color: #047857;
+
+    mat-icon {
+      color: #9333ea;
+    }
+  }
+
+  &.ai-status-pending,
+  &.ai-status-processing,
+  &.ai-status-loading {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1e40af;
+  }
+
+  &.ai-status-failed {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #b91c1c;
+  }
+
+  &.ai-status-none,
+  &.ai-status-unavailable {
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    color: #64748b;
+  }
+}
+
+.ai-notes-preview {
+  color: #334155;
+  display: block;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  max-width: 230px;
+
+  &.failed {
+    color: #b91c1c;
+  }
+}
+
+.ai-notes-inline-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1rem;
+
+  button {
+    height: 30px;
+    width: 30px;
+
+    mat-icon {
+      font-size: 18px;
+      height: 18px;
+      line-height: 18px;
+      width: 18px;
+    }
   }
 }
 
@@ -570,6 +631,100 @@
   padding: 0.75rem 1.25rem 0.9rem;
 }
 
+.ai-notes-dialog-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0;
+  padding: 1.15rem 1.25rem 0.9rem;
+  border-bottom: 1px solid #e5e7eb;
+
+  h2 {
+    color: #111827;
+    font-size: 1.1rem;
+    margin: 0.1rem 0 0;
+  }
+}
+
+.ai-notes-dialog-content {
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem !important;
+}
+
+.ai-notes-empty-panel {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  color: #64748b;
+  display: flex;
+  gap: 0.5rem;
+  padding: 1rem;
+}
+
+.ai-note-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem;
+
+  header,
+  footer {
+    align-items: center;
+    display: flex;
+    gap: 0.75rem;
+    justify-content: space-between;
+  }
+
+  h3 {
+    color: #111827;
+    font-size: 1rem;
+    margin: 0.15rem 0 0;
+  }
+
+  h4 {
+    color: #111827;
+    font-size: 0.88rem;
+    margin: 0 0 0.35rem;
+  }
+
+  footer {
+    border-top: 1px solid #e5e7eb;
+    color: #64748b;
+    font-size: 0.8rem;
+    padding-top: 0.65rem;
+  }
+}
+
+.ai-note-text {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  color: #111827;
+  line-height: 1.45;
+  padding: 0.75rem;
+  white-space: pre-wrap;
+}
+
+.ai-note-error {
+  align-items: center;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  color: #b91c1c;
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem;
+}
+
+.ai-notes-dialog-actions {
+  border-top: 1px solid #e5e7eb;
+  padding: 0.85rem 1.25rem 1rem;
+}
+
 ::ng-deep .appointment-details-dialog-panel .mat-mdc-dialog-container .mdc-dialog__surface {
   border-radius: 8px;
   overflow: hidden;
@@ -581,6 +736,11 @@
 }
 
 ::ng-deep .document-preview-dialog-panel .mat-mdc-dialog-container .mdc-dialog__surface {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+::ng-deep .ai-notes-dialog-panel .mat-mdc-dialog-container .mdc-dialog__surface {
   border-radius: 8px;
   overflow: hidden;
 }

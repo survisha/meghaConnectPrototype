@@ -7,11 +7,13 @@ import com.survisha.meghaconnect.entity.Visitor;
 import com.survisha.meghaconnect.repository.AppointmentRepository;
 import com.survisha.meghaconnect.repository.DocumentUploadRepository;
 import com.survisha.meghaconnect.repository.VisitorRepository;
+import com.survisha.meghaconnect.service.AppointmentDocumentAiNotesService;
 import com.survisha.meghaconnect.service.AuditLogService;
 import com.survisha.meghaconnect.service.FileStorageService;
 import com.survisha.meghaconnect.service.RequestValidationService;
 import com.survisha.meghaconnect.exception.MeghaConnectException;
 import com.survisha.meghaconnect.util.DateTimeUtil;
+import com.survisha.meghaconnect.util.RequestContextUtil;
 import com.survisha.meghaconnect.util.ValidationConstants;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -20,6 +22,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -52,6 +55,7 @@ import java.util.ArrayList;
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 @Tag(name = "Visitor Appointments", description = "Public visitor appointment booking and workflow operations")
+@Slf4j
 public class VisitorAppointmentController {
 
     private final AppointmentRepository appointmentRepository;
@@ -59,6 +63,7 @@ public class VisitorAppointmentController {
     private final DocumentUploadRepository documentUploadRepository;
     private final AuditLogService       auditLogService;
     private final FileStorageService    fileStorageService;
+    private final AppointmentDocumentAiNotesService appointmentDocumentAiNotesService;
     private final ObjectMapper          objectMapper;
     private final RequestValidationService validationService;
 
@@ -225,7 +230,8 @@ public class VisitorAppointmentController {
                                         .updatedAt(uploadedAt)
                                         .build();
 
-                                documentUploadRepository.save(docUpload);
+                                DocumentUpload savedDocument = documentUploadRepository.save(docUpload);
+                                queueAiNotes(savedDocument, "visitor_" + applicant.getId());
                             }
                         } catch (IOException e) {
                             auditLogService.log("DocumentUpload", saved.getId(), "UPLOAD_ERROR",
@@ -284,6 +290,20 @@ public class VisitorAppointmentController {
             throw e;
         } catch (Exception e) {
             return badRequest("Error processing appointment submission: " + e.getMessage());
+        }
+    }
+
+    private void queueAiNotes(DocumentUpload document, String actor) {
+        try {
+            appointmentDocumentAiNotesService.queueGeneration(document);
+        } catch (Exception e) {
+            log.warn("Unable to queue AI notes requestId={} appointmentId={} documentId={}",
+                    RequestContextUtil.getRequestId(),
+                    document.getAppointment() != null ? document.getAppointment().getId() : null,
+                    document.getId(),
+                    e);
+            auditLogService.log("DocumentUpload", document.getId(), "AI_NOTES_QUEUE_FAILED",
+                    "AI notes queue failed: " + e.getMessage(), actor);
         }
     }
 

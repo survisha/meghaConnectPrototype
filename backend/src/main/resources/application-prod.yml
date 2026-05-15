@@ -47,3 +47,12 @@ meghaconnect:
   storage:
     base-path: ${file.upload.root-path}
     crypto-key-path: ${file.upload.crypto-key-path}
+
+ai:
+  ollama:
+    enabled: true
+    base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+    model: ${OLLAMA_MODEL:llama3.2}
+    generate-endpoint: /api/generate
+    timeout-seconds: 120
+    max-input-chars: 12000

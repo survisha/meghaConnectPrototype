@@ -20,6 +20,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.Part;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -39,6 +40,7 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 public class AppointmentService {
 
     private static final List<Appointment.AppointmentStatus> DEO_VISIBLE_STATUSES = Arrays.asList(
@@ -90,6 +92,7 @@ public class AppointmentService {
     private final AuditLogService auditLogService;
     private final RequestValidationService validationService;
     private final FileStorageService fileStorageService;
+    private final AppointmentDocumentAiNotesService appointmentDocumentAiNotesService;
     private final QrTokenService qrTokenService;
     private final ObjectMapper objectMapper;
 
@@ -577,12 +580,27 @@ public class AppointmentService {
                         .createdAt(uploadedAt)
                         .updatedAt(uploadedAt)
                         .build();
-                documentUploadRepository.save(docUpload);
+                DocumentUpload savedDocument = documentUploadRepository.save(docUpload);
+                queueAiNotes(savedDocument, uploadedBy);
             }
         } catch (ServletException | IOException e) {
             auditLogService.log("Appointment", appointment.getId(), "DOCUMENT_UPLOAD_ERROR",
                     "Failed to process appointment documents: " + e.getMessage(), uploadedBy);
             throw new IllegalArgumentException("Failed to process uploaded documents.", e);
+        }
+    }
+
+    private void queueAiNotes(DocumentUpload document, String actor) {
+        try {
+            appointmentDocumentAiNotesService.queueGeneration(document);
+        } catch (Exception e) {
+            log.warn("Unable to queue AI notes requestId={} appointmentId={} documentId={}",
+                    com.survisha.meghaconnect.util.RequestContextUtil.getRequestId(),
+                    document.getAppointment() != null ? document.getAppointment().getId() : null,
+                    document.getId(),
+                    e);
+            auditLogService.log("DocumentUpload", document.getId(), "AI_NOTES_QUEUE_FAILED",
+                    "AI notes queue failed: " + e.getMessage(), actor);
         }
     }
 

@@ -22,6 +22,7 @@
         <maven.compiler.target>17</maven.compiler.target>
         <jjwt.version>0.11.5</jjwt.version>
         <logstash.logback.encoder.version>7.2</logstash.logback.encoder.version>
+        <tika.version>2.9.2</tika.version>
         <pmd.plugin.version>3.23.0</pmd.plugin.version>
         <spotbugs.plugin.version>4.8.6.6</spotbugs.plugin.version>
     </properties>
@@ -146,6 +147,18 @@
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-scratchpad</artifactId>
             <version>5.2.5</version>
+        </dependency>
+
+        <!-- Apache Tika: server-side document text extraction for AI notes -->
+        <dependency>
+            <groupId>org.apache.tika</groupId>
+            <artifactId>tika-core</artifactId>
+            <version>${tika.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.tika</groupId>
+            <artifactId>tika-parsers-standard-package</artifactId>
+            <version>${tika.version}</version>
         </dependency>
 
         <!-- ── Aadhaar OVSE SDK (Online Verification of Self-Employed) ── -->

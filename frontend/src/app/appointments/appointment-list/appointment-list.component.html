@@ -161,13 +161,47 @@
           <ng-container matColumnDef="aiNotes">
             <th mat-header-cell *matHeaderCellDef>AI Notes</th>
             <td mat-cell *matCellDef="let appt" class="ai-notes-cell">
-              <span *ngIf="appt.shortNotes" class="ai-notes-chip"
-                    [matTooltip]="appt.shortNotes"
-                    matTooltipPosition="above">
-                <mat-icon>auto_awesome</mat-icon>
-                {{ appt.shortNotes.substring(0, 60) }}{{ appt.shortNotes.length > 60 ? '…' : '' }}
-              </span>
-              <span *ngIf="!appt.shortNotes" class="empty-value">—</span>
+              <div class="ai-notes-stack" *ngIf="canViewAiNotes(); else aiNotesUnavailable">
+                <span class="ai-status-chip" [ngClass]="getAiNotesStatusClass(appt)">
+                  <mat-icon>{{ getAiNotesStatus(appt) === 'COMPLETED' ? 'auto_awesome' : getAiNotesStatus(appt) === 'FAILED' ? 'error_outline' : 'hourglass_empty' }}</mat-icon>
+                  {{ getAiNotesStatusLabel(appt) }}
+                </span>
+
+                <span class="ai-notes-preview"
+                      *ngIf="getAiNotesPreview(appt)"
+                      [matTooltip]="getAiNotesPreview(appt)"
+                      matTooltipPosition="above">
+                  {{ getAiNotesPreview(appt) }}
+                </span>
+
+                <span class="ai-notes-preview failed" *ngIf="hasAiNotesLoadFailed(appt)">
+                  Unable to load AI notes.
+                </span>
+
+                <div class="ai-notes-inline-actions" *ngIf="hasAiNotes(appt)">
+                  <button mat-icon-button
+                          type="button"
+                          color="primary"
+                          (click)="openAiNotesDialog(appt)"
+                          matTooltip="View full AI notes">
+                    <mat-icon>visibility</mat-icon>
+                  </button>
+
+                  <button mat-icon-button
+                          type="button"
+                          color="accent"
+                          *ngIf="canManageAiNotes() && getRegeneratableAiNote(appt) as aiNote"
+                          [disabled]="isAiNoteRegenerating(aiNote)"
+                          (click)="regenerateAiNotes(aiNote, appt, $event)"
+                          matTooltip="Regenerate AI notes">
+                    <mat-icon>refresh</mat-icon>
+                  </button>
+                </div>
+              </div>
+
+              <ng-template #aiNotesUnavailable>
+                <span class="empty-value">—</span>
+              </ng-template>
             </td>
           </ng-container>
 
@@ -204,6 +238,80 @@
     </div>
   </div>
 </div>
+
+<ng-template #aiNotesDialog>
+  <div class="ai-notes-dialog-title" mat-dialog-title>
+    <div>
+      <span class="eyebrow">AI Document Notes</span>
+      <h2>{{ selectedAiNotesAppointment?.applicationId }}</h2>
+    </div>
+    <button mat-icon-button aria-label="Close AI notes" (click)="closeAiNotesDialog()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <mat-dialog-content class="ai-notes-dialog-content">
+    <div class="ai-notes-empty-panel" *ngIf="selectedAiNotes.length === 0">
+      <mat-icon>auto_awesome</mat-icon>
+      <span>No AI notes are available for this appointment yet.</span>
+    </div>
+
+    <article class="ai-note-card" *ngFor="let note of selectedAiNotes">
+      <header>
+        <div>
+          <span class="field-label">Document</span>
+          <h3>{{ note.fileName || 'Document' }}</h3>
+        </div>
+        <span class="ai-status-chip" [ngClass]="'ai-status-' + note.status.toLowerCase()">
+          <mat-icon>{{ note.status === 'COMPLETED' ? 'auto_awesome' : note.status === 'FAILED' ? 'error_outline' : 'hourglass_empty' }}</mat-icon>
+          {{ note.status }}
+        </span>
+      </header>
+
+      <div class="ai-note-error" *ngIf="note.status === 'FAILED'">
+        <mat-icon>error_outline</mat-icon>
+        <span>{{ note.errorMessage || 'AI notes failed.' }}</span>
+      </div>
+
+      <section *ngIf="note.aiSummary">
+        <h4>Summary</h4>
+        <div class="ai-note-text">{{ note.aiSummary }}</div>
+      </section>
+
+      <section *ngIf="note.importantDetails">
+        <h4>Important Details</h4>
+        <div class="ai-note-text">{{ note.importantDetails }}</div>
+      </section>
+
+      <section *ngIf="note.missingInfo">
+        <h4>Missing or Unclear Information</h4>
+        <div class="ai-note-text">{{ note.missingInfo }}</div>
+      </section>
+
+      <section *ngIf="note.riskFlags">
+        <h4>Risk Flags</h4>
+        <div class="ai-note-text">{{ note.riskFlags }}</div>
+      </section>
+
+      <footer>
+        <span>{{ (note.updatedAt || note.createdAt) | date:'medium' }}</span>
+        <button mat-icon-button
+                type="button"
+                color="accent"
+                *ngIf="canManageAiNotes()"
+                [disabled]="isAiNoteRegenerating(note)"
+                (click)="regenerateAiNotes(note, selectedAiNotesAppointment || undefined, $event)"
+                matTooltip="Regenerate AI notes">
+          <mat-icon>refresh</mat-icon>
+        </button>
+      </footer>
+    </article>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end" class="ai-notes-dialog-actions">
+    <button mat-stroked-button type="button" (click)="closeAiNotesDialog()">Close</button>
+  </mat-dialog-actions>
+</ng-template>
 
 <ng-template #appointmentDetailsDialog>
   <div class="details-dialog-title" mat-dialog-title *ngIf="selectedAppointment">

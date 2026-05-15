@@ -50,3 +50,12 @@ meghaconnect:
     visitor-photo-path: ${STORAGE_VISITOR_PHOTO_PATH:visitor-photos}
     allowed-types: ${STORAGE_ALLOWED_TYPES:pdf,jpg,jpeg,png,doc,docx}
     max-file-size-mb: ${STORAGE_MAX_FILE_SIZE_MB:25}
+
+ai:
+  ollama:
+    enabled: true
+    base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+    model: ${OLLAMA_MODEL:llama3.2}
+    generate-endpoint: /api/generate
+    timeout-seconds: 120
+    max-input-chars: 12000

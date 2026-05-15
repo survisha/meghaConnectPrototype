@@ -54,7 +54,7 @@ meghaconnect:
 ai:
   ollama:
     enabled: true
-    base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+    base-url: ${OLLAMA_BASE_URL:http://127.0.0.1:11434}
     model: ${OLLAMA_MODEL:llama3.2}
     generate-endpoint: /api/generate
     timeout-seconds: 120

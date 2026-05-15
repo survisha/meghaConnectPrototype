@@ -6,7 +6,6 @@ import com.survisha.meghaconnect.util.DateTimeUtil;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -28,14 +27,13 @@ import java.util.*;
  *   - Dashboard insights (R010)
  *
  * Integration strategy (two-tier):
- *   TIER 1 – OpenAI (live):
- *     When {@code meghaconnect.ai.api-key} is configured, every applicable
- *     method delegates to {@link OpenAiClientService} (GPT-3.5-turbo by default).
- *     The extracted text is sent as the user message and a structured system prompt
- *     guides the model to return the expected format.
+ *   TIER 1 – Ollama (local):
+ *     When {@code ai.ollama.enabled} is true, applicable methods delegate to
+ *     {@link AiClientService}. The extracted text is sent to the configured local
+ *     Ollama model and a structured system prompt guides the response format.
  *   TIER 2 – Rule-based fallback:
- *     When no API key is present, or when the OpenAI call fails, the service
- *     falls back to its built-in deterministic keyword/regex engine.
+ *     When Ollama is disabled or unavailable, the service falls back to its
+ *     built-in deterministic keyword/regex engine.
  *     This guarantees the application is fully functional offline or during
  *     initial deployment without any API credentials.
  */
@@ -47,16 +45,13 @@ public class AiDocumentIntelligenceService {
 
     private final DocumentExtractionService extractionService;
     private final AppointmentRepository appointmentRepository;
-    private final OpenAiClientService openAiClient;
-
-    @Value("${meghaconnect.ai.api-key:}")
-    private String aiApiKey;
+    private final AiClientService aiClient;
 
     // ── Prompt constants ──────────────────────────────────────────────────────
 
     // ── Constants ─────────────────────────────────────────────────────────────
 
-    /** Maximum document text length (chars) sent to OpenAI to stay within token limits. */
+    /** Maximum document text length (chars) sent to AI to stay within prompt limits. */
     private static final int MAX_AI_TEXT_LENGTH = 3000;
 
     /** Maximum chars extracted per field label from document text. */
@@ -108,9 +103,9 @@ public class AiDocumentIntelligenceService {
     /**
      * Analyse an uploaded document: extract text, infer structured fields, generate summary.
      *
-     * When OpenAI is available the extracted text is sent to GPT for both
+     * When Ollama is available the extracted text is sent for both
      * structured field extraction (R004) and summarization (R005).
-     * Falls back to rule-based engine when the API key is not configured.
+     * Falls back to rule-based engine when Ollama is unavailable.
      *
      * @param file uploaded MultipartFile
      * @return map with keys: success, summary, extractedFields, priorityLevel, priorityReason, duplicateFlag
@@ -141,11 +136,11 @@ public class AiDocumentIntelligenceService {
 
     /**
      * Extract structured fields from document text.
-     * Uses OpenAI if available; falls back to rule-based parser.
+     * Uses Ollama if available; falls back to rule-based parser.
      */
     private Map<String, Object> extractFieldsWithAi(String text) {
-        if (openAiClient.isAvailable()) {
-            Optional<String> aiResponse = openAiClient.chat(SYSTEM_EXTRACT_FIELDS, text);
+        if (aiClient.isAvailable()) {
+            Optional<String> aiResponse = aiClient.chat(SYSTEM_EXTRACT_FIELDS, text);
             if (aiResponse.isPresent()) {
                 return parseExtractedFieldsFromAiResponse(aiResponse.get());
             }
@@ -155,11 +150,11 @@ public class AiDocumentIntelligenceService {
     }
 
     /**
-     * Parse the OpenAI field-extraction response (key: value lines) into a map.
+     * Parse the AI field-extraction response (key: value lines) into a map.
      */
     private Map<String, Object> parseExtractedFieldsFromAiResponse(String response) {
         Map<String, Object> fields = new LinkedHashMap<>();
-        // Normalise OpenAI field names to camelCase keys used by the frontend
+        // Normalise AI field names to camelCase keys used by the frontend
         Map<String, String> keyMap = new LinkedHashMap<>();
         keyMap.put("Project Name",      "projectName");
         keyMap.put("Project Category",  "projectCategory");
@@ -189,11 +184,11 @@ public class AiDocumentIntelligenceService {
 
     /**
      * Generate a document summary.
-     * Uses OpenAI if available; falls back to rule-based template.
+     * Uses Ollama if available; falls back to rule-based template.
      */
     private String summarizeWithAi(String text, Map<String, Object> extractedFields) {
-        if (openAiClient.isAvailable()) {
-            Optional<String> aiSummary = openAiClient.chat(SYSTEM_SUMMARIZE, text);
+        if (aiClient.isAvailable()) {
+            Optional<String> aiSummary = aiClient.chat(SYSTEM_SUMMARIZE, text);
             if (aiSummary.isPresent()) {
                 return aiSummary.get();
             }
@@ -204,11 +199,11 @@ public class AiDocumentIntelligenceService {
 
     /**
      * Recommend a priority level from document text.
-     * Uses OpenAI if available; falls back to rule-based classifier.
+     * Uses Ollama if available; falls back to rule-based classifier.
      */
     private String inferPriorityWithAi(String schemeHint, String text) {
-        if (openAiClient.isAvailable()) {
-            Optional<String> aiLevel = openAiClient.chatCompact(SYSTEM_PRIORITY, text, 5);
+        if (aiClient.isAvailable()) {
+            Optional<String> aiLevel = aiClient.chatCompact(SYSTEM_PRIORITY, text, 5);
             if (aiLevel.isPresent()) {
                 String level = aiLevel.get().toUpperCase().replaceAll("[^A-Z]", "");
                 if ("HIGH".equals(level) || "MEDIUM".equals(level) || "LOW".equals(level)) {
@@ -280,7 +275,7 @@ public class AiDocumentIntelligenceService {
 
     /**
      * Recommend a meeting priority level based on agenda type and brief.
-     * Uses OpenAI when available; falls back to rule-based classifier.
+     * Uses Ollama when available; falls back to rule-based classifier.
      *
      * @param agendaType  agenda type string
      * @param agendaBrief free-text description
@@ -300,7 +295,7 @@ public class AiDocumentIntelligenceService {
 
     /**
      * Answer a citizen's question.
-     * Uses OpenAI (GPT chat) when available; falls back to rule-based FAQ matching.
+     * Uses Ollama when available; falls back to rule-based FAQ matching.
      *
      * @param question citizen's question
      * @return answer string
@@ -310,9 +305,9 @@ public class AiDocumentIntelligenceService {
             return "Please type your question and I will try to help.";
         }
 
-        // Attempt OpenAI response first
-        if (openAiClient.isAvailable()) {
-            Optional<String> aiAnswer = openAiClient.chat(SYSTEM_CHATBOT, question.trim());
+        // Attempt Ollama response first
+        if (aiClient.isAvailable()) {
+            Optional<String> aiAnswer = aiClient.chat(SYSTEM_CHATBOT, question.trim());
             if (aiAnswer.isPresent()) {
                 return aiAnswer.get();
             }
@@ -322,7 +317,7 @@ public class AiDocumentIntelligenceService {
         return faqFallback(question);
     }
 
-    /** Rule-based FAQ matching – used when OpenAI is unavailable. */
+    /** Rule-based FAQ matching – used when Ollama is unavailable. */
     private String faqFallback(String question) {
         String q = question.toLowerCase().trim();
 
@@ -494,14 +489,14 @@ public class AiDocumentIntelligenceService {
         List<Map<String, Object>> districtList = buildTopList(districtCounts, 6, "district");
         List<Map<String, Object>> categoryList = buildTopCategories();
 
-        // AI narrative note – use OpenAI when available for richer insight
+        // AI narrative note – use Ollama when available for richer insight
         String topScheme = topSchemes.isEmpty() ? "CMSDF" : (String) topSchemes.get(0).get("scheme");
         String aiNote;
-        if (openAiClient.isAvailable()) {
+        if (aiClient.isAvailable()) {
             String prompt = "In 2 sentences, describe the key trends based on these appointment statistics for "
                     + "Meghalaya CM Office: total appointments this month=" + thisMonth
                     + ", top scheme=" + topScheme + ", total appointments=" + all.size() + ".";
-            aiNote = openAiClient.chatCompact(
+            aiNote = aiClient.chatCompact(
                     "You are a government data analyst. Provide a concise 2-sentence insight.",
                     prompt, 120
             ).orElse(buildDefaultAiNote(topScheme, all.size()));

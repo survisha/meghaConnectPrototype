@@ -16,7 +16,7 @@ import java.util.Map;
 
 /**
  * AI Document Summary endpoint.
- * Delegates to AISummaryService which is pluggable for LLM/OpenAI integration.
+ * Delegates to AISummaryService which is pluggable for local LLM integration.
  */
 @RestController
 @RequestMapping("/api/ai")

@@ -17,7 +17,8 @@ interface MenuItem { labelKey: string; icon: string; route?: string; children?: 
   styleUrls: ['./shell.component.scss'],
 })
 export class ShellComponent implements OnInit {
-  sidebarOpen = window.innerWidth > 768;
+  sidebarOpen = false;
+  private sidebarHoverOpen = false;
   menu: MenuItem[] = [];
 
   private ALL_MENU: MenuItem[] = [
@@ -91,8 +92,28 @@ export class ShellComponent implements OnInit {
   @HostListener('window:resize')
   onWindowResize() {
     if (window.innerWidth > 768) {
-      this.sidebarOpen = true;
+      this.sidebarHoverOpen = false;
+    } else {
+      this.sidebarOpen = false;
+      this.sidebarHoverOpen = false;
     }
+  }
+
+  toggleSidebar() {
+    this.sidebarHoverOpen = false;
+    this.sidebarOpen = !this.sidebarOpen;
+  }
+
+  openSidebarOnHover() {
+    if (window.innerWidth <= 768 || this.sidebarOpen) return;
+    this.sidebarHoverOpen = true;
+    this.sidebarOpen = true;
+  }
+
+  closeSidebarAfterHover() {
+    if (!this.sidebarHoverOpen) return;
+    this.sidebarHoverOpen = false;
+    this.sidebarOpen = false;
   }
 
   private buildMenu() {

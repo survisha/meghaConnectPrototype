@@ -1,7 +1,7 @@
 <div class="app-wrapper">
   <!-- Header -->
   <header class="megha-header" id="shell_header">
-    <button id="shell_toggleSidebarBtn" class="icon-btn" (click)="sidebarOpen = !sidebarOpen">
+    <button id="shell_toggleSidebarBtn" class="icon-btn" (click)="toggleSidebar()">
       <mat-icon>menu</mat-icon>
     </button>
     <span class="header-emblem">🏛️</span>
@@ -27,7 +27,11 @@
 
   <div class="body-wrapper" id="shell_bodyWrapper">
     <!-- Sidebar -->
-    <nav class="megha-sidebar" [class.collapsed]="!sidebarOpen" id="shell_sidebar">
+    <nav class="megha-sidebar"
+         [class.collapsed]="!sidebarOpen"
+         id="shell_sidebar"
+         (mouseenter)="openSidebarOnHover()"
+         (mouseleave)="closeSidebarAfterHover()">
       <ul class="nav-menu">
         <ng-container *ngFor="let item of menu; let i = index">
           <li *ngIf="!item.children" class="nav-item">

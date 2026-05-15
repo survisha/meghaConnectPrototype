@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { HomeComponent } from './home/home.component';
 import { LoginComponent } from './auth/login/login.component';
 import { PublicLoginComponent } from './public-login/public-login.component';
 import { VisitorRegisterComponent } from './visitor-register/visitor-register.component';
@@ -35,6 +36,7 @@ const STAFF_ROLES: UserRole[] = ['HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER
 const REPORTS_ROLES: UserRole[] = ['HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER'];
 
 export const routes: Routes = [
+  { path: '', component: HomeComponent, pathMatch: 'full' },
   { path: 'login', component: LoginComponent },
   { path: 'public-login', component: PublicLoginComponent },
   { path: 'register-visitor', component: VisitorRegisterComponent },

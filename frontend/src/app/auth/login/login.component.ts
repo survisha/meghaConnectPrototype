@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -9,11 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { LanguageSelectorComponent } from '../../shared/language-selector/language-selector.component';
-import { AiChatbotComponent } from '../../ai-chatbot/ai-chatbot.component';
 import { apiErrorMessage } from '../../shared/api-error.util';
-
-type HomeSection = 'home' | 'about' | 'faq' | 'contact' | 'login';
 
 @Component({
   selector: 'app-login',
@@ -27,14 +23,14 @@ type HomeSection = 'home' | 'about' | 'faq' | 'contact' | 'login';
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
-    TranslateModule,
-    LanguageSelectorComponent,
-    AiChatbotComponent
+    TranslateModule
   ],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss'],
 })
 export class LoginComponent {
+  @Input() embedded = false;
+
   username = '';
   password = '';
   errorMsg = '';
@@ -42,7 +38,6 @@ export class LoginComponent {
   isPublicMode = true;
   otpSent = false;
   otp = '';
-  currentSection: HomeSection = 'home';
 
   demoCredentials = [
     { label: 'HCM (hcm / hcm123)', value: { u: 'hcm', p: 'hcm123' } },
@@ -64,11 +59,6 @@ export class LoginComponent {
   selectDemo(cred: { u: string; p: string }) {
     this.username = cred.u;
     this.password = cred.p;
-    this.currentSection = 'login';
-  }
-
-  setSection(section: HomeSection) {
-    this.currentSection = section;
   }
 
   login() {

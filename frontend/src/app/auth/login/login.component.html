@@ -1,208 +1,72 @@
-<div class="login-page">
-  <header class="home-header">
-    <button type="button" class="brand-link" (click)="setSection('home')" aria-label="MeghaConnect home">
-      <img src="/asserts/logo.png" alt="MeghaConnect logo" class="header-logo">
-      <span>
-        <strong>MeghaConnect</strong>
-        <small>{{ 'OFFICIAL_GOVERNMENT_PORTAL' | translate }}</small>
-      </span>
-    </button>
-
-    <nav class="home-nav" aria-label="Home navigation">
-      <button type="button" [class.active]="currentSection === 'about'" (click)="setSection('about')">{{ 'ABOUT' | translate }}</button>
-      <button type="button" [class.active]="currentSection === 'contact'" (click)="setSection('contact')">{{ 'CONTACT_US' | translate }}</button>
-      <button type="button" [class.active]="currentSection === 'faq'" (click)="setSection('faq')">{{ 'FAQ' | translate }}</button>
-      <button type="button" class="nav-login" [class.active]="currentSection === 'login'" (click)="setSection('login')">{{ 'LOGIN' | translate }}</button>
-    </nav>
-
-    <div class="header-language">
-      <app-language-selector></app-language-selector>
+<section class="login-shell" [class.embedded]="embedded" aria-label="Login">
+  <div class="login-card">
+    <div class="login-header">
+      <p class="login-eyebrow">{{ 'OFFICIAL_GOVERNMENT_PORTAL' | translate }}</p>
+      <h2>{{ 'WELCOME_BACK' | translate }}</h2>
+      <p>{{ 'SIGN_IN_TO_CONTINUE' | translate }}</p>
     </div>
-  </header>
 
-  <main class="home-main">
-    <section *ngIf="currentSection === 'home'" class="home-section hero-section">
-      <div class="hero-content">
-        <div class="hero-kicker">{{ 'OFFICIAL_GOVERNMENT_PORTAL' | translate }}</div>
-        <h1>{{ 'MEGHACONNECT_WELCOME_TITLE' | translate }}</h1>
-        <p>{{ 'MEGHACONNECT_WELCOME_TEXT' | translate }}</p>
-        <div class="hero-actions">
-          <button type="button" class="primary-cta" (click)="setSection('login')">
-            <mat-icon>login</mat-icon>
-            {{ 'LOGIN' | translate }}
+    <div class="mode-tabs" role="tablist" aria-label="Login mode">
+      <button id="login_citizenModeTab" type="button" [class.active]="isPublicMode" (click)="isPublicMode=true">
+        <mat-icon>groups</mat-icon>
+        <span>{{ 'PUBLIC_CITIZEN' | translate }}</span>
+      </button>
+      <button id="login_staffModeTab" type="button" [class.active]="!isPublicMode" (click)="isPublicMode=false">
+        <mat-icon>badge</mat-icon>
+        <span>{{ 'STAFF_LOGIN' | translate }}</span>
+      </button>
+    </div>
+
+    <ng-container *ngIf="!isPublicMode">
+      <div class="form-group">
+        <label>{{ 'QUICK_DEMO_ACCESS' | translate }}</label>
+        <div class="demo-chips">
+          <button id="login_demoChip_{{d.value.u}}" type="button" *ngFor="let d of demoCredentials" class="demo-chip" (click)="selectDemo(d.value)">
+            {{ d.label.split('(')[0].trim() }}
           </button>
-          <a routerLink="/register-visitor" class="secondary-cta">
-            <mat-icon>person_add</mat-icon>
-            {{ 'REGISTER_VISITOR' | translate }}
-          </a>
         </div>
       </div>
 
-      <div class="hero-panel">
-        <div class="official-placeholder">
-          <img src="/asserts/CM_Profile_Picture.jpg" alt="Chief Minister official photo" class="official-photo">
-        </div>
-        <div class="hero-feature-grid">
-          <div><mat-icon>badge</mat-icon><span>{{ 'HOME_FEATURE_KYC' | translate }}</span></div>
-          <div><mat-icon>event</mat-icon><span>{{ 'HOME_FEATURE_APPOINTMENT' | translate }}</span></div>
-          <div><mat-icon>shield</mat-icon><span>{{ 'HOME_FEATURE_WORKFLOW' | translate }}</span></div>
-          <div><mat-icon>history</mat-icon><span>{{ 'HOME_FEATURE_AUDIT' | translate }}</span></div>
-        </div>
-      </div>
-    </section>
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>
+          <mat-icon>person</mat-icon>
+          <span> {{ 'USERNAME' | translate }}</span>
+        </mat-label>
+        <input matInput id="login_usernameInput" [(ngModel)]="username" [placeholder]="'ENTER_USERNAME' | translate" />
+      </mat-form-field>
 
-    <section *ngIf="currentSection === 'about'" class="home-section content-section">
-      <div class="section-heading">
-        <span>{{ 'ABOUT' | translate }}</span>
-        <h2>{{ 'ABOUT_MEGHACONNECT_TITLE' | translate }}</h2>
-        <p>{{ 'ABOUT_MEGHACONNECT_TEXT' | translate }}</p>
-      </div>
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>
+          <mat-icon>lock</mat-icon>
+          <span> {{ 'PASSWORD' | translate }}</span>
+        </mat-label>
+        <input matInput type="password" id="login_passwordInput" [(ngModel)]="password" [placeholder]="'ENTER_PASSWORD' | translate" (keyup.enter)="login()" />
+      </mat-form-field>
 
-      <div class="about-layout">
-        <div class="official-placeholder about-image">
-          <img src="/asserts/CM_Profile_Picture.jpg" alt="Chief Minister official photo" class="official-photo">
-        </div>
-        <div class="about-grid">
-          <article class="info-card"><mat-icon>badge</mat-icon><h3>{{ 'ABOUT_POINT_KYC_TITLE' | translate }}</h3><p>{{ 'ABOUT_POINT_KYC_TEXT' | translate }}</p></article>
-          <article class="info-card"><mat-icon>event_available</mat-icon><h3>{{ 'ABOUT_POINT_APPOINTMENT_TITLE' | translate }}</h3><p>{{ 'ABOUT_POINT_APPOINTMENT_TEXT' | translate }}</p></article>
-          <article class="info-card"><mat-icon>groups</mat-icon><h3>{{ 'ABOUT_POINT_VISITOR_TITLE' | translate }}</h3><p>{{ 'ABOUT_POINT_VISITOR_TEXT' | translate }}</p></article>
-          <article class="info-card"><mat-icon>check_circle</mat-icon><h3>{{ 'ABOUT_POINT_WORKFLOW_TITLE' | translate }}</h3><p>{{ 'ABOUT_POINT_WORKFLOW_TEXT' | translate }}</p></article>
-          <article class="info-card"><mat-icon>history</mat-icon><h3>{{ 'ABOUT_POINT_AUDIT_TITLE' | translate }}</h3><p>{{ 'ABOUT_POINT_AUDIT_TEXT' | translate }}</p></article>
-          <article class="info-card"><mat-icon>lock</mat-icon><h3>{{ 'ABOUT_POINT_SECURE_TITLE' | translate }}</h3><p>{{ 'ABOUT_POINT_SECURE_TEXT' | translate }}</p></article>
-        </div>
-      </div>
-    </section>
-
-    <section *ngIf="currentSection === 'faq'" class="home-section content-section narrow-section">
-      <div class="section-heading">
-        <span>{{ 'FAQ' | translate }}</span>
-        <h2>{{ 'FAQ_TITLE' | translate }}</h2>
-        <p>{{ 'FAQ_TEXT' | translate }}</p>
+      <div id="login_errorMsg" *ngIf="errorMsg" class="login-error">
+        <mat-icon>error</mat-icon>
+        <span>{{ errorMsg }}</span>
       </div>
 
-      <div class="faq-list">
-        <details open>
-          <summary>{{ 'FAQ_Q_REGISTER' | translate }}</summary>
-          <p>{{ 'FAQ_A_REGISTER' | translate }}</p>
-        </details>
-        <details>
-          <summary>{{ 'FAQ_Q_EPIC' | translate }}</summary>
-          <p>{{ 'FAQ_A_EPIC' | translate }}</p>
-        </details>
-        <details>
-          <summary>{{ 'FAQ_Q_AADHAAR' | translate }}</summary>
-          <p>{{ 'FAQ_A_AADHAAR' | translate }}</p>
-        </details>
-        <details>
-          <summary>{{ 'FAQ_Q_SAME_MOBILE' | translate }}</summary>
-          <p>{{ 'FAQ_A_SAME_MOBILE' | translate }}</p>
-        </details>
-        <details>
-          <summary>{{ 'FAQ_Q_LOGIN' | translate }}</summary>
-          <p>{{ 'FAQ_A_LOGIN' | translate }}</p>
-        </details>
-        <details>
-          <summary>{{ 'FAQ_Q_MULTIPLE_REG' | translate }}</summary>
-          <p>{{ 'FAQ_A_MULTIPLE_REG' | translate }}</p>
-        </details>
-        <details>
-          <summary>{{ 'FAQ_Q_APPOINTMENT' | translate }}</summary>
-          <p>{{ 'FAQ_A_APPOINTMENT' | translate }}</p>
-        </details>
-        <details>
-          <summary>{{ 'FAQ_Q_NOTIFICATIONS' | translate }}</summary>
-          <p>{{ 'FAQ_A_NOTIFICATIONS' | translate }}</p>
-        </details>
+      <button id="login_submitBtn" mat-raised-button color="primary" class="full-width" [disabled]="loading" (click)="login()">
+        <span *ngIf="!loading"><mat-icon>login</mat-icon> {{ 'SIGN_IN' | translate }}</span>
+        <span *ngIf="loading"><mat-icon class="spin-icon">sync</mat-icon> {{ 'SIGNING_IN' | translate }}</span>
+      </button>
+    </ng-container>
+
+    <ng-container *ngIf="isPublicMode">
+      <div class="public-info">
+        <p><mat-icon>info</mat-icon> {{ 'CITIZENS_OTP_INFO' | translate }}</p>
       </div>
-    </section>
-
-    <section *ngIf="currentSection === 'contact'" class="home-section content-section narrow-section">
-      <div class="section-heading">
-        <span>{{ 'CONTACT_US' | translate }}</span>
-        <h2>{{ 'CONTACT_TITLE' | translate }}</h2>
-        <p>{{ 'CONTACT_TEXT' | translate }}</p>
+      <a routerLink="/public-login" class="citizen-login-link">
+        <button id="login_citizenOtpBtn" mat-raised-button color="accent" class="full-width">
+          <mat-icon>groups</mat-icon> {{ 'CITIZEN_OTP_LOGIN' | translate }}
+        </button>
+      </a>
+      <div class="register-note">
+        {{ 'NEW_VISITOR' | translate }}
+        <a id="login_registerLink" routerLink="/register-visitor">{{ 'REGISTER_HERE' | translate }}</a>
       </div>
-
-      <div class="contact-card">
-        <div class="placeholder-note">{{ 'CONTACT_PLACEHOLDER_NOTE' | translate }}</div>
-        <div class="contact-row"><mat-icon>business</mat-icon><span>{{ 'CONTACT_HELPDESK' | translate }}</span></div>
-        <div class="contact-row"><mat-icon>mail</mat-icon><span>{{ 'CONTACT_EMAIL' | translate }}</span></div>
-        <div class="contact-row"><mat-icon>phone</mat-icon><span>{{ 'CONTACT_PHONE' | translate }}</span></div>
-        <div class="contact-row"><mat-icon>place</mat-icon><span>{{ 'CONTACT_ADDRESS' | translate }}</span></div>
-      </div>
-    </section>
-
-    <section *ngIf="currentSection === 'login'" class="home-section login-section">
-      <div class="login-right">
-        
-        <div class="login-card">
-          <div class="login-header">
-            <h2>{{ 'WELCOME_BACK' | translate }}</h2>
-            <p>{{ 'SIGN_IN_TO_CONTINUE' | translate }}</p>
-          </div>
-
-          <div class="mode-tabs">
-             <button id="login_citizenModeTab" [class.active]="isPublicMode" (click)="isPublicMode=true">
-              <mat-icon>groups</mat-icon>
-              <span>{{ 'PUBLIC_CITIZEN' | translate }}</span>
-            </button>
-            <button id="login_staffModeTab" [class.active]="!isPublicMode" (click)="isPublicMode=false">
-              <mat-icon>badge</mat-icon>
-              <span>{{ 'STAFF_LOGIN' | translate }}</span>
-            </button>
-          </div>
-
-          <ng-container *ngIf="!isPublicMode">
-            <div class="form-group">
-              <label>{{ 'QUICK_DEMO_ACCESS' | translate }}</label>
-              <div class="demo-chips">
-                <button id="login_demoChip_{{d.value}}" *ngFor="let d of demoCredentials" class="demo-chip" (click)="selectDemo(d.value)">
-                  {{ d.label.split('(')[0].trim() }}
-                </button>
-              </div>
-            </div>
-            <mat-form-field appearance="outline" class="full-width">
-              <mat-label>
-                <mat-icon>person</mat-icon>
-                <span> {{ 'USERNAME' | translate }}</span>
-              </mat-label>
-              <input matInput id="login_usernameInput" [(ngModel)]="username" [placeholder]="'ENTER_USERNAME' | translate" />
-            </mat-form-field>
-            
-            <mat-form-field appearance="outline" class="full-width">
-              <mat-label>
-                <mat-icon>lock</mat-icon>
-                <span> {{ 'PASSWORD' | translate }}</span>
-              </mat-label>
-              <input matInput type="password" id="login_passwordInput" [(ngModel)]="password" [placeholder]="'ENTER_PASSWORD' | translate" (keyup.enter)="login()" />
-            </mat-form-field>
-            <div id="login_errorMsg" *ngIf="errorMsg" style="color:#dc2626;font-size:0.85rem;margin-bottom:0.75rem">
-              <mat-icon style="font-size:1rem;width:1rem;height:1rem;vertical-align:text-bottom">error</mat-icon>
-              {{ errorMsg }}
-            </div>
-            <button id="login_submitBtn" mat-raised-button color="primary" class="full-width" [disabled]="loading" (click)="login()">
-              <span *ngIf="!loading"><mat-icon>login</mat-icon> {{ 'SIGN_IN' | translate }}</span>
-              <span *ngIf="loading"><mat-icon class="spin-icon">sync</mat-icon> {{ 'SIGNING_IN' | translate }}</span>
-            </button>
-          </ng-container>
-
-          <ng-container *ngIf="isPublicMode">
-            <div class="public-info">
-              <p><mat-icon>info</mat-icon> {{ 'CITIZENS_OTP_INFO' | translate }}</p>
-            </div>
-            <a routerLink="/public-login" style="text-decoration:none;display:block">
-              <button id="login_citizenOtpBtn" mat-raised-button color="accent" class="full-width">
-                <mat-icon>groups</mat-icon> {{ 'CITIZEN_OTP_LOGIN' | translate }}
-              </button>
-            </a>
-            <div style="text-align:center;margin-top:0.75rem;font-size:0.85rem;color:#6b7280">
-              {{ 'NEW_VISITOR' | translate }} <a id="login_registerLink" routerLink="/register-visitor" style="color:#1a237e;font-weight:600">{{ 'REGISTER_HERE' | translate }}</a>
-            </div>
-          </ng-container>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <app-ai-chatbot></app-ai-chatbot>
-</div>
+    </ng-container>
+  </div>
+</section>

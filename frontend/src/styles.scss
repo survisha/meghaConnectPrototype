@@ -31,6 +31,28 @@ app-root {
   min-height: 100vh;
 }
 
+/* Public login direct-route fallback.
+   The login component has its own SCSS, but keeping this lightweight global
+   fallback prevents /login from appearing unstyled if a dev-server watcher
+   briefly misses the component stylesheet during refactors. */
+app-login .login-shell {
+  width: 100%;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: clamp(1rem, 4vw, 2rem);
+  background:
+    linear-gradient(135deg, rgba(10, 31, 42, 0.86), rgba(15, 76, 92, 0.72)),
+    url('/asserts/meghalaya-hero.png') center / cover no-repeat;
+}
+
+app-login .login-shell.embedded {
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+  place-items: stretch;
+}
+
 img,
 video,
 canvas,

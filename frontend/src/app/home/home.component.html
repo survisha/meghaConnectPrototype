@@ -1,0 +1,184 @@
+<div class="home-page">
+  <header class="portal-header">
+    <button type="button" class="brand-link" (click)="scrollToSection('home')" [attr.aria-label]="'HOME_BRAND_ARIA' | translate">
+      <img src="/asserts/logo.png" [attr.alt]="'HOME_LOGO_ALT' | translate" class="header-logo">
+      <span>
+        <strong>MeghaConnect</strong>
+        <small>{{ 'HOME_BRAND_TAGLINE' | translate }}</small>
+      </span>
+    </button>
+
+    <nav class="portal-nav" [attr.aria-label]="'HOME_NAV_ARIA' | translate">
+      <button
+        type="button"
+        *ngFor="let item of navItems"
+        [class.active]="activeSection === item.id"
+        (click)="scrollToSection(item.id)">
+        {{ item.labelKey | translate }}
+      </button>
+    </nav>
+
+    <div class="header-language">
+      <app-language-selector></app-language-selector>
+    </div>
+  </header>
+
+  <main>
+    <section id="home" class="hero-section page-section">
+      <div class="hero-overlay"></div>
+      <div class="hero-content">
+        <p class="eyebrow">{{ 'HOME_HERO_EYEBROW' | translate }}</p>
+        <h1>MeghaConnect</h1>
+        <p class="hero-copy">
+          {{ 'HOME_HERO_COPY' | translate }}
+        </p>
+        <div class="hero-actions">
+          <button type="button" class="primary-cta" (click)="scrollToSection('login')">
+            <mat-icon>login</mat-icon>
+            {{ 'LOGIN' | translate }}
+          </button>
+          <a routerLink="/register-visitor" class="secondary-cta">
+            <mat-icon>person_add</mat-icon>
+            {{ 'HOME_REGISTER_CITIZEN' | translate }}
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="service-strip" [attr.aria-label]="'HOME_HIGHLIGHTS_ARIA' | translate">
+      <article>
+        <mat-icon>how_to_reg</mat-icon>
+        <span>{{ 'HOME_HIGHLIGHT_REGISTRATION' | translate }}</span>
+      </article>
+      <article>
+        <mat-icon>event_available</mat-icon>
+        <span>{{ 'HOME_HIGHLIGHT_APPOINTMENT' | translate }}</span>
+      </article>
+      <article>
+        <mat-icon>groups</mat-icon>
+        <span>{{ 'HOME_HIGHLIGHT_DARBAR' | translate }}</span>
+      </article>
+      <article>
+        <mat-icon>verified_user</mat-icon>
+        <span>{{ 'HOME_HIGHLIGHT_VERIFICATION' | translate }}</span>
+      </article>
+    </section>
+
+    <section id="about" class="page-section content-band">
+      <div class="section-heading">
+        <p class="eyebrow">{{ 'ABOUT' | translate }}</p>
+        <h2>{{ 'HOME_ABOUT_TITLE' | translate }}</h2>
+        <p>
+          {{ 'HOME_ABOUT_COPY' | translate }}
+        </p>
+      </div>
+
+      <div class="about-layout">
+        <aside class="cm-banner">
+          <img src="/asserts/CM_Profile_Picture.jpg" [attr.alt]="'HOME_CM_IMAGE_ALT' | translate">
+          <div>
+            <strong>Conrad Kongkal Sangma</strong>
+            <span>{{ 'HOME_CM_DESIGNATION' | translate }}</span>
+          </div>
+        </aside>
+
+        <div class="feature-grid">
+          <article><mat-icon>person_add</mat-icon><h3>{{ 'HOME_ABOUT_REGISTRATION_TITLE' | translate }}</h3><p>{{ 'HOME_ABOUT_REGISTRATION_TEXT' | translate }}</p></article>
+          <article><mat-icon>event</mat-icon><h3>{{ 'HOME_ABOUT_APPOINTMENT_TITLE' | translate }}</h3><p>{{ 'HOME_ABOUT_APPOINTMENT_TEXT' | translate }}</p></article>
+          <article><mat-icon>groups</mat-icon><h3>{{ 'HOME_ABOUT_DARBAR_TITLE' | translate }}</h3><p>{{ 'HOME_ABOUT_DARBAR_TEXT' | translate }}</p></article>
+          <article><mat-icon>apartment</mat-icon><h3>{{ 'HOME_ABOUT_DEPARTMENT_TITLE' | translate }}</h3><p>{{ 'HOME_ABOUT_DEPARTMENT_TEXT' | translate }}</p></article>
+          <article><mat-icon>upload_file</mat-icon><h3>{{ 'HOME_ABOUT_UPLOAD_TITLE' | translate }}</h3><p>{{ 'HOME_ABOUT_UPLOAD_TEXT' | translate }}</p></article>
+          <article><mat-icon>qr_code_scanner</mat-icon><h3>{{ 'HOME_ABOUT_QR_TITLE' | translate }}</h3><p>{{ 'HOME_ABOUT_QR_TEXT' | translate }}</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section id="connect" class="page-section connect-band">
+      <div class="section-heading light">
+        <p class="eyebrow">{{ 'HOME_NAV_CONNECT' | translate }}</p>
+        <h2>{{ 'HOME_CONNECT_TITLE' | translate }}</h2>
+        <p>
+          {{ 'HOME_CONNECT_COPY' | translate }}
+        </p>
+      </div>
+
+      <div class="connect-grid">
+        <article><mat-icon>forum</mat-icon><h3>{{ 'HOME_CONNECT_REQUESTS_TITLE' | translate }}</h3><p>{{ 'HOME_CONNECT_REQUESTS_TEXT' | translate }}</p></article>
+        <article><mat-icon>task_alt</mat-icon><h3>{{ 'HOME_CONNECT_REVIEW_TITLE' | translate }}</h3><p>{{ 'HOME_CONNECT_REVIEW_TEXT' | translate }}</p></article>
+        <article><mat-icon>notifications_active</mat-icon><h3>{{ 'HOME_CONNECT_NOTIFICATIONS_TITLE' | translate }}</h3><p>{{ 'HOME_CONNECT_NOTIFICATIONS_TEXT' | translate }}</p></article>
+      </div>
+    </section>
+
+    <section id="faq" class="page-section content-band narrow-band">
+      <div class="section-heading">
+        <p class="eyebrow">{{ 'FAQ' | translate }}</p>
+        <h2>{{ 'HOME_FAQ_TITLE' | translate }}</h2>
+      </div>
+
+      <div class="faq-list">
+        <details open><summary>{{ 'HOME_FAQ_REGISTER_Q' | translate }}</summary><p>{{ 'HOME_FAQ_REGISTER_A' | translate }}</p></details>
+        <details><summary>{{ 'HOME_FAQ_LOGIN_Q' | translate }}</summary><p>{{ 'HOME_FAQ_LOGIN_A' | translate }}</p></details>
+        <details><summary>{{ 'HOME_FAQ_APPOINTMENT_Q' | translate }}</summary><p>{{ 'HOME_FAQ_APPOINTMENT_A' | translate }}</p></details>
+        <details><summary>{{ 'HOME_FAQ_APPROVAL_Q' | translate }}</summary><p>{{ 'HOME_FAQ_APPROVAL_A' | translate }}</p></details>
+        <details><summary>{{ 'HOME_FAQ_DOCUMENTS_Q' | translate }}</summary><p>{{ 'HOME_FAQ_DOCUMENTS_A' | translate }}</p></details>
+        <details><summary>{{ 'HOME_FAQ_SUPPORT_Q' | translate }}</summary><p>{{ 'HOME_FAQ_SUPPORT_A' | translate }}</p></details>
+      </div>
+    </section>
+
+    <section id="contact" class="page-section contact-band">
+      <div class="section-heading">
+        <p class="eyebrow">{{ 'CONTACT_US' | translate }}</p>
+        <h2>{{ 'HOME_CONTACT_TITLE' | translate }}</h2>
+      </div>
+
+      <div class="contact-grid">
+        <article><mat-icon>mail</mat-icon><strong>{{ 'HOME_CONTACT_EMAIL_LABEL' | translate }}</strong><span>{{ 'HOME_CONTACT_EMAIL_VALUE' | translate }}</span></article>
+        <article><mat-icon>phone</mat-icon><strong>{{ 'HOME_CONTACT_PHONE_LABEL' | translate }}</strong><span>{{ 'HOME_CONTACT_PHONE_VALUE' | translate }}</span></article>
+        <article><mat-icon>place</mat-icon><strong>{{ 'HOME_CONTACT_ADDRESS_LABEL' | translate }}</strong><span>{{ 'HOME_CONTACT_ADDRESS_VALUE' | translate }}</span></article>
+        <article><mat-icon>schedule</mat-icon><strong>{{ 'HOME_CONTACT_HOURS_LABEL' | translate }}</strong><span>{{ 'HOME_CONTACT_HOURS_VALUE' | translate }}</span></article>
+      </div>
+    </section>
+
+    <section id="directory" class="page-section content-band">
+      <div class="section-heading">
+        <p class="eyebrow">{{ 'HOME_NAV_DIRECTORY' | translate }}</p>
+        <h2>{{ 'HOME_DIRECTORY_TITLE' | translate }}</h2>
+        <p>{{ 'HOME_DIRECTORY_COPY' | translate }}</p>
+      </div>
+
+      <div class="alphabet-tabs" [attr.aria-label]="'HOME_DIRECTORY_FILTER_ARIA' | translate">
+        <button
+          type="button"
+          *ngFor="let letter of letters"
+          [class.active]="selectedLetter === letter"
+          (click)="selectLetter(letter)">
+          {{ letter }}
+        </button>
+      </div>
+
+      <div class="directory-grid" *ngIf="hasDepartmentsForLetter; else emptyDirectory">
+        <article *ngFor="let department of filteredDepartments">
+          <h3>{{ department.nameKey | translate }}</h3>
+          <p>{{ department.descriptionKey | translate }}</p>
+        </article>
+      </div>
+
+      <ng-template #emptyDirectory>
+        <div class="empty-directory">
+          {{ 'HOME_DIRECTORY_EMPTY' | translate: { letter: selectedLetter } }}
+        </div>
+      </ng-template>
+    </section>
+
+    <section id="login" class="page-section login-band">
+      <div class="login-copy">
+        <p class="eyebrow">{{ 'LOGIN' | translate }}</p>
+        <h2>{{ 'HOME_LOGIN_TITLE' | translate }}</h2>
+        <p>{{ 'HOME_LOGIN_COPY' | translate }}</p>
+      </div>
+      <app-login [embedded]="true"></app-login>
+    </section>
+  </main>
+
+  <app-ai-chatbot></app-ai-chatbot>
+</div>

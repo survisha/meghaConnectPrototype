@@ -26,36 +26,24 @@ export class LanguageService {
     const supportedCodes = this.supportedLanguages.map(language => language.code);
     this.translate.addLangs(supportedCodes);
     this.translate.setFallbackLang(DEFAULT_LANGUAGE);
-    this.setLanguage(this.getStoredLanguage(), false);
+    this.clearStoredLanguage();
+    this.setLanguage(DEFAULT_LANGUAGE);
   }
 
-  setLanguage(language: string, persist = true): void {
+  setLanguage(language: string): void {
     const selectedLanguage = this.isSupportedLanguage(language) ? language : DEFAULT_LANGUAGE;
     this.translate.use(selectedLanguage);
-
-    if (persist) {
-      this.storeLanguage(selectedLanguage);
-    }
   }
 
   getCurrentLanguage(): string {
-    return this.translate.getCurrentLang() || this.getStoredLanguage();
+    return this.translate.getCurrentLang() || DEFAULT_LANGUAGE;
   }
 
-  private getStoredLanguage(): string {
+  private clearStoredLanguage(): void {
     try {
-      const storedLanguage = localStorage.getItem(APP_LANGUAGE_STORAGE_KEY);
-      return this.isSupportedLanguage(storedLanguage) ? storedLanguage : DEFAULT_LANGUAGE;
+      localStorage.removeItem(APP_LANGUAGE_STORAGE_KEY);
     } catch {
-      return DEFAULT_LANGUAGE;
-    }
-  }
-
-  private storeLanguage(language: string): void {
-    try {
-      localStorage.setItem(APP_LANGUAGE_STORAGE_KEY, language);
-    } catch {
-      // Ignore storage failures so language switching still works in restricted browsers.
+      // Ignore storage failures so language initialization still works in restricted browsers.
     }
   }
 

@@ -29,12 +29,20 @@ spring:
     serialization:
       write-dates-as-timestamps: false
 
+server:
+  forward-headers-strategy: native
+  tomcat:
+    remoteip:
+      protocol-header: X-Forwarded-Proto
+
 file:
   upload:
     root-path: ${FILE_UPLOAD_ROOT:/opt/meghaconnect/uploads/uat}
     crypto-key-path: ${FILE_UPLOAD_CRYPTO_KEY_PATH:/opt/meghaconnect/secure/crypto.key}
 
 meghaconnect:
+  security:
+    require-https: true
   storage:
     base-path: ${file.upload.root-path}
     crypto-key-path: ${file.upload.crypto-key-path}

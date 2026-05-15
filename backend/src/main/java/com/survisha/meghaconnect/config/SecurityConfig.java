@@ -6,6 +6,7 @@ import com.survisha.meghaconnect.repository.VisitorRepository;
 import com.survisha.meghaconnect.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -40,8 +41,15 @@ public class SecurityConfig {
     private final UserRepository userRepository;
     private final VisitorRepository visitorRepository;
 
+    @Value("${meghaconnect.security.require-https:false}")
+    private boolean requireHttps;
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthFilter, CorsConfigurationSource corsConfigurationSource) throws Exception {
+        if (requireHttps) {
+            http.requiresChannel(channel -> channel.anyRequest().requiresSecure());
+        }
+
         return http
             // Enable CORS with custom configuration
             .cors(cors -> cors.configurationSource(corsConfigurationSource))

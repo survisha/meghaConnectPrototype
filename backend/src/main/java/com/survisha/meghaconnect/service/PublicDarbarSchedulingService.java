@@ -1,6 +1,7 @@
 package com.survisha.meghaconnect.service;
 
 import com.survisha.meghaconnect.dto.BatchScheduleResult;
+import com.survisha.meghaconnect.dto.QrTokenGenerationResult;
 import com.survisha.meghaconnect.entity.Appointment;
 import com.survisha.meghaconnect.entity.PublicDarbar;
 import com.survisha.meghaconnect.exception.ErrorCodeConstants;
@@ -16,7 +17,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -33,6 +36,7 @@ public class PublicDarbarSchedulingService {
     private final AppointmentRepository appointmentRepository;
     private final AppointmentAuditService appointmentAuditService;
     private final AppointmentNotificationService notificationService;
+    private final QrTokenService qrTokenService;
 
     @Value("${meghaconnect.public-darbar.start-time:10:00}")
     private String publicDarbarStartTime;
@@ -64,7 +68,9 @@ public class PublicDarbarSchedulingService {
         int existingScheduled = appointmentRepository.findByPublicDarbar_IdOrderByPublicDarbarTokenNumberAsc(publicDarbarId).size();
         int availableSlots = Math.max(0, darbar.getMaxSlots() - existingScheduled);
         int skippedCount = 0;
+        int qrGeneratedCount = 0;
         List<Long> scheduledIds = new ArrayList<>();
+        Map<Long, String> qrTokensByAppointmentId = new HashMap<>();
         LocalTime startTime = LocalTime.parse(publicDarbarStartTime);
         int nextToken = nextTokenNumber(publicDarbarId);
 
@@ -96,6 +102,13 @@ public class PublicDarbarSchedulingService {
             appointment.setUpdatedBy(actor);
 
             Appointment saved = appointmentRepository.save(appointment);
+            QrTokenGenerationResult qrToken = qrTokenService.generateForApprovedAppointment(saved, actor);
+            if (qrToken.isNewlyGenerated()) {
+                qrGeneratedCount++;
+            }
+            if (qrToken.getQrToken() != null) {
+                qrTokensByAppointmentId.put(saved.getId(), qrToken.getQrToken());
+            }
             appointmentAuditService.recordStatusChange(
                     saved,
                     oldStatus,
@@ -118,7 +131,9 @@ public class PublicDarbarSchedulingService {
                 .selectedCount(selectedAppointments.size())
                 .scheduledCount(scheduledIds.size())
                 .skippedCount(skippedCount)
+                .qrGeneratedCount(qrGeneratedCount)
                 .scheduledAppointmentIds(scheduledIds)
+                .qrTokensByAppointmentId(qrTokensByAppointmentId)
                 .build();
     }
 

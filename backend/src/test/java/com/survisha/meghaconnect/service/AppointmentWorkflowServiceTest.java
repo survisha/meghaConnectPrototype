@@ -36,15 +36,18 @@ class AppointmentWorkflowServiceTest {
     @Mock
     private AppointmentNotificationService notificationService;
 
+    @Mock
+    private QrTokenService qrTokenService;
+
     @InjectMocks
     private AppointmentWorkflowService appointmentWorkflowService;
 
     @Test
-    void markForPublicDarbarMovesAppointmentToSelectedAndAudits() {
+    void markForPublicDarbarMovesB1AppointmentToFollowupAndAudits() {
         Appointment appointment = Appointment.builder()
                 .applicationId("MC-2026-000001")
                 .applicant(Visitor.builder().id(7L).fullName("Citizen").phoneNumber("9876543210").build())
-                .eventType(Appointment.EventType.A1)
+                .eventType(Appointment.EventType.B1)
                 .status(Appointment.AppointmentStatus.PENDING_APPROVER_REVIEW)
                 .build();
         appointment.setId(42L);
@@ -59,13 +62,13 @@ class AppointmentWorkflowServiceTest {
                 "CMO_OFFICER"
         );
 
-        assertEquals(Appointment.AppointmentStatus.SELECTED_FOR_PUBLIC_DARBAR, appointment.getStatus());
+        assertEquals(Appointment.AppointmentStatus.FOLLOWUP, appointment.getStatus());
         assertEquals("cmo", appointment.getSelectedForPublicDarbarBy());
         verify(appointmentAuditService).recordStatusChange(
                 eq(appointment),
                 eq(Appointment.AppointmentStatus.PENDING_APPROVER_REVIEW),
-                eq(Appointment.AppointmentStatus.SELECTED_FOR_PUBLIC_DARBAR),
-                eq("SELECTED_FOR_PUBLIC_DARBAR"),
+                eq(Appointment.AppointmentStatus.FOLLOWUP),
+                eq("FOLLOWUP"),
                 any(),
                 eq("cmo"),
                 eq("CMO_OFFICER")

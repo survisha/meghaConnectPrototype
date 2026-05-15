@@ -3,6 +3,7 @@ package com.survisha.meghaconnect.dto;
 import lombok.*;
 
 import java.util.List;
+import java.util.Map;
 
 @Getter
 @Setter
@@ -16,5 +17,7 @@ public class BatchScheduleResult {
     private int selectedCount;
     private int scheduledCount;
     private int skippedCount;
+    private int qrGeneratedCount;
     private List<Long> scheduledAppointmentIds;
+    private Map<Long, String> qrTokensByAppointmentId;
 }

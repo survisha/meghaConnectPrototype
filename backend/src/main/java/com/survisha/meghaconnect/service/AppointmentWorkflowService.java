@@ -65,6 +65,7 @@ public class AppointmentWorkflowService {
     private final VisitorRepository visitorRepository;
     private final AppointmentAuditService appointmentAuditService;
     private final AppointmentNotificationService notificationService;
+    private final QrTokenService qrTokenService;
 
     @Transactional
     public AppointmentWorkflowResponse createDraft(CitizenAppointmentRequest request,
@@ -269,6 +270,7 @@ public class AppointmentWorkflowService {
         appointment.setUpdatedBy(actor);
 
         Appointment saved = appointmentRepository.save(appointment);
+        QrTokenGenerationResult qrToken = qrTokenService.generateForApprovedAppointment(saved, actor);
         appointmentAuditService.recordStatusChange(
                 saved,
                 oldStatus,
@@ -281,7 +283,7 @@ public class AppointmentWorkflowService {
         notificationService.normalAppointmentApproved(saved);
         log.info("Appointment approved with date/time appointmentId={} scheduledDateTime={}",
                 saved.getId(), saved.getScheduledDateTime());
-        return toResponse(saved);
+        return toResponse(saved, qrToken);
     }
 
     @Transactional
@@ -340,6 +342,10 @@ public class AppointmentWorkflowService {
     }
 
     public AppointmentWorkflowResponse toResponse(Appointment appointment) {
+        return toResponse(appointment, null);
+    }
+
+    public AppointmentWorkflowResponse toResponse(Appointment appointment, QrTokenGenerationResult qrToken) {
         Visitor applicant = appointment.getApplicant();
         PublicDarbar darbar = appointment.getPublicDarbar();
         return AppointmentWorkflowResponse.builder()
@@ -364,6 +370,10 @@ public class AppointmentWorkflowService {
                 .publicDarbarLocation(darbar != null ? darbar.getLocation() : null)
                 .publicDarbarTokenNumber(appointment.getPublicDarbarTokenNumber())
                 .rejectionReason(appointment.getRejectionReason())
+                .qrToken(qrToken != null ? qrToken.getQrToken() : null)
+                .qrStatus(qrToken != null && qrToken.getStatus() != null ? qrToken.getStatus().name() : null)
+                .qrValidFrom(qrToken != null ? qrToken.getValidFrom() : null)
+                .qrValidTo(qrToken != null ? qrToken.getValidTo() : null)
                 .createdAt(appointment.getCreatedAt())
                 .updatedAt(appointment.getUpdatedAt())
                 .build();

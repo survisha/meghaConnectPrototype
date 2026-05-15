@@ -1,5 +1,7 @@
 package com.survisha.meghaconnect.controller;
 
+import com.survisha.meghaconnect.dto.CreateUserRequest;
+import com.survisha.meghaconnect.dto.UserResponse;
 import com.survisha.meghaconnect.entity.User;
 import com.survisha.meghaconnect.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,7 +14,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import javax.validation.Valid;
 import java.util.List;
 
 @RestController
@@ -52,5 +56,17 @@ public class UserController {
         return userService.getUserById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @Operation(summary = "Create user", description = "Create an application user, including ROLE_SECURITY scanner users (admin only)")
+    @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public com.survisha.meghaconnect.response.ApiResponse<UserResponse> create(
+            @Valid @RequestBody CreateUserRequest request,
+            Authentication authentication) {
+        return com.survisha.meghaconnect.response.ApiResponse.success(
+                "User created",
+                userService.createUser(request, authentication != null ? authentication.getName() : "admin")
+        );
     }
 }

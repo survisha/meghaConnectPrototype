@@ -77,6 +77,12 @@ public class AppointmentService {
         "CLOSED"
     );
 
+    private static final Set<Appointment.AppointmentStatus> QR_GENERATING_STATUSES = Set.of(
+        Appointment.AppointmentStatus.APPROVED_WITH_DATE_TIME,
+        Appointment.AppointmentStatus.SCHEDULED_FOR_PUBLIC_DARBAR,
+        Appointment.AppointmentStatus.SCHEDULED
+    );
+
     private final AppointmentRepository appointmentRepository;
     private final VisitorRepository visitorRepository;
     private final DocumentUploadRepository documentUploadRepository;
@@ -84,6 +90,7 @@ public class AppointmentService {
     private final AuditLogService auditLogService;
     private final RequestValidationService validationService;
     private final FileStorageService fileStorageService;
+    private final QrTokenService qrTokenService;
     private final ObjectMapper objectMapper;
 
     public Page<Appointment> findAll(Pageable pageable) {
@@ -340,6 +347,7 @@ public class AppointmentService {
         if (remarks != null) appt.setCmoRemarks(remarks);
 
         Appointment saved = appointmentRepository.save(appt);
+        generateQrIfApproved(saved, updatedBy);
         auditLogService.log("Appointment", saved.getId(), "STATUS_CHANGE",
             "Status: " + oldStatus + " → " + newStatus, updatedBy);
         return saved;
@@ -427,9 +435,18 @@ public class AppointmentService {
         appt.setStatus(Appointment.AppointmentStatus.SCHEDULED);
 
         Appointment saved = appointmentRepository.save(appt);
+        generateQrIfApproved(saved, updatedBy);
         auditLogService.log("Appointment", saved.getId(), "SCHEDULED",
             "Scheduled for: " + dateTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME), updatedBy);
         return saved;
+    }
+
+    private void generateQrIfApproved(Appointment appointment, String actor) {
+        if (appointment != null
+                && appointment.getScheduledDateTime() != null
+                && QR_GENERATING_STATUSES.contains(appointment.getStatus())) {
+            qrTokenService.generateForApprovedAppointment(appointment, actor);
+        }
     }
 
     private String generateApplicationId() {

@@ -118,6 +118,28 @@ public class ErrorCodeConstants {
     public static final String APPT_NO_APPOINTMENTS_FOR_SCHEDULING = "APPT_008";
     public static final String APPT_NO_APPOINTMENTS_FOR_SCHEDULING_MSG = "No appointments found for scheduling";
 
+    // ========== QR SCANNER ERRORS ==========
+    public static final String QR_TOKEN_INVALID = "QR_001";
+    public static final String QR_TOKEN_INVALID_MSG = "Invalid QR token";
+
+    public static final String QR_TOKEN_EXPIRED = "QR_002";
+    public static final String QR_TOKEN_EXPIRED_MSG = "QR token has expired";
+
+    public static final String QR_TOKEN_NOT_ACTIVE = "QR_003";
+    public static final String QR_TOKEN_NOT_ACTIVE_MSG = "QR token is not active";
+
+    public static final String QR_DUPLICATE_CHECK_IN = "QR_004";
+    public static final String QR_DUPLICATE_CHECK_IN_MSG = "Visitor is already checked in";
+
+    public static final String QR_DUPLICATE_CHECK_OUT = "QR_005";
+    public static final String QR_DUPLICATE_CHECK_OUT_MSG = "Visitor is already checked out";
+
+    public static final String QR_CHECK_OUT_REQUIRES_CHECK_IN = "QR_006";
+    public static final String QR_CHECK_OUT_REQUIRES_CHECK_IN_MSG = "Visitor must be checked in before checkout";
+
+    public static final String QR_APPOINTMENT_NOT_VALID = "QR_007";
+    public static final String QR_APPOINTMENT_NOT_VALID_MSG = "Appointment is not valid for entry at this time";
+
     // ========== OTP & AUTHENTICATION ERRORS (ERR_030 - ERR_039) ==========
     public static final String OTP_RATE_LIMIT_EXCEEDED = "ERR_030";
     public static final String OTP_RATE_LIMIT_EXCEEDED_MSG = "Too many OTP requests. Please try again after %d minutes";

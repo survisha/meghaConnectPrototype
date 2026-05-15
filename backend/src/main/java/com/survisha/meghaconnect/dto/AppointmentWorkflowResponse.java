@@ -34,6 +34,10 @@ public class AppointmentWorkflowResponse {
     private String publicDarbarLocation;
     private Integer publicDarbarTokenNumber;
     private String rejectionReason;
+    private String qrToken;
+    private String qrStatus;
+    private LocalDateTime qrValidFrom;
+    private LocalDateTime qrValidTo;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

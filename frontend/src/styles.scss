@@ -4,6 +4,9 @@
 :root {
   --app-header-height: 64px;
   --app-page-padding: 1.5rem;
+  --app-scrollbar-track: #f8fafc;
+  --app-scrollbar-thumb: #3949ab;
+  --app-scrollbar-thumb-hover: #1a237e;
 }
 
 *,
@@ -29,6 +32,35 @@ app-root {
   display: block;
   width: 100%;
   min-height: 100vh;
+}
+
+* {
+  scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--app-scrollbar-track);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--app-scrollbar-thumb);
+  border: 2px solid var(--app-scrollbar-track);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--app-scrollbar-thumb-hover);
+}
+
+*::-webkit-scrollbar-corner {
+  background: var(--app-scrollbar-track);
 }
 
 /* Public login direct-route fallback.

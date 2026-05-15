@@ -76,6 +76,39 @@
   margin: 0 2px;
 }
 
+.ai-notes-cell {
+  max-width: 250px;
+}
+
+.ai-notes-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 0.78rem;
+  max-width: 200px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+
+  mat-icon {
+    color: #9333ea;
+    font-size: 14px;
+    height: 14px;
+    line-height: 14px;
+    width: 14px;
+  }
+}
+
+.empty-value {
+  color: #9ca3af;
+  font-size: 0.8rem;
+}
+
 .select-cell {
   width: 56px;
   text-align: center;
@@ -355,6 +388,89 @@
   gap: 0.75rem;
 }
 
+.details-action-buttons {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+
+  button {
+    border: 1px solid transparent;
+
+    &:disabled {
+      opacity: 0.45;
+    }
+  }
+
+  .approve-action {
+    color: #15803d;
+    background: #dcfce7;
+    border-color: #bbf7d0;
+  }
+
+  .reject-action {
+    color: #b91c1c;
+    background: #fee2e2;
+    border-color: #fecaca;
+  }
+
+  .reschedule-action {
+    color: #1d4ed8;
+    background: #dbeafe;
+    border-color: #bfdbfe;
+  }
+
+  .followup-action {
+    color: #b45309;
+    background: #fef3c7;
+    border-color: #fde68a;
+  }
+}
+
+.action-dialog-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0;
+  padding: 1.15rem 1.25rem 0.9rem;
+  border-bottom: 1px solid #e5e7eb;
+
+  h2 {
+    color: #111827;
+    font-size: 1.1rem;
+    margin: 0.1rem 0 0;
+  }
+}
+
+.action-dialog-content {
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem !important;
+}
+
+.dialog-appt-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  color: #111827;
+  font-size: 0.9rem;
+  padding: 0.75rem 1rem;
+}
+
+.full-width-field {
+  width: 100%;
+}
+
+.action-dialog-actions {
+  border-top: 1px solid #e5e7eb;
+  gap: 0.75rem;
+  padding: 0.85rem 1.25rem 1rem;
+}
+
 .document-preview-title {
   display: flex;
   align-items: center;
@@ -455,6 +571,11 @@
 }
 
 ::ng-deep .appointment-details-dialog-panel .mat-mdc-dialog-container .mdc-dialog__surface {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+::ng-deep .appointment-action-dialog-panel .mat-mdc-dialog-container .mdc-dialog__surface {
   border-radius: 8px;
   overflow: hidden;
 }

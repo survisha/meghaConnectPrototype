@@ -27,6 +27,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { CmoReviewModalComponent } from '../cmo-review-modal/cmo-review-modal.component';
 import { apiErrorMessage } from '../../shared/api-error.util';
@@ -53,7 +54,8 @@ import { apiErrorMessage } from '../../shared/api-error.util';
     MatCardModule,
     MatTooltipModule,
     MatDividerModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    MatSnackBarModule
   ],
   providers: [provideNativeDateAdapter()],
   templateUrl: './appointment-list.component.html',
@@ -62,6 +64,8 @@ import { apiErrorMessage } from '../../shared/api-error.util';
 export class AppointmentListComponent implements OnInit, OnDestroy {
   @ViewChild('appointmentDetailsDialog') appointmentDetailsDialog!: TemplateRef<unknown>;
   @ViewChild('documentPreviewDialog') documentPreviewDialog!: TemplateRef<unknown>;
+  @ViewChild('appointmentRemarksDialog') appointmentRemarksDialog!: TemplateRef<unknown>;
+  @ViewChild('appointmentRescheduleDialog') appointmentRescheduleDialog!: TemplateRef<unknown>;
 
   appointments: Appointment[] = [];
   filtered: Appointment[] = [];
@@ -85,10 +89,15 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   filterToDate: Date | null = null;
   loading = false;
   bulkUpdating = false;
+  actionUpdating = false;
   errorMsg = '';
+  remarksText = '';
+  rescheduleDate = '';
+  pendingAction: 'APPROVE' | 'REJECT' | null = null;
+  followUpUpdatingId: number | null = null;
   selectedAppointmentIds = new Set<number>();
   eventTypeOptions: Array<{ label: string; value: EventType | '' }> = [{ label: 'All Types', value: '' }];
-  displayedColumns: string[] = ['select', 'applicant', 'designation', 'constituency', 'agenda', 'eventType', 'location', 'status', 'actions'];
+  displayedColumns: string[] = ['select', 'applicant', 'designation', 'constituency', 'agenda', 'eventType', 'location', 'status', 'aiNotes', 'actions'];
 
   statusOptions = [
     { label: 'All Statuses', value: '' },
@@ -104,6 +113,8 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   ];
 
   private documentPreviewDialogRef?: MatDialogRef<unknown>;
+  private appointmentRemarksDialogRef?: MatDialogRef<unknown>;
+  private appointmentRescheduleDialogRef?: MatDialogRef<unknown>;
   private readonly followUpStatuses: AppointmentStatus[] = ['FOLLOWUP', 'SELECTED_FOR_PUBLIC_DARBAR'];
   private readonly followUpReviewableStatuses: AppointmentStatus[] = [
     'CREATED',
@@ -120,7 +131,8 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     private visitorService: VisitorService,
     public auth: AuthService,
     private dialog: MatDialog,
-    private sanitizer: DomSanitizer
+    private sanitizer: DomSanitizer,
+    private snackBar: MatSnackBar
   ) {}
 
   ngOnInit() {
@@ -264,6 +276,148 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
 
   private canAppointmentBeMarkedFollowUp(appointment: Appointment) {
     return appointment.eventType === 'B1' && this.followUpReviewableStatuses.includes(appointment.status);
+  }
+
+  canUseApproverActions(appointment: Appointment | null) {
+    return !!appointment && this.auth.hasRole('HCM', 'ADMIN', 'OSD', 'APPROVER');
+  }
+
+  canApproveOrReject(appointment: Appointment | null) {
+    return this.canUseApproverActions(appointment) && appointment?.status !== 'HCM_PENDING';
+  }
+
+  canRescheduleAppointment(appointment: Appointment | null) {
+    return this.canUseApproverActions(appointment);
+  }
+
+  canMarkFollowUp(appointment: Appointment | null) {
+    return !!appointment && this.canUseApproverActions(appointment) && this.canAppointmentBeMarkedFollowUp(appointment);
+  }
+
+  openApprove(appointment: Appointment) {
+    this.selectedAppointment = appointment;
+    this.pendingAction = 'APPROVE';
+    this.remarksText = '';
+    this.appointmentRemarksDialogRef = this.dialog.open(this.appointmentRemarksDialog, {
+      width: '520px',
+      maxWidth: '94vw',
+      autoFocus: false,
+      panelClass: 'appointment-action-dialog-panel'
+    });
+    this.appointmentRemarksDialogRef.afterClosed().subscribe(() => {
+      this.appointmentRemarksDialogRef = undefined;
+      this.pendingAction = null;
+      this.remarksText = '';
+    });
+  }
+
+  openReject(appointment: Appointment) {
+    this.selectedAppointment = appointment;
+    this.pendingAction = 'REJECT';
+    this.remarksText = '';
+    this.appointmentRemarksDialogRef = this.dialog.open(this.appointmentRemarksDialog, {
+      width: '520px',
+      maxWidth: '94vw',
+      autoFocus: false,
+      panelClass: 'appointment-action-dialog-panel'
+    });
+    this.appointmentRemarksDialogRef.afterClosed().subscribe(() => {
+      this.appointmentRemarksDialogRef = undefined;
+      this.pendingAction = null;
+      this.remarksText = '';
+    });
+  }
+
+  openReschedule(appointment: Appointment) {
+    this.selectedAppointment = appointment;
+    this.rescheduleDate = '';
+    this.appointmentRescheduleDialogRef = this.dialog.open(this.appointmentRescheduleDialog, {
+      width: '460px',
+      maxWidth: '94vw',
+      autoFocus: false,
+      panelClass: 'appointment-action-dialog-panel'
+    });
+    this.appointmentRescheduleDialogRef.afterClosed().subscribe(() => {
+      this.appointmentRescheduleDialogRef = undefined;
+      this.rescheduleDate = '';
+    });
+  }
+
+  closeAppointmentRemarksDialog() {
+    this.appointmentRemarksDialogRef?.close();
+  }
+
+  closeAppointmentRescheduleDialog() {
+    this.appointmentRescheduleDialogRef?.close();
+  }
+
+  markFollowUp(appointment: Appointment) {
+    if (!this.canMarkFollowUp(appointment) || this.followUpUpdatingId) return;
+    this.followUpUpdatingId = appointment.id;
+    this.appointmentService.markFollowUp(appointment.id, 'Follow-up')
+      .pipe(finalize(() => this.followUpUpdatingId = null))
+      .subscribe({
+        next: () => {
+          this.snackBar.open(`${appointment.applicationId} marked as follow-up.`, 'Close', { duration: 5000, panelClass: ['success-snackbar'] });
+          this.loadAppointments();
+        },
+        error: error => this.snackBar.open(apiErrorMessage(error, 'Failed to mark appointment as follow-up.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] })
+      });
+  }
+
+  confirmAction() {
+    if (!this.selectedAppointment || !this.pendingAction || this.actionUpdating) return;
+    const appointment = this.selectedAppointment;
+    const action = this.pendingAction;
+    const newStatus: AppointmentStatus = action === 'APPROVE' ? 'HCM_PENDING' : 'HCM_REJECTED';
+
+    this.actionUpdating = true;
+    this.appointmentService.updateStatus(appointment.id, newStatus, this.remarksText)
+      .pipe(finalize(() => this.actionUpdating = false))
+      .subscribe({
+        next: updated => {
+          this.selectedAppointment = updated;
+          this.replaceAppointment(updated);
+          this.appointmentRemarksDialogRef?.close();
+          const message = action === 'APPROVE'
+            ? `${updated.applicationId} approved and pushed to HCM queue.`
+            : `${updated.applicationId} has been rejected.`;
+          this.snackBar.open(message, 'Close', {
+            duration: 5000,
+            panelClass: [action === 'APPROVE' ? 'success-snackbar' : 'error-snackbar']
+          });
+        },
+        error: error => this.snackBar.open(apiErrorMessage(error, 'Failed to update appointment.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] })
+      });
+  }
+
+  confirmReschedule() {
+    if (!this.selectedAppointment || !this.rescheduleDate || this.actionUpdating) return;
+    const appointment = this.selectedAppointment;
+    this.actionUpdating = true;
+    this.appointmentService.rescheduleAppointment(appointment.id, {
+      scheduledDateTime: new Date(this.rescheduleDate).toISOString().slice(0, 19),
+      durationMinutes: 30
+    }).pipe(finalize(() => this.actionUpdating = false))
+      .subscribe({
+        next: updated => {
+          this.selectedAppointment = updated;
+          this.replaceAppointment(updated);
+          this.appointmentRescheduleDialogRef?.close();
+          this.snackBar.open(`${updated.applicationId} rescheduled to ${this.rescheduleDate}.`, 'Close', { duration: 5000 });
+        },
+        error: error => this.snackBar.open(apiErrorMessage(error, 'Failed to reschedule.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] })
+      });
+  }
+
+  private replaceAppointment(updated: Appointment) {
+    const index = this.appointments.findIndex(appointment => appointment.id === updated.id);
+    if (index >= 0) {
+      this.appointments[index] = updated;
+    } else {
+      this.appointments = [updated, ...this.appointments];
+    }
+    this.applyFilter();
   }
 
   private isFollowUpStatus(status: AppointmentStatus) {

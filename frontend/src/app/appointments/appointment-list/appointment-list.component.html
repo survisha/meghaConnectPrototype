@@ -157,6 +157,20 @@
             </td>
           </ng-container>
 
+          <!-- AI Notes Column -->
+          <ng-container matColumnDef="aiNotes">
+            <th mat-header-cell *matHeaderCellDef>AI Notes</th>
+            <td mat-cell *matCellDef="let appt" class="ai-notes-cell">
+              <span *ngIf="appt.shortNotes" class="ai-notes-chip"
+                    [matTooltip]="appt.shortNotes"
+                    matTooltipPosition="above">
+                <mat-icon>auto_awesome</mat-icon>
+                {{ appt.shortNotes.substring(0, 60) }}{{ appt.shortNotes.length > 60 ? '…' : '' }}
+              </span>
+              <span *ngIf="!appt.shortNotes" class="empty-value">—</span>
+            </td>
+          </ng-container>
+
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef class="actions-header">Actions</th>
             <td mat-cell *matCellDef="let appt" class="actions-cell">
@@ -359,12 +373,137 @@
   </mat-dialog-content>
 
   <mat-dialog-actions align="end" class="details-dialog-actions">
+    <ng-container *ngIf="selectedAppointment as appointment">
+      <div class="details-action-buttons" *ngIf="canUseApproverActions(appointment)">
+        <button mat-icon-button
+                type="button"
+                class="approve-action"
+                [disabled]="!canApproveOrReject(appointment) || actionUpdating"
+                (click)="openApprove(appointment)"
+                matTooltip="Approve & Forward to HCM"
+                matTooltipPosition="above">
+          <mat-icon>check_circle</mat-icon>
+        </button>
+
+        <button mat-icon-button
+                type="button"
+                class="reject-action"
+                [disabled]="!canApproveOrReject(appointment) || actionUpdating"
+                (click)="openReject(appointment)"
+                matTooltip="Reject"
+                matTooltipPosition="above">
+          <mat-icon>cancel</mat-icon>
+        </button>
+
+        <button mat-icon-button
+                type="button"
+                class="reschedule-action"
+                [disabled]="!canRescheduleAppointment(appointment) || actionUpdating"
+                (click)="openReschedule(appointment)"
+                matTooltip="Reschedule"
+                matTooltipPosition="above">
+          <mat-icon>event</mat-icon>
+        </button>
+
+        <button mat-icon-button
+                type="button"
+                class="followup-action"
+                [disabled]="!canMarkFollowUp(appointment) || followUpUpdatingId === appointment.id"
+                (click)="markFollowUp(appointment)"
+                matTooltip="Mark Follow-up"
+                matTooltipPosition="above">
+          <mat-icon>follow_the_signs</mat-icon>
+        </button>
+      </div>
+
+      <button mat-icon-button
+              type="button"
+              color="accent"
+              *ngIf="auth.hasRole('CMO_OFFICER') && appointment.status === 'CMO_REVIEW'"
+              (click)="openCmoReviewFromDetails()"
+              matTooltip="CMO Review"
+              matTooltipPosition="above">
+        <mat-icon>rate_review</mat-icon>
+      </button>
+    </ng-container>
+
     <button mat-stroked-button (click)="closeViewDetails()">Close</button>
-    <button mat-raised-button color="accent"
-            *ngIf="selectedAppointment && auth.hasRole('CMO_OFFICER') && selectedAppointment.status === 'CMO_REVIEW'"
-            (click)="openCmoReviewFromDetails()">
-      <mat-icon>rate_review</mat-icon>
-      CMO Review
+  </mat-dialog-actions>
+</ng-template>
+
+<ng-template #appointmentRemarksDialog>
+  <div class="action-dialog-title" mat-dialog-title>
+    <div>
+      <span class="eyebrow">{{ pendingAction === 'APPROVE' ? 'Approve Appointment' : 'Reject Appointment' }}</span>
+      <h2>{{ selectedAppointment?.applicationId }}</h2>
+    </div>
+    <button mat-icon-button aria-label="Close action dialog" (click)="closeAppointmentRemarksDialog()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <mat-dialog-content class="action-dialog-content">
+    <div *ngIf="selectedAppointment" class="dialog-appt-summary">
+      <strong>{{ selectedAppointment.applicationId }}</strong>
+      <span>{{ selectedAppointment.applicant.fullName || selectedAppointment.applicantName || '—' }}</span>
+      <span class="event-badge" [class]="'type-' + selectedAppointment.eventType">{{ selectedAppointment.eventType }}</span>
+    </div>
+
+    <mat-form-field appearance="outline" class="full-width-field">
+      <mat-label>Remarks / Notes *</mat-label>
+      <textarea matInput
+                [(ngModel)]="remarksText"
+                rows="4"
+                [placeholder]="pendingAction === 'APPROVE' ? 'Add remarks before forwarding to HCM...' : 'Add remarks before rejecting...'">
+      </textarea>
+    </mat-form-field>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end" class="action-dialog-actions">
+    <button mat-stroked-button type="button" (click)="closeAppointmentRemarksDialog()">Cancel</button>
+    <button mat-raised-button
+            type="button"
+            [color]="pendingAction === 'APPROVE' ? 'primary' : 'warn'"
+            [disabled]="actionUpdating"
+            (click)="confirmAction()">
+      <mat-icon>{{ pendingAction === 'APPROVE' ? 'check' : 'close' }}</mat-icon>
+      {{ pendingAction === 'APPROVE' ? 'Approve & Push to HCM' : 'Confirm Reject' }}
+    </button>
+  </mat-dialog-actions>
+</ng-template>
+
+<ng-template #appointmentRescheduleDialog>
+  <div class="action-dialog-title" mat-dialog-title>
+    <div>
+      <span class="eyebrow">Reschedule Appointment</span>
+      <h2>{{ selectedAppointment?.applicationId }}</h2>
+    </div>
+    <button mat-icon-button aria-label="Close reschedule dialog" (click)="closeAppointmentRescheduleDialog()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <mat-dialog-content class="action-dialog-content">
+    <div *ngIf="selectedAppointment" class="dialog-appt-summary">
+      <strong>{{ selectedAppointment.applicationId }}</strong>
+      <span>{{ selectedAppointment.applicant.fullName || selectedAppointment.applicantName || '—' }}</span>
+    </div>
+
+    <mat-form-field appearance="outline" class="full-width-field">
+      <mat-label>New Date &amp; Time *</mat-label>
+      <input matInput type="datetime-local" [(ngModel)]="rescheduleDate" />
+    </mat-form-field>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end" class="action-dialog-actions">
+    <button mat-stroked-button type="button" (click)="closeAppointmentRescheduleDialog()">Cancel</button>
+    <button mat-raised-button
+            type="button"
+            color="accent"
+            [disabled]="!rescheduleDate || actionUpdating"
+            (click)="confirmReschedule()">
+      <mat-icon>event</mat-icon>
+      Confirm Reschedule
     </button>
   </mat-dialog-actions>
 </ng-template>

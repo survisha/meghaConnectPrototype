@@ -31,6 +31,18 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { apiErrorMessage } from '../../shared/api-error.util';
 
+type SortDirection = 'asc' | 'desc';
+type AppointmentSortColumn =
+  | 'applicant'
+  | 'designation'
+  | 'constituency'
+  | 'agenda'
+  | 'eventType'
+  | 'location'
+  | 'status'
+  | 'createdAt'
+  | 'aiNotes';
+
 @Component({
   selector: 'app-appointment-list',
   standalone: true,
@@ -110,7 +122,12 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   selectedAiNotes: AppointmentDocumentAiNotes[] = [];
   selectedAppointmentIds = new Set<number>();
   eventTypeOptions: Array<{ label: string; value: EventType | '' }> = [{ label: 'All Types', value: '' }];
-  displayedColumns: string[] = ['select', 'applicant', 'designation', 'constituency', 'agenda', 'eventType', 'location', 'status', 'aiNotes', 'actions'];
+  displayedColumns: string[] = ['select', 'applicant', 'designation', 'constituency', 'agenda', 'eventType', 'location', 'status', 'createdAt', 'aiNotes', 'actions'];
+  pageSizeOptions = [10, 25, 50];
+  pageSize = 10;
+  pageIndex = 0;
+  sortColumn: AppointmentSortColumn = 'createdAt';
+  sortDirection: SortDirection = 'desc';
 
   statusOptions = [
     { label: 'All Statuses', value: '' },
@@ -224,6 +241,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
 
   applyFilter() {
     const searchValue = this.search.trim().toLowerCase();
+    this.pageIndex = 0;
     this.filtered = this.appointments.filter(a => {
       const createdDate = this.parseAppointmentDate(a);
       return (!searchValue ||
@@ -241,6 +259,100 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
         this.selectedAppointmentIds.delete(id);
       }
     });
+  }
+
+  get sortedAppointments() {
+    return [...this.filtered].sort((left, right) => this.compareValues(
+      this.appointmentSortValue(left, this.sortColumn),
+      this.appointmentSortValue(right, this.sortColumn)
+    ) * (this.sortDirection === 'asc' ? 1 : -1));
+  }
+
+  get pagedAppointments() {
+    const start = this.pageIndex * this.pageSize;
+    return this.sortedAppointments.slice(start, start + this.pageSize);
+  }
+
+  get totalPages() {
+    return Math.max(1, Math.ceil(this.filtered.length / this.pageSize));
+  }
+
+  get pageStart() {
+    return this.filtered.length === 0 ? 0 : this.pageIndex * this.pageSize + 1;
+  }
+
+  get pageEnd() {
+    return Math.min(this.filtered.length, (this.pageIndex + 1) * this.pageSize);
+  }
+
+  setSort(column: AppointmentSortColumn) {
+    if (this.sortColumn === column) {
+      this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.sortColumn = column;
+      this.sortDirection = column === 'createdAt' ? 'desc' : 'asc';
+    }
+    this.pageIndex = 0;
+  }
+
+  sortIcon(column: AppointmentSortColumn) {
+    if (this.sortColumn !== column) return 'unfold_more';
+    return this.sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward';
+  }
+
+  changePageSize(size: number) {
+    this.pageSize = Number(size);
+    this.pageIndex = 0;
+  }
+
+  previousPage() {
+    if (this.pageIndex > 0) {
+      this.pageIndex--;
+    }
+  }
+
+  nextPage() {
+    if (this.pageIndex < this.totalPages - 1) {
+      this.pageIndex++;
+    }
+  }
+
+  private appointmentSortValue(appointment: Appointment, column: AppointmentSortColumn): string | number {
+    switch (column) {
+      case 'applicant':
+        return appointment.applicant?.fullName || appointment.applicantName || '';
+      case 'designation':
+        return appointment.applicant?.designation || '';
+      case 'constituency':
+        return appointment.applicant?.constituency || '';
+      case 'agenda':
+        return appointment.agendaType || appointment.subject || '';
+      case 'eventType':
+        return appointment.eventType || '';
+      case 'location':
+        return appointment.requestedLocation || '';
+      case 'status':
+        return this.getStatusLabel(appointment.status);
+      case 'createdAt':
+        return this.dateSortValue(appointment.createdAt);
+      case 'aiNotes':
+        return this.getAiNotesStatusLabel(appointment);
+      default:
+        return '';
+    }
+  }
+
+  private compareValues(left: string | number, right: string | number) {
+    if (typeof left === 'number' && typeof right === 'number') {
+      return left - right;
+    }
+    return String(left).toLowerCase().localeCompare(String(right).toLowerCase());
+  }
+
+  private dateSortValue(value?: string) {
+    if (!value) return 0;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? 0 : date.getTime();
   }
 
   getStatusSeverity(s: AppointmentStatus): 'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' | undefined {

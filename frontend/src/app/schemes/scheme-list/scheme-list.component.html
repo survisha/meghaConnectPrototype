@@ -1,7 +1,8 @@
 <div>
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.75rem">
     <h2 class="page-title" style="margin:0">CM Scheme Applications</h2>
-    <button id="schemeList_newApplicationBtn" mat-raised-button color="primary" routerLink="/schemes/apply">
+    <button id="schemeList_newApplicationBtn" mat-raised-button color="primary" routerLink="/schemes/apply"
+    *ngIf="auth.hasRole('ADMIN') || auth.hasRole('OSD')">
       <mat-icon>add</mat-icon> New Application
     </button>
   </div>
@@ -40,7 +41,7 @@
       <div class="scheme-filter-wrap">
         <mat-form-field appearance="outline" class="scheme-filter-field" floatLabel="always">
           <mat-label>Scheme</mat-label>
-          <mat-select id="schemeList_filterSelect" [(ngModel)]="filterScheme" [disabled]="schemeOptionsLoading">
+          <mat-select id="schemeList_filterSelect" [(ngModel)]="filterScheme" (ngModelChange)="applyFilter()" [disabled]="schemeOptionsLoading">
             <mat-option *ngFor="let opt of schemeOptions" [value]="opt.value">
               {{ opt.label }}
             </mat-option>
@@ -49,68 +50,108 @@
       </div>
     </div>
     <div class="section-card-body" style="padding:0; overflow-x: auto;">
-      <table mat-table [dataSource]="filtered" class="mat-elevation-z0" style="width: 100%;">
+      <table mat-table [dataSource]="pagedSchemes" class="mat-elevation-z0" style="width: 100%;">
         
         <!-- Applicant Column -->
         <ng-container matColumnDef="applicant">
-          <th mat-header-cell *matHeaderCellDef>Applicant</th>
+          <th mat-header-cell *matHeaderCellDef>
+            <button type="button" class="sort-header-button" (click)="setSort('applicant')">
+              Applicant <mat-icon>{{ sortIcon('applicant') }}</mat-icon>
+            </button>
+          </th>
           <td mat-cell *matCellDef="let s">
-            <div style="font-weight:600; color: #1f2937;">{{ s.applicant.fullName }}</div>
-            <div style="font-size:0.75rem;color:#6b7280">{{ s.applicant.constituency }}</div>
+            <div style="font-weight:600; color: #1f2937;">{{ applicantName(s) }}</div>
+            <div style="font-size:0.75rem;color:#6b7280">{{ applicantConstituency(s) }}</div>
           </td>
         </ng-container>
 
         <!-- Scheme Column -->
         <ng-container matColumnDef="scheme">
-          <th mat-header-cell *matHeaderCellDef>Scheme</th>
+          <th mat-header-cell *matHeaderCellDef>
+            <button type="button" class="sort-header-button" (click)="setSort('scheme')">
+              Scheme <mat-icon>{{ sortIcon('scheme') }}</mat-icon>
+            </button>
+          </th>
           <td mat-cell *matCellDef="let s">
             <span class="scheme-badge" [style.background]="getSchemeBadgeColor(s.schemeType)">
-              {{ s.schemeType.replace('_',' ') }}
+              {{ s.schemeType ? s.schemeType.replace('_',' ') : '-' }}
             </span>
           </td>
         </ng-container>
 
         <!-- Project Column -->
         <ng-container matColumnDef="project">
-          <th mat-header-cell *matHeaderCellDef>Project</th>
+          <th mat-header-cell *matHeaderCellDef>
+            <button type="button" class="sort-header-button" (click)="setSort('project')">
+              Project <mat-icon>{{ sortIcon('project') }}</mat-icon>
+            </button>
+          </th>
           <td mat-cell *matCellDef="let s" style="font-size:0.85rem; color: #1f2937;">
-            {{ s.projectName }}
+            {{ s.projectName || '-' }}
           </td>
         </ng-container>
 
         <!-- Category Column -->
         <ng-container matColumnDef="category">
-          <th mat-header-cell *matHeaderCellDef>Category</th>
+          <th mat-header-cell *matHeaderCellDef>
+            <button type="button" class="sort-header-button" (click)="setSort('category')">
+              Category <mat-icon>{{ sortIcon('category') }}</mat-icon>
+            </button>
+          </th>
           <td mat-cell *matCellDef="let s" style="font-size:0.85rem; color: #1f2937;">
-            {{ s.projectCategory }}
+            {{ s.projectCategory || '-' }}
           </td>
         </ng-container>
 
         <!-- Estimated Cost Column -->
         <ng-container matColumnDef="estCost">
-          <th mat-header-cell *matHeaderCellDef>Est. Cost</th>
+          <th mat-header-cell *matHeaderCellDef>
+            <button type="button" class="sort-header-button" (click)="setSort('estCost')">
+              Est. Cost <mat-icon>{{ sortIcon('estCost') }}</mat-icon>
+            </button>
+          </th>
           <td mat-cell *matCellDef="let s" style="font-size:0.85rem; color: #1f2937;">
-            ₹{{ (s.estimatedCost/100000).toFixed(1) }}L
+            {{ s.estimatedCost ? ('₹' + (s.estimatedCost/100000).toFixed(1) + 'L') : '-' }}
           </td>
         </ng-container>
 
         <!-- HCM Approved Column -->
         <ng-container matColumnDef="hcmApproved">
-          <th mat-header-cell *matHeaderCellDef>HCM Approved</th>
+          <th mat-header-cell *matHeaderCellDef>
+            <button type="button" class="sort-header-button" (click)="setSort('hcmApproved')">
+              HCM Approved <mat-icon>{{ sortIcon('hcmApproved') }}</mat-icon>
+            </button>
+          </th>
           <td mat-cell *matCellDef="let s" style="font-size:0.85rem;">
             <span *ngIf="s.hcmApprovedCost" class="dir-green">
               ₹{{ (s.hcmApprovedCost/100000).toFixed(1) }}L
             </span>
-            <span *ngIf="!s.hcmApprovedCost" style="color:#9ca3af">–</span>
+            <span *ngIf="!s.hcmApprovedCost" style="color:#9ca3af">-</span>
+          </td>
+        </ng-container>
+
+        <!-- Created At Column -->
+        <ng-container matColumnDef="createdAt">
+          <th mat-header-cell *matHeaderCellDef>
+            <button type="button" class="sort-header-button" (click)="setSort('createdAt')">
+              Created At <mat-icon>{{ sortIcon('createdAt') }}</mat-icon>
+            </button>
+          </th>
+          <td mat-cell *matCellDef="let s" style="font-size:0.85rem; color: #1f2937;">
+            {{ s.createdAt ? (s.createdAt | date:'dd-MMM-yyyy hh:mm a') : '-' }}
           </td>
         </ng-container>
 
         <!-- Status Column -->
         <ng-container matColumnDef="status">
-          <th mat-header-cell *matHeaderCellDef>Status</th>
+          <th mat-header-cell *matHeaderCellDef>
+            <button type="button" class="sort-header-button" (click)="setSort('status')">
+              Status <mat-icon>{{ sortIcon('status') }}</mat-icon>
+            </button>
+          </th>
           <td mat-cell *matCellDef="let s">
             <span [class]="getStatusClass(s.status)">
-              {{ s.status.replace('_',' ') }}
+              {{ s.status ? s.status.replace('_',' ') : '-' }}
             </span>
           </td>
         </ng-container>
@@ -119,7 +160,7 @@
         <ng-container matColumnDef="actions">
           <th mat-header-cell *matHeaderCellDef style="width: 80px;"></th>
           <td mat-cell *matCellDef="let s">
-            <button mat-icon-button (click)="view(s)" color="primary">
+            <button mat-icon-button (click)="view(s); $event.stopPropagation()" color="primary">
               <mat-icon>visibility</mat-icon>
             </button>
           </td>
@@ -129,36 +170,90 @@
         <tr mat-row *matRowDef="let row; columns: displayedColumns;" 
             style="cursor: pointer;" 
             (click)="view(row)"></tr>
+
+        <tr class="mat-row" *matNoDataRow>
+          <td class="mat-cell" [attr.colspan]="displayedColumns.length" style="text-align:center;padding:2rem;color:#9ca3af">
+            No scheme applications found.
+          </td>
+        </tr>
       </table>
+    </div>
+
+    <div class="table-pagination">
+      <div class="pagination-summary">
+        Showing {{ pageStart }}-{{ pageEnd }} of {{ filtered.length }} records
+      </div>
+      <div class="pagination-controls">
+        <mat-form-field appearance="outline" class="page-size-field">
+          <mat-label>Rows</mat-label>
+          <mat-select [ngModel]="pageSize" (ngModelChange)="changePageSize($event)">
+            <mat-option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <button mat-stroked-button type="button" (click)="previousPage()" [disabled]="pageIndex === 0">
+          <mat-icon>chevron_left</mat-icon>
+          Previous
+        </button>
+        <span class="page-count">Page {{ pageIndex + 1 }} of {{ totalPages }}</span>
+        <button mat-stroked-button type="button" (click)="nextPage()" [disabled]="pageIndex >= totalPages - 1">
+          Next
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+      </div>
     </div>
   </div>
 </div>
 
 <!-- Detail Dialog -->
-<div class="dialog-overlay" *ngIf="showDetail" (click)="showDetail=false"></div>
-<div class="dialog-container" *ngIf="showDetail" style="max-width:560px">
+<div class="dialog-overlay" *ngIf="showDetail" (click)="closeDetail()"></div>
+<div class="dialog-container" *ngIf="showDetail" style="max-width:680px">
   <div class="dialog-header">
     <h2>Scheme Application Detail</h2>
-    <button mat-icon-button (click)="showDetail=false">
+    <button mat-icon-button (click)="closeDetail()">
       <mat-icon>close</mat-icon>
     </button>
   </div>
   <div class="dialog-content" *ngIf="selected">
     <div style="display:flex;flex-direction:column;gap:0.75rem">
+      <div class="details-profile-panel">
+        <div class="visitor-photo-frame">
+          <img *ngIf="selectedVisitorPhotoUrl"
+               [src]="selectedVisitorPhotoUrl"
+               [alt]="applicantName(selected) + ' photo'">
+          <div class="visitor-photo-placeholder" *ngIf="!selectedVisitorPhotoUrl && !selectedVisitorPhotoLoading">
+            <mat-icon>account_circle</mat-icon>
+          </div>
+          <div class="visitor-photo-loading" *ngIf="selectedVisitorPhotoLoading">
+            <mat-icon>hourglass_empty</mat-icon>
+          </div>
+        </div>
+
+        <div class="details-profile-copy">
+          <span class="field-label">Citizen Photo</span>
+          <h3>{{ applicantName(selected) }}</h3>
+          <div class="details-profile-meta">
+            <span>{{ applicantPhone(selected) }}</span>
+            <span>EPIC: {{ applicantEpic(selected) }}</span>
+            <span>{{ applicantConstituency(selected) }}</span>
+          </div>
+          <span class="photo-error" *ngIf="selectedVisitorPhotoError">{{ selectedVisitorPhotoError }}</span>
+        </div>
+      </div>
+
       <div style="display:flex;gap:1rem;align-items:flex-start">
         <span class="scheme-badge" [style.background]="getSchemeBadgeColor(selected.schemeType)" 
               style="font-size:1rem;padding:6px 14px">
-          {{ selected.schemeType.replace('_',' ') }}
+          {{ selected.schemeType ? selected.schemeType.replace('_',' ') : '-' }}
         </span>
         <div style="flex: 1;">
-          <div style="font-weight:700;font-size:1rem; color: #1f2937;">{{ selected.projectName }}</div>
+          <div style="font-weight:700;font-size:1rem; color: #1f2937;">{{ selected.projectName || '-' }}</div>
           <div style="font-size:0.82rem;color:#6b7280">
-            {{ selected.applicant.fullName }} | {{ selected.applicant.constituency }}
+            {{ applicantName(selected) }} | {{ applicantConstituency(selected) }}
           </div>
         </div>
         <div>
           <span [class]="getStatusClass(selected.status)">
-            {{ selected.status.replace('_',' ') }}
+            {{ selected.status ? selected.status.replace('_',' ') : '-' }}
           </span>
         </div>
       </div>
@@ -166,11 +261,13 @@
       <mat-divider></mat-divider>
       
       <div class="detail-grid">
-        <div><span>Category</span><strong style="color: #1f2937;">{{ selected.projectCategory }}</strong></div>
-        <div><span>Beneficiary Type</span><strong style="color: #1f2937;">{{ selected.beneficiaryType }}</strong></div>
-        <div><span>Beneficiary Count</span><strong style="color: #1f2937;">{{ selected.beneficiaryCount }}</strong></div>
-        <div><span>Est. Cost</span><strong style="color: #1f2937;">₹{{ selected.estimatedCost.toLocaleString() }}</strong></div>
-        <div><span>Community Contribution</span><strong style="color: #1f2937;">₹{{ selected.communityContribution.toLocaleString() }}</strong></div>
+        <div><span>Category</span><strong style="color: #1f2937;">{{ selected.projectCategory || '-' }}</strong></div>
+        <div><span>Beneficiary Type</span><strong style="color: #1f2937;">{{ selected.beneficiaryType || '-' }}</strong></div>
+        <div><span>Beneficiary Count</span><strong style="color: #1f2937;">{{ selected.beneficiaryCount || '-' }}</strong></div>
+        <div><span>Est. Cost</span><strong style="color: #1f2937;">{{ selected.estimatedCost ? ('₹' + selected.estimatedCost.toLocaleString()) : '-' }}</strong></div>
+        <div><span>Community Contribution</span><strong style="color: #1f2937;">{{ selected.communityContribution ? ('₹' + selected.communityContribution.toLocaleString()) : '-' }}</strong></div>
+        <div><span>Created At</span><strong style="color: #1f2937;">{{ selected.createdAt ? (selected.createdAt | date:'dd-MMM-yyyy hh:mm a') : '-' }}</strong></div>
+        <div><span>Updated At</span><strong style="color: #1f2937;">{{ selected.updatedAt ? (selected.updatedAt | date:'dd-MMM-yyyy hh:mm a') : '-' }}</strong></div>
         <div *ngIf="selected.hcmApprovedCost">
           <span>HCM Approved</span>
           <strong class="dir-green">₹{{ selected.hcmApprovedCost.toLocaleString() }}</strong>
@@ -181,7 +278,7 @@
       
       <div style="font-size:0.85rem; color: #1f2937;">
         <strong>Justification:</strong><br>
-        {{ selected.justification }}
+        {{ selected.justification || '-' }}
       </div>
       
       <div *ngIf="selected.hcmDecision" 
@@ -194,9 +291,57 @@
     </div>
   </div>
   <div class="dialog-footer">
-    <button mat-stroked-button (click)="showDetail=false">Close</button>
-    <button mat-raised-button color="primary">
-      <mat-icon>edit</mat-icon> Edit
-    </button>
+    <ng-container *ngIf="selected as scheme">
+      <div class="details-action-buttons" *ngIf="canUseSchemeDecisionActions(scheme)">
+        <button mat-icon-button
+                type="button"
+                class="approve-action"
+                [disabled]="actionUpdating"
+                (click)="approveScheme(scheme)"
+                title="Approve">
+          <mat-icon>check_circle</mat-icon>
+        </button>
+
+        <button mat-icon-button
+                type="button"
+                class="reject-action"
+                [disabled]="actionUpdating"
+                (click)="rejectScheme(scheme)"
+                title="Reject">
+          <mat-icon>cancel</mat-icon>
+        </button>
+
+        <button mat-icon-button
+                type="button"
+                class="followup-action"
+                [disabled]="!canUseSchemeFollowUpAction(scheme) || actionUpdating"
+                (click)="markSchemeFollowUp(scheme)"
+                title="Mark Follow-up">
+          <mat-icon>follow_the_signs</mat-icon>
+        </button>
+      </div>
+
+      <div class="details-action-buttons cmo-action-buttons" *ngIf="canUseSchemeCmoActions(scheme)">
+        <button mat-icon-button
+                type="button"
+                class="cmo-info-action"
+                [disabled]="actionUpdating"
+                (click)="requestSchemeMissingInfo(scheme)"
+                title="Request missing information">
+          <mat-icon>assignment_late</mat-icon>
+        </button>
+
+        <button mat-icon-button
+                type="button"
+                class="cmo-forward-action"
+                [disabled]="actionUpdating"
+                (click)="forwardSchemeToApprover(scheme)"
+                title="Send to approver">
+          <mat-icon>send</mat-icon>
+        </button>
+      </div>
+    </ng-container>
+
+    <button mat-stroked-button (click)="closeDetail()">Close</button>
   </div>
 </div>

@@ -24,7 +24,6 @@ import { GrievancesComponent } from './grievances/grievances.component';
 import { VisitorDashboardComponent } from './visitor-dashboard/visitor-dashboard.component';
 import { ApproverInboxComponent } from './approver-workflow/approver-inbox.component';
 import { AppointmentApprovalDetailsComponent } from './approver-workflow/appointment-approval-details.component';
-import { CmoModerationComponent } from './cmo-moderation/cmo-moderation.component';
 import { authGuard } from './guards/auth.guard';
 import { roleGuard } from './guards/role.guard';
 
@@ -54,7 +53,6 @@ export const routes: Routes = [
       { path: 'appointments/approval-details/:id', component: AppointmentApprovalDetailsComponent, canActivate: [roleGuard('HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER')] },
       { path: 'scheduling', component: SchedulingComponent, canActivate: [roleGuard(...REPORTS_ROLES)] },
       { path: 'approver', redirectTo: 'appointments', pathMatch: 'full' },
-      { path: 'cmo-moderation', component: CmoModerationComponent, canActivate: [roleGuard('HCM', 'ADMIN', 'OSD', 'CMO_OFFICER')] },
       { path: 'schemes', component: SchemeListComponent, canActivate: [roleGuard(...REPORTS_ROLES)] },
       { path: 'schemes/apply', component: SchemeFormComponent },
       { path: 'grievances', component: GrievancesComponent },

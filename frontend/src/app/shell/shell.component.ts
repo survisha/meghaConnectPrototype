@@ -39,8 +39,6 @@ export class ShellComponent implements OnInit {
           roles: ['ADMIN','OSD','PUBLIC'] },
         { labelKey: 'WALKIN_COUNTER', icon: 'login', route: '/appointments/walkin',
           roles: ['ADMIN','OSD','DATA_ENTRY_OPERATOR'] },
-        { labelKey: 'CMO_MODERATION', icon: 'filter_alt', route: '/cmo-moderation',
-          roles: ['HCM','ADMIN','OSD','CMO_OFFICER'] },
       ]
     },
     {

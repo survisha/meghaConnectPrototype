@@ -14,6 +14,7 @@ class QrValidationPayload {
   Map<String, dynamic> toJson() {
     return {
       'qrToken': qrToken,
+      'qrData': qrToken,
       'deviceId': deviceId,
       if (gateName != null && gateName!.isNotEmpty) 'gateName': gateName,
       if (location != null && location!.isNotEmpty) 'location': location,
@@ -37,6 +38,7 @@ class QrActionPayload {
   Map<String, dynamic> toJson() {
     return {
       'qrToken': qrToken,
+      'qrData': qrToken,
       'deviceId': deviceId,
       if (gateName != null && gateName!.isNotEmpty) 'gateName': gateName,
       if (location != null && location!.isNotEmpty) 'location': location,

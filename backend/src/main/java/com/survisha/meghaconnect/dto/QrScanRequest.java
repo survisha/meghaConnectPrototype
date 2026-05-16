@@ -14,6 +14,8 @@ public class QrScanRequest {
     @NotBlank
     private String qrToken;
 
+    private String qrData;
+
     @NotBlank
     private String deviceId;
 

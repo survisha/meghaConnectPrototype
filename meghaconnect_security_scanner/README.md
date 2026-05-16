@@ -48,7 +48,7 @@ The app reads configuration through Dart defines:
 | `APP_ENV` | `dev` | `dev`, `uat`, or `prod` |
 | `API_BASE_URL` | Environment placeholder | Must be HTTPS |
 | `USE_MOCK_AUTH` | `false` | Set `true` for offline login demos |
-| `USE_MOCK_QR` | `true` | Set `false` when backend QR APIs are ready |
+| `USE_MOCK_QR` | `false` | Legacy flag retained for older builds; current app uses the backend visitor-pass API |
 | `USE_BACKEND_RECENT_SCANS` | `false` | Set `true` if `GET /api/v1/qr/recent-scans` exists |
 
 Example run against UAT:
@@ -109,13 +109,13 @@ Optional response fields:
 
 ### QR Validate
 
-`POST /api/v1/qr/validate`
+`POST /api/v1/visitor-pass/validate`
 
 Request:
 
 ```json
 {
-  "qrToken": "secure-token-only",
+  "qrData": "secure-token-only",
   "deviceId": "generated-device-id",
   "gateName": "Main Gate",
   "location": "Secretariat Entry"
@@ -142,7 +142,7 @@ Response fields consumed by the app:
 
 ### Check-In / Check-Out
 
-`POST /api/v1/qr/check-in`
+`POST /api/v1/visitor-pass/check-in`
 
 `POST /api/v1/qr/check-out`
 

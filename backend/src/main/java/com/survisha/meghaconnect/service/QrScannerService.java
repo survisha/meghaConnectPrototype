@@ -221,7 +221,7 @@ public class QrScannerService {
     }
 
     private AppointmentQrToken loadTokenForUpdate(QrScanRequest request, ScanContext context) {
-        String qrToken = request != null ? trimToNull(request.getQrToken()) : null;
+        String qrToken = request != null ? trimToNull(firstNonBlank(request.getQrToken(), request.getQrData())) : null;
         if (qrToken == null) {
             throw qrException(
                     ErrorCodeConstants.QR_TOKEN_INVALID,
@@ -305,6 +305,9 @@ public class QrScannerService {
         return QrValidationResponse.builder()
                 .valid(true)
                 .appointmentId(appointment != null ? appointment.getId() : null)
+                .applicationId(appointment != null ? appointment.getApplicationId() : null)
+                .applicantName(visitor != null ? visitor.getFullName() : null)
+                .mobileNumber(visitor != null ? visitor.getPhoneNumber() : null)
                 .visitorId(visitor != null ? visitor.getId() : null)
                 .visitorName(visitor != null ? visitor.getFullName() : null)
                 .visitorPhotoUrl(visitor != null ? firstNonBlank(
@@ -313,6 +316,11 @@ public class QrScannerService {
                         visitor.getPhotoPath()
                 ) : null)
                 .appointmentDateTime(appointment != null ? appointment.getScheduledDateTime() : null)
+                .scheduledDateTime(appointment != null ? appointment.getScheduledDateTime() : null)
+                .location(appointment != null && appointment.getRequestedLocation() != null
+                        ? appointment.getRequestedLocation().name()
+                        : null)
+                .status("VALID")
                 .purpose(appointment != null ? firstNonBlank(
                         appointment.getSubject(),
                         appointment.getAgendaType(),
@@ -352,7 +360,7 @@ public class QrScannerService {
     }
 
     private ScanContext contextFor(QrScanRequest request, String actor, QrScanAuditLog.ScanAction action) {
-        String rawToken = request != null ? request.getQrToken() : null;
+        String rawToken = request != null ? firstNonBlank(request.getQrToken(), request.getQrData()) : null;
         return ScanContext.builder()
                 .tokenHash(qrTokenService.hashToken(rawToken))
                 .scannedBy(firstNonBlank(actor, "anonymous"))

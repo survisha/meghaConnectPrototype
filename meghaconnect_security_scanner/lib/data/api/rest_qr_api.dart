@@ -17,7 +17,7 @@ class RestQrApi implements QrApi {
   Future<VisitorDetails> validate(QrValidationPayload payload) async {
     try {
       final response = await _dio.post(
-        '/api/v1/qr/validate',
+        '/api/v1/visitor-pass/validate',
         data: payload.toJson(),
       );
       return VisitorDetails.fromJson(
@@ -32,7 +32,7 @@ class RestQrApi implements QrApi {
   @override
   Future<QrActionResult> checkIn(QrActionPayload payload) async {
     return _postAction(
-      '/api/v1/qr/check-in',
+      '/api/v1/visitor-pass/check-in',
       payload,
       fallbackAction: 'CHECK_IN',
     );

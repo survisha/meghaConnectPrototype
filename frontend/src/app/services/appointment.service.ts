@@ -328,6 +328,12 @@ export class AppointmentService {
       .pipe(map(res => this.normalizeDocument(this.unwrapData(res))));
   }
 
+  downloadVisitorPass(appointmentId: number): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/${appointmentId}/visitor-pass/download`, {
+      responseType: 'blob',
+    });
+  }
+
   markForPublicDarbar(id: number, remarks = 'Follow-up'): Observable<unknown> {
     return this.http.post<unknown>(`${this.baseUrl}/approver/${id}/select-public-darbar`, { remarks });
   }

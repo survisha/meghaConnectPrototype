@@ -24,7 +24,7 @@ class AppEnvironment {
     const baseUrl = String.fromEnvironment('API_BASE_URL');
     const useMockAuth =
         bool.fromEnvironment('USE_MOCK_AUTH', defaultValue: false);
-    const useMockQr = bool.fromEnvironment('USE_MOCK_QR', defaultValue: true);
+    const useMockQr = bool.fromEnvironment('USE_MOCK_QR', defaultValue: false);
     const useBackendRecentScans =
         bool.fromEnvironment('USE_BACKEND_RECENT_SCANS', defaultValue: false);
 
@@ -64,9 +64,9 @@ class AppEnvironment {
 
   static String _defaultBaseUrl(EnvironmentName name) {
     return switch (name) {
-      EnvironmentName.dev => 'https://dev-api.meghaconnect.example',
-      EnvironmentName.uat => 'https://uat-api.meghaconnect.example',
-      EnvironmentName.prod => 'https://api.meghaconnect.example',
+      EnvironmentName.dev => 'https://meghaconnect.cloud',
+      EnvironmentName.uat => 'https://meghaconnect.cloud',
+      EnvironmentName.prod => 'https://meghaconnect.cloud',
     };
   }
 

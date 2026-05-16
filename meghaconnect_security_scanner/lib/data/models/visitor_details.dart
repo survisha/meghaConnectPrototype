@@ -32,7 +32,10 @@ class VisitorDetails {
   final bool canCheckOut;
   final String? message;
 
-  bool get isValid => qrStatus.toUpperCase() == 'VALID';
+  bool get isValid {
+    final status = qrStatus.toUpperCase();
+    return status == 'VALID' || status == 'ACTIVE' || status == 'QR_GENERATED';
+  }
 
   VisitorDetails copyWith({
     String? qrStatus,
@@ -161,7 +164,7 @@ class VisitorDetails {
   }) {
     final qr = qrStatus.toUpperCase();
     final entry = entryExitStatus.toUpperCase();
-    return qr == 'VALID' &&
+    return (qr == 'VALID' || qr == 'ACTIVE' || qr == 'QR_GENERATED') &&
         entry != 'CHECKED_IN' &&
         entry != 'CHECKED_OUT' &&
         entry != 'CANCELLED';
@@ -173,7 +176,7 @@ class VisitorDetails {
   }) {
     final qr = qrStatus.toUpperCase();
     final entry = entryExitStatus.toUpperCase();
-    return qr == 'VALID' && entry == 'CHECKED_IN';
+    return (qr == 'VALID' || qr == 'ACTIVE' || qr == 'CHECKED_IN') && entry == 'CHECKED_IN';
   }
 
   static DateTime? _dateTime(Object? value) {

@@ -28,13 +28,13 @@ class QrTokenServiceTest {
     private QrTokenService qrTokenService;
 
     @Test
-    void generateRawTokenCreatesCryptographicallyStrongUrlSafeToken() {
+    void generateRawTokenCreatesCryptographicallyStrongScannerSafeToken() {
         String first = qrTokenService.generateRawToken();
         String second = qrTokenService.generateRawToken();
 
         assertNotNull(first);
-        assertEquals(43, first.length());
-        assertTrue(first.matches("[A-Za-z0-9_-]+"));
+        assertEquals(64, first.length());
+        assertTrue(first.matches("[A-F0-9]+"));
         assertNotEquals(first, second);
     }
 

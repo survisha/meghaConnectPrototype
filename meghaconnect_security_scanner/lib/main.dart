@@ -7,7 +7,6 @@ import 'core/security/secure_token_storage.dart';
 import 'core/utils/device_id_provider.dart';
 import 'data/api/auth_api.dart';
 import 'data/api/mock_auth_api.dart';
-import 'data/api/mock_qr_api.dart';
 import 'data/api/qr_api.dart';
 import 'data/api/rest_auth_api.dart';
 import 'data/api/rest_qr_api.dart';
@@ -33,8 +32,7 @@ void main() {
 
   final AuthApi authApi =
       environment.useMockAuth ? MockAuthApi() : RestAuthApi(apiClient.dio);
-  final QrApi qrApi =
-      environment.useMockQr ? MockQrApi() : RestQrApi(apiClient.dio);
+  final QrApi qrApi = RestQrApi(apiClient.dio);
 
   final appState = AppState(
     authRepository: AuthRepository(

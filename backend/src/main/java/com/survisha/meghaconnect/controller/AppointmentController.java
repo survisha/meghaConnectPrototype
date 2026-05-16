@@ -12,6 +12,7 @@ import com.survisha.meghaconnect.service.AppointmentDocumentAiNotesService;
 import com.survisha.meghaconnect.service.AppointmentService;
 import com.survisha.meghaconnect.service.HcmActionService;
 import com.survisha.meghaconnect.service.ScheduleEventService;
+import com.survisha.meghaconnect.service.VisitorPassService;
 import com.survisha.meghaconnect.util.RequestContextUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -54,6 +55,7 @@ public class AppointmentController {
     private final AppointmentDocumentAiNotesService appointmentDocumentAiNotesService;
     private final ScheduleEventService scheduleEventService;
     private final HcmActionService hcmActionService;
+    private final VisitorPassService visitorPassService;
 
     @Operation(summary = "Get all appointments", description = "Retrieve paginated list of all appointments")
     @ApiResponses(value = {
@@ -137,6 +139,32 @@ public class AppointmentController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         return ResponseEntity.ok(appointmentService.findMyAppointments(visitorId));
+    }
+
+    @Operation(summary = "Get visitor pass details", description = "Retrieve visitor pass metadata for a scheduled citizen appointment")
+    @GetMapping("/{id}/visitor-pass")
+    @PreAuthorize("hasAnyRole('PUBLIC','CITIZEN')")
+    public ResponseEntity<Map<String, Object>> getVisitorPass(@PathVariable Long id,
+                                                              @AuthenticationPrincipal UserDetails user) {
+        logEndpoint("/api/v1/appointments/{id}/visitor-pass");
+        return ResponseEntity.ok(visitorPassService.getPassDetails(id, visitorIdFromPrincipal(user)));
+    }
+
+    @Operation(summary = "Download visitor pass", description = "Download the visitor pass file for a scheduled citizen appointment")
+    @GetMapping(value = "/{id}/visitor-pass/download", produces = MediaType.APPLICATION_PDF_VALUE)
+    @PreAuthorize("hasAnyRole('PUBLIC','CITIZEN')")
+    public ResponseEntity<byte[]> downloadVisitorPass(@PathVariable Long id,
+                                                      @AuthenticationPrincipal UserDetails user) {
+        logEndpoint("/api/v1/appointments/{id}/visitor-pass/download");
+        Long visitorId = visitorIdFromPrincipal(user);
+        byte[] pdf = visitorPassService.generatePassPdf(id, visitorId, user != null ? user.getUsername() : "visitor");
+        String applicationId = appointmentService.findById(id)
+            .map(Appointment::getApplicationId)
+            .orElse(String.valueOf(id));
+        return ResponseEntity.ok()
+            .contentType(MediaType.APPLICATION_PDF)
+            .header("Content-Disposition", "attachment; filename=\"visitor-pass-" + applicationId + ".pdf\"")
+            .body(pdf);
     }
 
     @Operation(summary = "Get appointments for DEO", description = "Retrieve appointments visible to DEO review queues")

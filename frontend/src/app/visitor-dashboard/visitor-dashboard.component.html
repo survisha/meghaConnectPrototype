@@ -2,6 +2,9 @@
   <div *ngIf="errorMsg" class="error-message" style="margin-bottom:1rem">
     {{ errorMsg }}
   </div>
+  <div *ngIf="successMsg" class="success-message" style="margin-bottom:1rem">
+    {{ successMsg }}
+  </div>
 
   <!-- KPI Cards -->
   <div class="kpi-grid">
@@ -136,14 +139,30 @@
         <mat-icon>event</mat-icon> Appointment History
       </div>
       <div class="card-body">
-        <div *ngFor="let a of myAppointments" class="list-item">
+        <div *ngFor="let a of myAppointments" class="list-item appointment-item">
           <div class="item-main">
-            <div class="item-id">{{ a.id }}</div>
-            <div class="item-text">{{ a.title }}</div>
+            <div class="item-id">{{ a.applicationId }}</div>
+            <div class="item-text">{{ appointmentTitle(a) }}</div>
+            <div class="appointment-subtext">
+              <span>{{ a.agendaType || 'Appointment' }}</span>
+              <span>{{ a.requestedLocation || '—' }}</span>
+              <span>Created {{ formatDate(a.createdAt || a.submittedAt) }}</span>
+            </div>
           </div>
-          <div class="item-meta">
-            <p-tag [value]="a.status | titlecase" [severity]="getStatusSeverity(a.status)"></p-tag>
-            <span class="item-date"><mat-icon>event</mat-icon> {{ a.date }}</span>
+          <div class="item-meta appointment-actions">
+            <p-tag [value]="displayStatus(a)" [severity]="getStatusSeverity(a.status)"></p-tag>
+            <span class="item-date"><mat-icon>event</mat-icon> {{ formatDate(a.scheduledDateTime) }}</span>
+            <button type="button" class="btn-small btn-outline-small" (click)="viewAppointment(a)">
+              View
+            </button>
+            <button
+              type="button"
+              class="btn-small btn-primary-small"
+              [disabled]="!canDownloadPass(a) || downloadingPassId === a.id"
+              (click)="downloadVisitorPass(a)">
+              {{ downloadingPassId === a.id ? 'Downloading...' : 'Download Pass' }}
+            </button>
+            <span *ngIf="!canDownloadPass(a)" class="pass-hint">Pass available after appointment scheduling.</span>
           </div>
         </div>
         <div *ngIf="myAppointments.length === 0" class="empty-state">No appointments yet.</div>
@@ -207,4 +226,42 @@
 
   <!-- R008: AI Chatbot Widget -->
   <app-ai-chatbot></app-ai-chatbot>
+
+  <div *ngIf="selectedAppointment" class="modal-backdrop" (click)="closeAppointmentDetails()">
+    <div class="details-modal" (click)="$event.stopPropagation()">
+      <div class="details-header">
+        <div>
+          <div class="details-title">Appointment Details</div>
+          <div class="item-id">{{ selectedAppointment.applicationId }}</div>
+        </div>
+        <button type="button" class="photo-preview-close" (click)="closeAppointmentDetails()" aria-label="Close appointment details">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      <div class="details-grid">
+        <div><span>Applicant</span><strong>{{ selectedAppointment.applicantName || selectedAppointment.applicant.fullName }}</strong></div>
+        <div><span>Mobile</span><strong>{{ selectedAppointment.applicantPhone || selectedAppointment.applicant.phoneNumber }}</strong></div>
+        <div><span>Status</span><strong>{{ displayStatus(selectedAppointment) }}</strong></div>
+        <div><span>Requested Location</span><strong>{{ selectedAppointment.requestedLocation || '—' }}</strong></div>
+        <div><span>Scheduled Date/Time</span><strong>{{ formatDate(selectedAppointment.scheduledDateTime) }}</strong></div>
+        <div><span>Duration</span><strong>{{ selectedAppointment.scheduledDurationMinutes || 30 }} minutes</strong></div>
+        <div><span>Agenda Type</span><strong>{{ selectedAppointment.agendaType || '—' }}</strong></div>
+        <div><span>Created At</span><strong>{{ formatDate(selectedAppointment.createdAt || selectedAppointment.submittedAt) }}</strong></div>
+      </div>
+      <div class="details-brief">
+        <span>Agenda Brief</span>
+        <p>{{ selectedAppointment.agendaBrief || selectedAppointment.subject || '—' }}</p>
+      </div>
+      <div class="details-actions">
+        <button
+          type="button"
+          class="btn-small btn-primary-small"
+          [disabled]="!canDownloadPass(selectedAppointment) || downloadingPassId === selectedAppointment.id"
+          (click)="downloadVisitorPass(selectedAppointment)">
+          {{ downloadingPassId === selectedAppointment.id ? 'Downloading...' : 'Download Visitor Pass' }}
+        </button>
+        <span *ngIf="!canDownloadPass(selectedAppointment)" class="pass-hint">Pass available after appointment scheduling.</span>
+      </div>
+    </div>
+  </div>
 </div>

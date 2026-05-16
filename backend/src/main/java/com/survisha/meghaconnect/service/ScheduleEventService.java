@@ -36,6 +36,7 @@ public class ScheduleEventService {
     private final AppointmentRepository appointmentRepository;
     private final AppointmentService appointmentService;
     private final AppointmentAuditService appointmentAuditService;
+    private final QrTokenService qrTokenService;
 
     public List<ScheduleEvent> findAll() {
         return scheduleEventRepository.findAll();
@@ -162,6 +163,7 @@ public class ScheduleEventService {
             appointment.setUpdatedBy(actor);
 
             Appointment saved = appointmentRepository.save(appointment);
+            qrTokenService.generateForApprovedAppointment(saved, actor);
             appointmentAuditService.recordStatusChange(
                 saved,
                 oldStatus,

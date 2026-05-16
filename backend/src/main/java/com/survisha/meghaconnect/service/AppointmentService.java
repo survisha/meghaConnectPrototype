@@ -288,6 +288,7 @@ public class AppointmentService {
         appt.setStatus(Appointment.AppointmentStatus.SCHEDULED);
         appt.setUpdatedBy(updatedBy);
         Appointment saved = appointmentRepository.save(appt);
+        generateQrIfApproved(saved, updatedBy);
         auditLogService.log("Appointment", saved.getId(), "RESCHEDULED",
             "Rescheduled for: " + scheduledDateTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME), updatedBy);
         return saved;

@@ -6,6 +6,7 @@ import { environment } from '../../environments/environment';
 import { AuthService } from '../services/auth.service';
 import { AppointmentService } from '../services/appointment.service';
 import { GrievanceService } from '../services/grievance.service';
+import { Appointment } from '../models';
 import { Tag } from 'primeng/tag';
 import { AiChatbotComponent } from '../ai-chatbot/ai-chatbot.component';
 import { MatIconModule } from '@angular/material/icon';
@@ -41,11 +42,14 @@ interface ListEntry { id: string; title: string; status: string; date: string; e
 })
 export class VisitorDashboardComponent implements OnInit {
   cards: VisitorCard[] = [];
-  myAppointments: ListEntry[] = [];
+  myAppointments: Appointment[] = [];
   mySchemes: ListEntry[] = [];
   myGrievances: ListEntry[] = [];
   loading = false;
   errorMsg = '';
+  successMsg = '';
+  selectedAppointment: Appointment | null = null;
+  downloadingPassId: number | null = null;
 
   visitorProfile: VisitorProfile | null = null;
   visitorPhotoUrl = '';
@@ -110,12 +114,7 @@ export class VisitorDashboardComponent implements OnInit {
     this.loading = true;
     this.appointmentService.getMyAppointments().subscribe({
       next: appointments => {
-        this.myAppointments = appointments.map(a => ({
-          id: a.applicationId,
-          title: a.subject || a.agendaBrief || a.agendaType || 'Appointment request',
-          status: a.status,
-          date: this.formatDate(a.scheduledDateTime || a.submittedAt || a.createdAt),
-        }));
+        this.myAppointments = appointments;
         this.totalVisits = this.myAppointments.length;
         this.updateCards();
         this.loading = false;
@@ -158,11 +157,66 @@ export class VisitorDashboardComponent implements OnInit {
     ];
   }
 
-  private formatDate(value?: string) {
+  formatDate(value?: string) {
     if (!value) return 'Not scheduled';
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return value;
     return date.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+  }
+
+  appointmentTitle(appointment: Appointment): string {
+    return appointment.subject || appointment.agendaBrief || appointment.agendaType || 'Appointment request';
+  }
+
+  displayStatus(appointment: Appointment): string {
+    if (appointment.status === 'APPROVER_REVIEW') {
+      return 'Under Review';
+    }
+    if (appointment.status === 'APPROVED' && !appointment.scheduledDateTime) {
+      return 'Approved - Waiting for Schedule';
+    }
+    return appointment.status.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  canDownloadPass(appointment: Appointment): boolean {
+    if (!appointment?.scheduledDateTime) {
+      return false;
+    }
+    return ['SCHEDULED', 'HCM_ACCEPTED', 'APPROVED', 'APPROVED_WITH_DATE_TIME', 'SCHEDULED_FOR_PUBLIC_DARBAR']
+      .includes(appointment.status);
+  }
+
+  viewAppointment(appointment: Appointment): void {
+    this.selectedAppointment = appointment;
+  }
+
+  closeAppointmentDetails(): void {
+    this.selectedAppointment = null;
+  }
+
+  downloadVisitorPass(appointment: Appointment): void {
+    if (!this.canDownloadPass(appointment) || this.downloadingPassId) {
+      return;
+    }
+    this.errorMsg = '';
+    this.successMsg = '';
+    this.downloadingPassId = appointment.id;
+    this.appointmentService.downloadVisitorPass(appointment.id).subscribe({
+      next: blob => {
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `visitor-pass-${appointment.applicationId || appointment.id}.pdf`;
+        anchor.click();
+        URL.revokeObjectURL(url);
+        this.successMsg = 'Visitor pass downloaded successfully.';
+        this.downloadingPassId = null;
+      },
+      error: err => {
+        this.errorMsg = apiErrorMessage(err, 'Unable to download visitor pass.');
+        this.downloadingPassId = null;
+      }
+    });
   }
 
   private updateVisitorPhotoUrl() {

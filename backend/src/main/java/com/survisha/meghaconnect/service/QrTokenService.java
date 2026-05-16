@@ -19,7 +19,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
-import java.util.Base64;
 import java.util.List;
 
 @Service
@@ -74,6 +73,30 @@ public class QrTokenService {
                     .build();
         }
 
+        return createToken(appointment, visitor, actor);
+    }
+
+    @Transactional
+    public QrTokenGenerationResult generateFreshForVisitorPass(Appointment appointment, String actor) {
+        if (appointment == null || appointment.getId() == null) {
+            throw new MeghaConnectException(
+                    ErrorCodeConstants.QR_GENERATION_FAILED,
+                    "Appointment must be saved before QR token generation.",
+                    HttpStatus.BAD_REQUEST.value()
+            );
+        }
+        Visitor visitor = appointment.getApplicant();
+        if (visitor == null || visitor.getId() == null) {
+            throw new MeghaConnectException(
+                    ErrorCodeConstants.QR_GENERATION_FAILED,
+                    "Appointment visitor is required for QR token generation.",
+                    HttpStatus.BAD_REQUEST.value()
+            );
+        }
+        return createToken(appointment, visitor, actor);
+    }
+
+    private QrTokenGenerationResult createToken(Appointment appointment, Visitor visitor, String actor) {
         String rawToken;
         String tokenHash;
         do {
@@ -117,7 +140,11 @@ public class QrTokenService {
     public String generateRawToken() {
         byte[] bytes = new byte[TOKEN_BYTES];
         secureRandom.nextBytes(bytes);
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+        StringBuilder builder = new StringBuilder(bytes.length * 2);
+        for (byte value : bytes) {
+            builder.append(String.format("%02X", value));
+        }
+        return builder.toString();
     }
 
     public String hashToken(String rawToken) {

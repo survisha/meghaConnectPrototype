@@ -58,8 +58,8 @@ export class SchedulingComponent implements OnInit {
   publicDarbarCandidatesLoading = false;
   publicDarbarAssignmentLoading = false;
   publicDarbarAssignmentError = '';
-  publicDarbarRemarks = 'Public Darbar';
-  private readonly followUpStatuses: AppointmentStatus[] = ['FOLLOWUP', 'SELECTED_FOR_PUBLIC_DARBAR'];
+  publicDarbarRemarks = 'Scheduled';
+  private readonly followUpStatuses: AppointmentStatus[] = ['FOLLOWUP'];
 
   hours = Array.from({ length: 13 }, (_, i) => `${String(i + 8).padStart(2,'0')}:00`);
 
@@ -168,7 +168,7 @@ export class SchedulingComponent implements OnInit {
     this.publicDarbarCandidates = [];
     this.publicDarbarCandidateIds.clear();
     this.publicDarbarAssignmentError = '';
-    this.publicDarbarRemarks = 'Public Darbar';
+    this.publicDarbarRemarks = 'Scheduled';
     this.showDialog = true;
     if (this.canAssignPublicDarbarAppointments(event)) {
       this.loadPublicDarbarCandidates();
@@ -257,7 +257,7 @@ export class SchedulingComponent implements OnInit {
   }
 
   canAssignPublicDarbarAppointments(event: ScheduleEvent | null = this.selectedEvent): boolean {
-    return Boolean(event && event.eventType === 'B1' && event.sourceType !== 'APPOINTMENT');
+    return Boolean(event && event.sourceType !== 'APPOINTMENT');
   }
 
   loadPublicDarbarCandidates() {
@@ -265,10 +265,9 @@ export class SchedulingComponent implements OnInit {
     const assignedIds = new Set((this.selectedEvent.appointments ?? []).map(item => item.id));
     this.publicDarbarCandidatesLoading = true;
     this.publicDarbarAssignmentError = '';
-    this.appointmentService.getAllAppointments(0, 1000).subscribe({
+    this.appointmentService.getAllAppointments(0, 1000, 'FOLLOWUP').subscribe({
       next: page => {
         this.publicDarbarCandidates = (page.content ?? [])
-          .filter(appointment => appointment.eventType === 'B1')
           .filter(appointment => this.isFollowUpStatus(appointment.status))
           .filter(appointment => !assignedIds.has(appointment.id));
         this.publicDarbarCandidateIds.clear();
@@ -276,7 +275,7 @@ export class SchedulingComponent implements OnInit {
       },
       error: error => {
         this.publicDarbarCandidates = [];
-        this.publicDarbarAssignmentError = apiErrorMessage(error, 'Unable to load Public Durbar follow-up visitors.');
+        this.publicDarbarAssignmentError = apiErrorMessage(error, 'Unable to load follow-up applications.');
         this.publicDarbarCandidatesLoading = false;
       }
     });
@@ -300,7 +299,7 @@ export class SchedulingComponent implements OnInit {
     this.publicDarbarAssignmentError = '';
     this.scheduleEventService.assignAppointments(this.selectedEvent.id, {
       appointmentIds: Array.from(this.publicDarbarCandidateIds),
-      remarks: this.publicDarbarRemarks || 'Public Darbar',
+      remarks: this.publicDarbarRemarks || 'Scheduled',
     }).subscribe({
       next: saved => {
         this.selectedEvent = saved;
@@ -310,7 +309,7 @@ export class SchedulingComponent implements OnInit {
         this.publicDarbarAssignmentLoading = false;
       },
       error: error => {
-        this.publicDarbarAssignmentError = apiErrorMessage(error, 'Unable to assign visitors to this Public Durbar event.');
+        this.publicDarbarAssignmentError = apiErrorMessage(error, 'Unable to assign follow-up applications to this event.');
         this.publicDarbarAssignmentLoading = false;
       }
     });

@@ -23,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -50,6 +51,7 @@ public class AppointmentService {
         Appointment.AppointmentStatus.PENDING_APPROVER_REVIEW,
         Appointment.AppointmentStatus.CMO_REVIEW,
         Appointment.AppointmentStatus.APPROVER_REVIEW,
+        Appointment.AppointmentStatus.APPROVED,
         Appointment.AppointmentStatus.HCM_PENDING,
         Appointment.AppointmentStatus.FOLLOWUP,
         Appointment.AppointmentStatus.SELECTED_FOR_PUBLIC_DARBAR,
@@ -58,15 +60,8 @@ public class AppointmentService {
     );
 
     private static final List<Appointment.AppointmentStatus> APPROVER_VISIBLE_STATUSES = Arrays.asList(
-        Appointment.AppointmentStatus.CREATED,
-        Appointment.AppointmentStatus.SUBMITTED,
-        Appointment.AppointmentStatus.PENDING_APPROVER_REVIEW,
-        Appointment.AppointmentStatus.CMO_REVIEW,
-        Appointment.AppointmentStatus.APPROVER_REVIEW,
-        Appointment.AppointmentStatus.HCM_PENDING,
+        Appointment.AppointmentStatus.APPROVED,
         Appointment.AppointmentStatus.FOLLOWUP,
-        Appointment.AppointmentStatus.SELECTED_FOR_PUBLIC_DARBAR,
-        Appointment.AppointmentStatus.APPROVED_WITH_DATE_TIME,
         Appointment.AppointmentStatus.SCHEDULED
     );
 
@@ -104,6 +99,14 @@ public class AppointmentService {
         return appointmentRepository.findAll(pageable).map(this::toDto);
     }
 
+    public Page<AppointmentDto> findAllDtos(String status, Pageable pageable) {
+        List<Appointment.AppointmentStatus> statuses = parseStatuses(status);
+        if (statuses.isEmpty()) {
+            return findAllDtos(pageable);
+        }
+        return appointmentRepository.findByStatusIn(statuses, pageable).map(this::toDto);
+    }
+
     public Optional<Appointment> findById(Long id) {
         return appointmentRepository.findById(id);
     }
@@ -128,6 +131,33 @@ public class AppointmentService {
 
     public Page<AppointmentDto> findForApprover(Pageable pageable) {
         return appointmentRepository.findByStatusIn(APPROVER_VISIBLE_STATUSES, pageable).map(this::toDto);
+    }
+
+    @Transactional
+    public List<AppointmentDto> markFollowup(List<Long> appointmentIds, String remarks, String updatedBy) {
+        List<Long> ids = uniqueIds(appointmentIds);
+        if (ids.isEmpty()) {
+            throw new MeghaConnectException(ErrorCodeConstants.MISSING_REQUIRED_FIELD,
+                ErrorCodeConstants.format(ErrorCodeConstants.MISSING_REQUIRED_FIELD_MSG, "appointmentIds"),
+                HttpStatus.BAD_REQUEST.value());
+        }
+
+        List<Appointment> appointments = appointmentRepository.findAllById(ids);
+        if (appointments.size() != ids.size()) {
+            throw new AppointmentNotFoundException(ids.get(0));
+        }
+
+        for (Appointment appointment : appointments) {
+            ensureTransition(appointment, Appointment.AppointmentStatus.APPROVED, "Only APPROVED applications can be marked as FOLLOWUP.");
+            appointment.setStatus(Appointment.AppointmentStatus.FOLLOWUP);
+            appointment.setApproverRemarks(firstNonBlank(remarks, "Follow-up"));
+            appointment.setUpdatedBy(updatedBy);
+        }
+
+        return appointmentRepository.saveAll(appointments)
+            .stream()
+            .map(this::toDto)
+            .toList();
     }
 
     public List<AppointmentDocumentDto> findDocumentDtos(Long appointmentId) {
@@ -346,8 +376,16 @@ public class AppointmentService {
             .orElseThrow(() -> new AppointmentNotFoundException(id));
 
         Appointment.AppointmentStatus oldStatus = appt.getStatus();
+        validateStatusTransition(appt, newStatus);
         appt.setStatus(newStatus);
-        if (remarks != null) appt.setCmoRemarks(remarks);
+        if (remarks != null) {
+            if (newStatus == Appointment.AppointmentStatus.APPROVED || newStatus == Appointment.AppointmentStatus.CMO_REVIEW) {
+                appt.setCmoRemarks(remarks);
+            } else {
+                appt.setApproverRemarks(remarks);
+            }
+        }
+        appt.setUpdatedBy(updatedBy);
 
         Appointment saved = appointmentRepository.save(appt);
         generateQrIfApproved(saved, updatedBy);
@@ -387,6 +425,7 @@ public class AppointmentService {
         if (remarks != null) {
             appt.setCmoRemarks(remarks);
         }
+        validateStatusTransition(appt, newStatus);
         appt.setStatus(newStatus);
         appt.setUpdatedBy(updatedBy);
 
@@ -475,6 +514,57 @@ public class AppointmentService {
         }
         String value = body.get(key).toString().trim();
         return value.isEmpty() ? null : value;
+    }
+
+    private List<Appointment.AppointmentStatus> parseStatuses(String status) {
+        if (status == null || status.trim().isEmpty()) {
+            return List.of();
+        }
+        return Arrays.stream(status.split(","))
+            .map(String::trim)
+            .filter(value -> !value.isEmpty())
+            .map(value -> validationService.requireEnum(value, Appointment.AppointmentStatus.class, "status"))
+            .distinct()
+            .toList();
+    }
+
+    private List<Long> uniqueIds(List<Long> ids) {
+        if (ids == null) {
+            return List.of();
+        }
+        return ids.stream()
+            .filter(id -> id != null && id > 0)
+            .distinct()
+            .toList();
+    }
+
+    private void validateStatusTransition(Appointment appointment, Appointment.AppointmentStatus newStatus) {
+        if (newStatus == Appointment.AppointmentStatus.APPROVED) {
+            if (appointment.getStatus() != Appointment.AppointmentStatus.SUBMITTED
+                    && appointment.getStatus() != Appointment.AppointmentStatus.CMO_REVIEW) {
+                invalidTransition("Only SUBMITTED or CMO_REVIEW applications can be approved by CMO.");
+            }
+            return;
+        }
+        if (newStatus == Appointment.AppointmentStatus.FOLLOWUP) {
+            ensureTransition(appointment, Appointment.AppointmentStatus.APPROVED,
+                "Only APPROVED applications can be marked as FOLLOWUP.");
+            return;
+        }
+        if (newStatus == Appointment.AppointmentStatus.SCHEDULED) {
+            ensureTransition(appointment, Appointment.AppointmentStatus.FOLLOWUP,
+                "Only FOLLOWUP applications can be assigned to an event.");
+        }
+    }
+
+    private void ensureTransition(Appointment appointment, Appointment.AppointmentStatus expectedStatus, String message) {
+        if (appointment.getStatus() != expectedStatus) {
+            invalidTransition(message);
+        }
+    }
+
+    private void invalidTransition(String message) {
+        throw new MeghaConnectException(ErrorCodeConstants.APPT_INVALID_STATUS, message, HttpStatus.CONFLICT.value());
     }
 
     private String maskAadhaarForResponse(String aadhaarNumber) {

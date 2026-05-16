@@ -103,20 +103,19 @@ public class ScheduleEventService {
                                                ScheduleEventAppointmentAssignmentRequest request,
                                                String actor,
                                                String actorRole) {
+        if (eventId == null) {
+            throw workflowException(
+                ErrorCodeConstants.MISSING_REQUIRED_FIELD,
+                ErrorCodeConstants.format(ErrorCodeConstants.MISSING_REQUIRED_FIELD_MSG, "eventId"),
+                HttpStatus.BAD_REQUEST
+            );
+        }
         ScheduleEvent event = scheduleEventRepository.findById(eventId)
             .orElseThrow(() -> workflowException(
                 ErrorCodeConstants.SCHEDULE_EVENT_NOT_FOUND,
                 ErrorCodeConstants.format(ErrorCodeConstants.SCHEDULE_EVENT_NOT_FOUND_MSG, eventId),
                 HttpStatus.NOT_FOUND
             ));
-
-        if (event.getEventType() != Appointment.EventType.B1) {
-            throw workflowException(
-                ErrorCodeConstants.APPT_INVALID_STATUS,
-                "Only B1 Public Durbar events can invite follow-up appointments.",
-                HttpStatus.BAD_REQUEST
-            );
-        }
 
         List<Long> appointmentIds = request != null && request.getAppointmentIds() != null
             ? request.getAppointmentIds().stream().distinct().toList()
@@ -138,22 +137,15 @@ public class ScheduleEventService {
             );
         }
 
-        String remarks = firstNonBlank(request != null ? request.getRemarks() : null, "Public Darbar");
+        String remarks = firstNonBlank(request != null ? request.getRemarks() : null, "Scheduled");
         int durationMinutes = Math.max(1, (int) ChronoUnit.MINUTES.between(event.getStartTime(), event.getEndTime()));
 
         for (Appointment appointment : appointments) {
             if (!FOLLOWUP_STATUSES.contains(appointment.getStatus())) {
                 throw workflowException(
                     ErrorCodeConstants.APPT_INVALID_STATUS,
-                    "Only follow-up Public Durbar appointments can be assigned to an event.",
+                    "Only FOLLOWUP applications can be assigned to an event.",
                     HttpStatus.CONFLICT
-                );
-            }
-            if (appointment.getEventType() != Appointment.EventType.B1) {
-                throw workflowException(
-                    ErrorCodeConstants.INVALID_FIELD_VALUE,
-                    "Only B1 appointments can be assigned to a Public Durbar event.",
-                    HttpStatus.BAD_REQUEST
                 );
             }
 
@@ -161,7 +153,7 @@ public class ScheduleEventService {
             appointment.setScheduleEvent(event);
             appointment.setScheduledDateTime(event.getStartTime());
             appointment.setScheduledDurationMinutes(durationMinutes);
-            appointment.setStatus(Appointment.AppointmentStatus.SCHEDULED_FOR_PUBLIC_DARBAR);
+            appointment.setStatus(Appointment.AppointmentStatus.SCHEDULED);
             appointment.setApproverRemarks(remarks);
             appointment.setApprovedBy(actor);
             appointment.setUpdatedBy(actor);
@@ -171,7 +163,7 @@ public class ScheduleEventService {
                 saved,
                 oldStatus,
                 saved.getStatus(),
-                "SCHEDULED_FOR_PUBLIC_DARBAR_EVENT",
+                "ASSIGNED_TO_EVENT",
                 remarks,
                 actor,
                 actorRole

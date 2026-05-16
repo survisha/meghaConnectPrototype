@@ -64,11 +64,30 @@
         <button mat-raised-button
                 color="primary"
                 type="button"
-                *ngIf="auth.hasRole('APPROVER') || auth.hasRole('CMO_OFFICER') || auth.hasRole('OSD')"
+                *ngIf="auth.hasRole('APPROVER') || auth.hasRole('ADMIN') || auth.hasRole('OSD')"
                 (click)="markSelectedFollowUp()"
                 [disabled]="!canMarkSelectedFollowUp || bulkUpdating">
           <mat-icon>follow_the_signs</mat-icon>
           Mark Follow-up
+        </button>
+
+        <mat-form-field appearance="outline" style="min-width:240px" *ngIf="canAssignSelectedToEvent">
+          <mat-label>Assign to Event</mat-label>
+          <mat-select [(ngModel)]="selectedEventId" [disabled]="eventsLoading || eventAssigning">
+            <mat-option *ngFor="let event of availableEvents" [value]="event.id">
+              {{ event.title }} - {{ event.startTime | date:'dd-MMM hh:mm a' }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <button mat-raised-button
+                color="accent"
+                type="button"
+                *ngIf="canAssignSelectedToEvent"
+                (click)="assignSelectedToEvent()"
+                [disabled]="!selectedEventId || eventAssigning">
+          <mat-icon>event_available</mat-icon>
+          Assign to Event
         </button>
       </div>
 
@@ -95,6 +114,7 @@
             </th>
             <td mat-cell *matCellDef="let appt" class="select-cell">
               <mat-checkbox
+                *ngIf="canSelectAppointment(appt)"
                 [checked]="isSelected(appt)"
                 (change)="toggleSelection(appt, $event.checked)"
                 [attr.aria-label]="'Select appointment ' + appt.applicationId">

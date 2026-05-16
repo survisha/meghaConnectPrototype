@@ -4,9 +4,12 @@ import com.survisha.meghaconnect.dto.AppointmentMultipartRequest;
 import com.survisha.meghaconnect.dto.AppointmentDocumentAiNotesDto;
 import com.survisha.meghaconnect.dto.AppointmentDocumentDto;
 import com.survisha.meghaconnect.dto.AppointmentDto;
+import com.survisha.meghaconnect.dto.ScheduleEventAppointmentAssignmentRequest;
+import com.survisha.meghaconnect.dto.ScheduleEventDto;
 import com.survisha.meghaconnect.entity.Appointment;
 import com.survisha.meghaconnect.service.AppointmentDocumentAiNotesService;
 import com.survisha.meghaconnect.service.AppointmentService;
+import com.survisha.meghaconnect.service.ScheduleEventService;
 import com.survisha.meghaconnect.util.RequestContextUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -24,6 +27,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -42,6 +47,7 @@ public class AppointmentController {
 
     private final AppointmentService appointmentService;
     private final AppointmentDocumentAiNotesService appointmentDocumentAiNotesService;
+    private final ScheduleEventService scheduleEventService;
 
     @Operation(summary = "Get all appointments", description = "Retrieve paginated list of all appointments")
     @ApiResponses(value = {
@@ -51,9 +57,10 @@ public class AppointmentController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping
-    public ResponseEntity<Page<AppointmentDto>> getAll(Pageable pageable) {
+    public ResponseEntity<Page<AppointmentDto>> getAll(@RequestParam(required = false) String status,
+                                                       Pageable pageable) {
         logEndpoint("/api/v1/appointments");
-        return ResponseEntity.ok(appointmentService.findAllDtos(pageable));
+        return ResponseEntity.ok(appointmentService.findAllDtos(status, pageable));
     }
 
     @Operation(summary = "Get appointment by ID", description = "Retrieve a specific appointment by its ID")
@@ -138,6 +145,32 @@ public class AppointmentController {
     public ResponseEntity<Page<AppointmentDto>> getForApprover(Pageable pageable) {
         logEndpoint("/api/v1/appointments/approver");
         return ResponseEntity.ok(appointmentService.findForApprover(pageable));
+    }
+
+    @Operation(summary = "Bulk mark appointments as follow-up", description = "Move approved applications into the follow-up scheduling queue")
+    @PostMapping("/mark-followup")
+    @PreAuthorize("hasAnyRole('APPROVER','ADMIN','OSD')")
+    public ResponseEntity<List<AppointmentDto>> markFollowup(@RequestBody Map<String, Object> body,
+                                                             @AuthenticationPrincipal UserDetails user) {
+        logEndpoint("/api/v1/appointments/mark-followup");
+        String actor = user != null ? user.getUsername() : "system";
+        Map<String, Object> safeBody = body != null ? body : Map.of();
+        return ResponseEntity.ok(appointmentService.markFollowup(longList(safeBody.get("appointmentIds")),
+            stringValue(safeBody.get("remarks")), actor));
+    }
+
+    @Operation(summary = "Assign follow-up appointments to a schedule event", description = "Link selected follow-up applications to an existing calendar event")
+    @PostMapping("/assign-event")
+    @PreAuthorize("hasAnyRole('APPROVER','ADMIN','OSD')")
+    public ResponseEntity<ScheduleEventDto> assignEvent(@RequestBody Map<String, Object> body,
+                                                        Authentication authentication) {
+        logEndpoint("/api/v1/appointments/assign-event");
+        Map<String, Object> safeBody = body != null ? body : Map.of();
+        Long eventId = longValue(safeBody.get("eventId"));
+        ScheduleEventAppointmentAssignmentRequest request = new ScheduleEventAppointmentAssignmentRequest();
+        request.setAppointmentIds(longList(safeBody.get("appointmentIds")));
+        request.setRemarks(stringValue(safeBody.get("remarks")));
+        return ResponseEntity.ok(scheduleEventService.assignAppointments(eventId, request, actor(authentication), role(authentication)));
     }
 
     @Operation(summary = "Create appointment", description = "Create a new appointment")
@@ -241,5 +274,50 @@ public class AppointmentController {
 
     private void logEndpoint(String endpoint) {
         log.info("Appointment API request requestId={} endpoint={}", RequestContextUtil.getRequestId(), endpoint);
+    }
+
+    private List<Long> longList(Object value) {
+        if (!(value instanceof List<?> values)) {
+            return List.of();
+        }
+        return values.stream()
+            .map(this::longValue)
+            .filter(item -> item != null && item > 0)
+            .distinct()
+            .toList();
+    }
+
+    private Long longValue(Object value) {
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        if (value == null) {
+            return null;
+        }
+        try {
+            return Long.parseLong(value.toString());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private String stringValue(Object value) {
+        return value == null ? null : value.toString();
+    }
+
+    private String actor(Authentication authentication) {
+        return authentication != null ? authentication.getName() : "anonymous";
+    }
+
+    private String role(Authentication authentication) {
+        if (authentication == null || authentication.getAuthorities() == null) {
+            return "ANONYMOUS";
+        }
+        return authentication.getAuthorities()
+            .stream()
+            .map(GrantedAuthority::getAuthority)
+            .findFirst()
+            .map(authority -> authority.replace("ROLE_", ""))
+            .orElse("ANONYMOUS");
     }
 }

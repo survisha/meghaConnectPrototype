@@ -252,7 +252,7 @@
         </ng-container>
 
         <div class="detail-section" *ngIf="canAssignPublicDarbarAppointments()">
-          <h3><mat-icon>how_to_reg</mat-icon> Public Durbar Invitations</h3>
+          <h3><mat-icon>how_to_reg</mat-icon> Follow-up Applications</h3>
 
           <div class="appointment-list" *ngIf="selectedAppointments.length > 0">
             <div *ngFor="let appointment of selectedAppointments">
@@ -269,11 +269,11 @@
             </div>
 
             <div *ngIf="publicDarbarCandidatesLoading" class="assignment-empty">
-              Loading follow-up visitors...
+              Loading follow-up applications...
             </div>
 
             <div *ngIf="!publicDarbarCandidatesLoading && publicDarbarCandidates.length === 0" class="assignment-empty">
-              No B1 follow-up visitors are available for assignment.
+              No follow-up applications available for scheduling.
             </div>
 
             <div *ngIf="!publicDarbarCandidatesLoading && publicDarbarCandidates.length > 0" class="candidate-list">
@@ -297,7 +297,7 @@
                     (click)="assignSelectedPublicDarbarAppointments()"
                     [disabled]="publicDarbarCandidateIds.size === 0 || publicDarbarAssignmentLoading">
               <mat-icon>group_add</mat-icon>
-              Assign Selected Visitors
+              Assign Selected Applications
             </button>
           </div>
         </div>

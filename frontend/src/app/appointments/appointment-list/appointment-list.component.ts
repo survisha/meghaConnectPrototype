@@ -3,13 +3,14 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
-import { forkJoin, of } from 'rxjs';
+import { of } from 'rxjs';
 import { AppointmentDocumentAiNotes, AiNotesStatus, AppointmentService } from '../../services/appointment.service';
 import { AuthService } from '../../services/auth.service';
 import { DocumentService } from '../../services/document.service';
 import { ReferenceDataService } from '../../services/reference-data.service';
+import { ScheduleEventService } from '../../services/schedule-event.service';
 import { VisitorService } from '../../services/visitor.service';
-import { Appointment, AppointmentDocument, AppointmentStatus, EventType, Location } from '../../models';
+import { Appointment, AppointmentDocument, AppointmentStatus, EventType, Location, ScheduleEvent } from '../../models';
 import { catchError, finalize } from 'rxjs/operators';
 import { MatTableModule } from '@angular/material/table';
 import { MatPaginatorModule } from '@angular/material/paginator';
@@ -103,6 +104,8 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   filterToDate: Date | null = null;
   loading = false;
   bulkUpdating = false;
+  eventAssigning = false;
+  eventsLoading = false;
   actionUpdating = false;
   cmoActionUpdating = false;
   errorMsg = '';
@@ -121,6 +124,8 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   selectedAiNotesAppointment: Appointment | null = null;
   selectedAiNotes: AppointmentDocumentAiNotes[] = [];
   selectedAppointmentIds = new Set<number>();
+  availableEvents: ScheduleEvent[] = [];
+  selectedEventId: number | null = null;
   eventTypeOptions: Array<{ label: string; value: EventType | '' }> = [{ label: 'All Types', value: '' }];
   displayedColumns: string[] = ['select', 'applicant', 'designation', 'constituency', 'agenda', 'eventType', 'location', 'status', 'createdAt', 'aiNotes', 'actions'];
   pageSizeOptions = [10, 25, 50];
@@ -132,6 +137,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   statusOptions = [
     { label: 'All Statuses', value: '' },
     { label: 'Submitted', value: 'SUBMITTED' },
+    { label: 'Approved', value: 'APPROVED' },
     { label: 'CMO Review', value: 'CMO_REVIEW' },
     { label: 'Approver Review', value: 'APPROVER_REVIEW' },
     { label: 'Follow-up', value: 'FOLLOWUP' },
@@ -166,25 +172,16 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   private cmoMissingInfoDialogRef?: MatDialogRef<unknown>;
   private aiNotesPollTimers = new Map<number, number>();
   private readonly cmoQueueStatuses = new Set<AppointmentStatus>([
-    'CREATED',
     'SUBMITTED',
-    'DEO_PROCESSED',
-    'PENDING_APPROVER_REVIEW',
     'CMO_REVIEW',
   ]);
-  private readonly followUpStatuses: AppointmentStatus[] = ['FOLLOWUP', 'SELECTED_FOR_PUBLIC_DARBAR'];
-  private readonly followUpReviewableStatuses: AppointmentStatus[] = [
-    'CREATED',
-    'SUBMITTED',
-    'PENDING_APPROVER_REVIEW',
-    'CMO_REVIEW',
-    'APPROVER_REVIEW'
-  ];
+  private readonly followUpStatuses: AppointmentStatus[] = ['FOLLOWUP'];
 
   constructor(
     private appointmentService: AppointmentService,
     private documentService: DocumentService,
     private referenceDataService: ReferenceDataService,
+    private scheduleEventService: ScheduleEventService,
     private visitorService: VisitorService,
     public auth: AuthService,
     private dialog: MatDialog,
@@ -193,8 +190,21 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
+    this.configureRoleDefaults();
     this.loadAppointmentTypes();
+    this.loadScheduleEvents();
     this.loadAppointments();
+  }
+
+  private configureRoleDefaults() {
+    if (this.auth.hasRole('APPROVER') && !this.auth.hasRole('ADMIN', 'OSD')) {
+      this.filterStatus = 'APPROVED';
+    } else if (this.auth.hasRole('CMO_OFFICER') && !this.auth.hasRole('ADMIN', 'OSD')) {
+      this.filterStatus = 'SUBMITTED';
+    }
+    if (!this.canSelectAppointments()) {
+      this.displayedColumns = this.displayedColumns.filter(column => column !== 'select');
+    }
   }
 
   private loadAppointmentTypes() {
@@ -215,6 +225,8 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     this.loading = true;
     const source = this.auth.hasRole('DATA_ENTRY_OPERATOR')
       ? this.appointmentService.getDeoAppointments(0, 100)
+      : this.auth.hasRole('APPROVER') && !this.auth.hasRole('ADMIN', 'OSD')
+      ? this.appointmentService.getApproverAppointments(0, 100)
       : this.appointmentService.getAllAppointments(0, 100);
     source.subscribe({
       next: page => {
@@ -231,6 +243,20 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
         this.loading = false;
       }
     });
+  }
+
+  private loadScheduleEvents() {
+    this.eventsLoading = true;
+    this.scheduleEventService.getAll()
+      .pipe(finalize(() => this.eventsLoading = false))
+      .subscribe({
+        next: events => {
+          this.availableEvents = (events ?? []).filter(event => event.sourceType !== 'APPOINTMENT' && event.id > 0);
+        },
+        error: error => {
+          this.snackBar.open(apiErrorMessage(error, 'Unable to load schedule events.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] });
+        }
+      });
   }
 
   ngOnDestroy() {
@@ -378,7 +404,16 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     return this.selectedAppointmentIds.has(appointment.id);
   }
 
+  canSelectAppointments() {
+    return this.auth.hasRole('APPROVER', 'ADMIN', 'OSD');
+  }
+
+  canSelectAppointment(appointment: Appointment) {
+    return this.canSelectAppointments() && (appointment.status === 'APPROVED' || this.isFollowUpStatus(appointment.status));
+  }
+
   toggleSelection(appointment: Appointment, checked: boolean) {
+    if (!this.canSelectAppointment(appointment)) return;
     if (checked) {
       this.selectedAppointmentIds.add(appointment.id);
     } else {
@@ -387,15 +422,18 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   }
 
   areAllFilteredSelected() {
-    return this.filtered.length > 0 && this.filtered.every(appointment => this.selectedAppointmentIds.has(appointment.id));
+    const selectable = this.filtered.filter(appointment => this.canSelectAppointment(appointment));
+    return selectable.length > 0 && selectable.every(appointment => this.selectedAppointmentIds.has(appointment.id));
   }
 
   isSomeFilteredSelected() {
-    return this.filtered.some(appointment => this.selectedAppointmentIds.has(appointment.id)) && !this.areAllFilteredSelected();
+    return this.filtered.some(appointment => this.canSelectAppointment(appointment) && this.selectedAppointmentIds.has(appointment.id))
+      && !this.areAllFilteredSelected();
   }
 
   toggleAllFiltered(checked: boolean) {
     this.filtered.forEach(appointment => {
+      if (!this.canSelectAppointment(appointment)) return;
       if (checked) {
         this.selectedAppointmentIds.add(appointment.id);
       } else {
@@ -409,23 +447,48 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   }
 
   get canMarkSelectedFollowUp() {
-    return this.auth.hasRole('APPROVER', 'CMO_OFFICER', 'OSD') &&
+    return this.auth.hasRole('APPROVER', 'ADMIN', 'OSD') &&
       this.selectedAppointments.length > 0 &&
       this.selectedAppointments.every(appointment => this.canAppointmentBeMarkedFollowUp(appointment));
+  }
+
+  get canAssignSelectedToEvent() {
+    return this.auth.hasRole('APPROVER', 'ADMIN', 'OSD') &&
+      this.selectedAppointments.length > 0 &&
+      this.selectedAppointments.every(appointment => this.isFollowUpStatus(appointment.status));
   }
 
   markSelectedFollowUp() {
     if (!this.canMarkSelectedFollowUp || this.bulkUpdating) return;
     this.bulkUpdating = true;
-    forkJoin(this.selectedAppointments.map(appointment =>
-      this.appointmentService.markFollowUp(appointment.id, 'Follow-up')
-    )).pipe(finalize(() => this.bulkUpdating = false))
+    this.appointmentService.markFollowUpBulk(this.selectedAppointments.map(appointment => appointment.id), 'Follow-up')
+      .pipe(finalize(() => this.bulkUpdating = false))
       .subscribe({
         next: () => {
           this.selectedAppointmentIds.clear();
+          this.snackBar.open('Selected applications marked as follow-up.', 'Close', { duration: 5000, panelClass: ['success-snackbar'] });
           this.loadAppointments();
         },
-        error: error => this.errorMsg = apiErrorMessage(error, 'Unable to mark selected appointments for Public Durbar follow-up.')
+        error: error => this.errorMsg = apiErrorMessage(error, 'Unable to mark selected appointments as follow-up.')
+      });
+  }
+
+  assignSelectedToEvent() {
+    if (!this.canAssignSelectedToEvent || !this.selectedEventId || this.eventAssigning) return;
+    this.eventAssigning = true;
+    this.appointmentService.assignAppointmentsToEvent(
+      this.selectedEventId,
+      this.selectedAppointments.map(appointment => appointment.id),
+      'Scheduled'
+    ).pipe(finalize(() => this.eventAssigning = false))
+      .subscribe({
+        next: () => {
+          this.selectedAppointmentIds.clear();
+          this.selectedEventId = null;
+          this.snackBar.open('Selected follow-up applications assigned to event.', 'Close', { duration: 5000, panelClass: ['success-snackbar'] });
+          this.loadAppointments();
+        },
+        error: error => this.errorMsg = apiErrorMessage(error, 'Unable to assign selected applications to event.')
       });
   }
 
@@ -602,7 +665,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   }
 
   private canAppointmentBeMarkedFollowUp(appointment: Appointment) {
-    return appointment.eventType === 'B1' && this.followUpReviewableStatuses.includes(appointment.status);
+    return appointment.status === 'APPROVED';
   }
 
   canUseApproverActions(appointment: Appointment | null) {
@@ -610,7 +673,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   }
 
   canApproveOrReject(appointment: Appointment | null) {
-    return this.canUseApproverActions(appointment) && appointment?.status !== 'HCM_PENDING';
+    return this.canUseApproverActions(appointment) && appointment?.status === 'HCM_PENDING';
   }
 
   canRescheduleAppointment(appointment: Appointment | null) {
@@ -674,7 +737,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
       eventType: this.cmoModifyEventType,
       requestedLocation: this.cmoModifyLocation,
       cmoRemarks: this.cmoModifyRemarks,
-      status: 'APPROVER_REVIEW',
+      status: 'APPROVED',
       notifyApplicant: false,
       notifyDeo: false,
     }).pipe(finalize(() => this.cmoActionUpdating = false))
@@ -683,7 +746,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
           this.selectedAppointment = updated;
           this.replaceAppointment(updated);
           this.cmoModifyDialogRef?.close();
-          this.snackBar.open(`${updated.applicationId} forwarded to Approver.`, 'Close', { duration: 5000, panelClass: ['success-snackbar'] });
+          this.snackBar.open(`${updated.applicationId} approved.`, 'Close', { duration: 5000, panelClass: ['success-snackbar'] });
         },
         error: error => this.snackBar.open(apiErrorMessage(error, 'Failed to update appointment.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] })
       });
@@ -726,7 +789,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
       eventType: appointment.eventType,
       requestedLocation: appointment.requestedLocation,
       cmoRemarks: appointment.cmoRemarks,
-      status: 'APPROVER_REVIEW',
+      status: 'APPROVED',
       notifyApplicant: false,
       notifyDeo: false,
     }).pipe(finalize(() => this.cmoActionUpdating = false))
@@ -734,7 +797,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
         next: updated => {
           this.selectedAppointment = updated;
           this.replaceAppointment(updated);
-          this.snackBar.open(`${updated.applicationId} forwarded to Approver.`, 'Close', { duration: 5000, panelClass: ['success-snackbar'] });
+          this.snackBar.open(`${updated.applicationId} approved.`, 'Close', { duration: 5000, panelClass: ['success-snackbar'] });
         },
         error: error => this.snackBar.open(apiErrorMessage(error, 'Failed to forward appointment.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] })
       });
@@ -815,7 +878,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     if (!this.selectedAppointment || !this.pendingAction || this.actionUpdating) return;
     const appointment = this.selectedAppointment;
     const action = this.pendingAction;
-    const newStatus: AppointmentStatus = action === 'APPROVE' ? 'HCM_PENDING' : 'HCM_REJECTED';
+    const newStatus: AppointmentStatus = action === 'APPROVE' ? 'HCM_ACCEPTED' : 'HCM_REJECTED';
 
     this.actionUpdating = true;
     this.appointmentService.updateStatus(appointment.id, newStatus, this.remarksText)

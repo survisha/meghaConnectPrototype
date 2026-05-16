@@ -1,0 +1,118 @@
+.guest-page {
+  background: #f0f2f5;
+  min-height: 100vh;
+  padding: clamp(1rem, 3vw, 2rem);
+}
+
+.guest-shell {
+  margin: 0 auto;
+  max-width: 920px;
+}
+
+.guest-header {
+  margin-bottom: 1rem;
+
+  .eyebrow {
+    color: #3949ab;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  h1 {
+    color: #1a237e;
+    font-size: clamp(1.6rem, 4vw, 2.35rem);
+    margin: 0.25rem 0;
+  }
+
+  p {
+    color: #475569;
+    margin: 0;
+  }
+}
+
+.guest-card,
+.success-card {
+  border-radius: 8px;
+}
+
+.guest-form {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.full-width {
+  grid-column: 1 / -1;
+}
+
+.file-row {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  color: #475569;
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem;
+}
+
+.file-row span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.form-actions button {
+  min-width: 180px;
+}
+
+.error-message {
+  margin-bottom: 1rem;
+}
+
+.success-card mat-card-content {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+.success-card mat-icon {
+  color: #15803d;
+  font-size: 3rem;
+  height: 3rem;
+  width: 3rem;
+}
+
+.success-card h2 {
+  color: #111827;
+  margin: 0;
+}
+
+.success-card p {
+  color: #475569;
+  line-height: 1.5;
+  margin: 0 0 0.5rem;
+  max-width: 620px;
+}
+
+@media (max-width: 720px) {
+  .guest-form {
+    grid-template-columns: 1fr;
+  }
+
+  .form-actions,
+  .form-actions button {
+    width: 100%;
+  }
+}

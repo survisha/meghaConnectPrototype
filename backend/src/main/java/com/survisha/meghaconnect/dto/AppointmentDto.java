@@ -2,6 +2,7 @@ package com.survisha.meghaconnect.dto;
 
 import com.survisha.meghaconnect.entity.Appointment;
 import lombok.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
@@ -16,6 +17,19 @@ public class AppointmentDto {
     private String subject;
     private String department;
     private String appointmentType;
+    private String appointmentSource;
+    private String guestReferenceId;
+    private String guestName;
+    private String guestMobile;
+    private String guestAddress;
+    private String guestEmail;
+    private String organizationName;
+    private String guestDesignation;
+    private String visitorCategory;
+    private String referredOffice;
+    private String referredByName;
+    private String reasonForAppointment;
+    private LocalDate preferredDate;
     private String agendaType;
     private String agendaBrief;
     private Appointment.AppointmentStatus status;

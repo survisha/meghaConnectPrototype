@@ -101,6 +101,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   documentsError = '';
   search = '';
   filterStatus = '';
+  filterSource = '';
   filterEventType = '';
   filterFromDate: Date | null = null;
   filterToDate: Date | null = null;
@@ -148,6 +149,12 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     { label: 'HCM ACCEPTED', value: 'HCM_ACCEPTED' },
     { label: 'Scheduled', value: 'SCHEDULED' },
     { label: 'Completed', value: 'COMPLETED' },
+  ];
+
+  sourceOptions = [
+    { label: 'All Sources', value: '' },
+    { label: 'Citizen', value: 'CITIZEN' },
+    { label: 'Guest', value: 'GUEST' },
   ];
 
   readonly cmoEventTypeOptions: { label: string; value: EventType }[] = [
@@ -278,6 +285,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
           a.applicationId?.toLowerCase().includes(searchValue) ||
           a.applicant?.phoneNumber?.includes(searchValue)) &&
         (!this.filterStatus || this.matchesStatusFilter(a.status, this.filterStatus)) &&
+        (!this.filterSource || (a.appointmentSource || 'CITIZEN') === this.filterSource) &&
         (!this.filterEventType || a.eventType === this.filterEventType) &&
         (!this.filterFromDate || (createdDate && createdDate >= this.startOfDay(this.filterFromDate))) &&
         (!this.filterToDate || (createdDate && createdDate < this.nextDay(this.filterToDate)));
@@ -350,7 +358,9 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
       case 'applicant':
         return appointment.applicant?.fullName || appointment.applicantName || '';
       case 'designation':
-        return appointment.applicant?.designation || '';
+        return appointment.appointmentSource === 'GUEST'
+          ? `${appointment.organizationName || ''} ${appointment.guestDesignation || ''}`.trim()
+          : appointment.applicant?.designation || '';
       case 'constituency':
         return appointment.applicant?.constituency || '';
       case 'agenda':
@@ -400,6 +410,32 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     if (this.isFollowUpStatus(s)) return 'FOLLOW-UP';
     if (s === 'SCHEDULED_FOR_PUBLIC_DARBAR') return 'SCHEDULED FOR PUBLIC DURBAR';
     return s.replace(/_/g, ' ');
+  }
+
+  getDisplayName(appointment: Appointment) {
+    return appointment.guestName || appointment.applicant?.fullName || appointment.applicantName || '-';
+  }
+
+  getDisplayPhone(appointment: Appointment) {
+    return appointment.guestMobile || appointment.applicant?.phoneNumber || appointment.applicantPhone || '-';
+  }
+
+  getDisplayDesignation(appointment: Appointment) {
+    if (appointment.appointmentSource === 'GUEST') {
+      return [appointment.organizationName, appointment.guestDesignation].filter(Boolean).join(' / ') || '-';
+    }
+    return appointment.applicant?.designation || '-';
+  }
+
+  getDisplayConstituency(appointment: Appointment) {
+    if (appointment.appointmentSource === 'GUEST') {
+      return [appointment.referredOffice, appointment.visitorCategory].filter(Boolean).join(' / ') || '-';
+    }
+    return appointment.applicant?.constituency || '-';
+  }
+
+  getDisplayAgenda(appointment: Appointment) {
+    return appointment.reasonForAppointment || appointment.agendaType || appointment.subject || '-';
   }
 
   isSelected(appointment: Appointment) {
@@ -679,7 +715,9 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   }
 
   canRescheduleAppointment(appointment: Appointment | null) {
-    return this.canUseApproverActions(appointment) && !!appointment && ['APPROVED', 'FOLLOWUP', 'SCHEDULED'].includes(appointment.status);
+    return this.canUseApproverActions(appointment) && !!appointment &&
+      (['APPROVED', 'FOLLOWUP', 'SCHEDULED'].includes(appointment.status)
+        || (appointment.appointmentSource === 'GUEST' && appointment.status === 'SUBMITTED'));
   }
 
   canMarkFollowUp(appointment: Appointment | null) {

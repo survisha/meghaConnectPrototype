@@ -2,6 +2,7 @@ package com.survisha.meghaconnect.entity;
 
 import javax.persistence.*;
 import lombok.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -40,6 +41,44 @@ public class Appointment extends BaseEntity {
 
     @Column(length = 50)
     private String appointmentType;
+
+    @Column(length = 20)
+    private String appointmentSource;
+
+    @Column(length = 40)
+    private String guestReferenceId;
+
+    @Column(length = 200)
+    private String guestName;
+
+    @Column(length = 20)
+    private String guestMobile;
+
+    @Column(length = 500)
+    private String guestAddress;
+
+    @Column(length = 150)
+    private String guestEmail;
+
+    @Column(length = 200)
+    private String organizationName;
+
+    @Column(length = 100)
+    private String guestDesignation;
+
+    @Column(length = 100)
+    private String visitorCategory;
+
+    @Column(length = 100)
+    private String referredOffice;
+
+    @Column(length = 200)
+    private String referredByName;
+
+    @Column(length = 500)
+    private String reasonForAppointment;
+
+    private LocalDate preferredDate;
 
     @Column(columnDefinition = "TEXT")
     private String agendaBrief;

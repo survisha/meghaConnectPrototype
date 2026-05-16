@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { HomeComponent } from './home/home.component';
 import { LoginComponent } from './auth/login/login.component';
 import { PublicLoginComponent } from './public-login/public-login.component';
+import { GuestAppointmentComponent } from './guest-appointment/guest-appointment.component';
 import { VisitorRegisterComponent } from './visitor-register/visitor-register.component';
 import { ShellComponent } from './shell/shell.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
@@ -38,6 +39,7 @@ export const routes: Routes = [
   { path: 'login', component: LoginComponent },
   { path: 'public-login', component: PublicLoginComponent },
   { path: 'register-visitor', component: VisitorRegisterComponent },
+  { path: 'guest-appointment', component: GuestAppointmentComponent },
   {
     path: '', component: ShellComponent,
     canActivate: [authGuard],
@@ -65,7 +67,7 @@ export const routes: Routes = [
       { path: 'admin/users', component: UserManagementComponent, canActivate: [roleGuard(...FULL_CONTROL)] },
       { path: 'admin/schemes', component: SchemeManagementComponent, canActivate: [roleGuard('ADMIN')] },
       { path: 'admin/appointment-types', component: AppointmentTypeManagementComponent, canActivate: [roleGuard('ADMIN')] },
-      { path: 'hcm/appointments', component: HcmDashboardComponent, canActivate: [roleGuard('HCM')] },
+      { path: 'hcm/appointments', component: HcmDashboardComponent, canActivate: [roleGuard('HCM', 'OSD', 'ADMIN')] },
     ]
   },
   { path: '**', redirectTo: '' }

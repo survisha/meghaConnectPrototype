@@ -38,6 +38,15 @@
           </mat-select>
         </mat-form-field>
 
+        <mat-form-field appearance="outline" style="min-width:180px">
+          <mat-label>Source</mat-label>
+          <mat-select [(ngModel)]="filterSource" (ngModelChange)="applyFilter()">
+            <mat-option *ngFor="let opt of sourceOptions" [value]="opt.value">
+              {{ opt.label }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
         <mat-form-field appearance="outline" style="min-width:200px">
           <mat-label>Type Filter</mat-label>
           <mat-select [(ngModel)]="filterEventType" (ngModelChange)="applyFilter()">
@@ -129,10 +138,14 @@
               </button>
             </th>
             <td mat-cell *matCellDef="let appt">
-              <div style="font-weight:600">{{ appt.applicant.fullName || appt.applicantName || '-' }}</div>
+              <div style="font-weight:600">{{ getDisplayName(appt) }}</div>
               <div class="applicant-phone">
                 <mat-icon>phone</mat-icon>
-                <span>{{ appt.applicant.phoneNumber || appt.applicantPhone || '-' }}</span>
+                <span>{{ getDisplayPhone(appt) }}</span>
+              </div>
+              <div class="applicant-phone" *ngIf="appt.appointmentSource === 'GUEST'">
+                <mat-icon>badge</mat-icon>
+                <span>{{ appt.guestReferenceId || 'Guest' }}</span>
               </div>
             </td>
           </ng-container>
@@ -144,7 +157,7 @@
               </button>
             </th>
             <td mat-cell *matCellDef="let appt" style="font-size:0.85rem">
-              {{ appt.applicant.designation || '-' }}
+              {{ getDisplayDesignation(appt) }}
             </td>
           </ng-container>
 
@@ -155,7 +168,7 @@
               </button>
             </th>
             <td mat-cell *matCellDef="let appt" style="font-size:0.85rem">
-              {{ appt.applicant.constituency || '-' }}
+              {{ getDisplayConstituency(appt) }}
             </td>
           </ng-container>
 
@@ -166,7 +179,7 @@
               </button>
             </th>
             <td mat-cell *matCellDef="let appt" style="font-size:0.85rem;max-width:180px">
-              {{ appt.agendaType || appt.subject || '-' }}
+              {{ getDisplayAgenda(appt) }}
             </td>
           </ng-container>
 
@@ -438,15 +451,21 @@
     </div>
 
     <div class="details-grid">
+      <div *ngIf="selectedAppointment.appointmentSource === 'GUEST'">
+        <span class="field-label">Guest Reference</span>
+        <strong>{{ selectedAppointment.guestReferenceId || selectedAppointment.applicationId }}</strong>
+        <span>Source: Guest Appointment</span>
+      </div>
       <div>
         <span class="field-label">Applicant</span>
-        <strong>{{ selectedAppointment.applicant.fullName || selectedAppointment.applicantName || '—' }}</strong>
-        <span>{{ selectedAppointment.applicant.designation || '—' }}</span>
+        <strong>{{ getDisplayName(selectedAppointment) }}</strong>
+        <span>{{ getDisplayDesignation(selectedAppointment) }}</span>
       </div>
       <div>
         <span class="field-label">Mobile</span>
-        <strong>{{ selectedAppointment.applicant.phoneNumber || selectedAppointment.applicantPhone || '—' }}</strong>
-        <span>EPIC: {{ selectedAppointment.applicant.epicNumber || '—' }}</span>
+        <strong>{{ getDisplayPhone(selectedAppointment) }}</strong>
+        <span *ngIf="selectedAppointment.appointmentSource !== 'GUEST'">EPIC: {{ selectedAppointment.applicant.epicNumber || '—' }}</span>
+        <span *ngIf="selectedAppointment.appointmentSource === 'GUEST'">{{ selectedAppointment.guestEmail || 'No email' }}</span>
       </div>
       <div>
         <span class="field-label">District</span>
@@ -464,6 +483,32 @@
         <span>Updated: {{ selectedAppointment.updatedAt ? (selectedAppointment.updatedAt | date:'dd-MMM-yyyy hh:mm a') : '-' }}</span>
       </div>
     </div>
+
+    <section class="detail-section" *ngIf="selectedAppointment.appointmentSource === 'GUEST'">
+      <h3>Guest Appointment Details</h3>
+      <div class="details-grid">
+        <div>
+          <span class="field-label">Referred Office</span>
+          <strong>{{ selectedAppointment.referredOffice || '—' }}</strong>
+          <span>{{ selectedAppointment.referredByName || 'No referred by name' }}</span>
+        </div>
+        <div>
+          <span class="field-label">Visitor Category</span>
+          <strong>{{ selectedAppointment.visitorCategory || '—' }}</strong>
+          <span>{{ selectedAppointment.preferredDate || 'No preferred date' }}</span>
+        </div>
+        <div>
+          <span class="field-label">Organization</span>
+          <strong>{{ selectedAppointment.organizationName || '—' }}</strong>
+          <span>{{ selectedAppointment.guestDesignation || '—' }}</span>
+        </div>
+        <div>
+          <span class="field-label">Address</span>
+          <strong>{{ selectedAppointment.guestAddress || '—' }}</strong>
+          <span>{{ selectedAppointment.guestEmail || '—' }}</span>
+        </div>
+      </div>
+    </section>
 
     <mat-divider></mat-divider>
 

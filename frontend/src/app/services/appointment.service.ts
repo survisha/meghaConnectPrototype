@@ -36,6 +36,28 @@ export interface AppointmentPage {
   number: number;
 }
 
+export interface GuestAppointmentRequest {
+  fullName: string;
+  mobileNumber: string;
+  address: string;
+  email?: string;
+  organizationName?: string;
+  designation?: string;
+  visitorCategory?: string;
+  referredOffice: string;
+  referredByName?: string;
+  reasonForAppointment: string;
+  preferredDate?: string;
+  remarks?: string;
+  supportingDocument?: File | null;
+}
+
+export interface GuestAppointmentResponse {
+  referenceId: string;
+  status: string;
+  message: string;
+}
+
 export type AiNotesStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
 
 export interface AppointmentDocumentAiNotes {
@@ -152,15 +174,42 @@ export class AppointmentService {
       .pipe(map(res => this.normalizePage(res)));
   }
 
-  getAllAppointments(page = 0, size = 20, status?: string): Observable<AppointmentPage> {
+  getAllAppointments(page = 0, size = 20, status?: string, options?: { source?: string; referredOffice?: string }): Observable<AppointmentPage> {
     let params = new HttpParams()
       .set('page', page.toString())
       .set('size', size.toString());
     if (status) {
       params = params.set('status', status);
     }
+    if (options?.source) {
+      params = params.set('source', options.source);
+    }
+    if (options?.referredOffice) {
+      params = params.set('referredOffice', options.referredOffice);
+    }
     return this.http.get<unknown>(this.baseUrl, { params })
       .pipe(map(res => this.normalizePage(res)));
+  }
+
+  createGuestAppointment(request: GuestAppointmentRequest): Observable<GuestAppointmentResponse> {
+    const formData = new FormData();
+    formData.append('fullName', request.fullName);
+    formData.append('mobileNumber', request.mobileNumber);
+    formData.append('address', request.address);
+    formData.append('referredOffice', request.referredOffice);
+    formData.append('reasonForAppointment', request.reasonForAppointment);
+    this.appendIfPresent(formData, 'email', request.email);
+    this.appendIfPresent(formData, 'organizationName', request.organizationName);
+    this.appendIfPresent(formData, 'designation', request.designation);
+    this.appendIfPresent(formData, 'visitorCategory', request.visitorCategory);
+    this.appendIfPresent(formData, 'referredByName', request.referredByName);
+    this.appendIfPresent(formData, 'preferredDate', request.preferredDate);
+    this.appendIfPresent(formData, 'remarks', request.remarks);
+    if (request.supportingDocument) {
+      formData.append('supportingDocument', request.supportingDocument, request.supportingDocument.name);
+    }
+    const guestUrl = environment.apiUrl.replace(/\/appointments$/, '') + '/guest-appointments';
+    return this.http.post<GuestAppointmentResponse>(guestUrl, formData);
   }
 
   getAppointmentById(id: number): Observable<Appointment> {
@@ -317,8 +366,8 @@ export class AppointmentService {
     const applicantRaw = raw.applicant ?? {};
     const applicant = {
       id: Number(applicantRaw.id ?? raw.applicantId ?? 0),
-      fullName: applicantRaw.fullName ?? raw.applicantName ?? '—',
-      phoneNumber: applicantRaw.phoneNumber ?? raw.applicantPhone ?? raw.applicantMobile ?? '',
+      fullName: applicantRaw.fullName ?? raw.guestName ?? raw.applicantName ?? '—',
+      phoneNumber: applicantRaw.phoneNumber ?? raw.guestMobile ?? raw.applicantPhone ?? raw.applicantMobile ?? '',
       epicNumber: applicantRaw.epicNumber ?? '',
       photoUrl: applicantRaw.photoUrl,
       livePhotoBase64: applicantRaw.livePhotoBase64,
@@ -326,7 +375,7 @@ export class AppointmentService {
       livePhotoPath: applicantRaw.livePhotoPath,
       photoStoragePath: applicantRaw.photoStoragePath,
       photoPath: applicantRaw.photoPath,
-      designation: applicantRaw.designation ?? '',
+      designation: applicantRaw.designation ?? raw.guestDesignation ?? raw.designation ?? '',
       district: applicantRaw.district ?? raw.district ?? '',
       constituency: applicantRaw.constituency ?? '',
       booth: applicantRaw.booth ?? '',
@@ -340,13 +389,26 @@ export class AppointmentService {
       applicationId: raw.applicationId ?? raw.id?.toString() ?? '',
       applicantId: raw.applicantId ?? applicant.id,
       applicant,
-      applicantName: raw.applicantName ?? applicant.fullName,
-      applicantPhone: raw.applicantPhone ?? applicant.phoneNumber,
+      applicantName: raw.applicantName ?? raw.guestName ?? applicant.fullName,
+      applicantPhone: raw.applicantPhone ?? raw.guestMobile ?? applicant.phoneNumber,
       subject: raw.subject,
       department: raw.department,
       appointmentType: raw.appointmentType,
+      appointmentSource: raw.appointmentSource ?? 'CITIZEN',
+      guestReferenceId: raw.guestReferenceId,
+      guestName: raw.guestName,
+      guestMobile: raw.guestMobile,
+      guestAddress: raw.guestAddress,
+      guestEmail: raw.guestEmail,
+      organizationName: raw.organizationName,
+      guestDesignation: raw.guestDesignation,
+      visitorCategory: raw.visitorCategory,
+      referredOffice: raw.referredOffice,
+      referredByName: raw.referredByName,
+      reasonForAppointment: raw.reasonForAppointment,
+      preferredDate: raw.preferredDate,
       agendaType: raw.agendaType ?? raw.appointmentType ?? raw.subject ?? '',
-      agendaBrief: raw.agendaBrief ?? raw.description ?? '',
+      agendaBrief: raw.agendaBrief ?? raw.reasonForAppointment ?? raw.description ?? '',
       status: raw.status ?? 'SUBMITTED',
       requestedLocation: raw.requestedLocation ?? 'OTHERS',
       scheduledDateTime: raw.scheduledDateTime,
@@ -372,6 +434,12 @@ export class AppointmentService {
       return raw.data as T;
     }
     return response as T;
+  }
+
+  private appendIfPresent(formData: FormData, key: string, value?: string | null): void {
+    if (value !== undefined && value !== null && value !== '') {
+      formData.append(key, value);
+    }
   }
 
   private normalizePilotImportResult(response: unknown): PilotImportResult {

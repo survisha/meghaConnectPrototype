@@ -84,6 +84,7 @@ public class SecurityConfig {
                     "/api/webjars/**"
                 ).permitAll()
                 .antMatchers("/api/v1/appointments").permitAll()   // Public can submit
+                .antMatchers("/api/v1/guest-appointments").permitAll() // Public guest appointment requests
                 .antMatchers("/api/v1/public/**").permitAll()       // Public registration
                 .antMatchers("/api/v1/visitor/auth/**").permitAll() // Visitor OTP auth
                 .antMatchers("/api/v1/visitor/**").permitAll()      // Visitor KYC endpoints

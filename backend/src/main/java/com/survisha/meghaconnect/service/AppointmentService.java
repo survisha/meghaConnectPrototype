@@ -3,6 +3,8 @@ package com.survisha.meghaconnect.service;
 import com.survisha.meghaconnect.dto.AppointmentDto;
 import com.survisha.meghaconnect.dto.AppointmentDocumentDto;
 import com.survisha.meghaconnect.dto.AppointmentMultipartRequest;
+import com.survisha.meghaconnect.dto.GuestAppointmentRequest;
+import com.survisha.meghaconnect.dto.GuestAppointmentResponse;
 import com.survisha.meghaconnect.entity.Appointment;
 import com.survisha.meghaconnect.entity.DocumentUpload;
 import com.survisha.meghaconnect.entity.SchemeApplication;
@@ -24,6 +26,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -102,11 +105,30 @@ public class AppointmentService {
     }
 
     public Page<AppointmentDto> findAllDtos(String status, Pageable pageable) {
+        return findAllDtos(status, null, null, pageable);
+    }
+
+    public Page<AppointmentDto> findAllDtos(String status, String source, String referredOffice, Pageable pageable) {
         List<Appointment.AppointmentStatus> statuses = parseStatuses(status);
-        if (statuses.isEmpty()) {
+        String sourceValue = normalizeSource(source);
+        String referredOfficeValue = trimToNull(referredOffice);
+        if (statuses.isEmpty() && sourceValue == null && referredOfficeValue == null) {
             return findAllDtos(pageable);
         }
-        return appointmentRepository.findByStatusIn(statuses, pageable).map(this::toDto);
+        Specification<Appointment> spec = (root, query, cb) -> {
+            javax.persistence.criteria.Predicate predicate = cb.conjunction();
+            if (!statuses.isEmpty()) {
+                predicate = cb.and(predicate, root.get("status").in(statuses));
+            }
+            if (sourceValue != null) {
+                predicate = cb.and(predicate, cb.equal(cb.upper(root.get("appointmentSource")), sourceValue));
+            }
+            if (referredOfficeValue != null) {
+                predicate = cb.and(predicate, cb.equal(cb.upper(root.get("referredOffice")), referredOfficeValue.toUpperCase()));
+            }
+            return predicate;
+        };
+        return appointmentRepository.findAll(spec, pageable).map(this::toDto);
     }
 
     public Optional<Appointment> findById(Long id) {
@@ -170,6 +192,80 @@ public class AppointmentService {
             .stream()
             .map(this::toDocumentDto)
             .toList();
+    }
+
+    @Transactional
+    public GuestAppointmentResponse createGuestAppointment(GuestAppointmentRequest request) {
+        GuestAppointmentRequest safeRequest = request != null ? request : new GuestAppointmentRequest();
+        String fullName = validationService.requireText(safeRequest.getFullName(), "fullName");
+        String mobileNumber = validationService.requirePhone(safeRequest.getMobileNumber());
+        String address = validationService.requireText(safeRequest.getAddress(), "address");
+        String referredOffice = validationService.requireText(safeRequest.getReferredOffice(), "referredOffice");
+        String reason = validationService.requireText(safeRequest.getReasonForAppointment(), "reasonForAppointment");
+        if (reason.length() < 10) {
+            throw new MeghaConnectException(ErrorCodeConstants.INVALID_FIELD_VALUE,
+                "Reason for appointment must be at least 10 characters.", HttpStatus.BAD_REQUEST.value());
+        }
+
+        Visitor visitor = Visitor.builder()
+            .fullName(fullName)
+            .phoneNumber(mobileNumber)
+            .email(trimToNull(safeRequest.getEmail()))
+            .designation(trimToNull(safeRequest.getDesignation()))
+            .address(address)
+            .addressLine(address)
+            .fullAddress(address)
+            .kycType("NONE")
+            .kycVerified(false)
+            .kycStatus("NOT_VERIFIED")
+            .build();
+        Visitor savedVisitor = visitorRepository.save(visitor);
+
+        String referenceId = generateGuestReferenceId();
+        Appointment appointment = Appointment.builder()
+            .applicationId(referenceId)
+            .applicant(savedVisitor)
+            .eventType(Appointment.EventType.A4)
+            .agendaType("Guest Appointment")
+            .subject("Guest Appointment - " + fullName)
+            .appointmentType("Guest Appointment")
+            .agendaBrief(reason)
+            .status(Appointment.AppointmentStatus.SUBMITTED)
+            .requestedLocation(Appointment.MeetingLocation.OTHERS)
+            .mlaMdcApproved(false)
+            .isWalkIn(false)
+            .aiDuplicateFlag(false)
+            .meetingCountLast6Months(0)
+            .appointmentSource("GUEST")
+            .guestReferenceId(referenceId)
+            .guestName(fullName)
+            .guestMobile(mobileNumber)
+            .guestAddress(address)
+            .guestEmail(trimToNull(safeRequest.getEmail()))
+            .organizationName(trimToNull(safeRequest.getOrganizationName()))
+            .guestDesignation(trimToNull(safeRequest.getDesignation()))
+            .visitorCategory(trimToNull(safeRequest.getVisitorCategory()))
+            .referredOffice(referredOffice)
+            .referredByName(trimToNull(safeRequest.getReferredByName()))
+            .reasonForAppointment(reason)
+            .preferredDate(safeRequest.getPreferredDate())
+            .shortNotes(trimToNull(safeRequest.getRemarks()))
+            .build();
+        appointment.setCreatedBy("guest");
+        appointment.setUpdatedBy("guest");
+        Appointment saved = appointmentRepository.save(appointment);
+
+        if (safeRequest.getSupportingDocument() != null && !safeRequest.getSupportingDocument().isEmpty()) {
+            uploadSupportingDocument(saved.getId(), safeRequest.getSupportingDocument(), "guest");
+        }
+
+        auditLogService.log("Appointment", saved.getId(), "GUEST_SUBMITTED",
+            "Guest appointment submitted: " + referenceId, "guest");
+        return GuestAppointmentResponse.builder()
+            .referenceId(referenceId)
+            .status(saved.getStatus().name())
+            .message("Guest appointment submitted successfully")
+            .build();
     }
 
     @Transactional
@@ -253,6 +349,7 @@ public class AppointmentService {
             .subject(dto.getSubject())
             .department(dto.getDepartment())
             .appointmentType(dto.getAppointmentType())
+            .appointmentSource("CITIZEN")
             .agendaType(dto.getAgendaType())
             .agendaBrief(dto.getAgendaBrief())
             .status(Appointment.AppointmentStatus.SUBMITTED)
@@ -319,6 +416,7 @@ public class AppointmentService {
             .eventType(parsedEventType)
             .agendaType(agendaTypeValue)
             .agendaBrief(safeForm.getAgendaBrief())
+            .appointmentSource("CITIZEN")
             .status(Appointment.AppointmentStatus.SUBMITTED)
             .requestedLocation(location)
             .mlaMdcApproved(safeForm.getMlaMdcApproved() != null && safeForm.getMlaMdcApproved())
@@ -405,6 +503,19 @@ public class AppointmentService {
             .subject(appointment.getSubject())
             .department(appointment.getDepartment())
             .appointmentType(appointment.getAppointmentType())
+            .appointmentSource(appointment.getAppointmentSource())
+            .guestReferenceId(appointment.getGuestReferenceId())
+            .guestName(appointment.getGuestName())
+            .guestMobile(appointment.getGuestMobile())
+            .guestAddress(appointment.getGuestAddress())
+            .guestEmail(appointment.getGuestEmail())
+            .organizationName(appointment.getOrganizationName())
+            .guestDesignation(appointment.getGuestDesignation())
+            .visitorCategory(appointment.getVisitorCategory())
+            .referredOffice(appointment.getReferredOffice())
+            .referredByName(appointment.getReferredByName())
+            .reasonForAppointment(appointment.getReasonForAppointment())
+            .preferredDate(appointment.getPreferredDate())
             .agendaType(appointment.getAgendaType())
             .agendaBrief(appointment.getAgendaBrief())
             .status(appointment.getStatus())
@@ -527,7 +638,8 @@ public class AppointmentService {
         }
         if (appt.getStatus() != Appointment.AppointmentStatus.APPROVED
                 && appt.getStatus() != Appointment.AppointmentStatus.FOLLOWUP
-                && appt.getStatus() != Appointment.AppointmentStatus.SCHEDULED) {
+                && appt.getStatus() != Appointment.AppointmentStatus.SCHEDULED
+                && !(isGuestAppointment(appt) && appt.getStatus() == Appointment.AppointmentStatus.SUBMITTED)) {
             invalidTransition("Only APPROVED, FOLLOWUP, or SCHEDULED applications can be scheduled.");
         }
 
@@ -568,6 +680,10 @@ public class AppointmentService {
     private String generateApplicationId() {
         long count = appointmentRepository.count() + 1;
         return "MC-" + DateTimeUtil.nowIST().getYear() + "-" + String.format("%05d", count);
+    }
+
+    private String generateGuestReferenceId() {
+        return "GA-" + DateTimeUtil.nowIST().getYear() + "-" + String.format("%05d", appointmentRepository.count() + 1);
     }
 
     private String firstNonBlank(String... values) {
@@ -616,6 +732,18 @@ public class AppointmentService {
         } catch (NumberFormatException e) {
             return null;
         }
+    }
+
+    private String normalizeSource(String source) {
+        String value = trimToNull(source);
+        if (value == null) {
+            return null;
+        }
+        return value.toUpperCase();
+    }
+
+    private boolean isGuestAppointment(Appointment appointment) {
+        return appointment != null && "GUEST".equalsIgnoreCase(appointment.getAppointmentSource());
     }
 
     private List<Appointment.AppointmentStatus> parseStatuses(String status) {

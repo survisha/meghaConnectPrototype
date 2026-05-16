@@ -1,0 +1,112 @@
+<main class="guest-page">
+  <section class="guest-shell">
+    <header class="guest-header">
+      <span class="eyebrow">MeghaConnect</span>
+      <h1>Guest Appointment</h1>
+      <p>This form is for visitors referred by officials for appointment scheduling.</p>
+    </header>
+
+    <mat-card class="guest-card" *ngIf="!referenceId; else successPanel">
+      <mat-card-content>
+        <div class="error-message" *ngIf="errorMsg">
+          <mat-icon>error_outline</mat-icon>
+          <span>{{ errorMsg }}</span>
+        </div>
+
+        <form class="guest-form" (ngSubmit)="submit()">
+          <mat-form-field appearance="outline">
+            <mat-label>Full name *</mat-label>
+            <input matInput name="fullName" [(ngModel)]="form.fullName" required>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Mobile number *</mat-label>
+            <input matInput name="mobileNumber" [(ngModel)]="form.mobileNumber" maxlength="10" required>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Address *</mat-label>
+            <textarea matInput name="address" [(ngModel)]="form.address" rows="2" required></textarea>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Referred office/person *</mat-label>
+            <mat-select name="referredOffice" [(ngModel)]="form.referredOffice" required>
+              <mat-option *ngFor="let office of referredOffices" [value]="office.code">{{ office.value }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Referred by name</mat-label>
+            <input matInput name="referredByName" [(ngModel)]="form.referredByName">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Visitor category</mat-label>
+            <mat-select name="visitorCategory" [(ngModel)]="form.visitorCategory">
+              <mat-option *ngFor="let category of visitorCategories" [value]="category.code">{{ category.value }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Email</mat-label>
+            <input matInput name="email" type="email" [(ngModel)]="form.email">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Organization name</mat-label>
+            <input matInput name="organizationName" [(ngModel)]="form.organizationName">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Designation</mat-label>
+            <input matInput name="designation" [(ngModel)]="form.designation">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Preferred appointment date</mat-label>
+            <input matInput [matDatepicker]="preferredPicker" name="preferredDate" [(ngModel)]="preferredDate">
+            <mat-datepicker-toggle matSuffix [for]="preferredPicker"></mat-datepicker-toggle>
+            <mat-datepicker #preferredPicker></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Reason for appointment *</mat-label>
+            <textarea matInput name="reasonForAppointment" [(ngModel)]="form.reasonForAppointment" rows="4" required></textarea>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Remarks</mat-label>
+            <textarea matInput name="remarks" [(ngModel)]="form.remarks" rows="2"></textarea>
+          </mat-form-field>
+
+          <div class="file-row full-width">
+            <mat-icon>attach_file</mat-icon>
+            <span>{{ supportingDocument?.name || 'Supporting document optional' }}</span>
+            <input #fileInput type="file" hidden (change)="onFileSelected($event)">
+            <button mat-stroked-button type="button" (click)="fileInput.click()">Choose File</button>
+          </div>
+
+          <div class="form-actions full-width">
+            <button mat-raised-button color="primary" type="submit" [disabled]="submitting">
+              <mat-spinner *ngIf="submitting" diameter="18"></mat-spinner>
+              <mat-icon *ngIf="!submitting">send</mat-icon>
+              Submit Request
+            </button>
+          </div>
+        </form>
+      </mat-card-content>
+    </mat-card>
+
+    <ng-template #successPanel>
+      <mat-card class="success-card">
+        <mat-card-content>
+          <mat-icon>check_circle</mat-icon>
+          <h2>Request Submitted</h2>
+          <p>Your guest appointment request has been submitted successfully. Reference ID: <strong>{{ referenceId }}</strong>. You will be notified once your appointment is scheduled.</p>
+          <button mat-raised-button color="primary" type="button" (click)="reset()">Submit Another Request</button>
+        </mat-card-content>
+      </mat-card>
+    </ng-template>
+  </section>
+</main>

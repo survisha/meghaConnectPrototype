@@ -40,6 +40,7 @@
         <mat-calendar 
           [(selected)]="selectedDate" 
           (selectedChange)="onDateSelected($event)"
+          [dateFilter]="dateFilter"
           [dateClass]="dateClass"
           style="width: 100%;">
         </mat-calendar>
@@ -75,7 +76,6 @@
             <div *ngFor="let evt of getEventsForHour(hour)"
                  class="{{getEventClass(evt.eventType)}} timeline-event"
                  cdkDrag
-                 [cdkDragDisabled]="evt.sourceType === 'APPOINTMENT'"
                  [cdkDragData]="evt"
                  (click)="openEvent(evt)">
               <div class="drag-handle" cdkDragHandle *ngIf="evt.sourceType !== 'APPOINTMENT'">
@@ -141,6 +141,7 @@
           <mat-calendar 
             [(selected)]="selectedDate" 
             (selectedChange)="onDateSelected($event)"
+            [dateFilter]="dateFilter"
             [dateClass]="dateClass"
             style="width: 100%;">
           </mat-calendar>

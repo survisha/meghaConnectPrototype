@@ -29,6 +29,10 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long>,
 
     List<Appointment> findByStatusIn(Collection<Appointment.AppointmentStatus> statuses);
 
+    List<Appointment> findByScheduledDateTimeGreaterThanEqualAndScheduledDateTimeLessThanOrderByScheduledDateTimeAsc(
+        java.time.LocalDateTime start,
+        java.time.LocalDateTime end);
+
     List<Appointment> findByPublicDarbar_IdOrderByPublicDarbarTokenNumberAsc(Long publicDarbarId);
 
     boolean existsByPublicDarbar_IdAndStatusIn(Long publicDarbarId, Collection<Appointment.AppointmentStatus> statuses);

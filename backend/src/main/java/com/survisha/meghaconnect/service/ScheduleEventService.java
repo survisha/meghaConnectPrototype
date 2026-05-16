@@ -84,6 +84,7 @@ public class ScheduleEventService {
 
     @Transactional
     public ScheduleEvent create(ScheduleEvent event) {
+        ensureFutureEvent(event);
         // Check for conflicts
         boolean conflict = scheduleEventRepository.findAll().stream()
             .anyMatch(e -> !e.getId().equals(event.getId()) &&
@@ -95,6 +96,7 @@ public class ScheduleEventService {
 
     @Transactional
     public ScheduleEvent update(ScheduleEvent event) {
+        ensureFutureEvent(event);
         return scheduleEventRepository.save(event);
     }
 
@@ -116,6 +118,7 @@ public class ScheduleEventService {
                 ErrorCodeConstants.format(ErrorCodeConstants.SCHEDULE_EVENT_NOT_FOUND_MSG, eventId),
                 HttpStatus.NOT_FOUND
             ));
+        ensureFutureEvent(event);
 
         List<Long> appointmentIds = request != null && request.getAppointmentIds() != null
             ? request.getAppointmentIds().stream().distinct().toList()
@@ -265,5 +268,15 @@ public class ScheduleEventService {
 
     private MeghaConnectException workflowException(String code, String message, HttpStatus status) {
         return new MeghaConnectException(code, message, status.value());
+    }
+
+    private void ensureFutureEvent(ScheduleEvent event) {
+        if (event == null || event.getStartTime() == null || event.getStartTime().isBefore(java.time.LocalDateTime.now())) {
+            throw workflowException(
+                ErrorCodeConstants.APPT_INVALID_SCHEDULE_DATE_TIME,
+                "Events and assignments cannot be scheduled in the past.",
+                HttpStatus.BAD_REQUEST
+            );
+        }
     }
 }

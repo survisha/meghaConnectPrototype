@@ -346,6 +346,29 @@
   border-radius: 6px; padding: 0.5rem 0.75rem;
   color: #dc2626; font-weight: 600; font-size: 0.85rem;
 }
+
+::ng-deep .mat-calendar-body-cell.past-date .mat-calendar-body-cell-content {
+  color: #9ca3af !important;
+  text-decoration: line-through;
+}
+
+::ng-deep .mat-calendar-body-cell.has-events .mat-calendar-body-cell-content::after {
+  bottom: 3px;
+  border-radius: 999px;
+  content: '';
+  height: 5px;
+  left: 50%;
+  position: absolute;
+  transform: translateX(-50%);
+  width: 18px;
+}
+
+::ng-deep .mat-calendar-body-cell.has-event-a1 .mat-calendar-body-cell-content::after { background: #1565c0; }
+::ng-deep .mat-calendar-body-cell.has-event-a2 .mat-calendar-body-cell-content::after { background: #2e7d32; }
+::ng-deep .mat-calendar-body-cell.has-event-a3 .mat-calendar-body-cell-content::after { background: #f57f17; }
+::ng-deep .mat-calendar-body-cell.has-event-a4 .mat-calendar-body-cell-content::after { background: #c62828; }
+::ng-deep .mat-calendar-body-cell.has-event-b1 .mat-calendar-body-cell-content::after { background: #4527a0; }
+::ng-deep .mat-calendar-body-cell.has-event-b2 .mat-calendar-body-cell-content::after { background: #006064; }
 .form-group { label { display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem; } }
 
 .dialog-overlay {

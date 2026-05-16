@@ -4,7 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { Appointment } from '../../models';
-import { AppointmentService } from '../../services/appointment.service';
+import { AppointmentRemark, AppointmentService } from '../../services/appointment.service';
+import { ReferenceDataDto, ReferenceDataService } from '../../services/reference-data.service';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -12,6 +13,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -67,6 +69,7 @@ interface HcmActionDto {
     MatDialogModule,
     MatFormFieldModule,
     MatInputModule,
+    MatSelectModule,
     MatDatepickerModule,
     MatNativeDateModule,
     MatProgressSpinnerModule,
@@ -79,6 +82,10 @@ interface HcmActionDto {
 export class HcmDashboardComponent implements OnInit {
   
   appointments: HcmAppointmentCard[] = [];
+  selectedDate: Date = new Date();
+  departments: ReferenceDataDto[] = [];
+  remarksHistory: AppointmentRemark[] = [];
+  loadingRemarks = false;
   pendingWorkItems: HcmActionDto[] = [];
   loadingAppointments = false;
   loadingPendingWork = false;
@@ -103,6 +110,8 @@ export class HcmDashboardComponent implements OnInit {
   // Form data for actions
   actionFormData = {
     remarks: '',
+    decision: '',
+    departmentCode: '',
     modifiedDateTime: null as Date | null,
     snoozeType: 'DAYS_7',
     clarification: '',
@@ -112,9 +121,11 @@ export class HcmDashboardComponent implements OnInit {
   constructor(
     private http: HttpClient,
     private appointmentService: AppointmentService,
+    private referenceDataService: ReferenceDataService,
   ) {}
   
   ngOnInit() {
+    this.loadDepartments();
     this.loadAppointments();
     this.loadPendingWorkItems();
     this.getPendingWorkCount();
@@ -125,11 +136,10 @@ export class HcmDashboardComponent implements OnInit {
    */
   loadAppointments() {
     this.loadingAppointments = true;
-    this.appointmentService.getApproverAppointments(0, 1000)
+    this.appointmentService.getHcmActionAppointments(this.toDateParam(this.selectedDate))
       .subscribe({
         next: page => {
-          this.appointments = (page.content ?? [])
-            .filter(appointment => appointment.status === 'HCM_PENDING')
+          this.appointments = (page ?? [])
             .map(appointment => this.mapAppointmentCard(appointment));
           this.clearApiError('appointments');
           this.loadingAppointments = false;
@@ -140,6 +150,19 @@ export class HcmDashboardComponent implements OnInit {
           this.loadingAppointments = false;
         },
       });
+  }
+
+  onDateSelected(date: Date | null) {
+    if (!date) return;
+    this.selectedDate = date;
+    this.loadAppointments();
+  }
+
+  private loadDepartments() {
+    this.referenceDataService.getByType('DEPARTMENT').subscribe({
+      next: departments => this.departments = departments ?? [],
+      error: err => this.setApiError('departments', err, 'Unable to load departments.'),
+    });
   }
   
   /**
@@ -254,6 +277,7 @@ export class HcmDashboardComponent implements OnInit {
     this.selectedAppointment = appointment;
     this.selectedActionType = 'RIGHT_SWIPE';
     this.showActionMenu = true;
+    this.loadRemarks(appointmentId);
   }
   
   /**
@@ -266,6 +290,48 @@ export class HcmDashboardComponent implements OnInit {
     this.selectedAppointment = appointment;
     this.selectedActionType = 'LEFT_SWIPE';
     this.showActionMenu = true;
+    this.loadRemarks(appointmentId);
+  }
+
+  loadRemarks(appointmentId: number) {
+    this.loadingRemarks = true;
+    this.appointmentService.getRemarks(appointmentId)
+      .subscribe({
+        next: remarks => {
+          this.remarksHistory = remarks;
+          this.loadingRemarks = false;
+        },
+        error: err => {
+          this.remarksHistory = [];
+          this.setApiError('remarks', err, 'Unable to load notes history.');
+          this.loadingRemarks = false;
+        }
+      });
+  }
+
+  saveMeetingRemark() {
+    if (!this.selectedAppointment || !this.actionFormData.remarks.trim()) {
+      alert('Please enter remarks before saving.');
+      return;
+    }
+    this.submittingAction = true;
+    this.appointmentService.addRemark(this.selectedAppointment.id, {
+      hcmRemarks: this.actionFormData.remarks,
+      decision: this.actionFormData.decision,
+      departmentCode: this.actionFormData.departmentCode,
+    }).subscribe({
+      next: () => {
+        alert('Remarks saved successfully.');
+        this.loadRemarks(this.selectedAppointment.id);
+        this.loadAppointments();
+        this.resetActionForm();
+        this.submittingAction = false;
+      },
+      error: err => {
+        this.setApiError('saveRemark', err, 'Unable to save remarks.');
+        this.submittingAction = false;
+      }
+    });
   }
   
   /**
@@ -387,6 +453,8 @@ export class HcmDashboardComponent implements OnInit {
   resetActionForm() {
     this.actionFormData = {
       remarks: '',
+      decision: '',
+      departmentCode: '',
       modifiedDateTime: null,
       snoozeType: 'DAYS_7',
       clarification: '',
@@ -400,6 +468,7 @@ export class HcmDashboardComponent implements OnInit {
   closeActionMenu() {
     this.showActionMenu = false;
     this.selectedAppointment = null;
+    this.remarksHistory = [];
     this.resetActionForm();
   }
   
@@ -508,5 +577,10 @@ export class HcmDashboardComponent implements OnInit {
 
     const pad = (part: number) => part.toString().padStart(2, '0');
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+  }
+
+  private toDateParam(date: Date): string {
+    const pad = (part: number) => part.toString().padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
   }
 }

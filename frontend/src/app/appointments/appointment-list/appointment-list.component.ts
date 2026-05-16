@@ -93,6 +93,8 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   selectedVisitorPhotoError = '';
   documentPreviewLoading = false;
   documentDownloadLoading = false;
+  supportingDocumentUploading = false;
+  selectedSupportingDocument: File | null = null;
   documentPreviewError = '';
   documents: AppointmentDocument[] = [];
   documentsLoading = false;
@@ -677,7 +679,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   }
 
   canRescheduleAppointment(appointment: Appointment | null) {
-    return this.canUseApproverActions(appointment);
+    return this.canUseApproverActions(appointment) && !!appointment && ['APPROVED', 'FOLLOWUP', 'SCHEDULED'].includes(appointment.status);
   }
 
   canMarkFollowUp(appointment: Appointment | null) {
@@ -913,10 +915,34 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
           this.selectedAppointment = updated;
           this.replaceAppointment(updated);
           this.appointmentRescheduleDialogRef?.close();
-          this.snackBar.open(`${updated.applicationId} rescheduled to ${this.rescheduleDate}.`, 'Close', { duration: 5000 });
+          this.snackBar.open(`Appointment scheduled successfully.`, 'Close', { duration: 5000 });
         },
         error: error => this.snackBar.open(apiErrorMessage(error, 'Failed to reschedule.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] })
       });
+  }
+
+  onSupportingDocumentSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.selectedSupportingDocument = input.files?.[0] ?? null;
+  }
+
+  uploadSupportingDocument() {
+    if (!this.selectedAppointment || !this.selectedSupportingDocument || this.supportingDocumentUploading) return;
+    this.supportingDocumentUploading = true;
+    this.appointmentService.uploadSupportingDocument(this.selectedAppointment.id, this.selectedSupportingDocument)
+      .pipe(finalize(() => this.supportingDocumentUploading = false))
+      .subscribe({
+        next: document => {
+          this.documents = [document, ...this.documents];
+          this.selectedSupportingDocument = null;
+          this.snackBar.open('Supporting document uploaded.', 'Close', { duration: 5000, panelClass: ['success-snackbar'] });
+        },
+        error: error => this.snackBar.open(apiErrorMessage(error, 'Unable to upload supporting document.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] })
+      });
+  }
+
+  canUploadSupportingDocument() {
+    return this.auth.hasRole('APPROVER', 'CMO_OFFICER', 'ADMIN', 'OSD');
   }
 
   private replaceAppointment(updated: Appointment) {
@@ -1033,6 +1059,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     this.clearVisitorPhotoState();
     this.documents = [];
     this.documentsError = '';
+    this.selectedSupportingDocument = null;
   }
 
   private loadVisitorPhoto(appointment: Appointment) {

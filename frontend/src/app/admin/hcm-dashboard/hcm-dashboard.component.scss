@@ -215,6 +215,47 @@
   }
 }
 
+.date-filter-row {
+  display: flex;
+  justify-content: flex-start;
+  margin: 0.75rem 0 1rem;
+
+  mat-form-field {
+    min-width: 240px;
+  }
+}
+
+.notes-history {
+  border-top: 1px solid #e5e7eb;
+  margin-top: 1rem;
+  padding-top: 1rem;
+
+  h3 {
+    font-size: 0.95rem;
+    margin: 0 0 0.75rem;
+  }
+}
+
+.note-row {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  display: grid;
+  gap: 0.2rem;
+  margin-bottom: 0.5rem;
+  padding: 0.65rem;
+
+  span,
+  em {
+    color: #64748b;
+    font-size: 0.8rem;
+  }
+
+  p {
+    margin: 0.25rem 0;
+  }
+}
+
 .pilot-arrow-controls {
   display: grid;
   grid-template-columns: 44px 1fr 44px;

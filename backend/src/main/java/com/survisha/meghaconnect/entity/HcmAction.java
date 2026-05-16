@@ -70,6 +70,21 @@ public class HcmAction {
     // Remarks from HCM
     @Column(name = "hcm_remarks", columnDefinition = "TEXT")
     private String hcmRemarks;
+
+    @Column(name = "decision", length = 200)
+    private String decision;
+
+    @Column(name = "department_code", length = 100)
+    private String departmentCode;
+
+    @Column(name = "department_name", length = 200)
+    private String departmentName;
+
+    @Column(name = "created_by", length = 100)
+    private String createdBy;
+
+    @Column(name = "created_by_role", length = 50)
+    private String createdByRole;
     
     // Gesture info
     @Column(name = "gesture_type", length = 50) // RIGHT_SWIPE, LEFT_SWIPE

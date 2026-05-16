@@ -14,6 +14,7 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule, provideNativeDateAdapter } from '@angular/material/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { DragDropModule, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { apiErrorMessage } from '../shared/api-error.util';
 
@@ -32,6 +33,7 @@ import { apiErrorMessage } from '../shared/api-error.util';
     MatNativeDateModule,
     MatCardModule,
     MatCheckboxModule,
+    MatSnackBarModule,
     DragDropModule
   ],
   providers: [provideNativeDateAdapter()],
@@ -75,7 +77,8 @@ export class SchedulingComponent implements OnInit {
   constructor(
     private scheduleEventService: ScheduleEventService,
     private appointmentService: AppointmentService,
-    private referenceDataService: ReferenceDataService
+    private referenceDataService: ReferenceDataService,
+    private snackBar: MatSnackBar
   ) {}
 
   ngOnInit() {
@@ -226,6 +229,10 @@ export class SchedulingComponent implements OnInit {
   addEvent() {
     const startTime = this.combineDateAndTime(this.newEventStartDate, this.newEventStartTime);
     const endTime = this.combineDateAndTime(this.newEventEndDate, this.newEventEndTime);
+    if (startTime && this.isPastDateTime(startTime)) {
+      this.snackBar.open('Cannot schedule an event in the past.', 'Close', { duration: 4000 });
+      return;
+    }
     if (this.newEvent.title && this.newEvent.eventType && startTime && endTime && this.newEvent.location) {
       this.scheduleEventService.create({ ...this.newEvent, startTime, endTime }).subscribe({
         next: created => {
@@ -236,6 +243,7 @@ export class SchedulingComponent implements OnInit {
           this.newEventStartDate = null;
           this.newEventEndDate = null;
           this.showAddDialog = false;
+          this.snackBar.open('Event created successfully.', 'Close', { duration: 4000 });
         },
         error: error => this.errorMsg = apiErrorMessage(error, 'Unable to create schedule event.')
       });
@@ -333,10 +341,15 @@ export class SchedulingComponent implements OnInit {
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
   }
 
+  private toDateParam(date: Date): string {
+    const pad = (value: number) => value.toString().padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  }
+
   // Drag and drop handler
   onEventDrop(event: CdkDragDrop<ScheduleEvent[]>, targetHour: string) {
     const droppedEvent = event.item.data as ScheduleEvent;
-    if (droppedEvent.sourceType === 'APPOINTMENT' || droppedEvent.id < 0) {
+    if (!droppedEvent) {
       return;
     }
 
@@ -348,8 +361,32 @@ export class SchedulingComponent implements OnInit {
     // Create new date with selected date and target hour
     const newStart = new Date(this.selectedDate);
     newStart.setHours(targetHourNum, 0, 0, 0);
+    if (this.isPastDateTime(newStart)) {
+      this.snackBar.open('Cannot schedule or drag appointments to past dates.', 'Close', { duration: 5000 });
+      return;
+    }
+    if (!window.confirm('Reschedule this appointment/event to the selected date and time?')) {
+      return;
+    }
     
     const newEnd = new Date(newStart.getTime() + duration);
+
+    if (droppedEvent.sourceType === 'APPOINTMENT' && droppedEvent.appointmentId) {
+      this.appointmentService.rescheduleAppointmentDate(droppedEvent.appointmentId, {
+        scheduledDate: this.toDateParam(newStart),
+        scheduledTime: `${String(newStart.getHours()).padStart(2, '0')}:00`,
+      }).subscribe({
+        next: () => {
+          this.snackBar.open('Appointment rescheduled successfully.', 'Close', { duration: 5000 });
+          this.loadEvents();
+        },
+        error: error => {
+          this.errorMsg = apiErrorMessage(error, 'Unable to reschedule appointment.');
+          this.loadEvents();
+        }
+      });
+      return;
+    }
     
     const updatedEvent: Partial<ScheduleEvent> = {
       title: droppedEvent.title,
@@ -366,6 +403,7 @@ export class SchedulingComponent implements OnInit {
     this.scheduleEventService.update(droppedEvent.id, updatedEvent).subscribe({
       next: saved => {
         this.events = this.events.map(item => item.id === saved.id ? saved : item);
+        this.snackBar.open('Appointment rescheduled successfully.', 'Close', { duration: 5000 });
       },
       error: error => {
         this.errorMsg = apiErrorMessage(error, 'Unable to update schedule event.');
@@ -382,9 +420,34 @@ export class SchedulingComponent implements OnInit {
     });
   }
 
+  dateFilter = (date: Date | null): boolean => {
+    return !date || !this.isPastCalendarDate(date);
+  };
+
   // Custom date class for calendar styling
   dateClass = (date: Date): string => {
-    return this.dateHasEvents(date) ? 'has-events' : '';
+    const classes: string[] = [];
+    if (this.isPastCalendarDate(date)) {
+      classes.push('past-date');
+    }
+    const event = this.events.find(item => this.isSameDay(new Date(item.startTime), date));
+    if (event) {
+      classes.push('has-events', `has-event-${event.eventType.toLowerCase()}`);
+    }
+    return classes.join(' ');
+  }
+
+  private isPastCalendarDate(date: Date) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const value = new Date(date);
+    value.setHours(0, 0, 0, 0);
+    return value < today;
+  }
+
+  private isPastDateTime(value: string | Date) {
+    const date = value instanceof Date ? value : new Date(value);
+    return date.getTime() < Date.now();
   }
 }
 

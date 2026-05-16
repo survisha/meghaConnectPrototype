@@ -4,11 +4,13 @@ import com.survisha.meghaconnect.dto.AppointmentMultipartRequest;
 import com.survisha.meghaconnect.dto.AppointmentDocumentAiNotesDto;
 import com.survisha.meghaconnect.dto.AppointmentDocumentDto;
 import com.survisha.meghaconnect.dto.AppointmentDto;
+import com.survisha.meghaconnect.dto.HcmActionDto;
 import com.survisha.meghaconnect.dto.ScheduleEventAppointmentAssignmentRequest;
 import com.survisha.meghaconnect.dto.ScheduleEventDto;
 import com.survisha.meghaconnect.entity.Appointment;
 import com.survisha.meghaconnect.service.AppointmentDocumentAiNotesService;
 import com.survisha.meghaconnect.service.AppointmentService;
+import com.survisha.meghaconnect.service.HcmActionService;
 import com.survisha.meghaconnect.service.ScheduleEventService;
 import com.survisha.meghaconnect.util.RequestContextUtil;
 import io.swagger.v3.oas.annotations.Operation;
@@ -23,6 +25,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -32,7 +35,9 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import javax.servlet.http.HttpServletRequest;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -48,6 +53,7 @@ public class AppointmentController {
     private final AppointmentService appointmentService;
     private final AppointmentDocumentAiNotesService appointmentDocumentAiNotesService;
     private final ScheduleEventService scheduleEventService;
+    private final HcmActionService hcmActionService;
 
     @Operation(summary = "Get all appointments", description = "Retrieve paginated list of all appointments")
     @ApiResponses(value = {
@@ -171,6 +177,56 @@ public class AppointmentController {
         request.setAppointmentIds(longList(safeBody.get("appointmentIds")));
         request.setRemarks(stringValue(safeBody.get("remarks")));
         return ResponseEntity.ok(scheduleEventService.assignAppointments(eventId, request, actor(authentication), role(authentication)));
+    }
+
+    @Operation(summary = "Get HCM/OSD action appointments for date", description = "Retrieve scheduled appointments for HCM/OSD action on a selected date")
+    @GetMapping("/hcm-actions")
+    @PreAuthorize("hasAnyRole('HCM','OSD','ADMIN')")
+    public ResponseEntity<List<AppointmentDto>> getHcmActionAppointments(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        logEndpoint("/api/v1/appointments/hcm-actions");
+        return ResponseEntity.ok(hcmActionService.getAppointmentsForDate(date)
+            .stream()
+            .map(appointmentService::toDto)
+            .toList());
+    }
+
+    @PostMapping("/{id}/reschedule")
+    @PreAuthorize("hasAnyRole('APPROVER','HCM','OSD','ADMIN')")
+    public ResponseEntity<AppointmentDto> rescheduleAppointment(@PathVariable Long id,
+                                                                @RequestBody Map<String, Object> body,
+                                                                @AuthenticationPrincipal UserDetails user) {
+        logEndpoint("/api/v1/appointments/{id}/reschedule");
+        String actor = user != null ? user.getUsername() : "system";
+        return ResponseEntity.ok(appointmentService.toDto(appointmentService.reschedule(id, body, actor)));
+    }
+
+    @GetMapping("/{id}/remarks")
+    @PreAuthorize("hasAnyRole('HCM','OSD','ADMIN','APPROVER','CMO_OFFICER')")
+    public ResponseEntity<List<HcmActionDto>> getRemarks(@PathVariable Long id) {
+        logEndpoint("/api/v1/appointments/{id}/remarks");
+        return ResponseEntity.ok(hcmActionService.getRemarksForAppointment(id));
+    }
+
+    @PostMapping("/{id}/remarks")
+    @PreAuthorize("hasAnyRole('HCM','OSD','ADMIN')")
+    public ResponseEntity<HcmActionDto> addRemark(@PathVariable Long id,
+                                                  @RequestBody HcmActionDto body,
+                                                  Authentication authentication) {
+        logEndpoint("/api/v1/appointments/{id}/remarks");
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .body(hcmActionService.addRemark(id, body, actor(authentication), role(authentication)));
+    }
+
+    @PostMapping(value = "/{id}/supporting-documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyRole('APPROVER','CMO_OFFICER','ADMIN','OSD')")
+    public ResponseEntity<AppointmentDocumentDto> uploadSupportingDocument(@PathVariable Long id,
+                                                                           @RequestParam("file") MultipartFile file,
+                                                                           @AuthenticationPrincipal UserDetails user) {
+        logEndpoint("/api/v1/appointments/{id}/supporting-documents");
+        String actor = user != null ? user.getUsername() : "system";
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .body(appointmentService.uploadSupportingDocument(id, file, actor));
     }
 
     @Operation(summary = "Create appointment", description = "Create a new appointment")

@@ -11,6 +11,15 @@
     {{ errorMsg }}
   </div>
 
+  <div class="date-filter-row">
+    <mat-form-field appearance="outline">
+      <mat-label>Selected Date</mat-label>
+      <input matInput [matDatepicker]="hcmDatePicker" [(ngModel)]="selectedDate" (dateChange)="onDateSelected($event.value)">
+      <mat-datepicker-toggle matSuffix [for]="hcmDatePicker"></mat-datepicker-toggle>
+      <mat-datepicker #hcmDatePicker></mat-datepicker>
+    </mat-form-field>
+  </div>
+
   <!-- Tabs: Appointments and Pending Work -->
   <mat-tab-group class="dashboard-tabs">
     
@@ -128,7 +137,7 @@
           <!-- Empty state -->
           <div *ngIf="appointments.length === 0 && !loadingAppointments" class="empty-state">
             <mat-icon>inbox</mat-icon>
-            <p>No appointments to review</p>
+            <p>No appointments for selected date.</p>
           </div>
         </div>
       </div>
@@ -286,9 +295,39 @@
         <!-- Remarks section (common to all actions) -->
         <div class="remarks-section">
           <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Add Remarks (Optional)</mat-label>
+            <mat-label>Decision</mat-label>
+            <input matInput [(ngModel)]="actionFormData.decision" placeholder="Forwarded for verification">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Forward to Department</mat-label>
+            <mat-select [(ngModel)]="actionFormData.departmentCode">
+              <mat-option value="">No department</mat-option>
+              <mat-option *ngFor="let department of departments" [value]="department.code">
+                {{ department.value }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Add Remarks / Notes</mat-label>
             <textarea matInput [(ngModel)]="actionFormData.remarks" rows="2"></textarea>
           </mat-form-field>
+
+          <button mat-raised-button color="primary" type="button" (click)="saveMeetingRemark()" [disabled]="submittingAction || !actionFormData.remarks">
+            <mat-icon>save</mat-icon>
+            Save Remarks
+          </button>
+
+          <div class="notes-history" *ngIf="remarksHistory.length > 0">
+            <h3>Notes History</h3>
+            <div class="note-row" *ngFor="let note of remarksHistory">
+              <strong>{{ note.decision || 'Remark' }}</strong>
+              <span>{{ note.departmentName || note.departmentCode || 'No department' }}</span>
+              <p>{{ note.hcmRemarks }}</p>
+              <em>{{ note.createdByRole || '-' }} / {{ note.createdBy || '-' }} · {{ formatDateTime(note.createdAt) }}</em>
+            </div>
+          </div>
         </div>
       </div>
 

@@ -9,6 +9,7 @@ import com.survisha.meghaconnect.entity.SchemeApplication;
 import com.survisha.meghaconnect.entity.Visitor;
 import com.survisha.meghaconnect.repository.AppointmentRepository;
 import com.survisha.meghaconnect.repository.DocumentUploadRepository;
+import com.survisha.meghaconnect.repository.ScheduleEventRepository;
 import com.survisha.meghaconnect.repository.SchemeApplicationRepository;
 import com.survisha.meghaconnect.repository.VisitorRepository;
 import com.survisha.meghaconnect.exception.*;
@@ -83,6 +84,7 @@ public class AppointmentService {
     private final AppointmentRepository appointmentRepository;
     private final VisitorRepository visitorRepository;
     private final DocumentUploadRepository documentUploadRepository;
+    private final ScheduleEventRepository scheduleEventRepository;
     private final SchemeApplicationRepository schemeApplicationRepository;
     private final AuditLogService auditLogService;
     private final RequestValidationService validationService;
@@ -168,6 +170,69 @@ public class AppointmentService {
             .stream()
             .map(this::toDocumentDto)
             .toList();
+    }
+
+    @Transactional
+    public Appointment reschedule(Long id, Map<String, Object> body, String updatedBy) {
+        Appointment appt = appointmentRepository.findById(id)
+            .orElseThrow(() -> new AppointmentNotFoundException(id));
+        LocalDateTime scheduledDateTime = parseScheduleDateTime(body);
+        if (scheduledDateTime.isBefore(DateTimeUtil.nowIST())) {
+            throw new MeghaConnectException(ErrorCodeConstants.APPT_INVALID_SCHEDULE_DATE_TIME,
+                "Appointments cannot be scheduled or rescheduled to a past date/time.", HttpStatus.BAD_REQUEST.value());
+        }
+        Long eventId = longValue(body != null ? body.get("eventId") : null);
+        if (eventId != null) {
+            scheduleEventRepository.findById(eventId).ifPresent(appt::setScheduleEvent);
+        }
+        appt.setScheduledDateTime(scheduledDateTime);
+        if (appt.getScheduledDurationMinutes() == null) {
+            appt.setScheduledDurationMinutes(30);
+        }
+        appt.setStatus(Appointment.AppointmentStatus.SCHEDULED);
+        appt.setUpdatedBy(updatedBy);
+        Appointment saved = appointmentRepository.save(appt);
+        auditLogService.log("Appointment", saved.getId(), "RESCHEDULED",
+            "Rescheduled for: " + scheduledDateTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME), updatedBy);
+        return saved;
+    }
+
+    @Transactional
+    public AppointmentDocumentDto uploadSupportingDocument(Long appointmentId, MultipartFile file, String actor) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+            .orElseThrow(() -> new AppointmentNotFoundException(appointmentId));
+        if (file == null || file.isEmpty()) {
+            throw new MeghaConnectException(ErrorCodeConstants.MISSING_REQUIRED_FIELD,
+                ErrorCodeConstants.format(ErrorCodeConstants.MISSING_REQUIRED_FIELD_MSG, "file"),
+                HttpStatus.BAD_REQUEST.value());
+        }
+        try {
+            FileStorageService.StoredFileMetadata storedFile =
+                fileStorageService.storeFileSecure(file, appointment.getApplicant().getId(), appointment.getApplicationId());
+            LocalDateTime now = DateTimeUtil.nowIST();
+            DocumentUpload document = DocumentUpload.builder()
+                .appointment(appointment)
+                .visitor(appointment.getApplicant())
+                .documentType("SUPPORTING_DOCUMENT")
+                .originalFilename(storedFile.getOriginalFileName())
+                .storedFileName(storedFile.getStoredFileName())
+                .filePath(storedFile.getEncryptedFilePath())
+                .encryptedFilePath(storedFile.getEncryptedFilePath())
+                .secureHash(storedFile.getSecureHash())
+                .fileSizeBytes(storedFile.getFileSize())
+                .mimeType(storedFile.getContentType())
+                .contentType(storedFile.getContentType())
+                .uploadedBy(actor)
+                .uploadedDate(now)
+                .createdAt(now)
+                .updatedAt(now)
+                .build();
+            DocumentUpload saved = documentUploadRepository.save(document);
+            queueAiNotes(saved, actor);
+            return toDocumentDto(saved);
+        } catch (IOException e) {
+            throw new IllegalArgumentException("Failed to store supporting document.", e);
+        }
     }
 
     @Transactional
@@ -456,6 +521,15 @@ public class AppointmentService {
                                 String updatedBy) {
         Appointment appt = appointmentRepository.findById(id)
             .orElseThrow(() -> new AppointmentNotFoundException(id));
+        if (dateTime == null || dateTime.isBefore(DateTimeUtil.nowIST())) {
+            throw new MeghaConnectException(ErrorCodeConstants.APPT_INVALID_SCHEDULE_DATE_TIME,
+                "Appointments cannot be scheduled in the past.", HttpStatus.BAD_REQUEST.value());
+        }
+        if (appt.getStatus() != Appointment.AppointmentStatus.APPROVED
+                && appt.getStatus() != Appointment.AppointmentStatus.FOLLOWUP
+                && appt.getStatus() != Appointment.AppointmentStatus.SCHEDULED) {
+            invalidTransition("Only APPROVED, FOLLOWUP, or SCHEDULED applications can be scheduled.");
+        }
 
         // Conflict check
         List<Appointment> conflicts = appointmentRepository.findByStatus(
@@ -514,6 +588,34 @@ public class AppointmentService {
         }
         String value = body.get(key).toString().trim();
         return value.isEmpty() ? null : value;
+    }
+
+    private LocalDateTime parseScheduleDateTime(Map<String, Object> body) {
+        Object scheduledDateTime = body != null ? body.get(ValidationConstants.FIELD_SCHEDULED_DATE_TIME) : null;
+        if (scheduledDateTime != null && !scheduledDateTime.toString().trim().isEmpty()) {
+            return validationService.requireDateTime(scheduledDateTime, ValidationConstants.FIELD_SCHEDULED_DATE_TIME);
+        }
+        String date = bodyValue(body, "scheduledDate");
+        String time = bodyValue(body, "scheduledTime");
+        if (date == null || time == null) {
+            throw new MeghaConnectException(ErrorCodeConstants.MISSING_REQUIRED_FIELD,
+                "scheduledDate and scheduledTime are required.", HttpStatus.BAD_REQUEST.value());
+        }
+        return LocalDateTime.parse(date + "T" + time);
+    }
+
+    private Long longValue(Object value) {
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        if (value == null || value.toString().trim().isEmpty()) {
+            return null;
+        }
+        try {
+            return Long.parseLong(value.toString());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     private List<Appointment.AppointmentStatus> parseStatuses(String status) {

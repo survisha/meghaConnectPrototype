@@ -3,8 +3,10 @@ package com.survisha.meghaconnect.service;
 import com.survisha.meghaconnect.dto.HcmActionDto;
 import com.survisha.meghaconnect.entity.Appointment;
 import com.survisha.meghaconnect.entity.HcmAction;
+import com.survisha.meghaconnect.entity.ReferenceData;
 import com.survisha.meghaconnect.repository.AppointmentRepository;
 import com.survisha.meghaconnect.repository.HcmActionRepository;
+import com.survisha.meghaconnect.repository.ReferenceDataRepository;
 import com.survisha.meghaconnect.security.JwtUtils;
 import com.survisha.meghaconnect.util.DateTimeUtil;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.servlet.http.HttpServletRequest;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -30,6 +33,7 @@ public class HcmActionService {
     
     private final HcmActionRepository hcmActionRepository;
     private final AppointmentRepository appointmentRepository;
+    private final ReferenceDataRepository referenceDataRepository;
     private final JwtUtils jwtUtils;
     
     /**
@@ -79,6 +83,65 @@ public class HcmActionService {
         HcmAction saved = hcmActionRepository.save(action);
         updateAppointmentAfterHcmAcceptance(appointmentId, acceptedDateTime, actionDto.getHcmRemarks());
         log.info("Appointment accepted by HCM: appointmentId={}", appointmentId);
+        return convertToDto(saved);
+    }
+
+    public List<HcmActionDto> getRemarksForAppointment(Long appointmentId) {
+        return hcmActionRepository.findByAppointmentIdAndActionTypeOrderByCreatedAtDesc(appointmentId, "REMARK")
+            .stream()
+            .map(this::convertToDto)
+            .collect(Collectors.toList());
+    }
+
+    public List<Appointment> getAppointmentsForDate(LocalDate date) {
+        LocalDate target = date != null ? date : DateTimeUtil.currentDateIST();
+        return appointmentRepository
+            .findByScheduledDateTimeGreaterThanEqualAndScheduledDateTimeLessThanOrderByScheduledDateTimeAsc(
+                target.atStartOfDay(),
+                target.plusDays(1).atStartOfDay()
+            );
+    }
+
+    public HcmActionDto addRemark(Long appointmentId, HcmActionDto actionDto, String actor, String actorRole) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+            .orElseThrow(() -> new IllegalArgumentException("Appointment not found: " + appointmentId));
+        if (appointment.getScheduledDateTime() == null && appointment.getStatus() != Appointment.AppointmentStatus.SCHEDULED) {
+            throw new IllegalArgumentException("HCM/OSD remarks can be added only for scheduled appointments.");
+        }
+
+        String departmentCode = trimToNull(actionDto != null ? actionDto.getDepartmentCode() : null);
+        String departmentName = resolveDepartmentName(departmentCode);
+        String remarks = trimToNull(actionDto != null ? actionDto.getHcmRemarks() : null);
+        String decision = trimToNull(actionDto != null ? actionDto.getDecision() : null);
+
+        HcmAction action = HcmAction.builder()
+            .appointmentId(appointmentId)
+            .actionType("REMARK")
+            .actionStatus("COMPLETED")
+            .gestureType("MANUAL")
+            .hcmRemarks(remarks)
+            .decision(decision)
+            .departmentCode(departmentCode)
+            .departmentName(departmentName)
+            .createdBy(actor)
+            .createdByRole(actorRole)
+            .originalDateTime(appointment.getScheduledDateTime())
+            .originalLocation(appointment.getRequestedLocation() != null ? appointment.getRequestedLocation().name() : null)
+            .appointmentSubject(firstNonBlank(appointment.getSubject(), appointment.getAgendaType(), appointment.getApplicationId()))
+            .build();
+        HcmAction saved = hcmActionRepository.save(action);
+
+        if (remarks != null) {
+            appointment.setHcmRemarks(remarks);
+        }
+        if (departmentCode != null) {
+            appointment.setDepartment(departmentName != null ? departmentName : departmentCode);
+            appointment.setStatus(Appointment.AppointmentStatus.FORWARDED_TO_DEPARTMENT);
+        } else if (decision != null) {
+            appointment.setStatus(Appointment.AppointmentStatus.COMPLETED);
+        }
+        appointment.setUpdatedBy(actor);
+        appointmentRepository.save(appointment);
         return convertToDto(saved);
     }
     
@@ -244,7 +307,7 @@ public class HcmActionService {
             String token = jwtUtils.extractTokenFromRequest(request);
             if (token == null) return false;
             String role = jwtUtils.getRoleFromToken(token);
-            return "HCM".equals(role);
+            return "HCM".equals(role) || "OSD".equals(role) || "ADMIN".equals(role);
         } catch (Exception e) {
             log.error("Error checking HCM role", e);
             return false;
@@ -269,6 +332,11 @@ public class HcmActionService {
             .isRejected(action.getIsRejected())
             .clarificationRequested(action.getClarificationRequested())
             .hcmRemarks(action.getHcmRemarks())
+            .decision(action.getDecision())
+            .departmentCode(action.getDepartmentCode())
+            .departmentName(action.getDepartmentName())
+            .createdBy(action.getCreatedBy())
+            .createdByRole(action.getCreatedByRole())
             .gestureType(action.getGestureType())
             .originalDateTime(action.getOriginalDateTime())
             .originalLocation(action.getOriginalLocation())
@@ -289,5 +357,33 @@ public class HcmActionService {
             appointment.setScheduledDurationMinutes(30);
         }
         appointmentRepository.save(appointment);
+    }
+
+    private String resolveDepartmentName(String departmentCode) {
+        if (departmentCode == null) {
+            return null;
+        }
+        return referenceDataRepository.findActiveByTypeCode("DEPARTMENT")
+            .stream()
+            .filter(reference -> departmentCode.equals(reference.getCode()))
+            .findFirst()
+            .map(ReferenceData::getValue)
+            .orElse(departmentCode);
+    }
+
+    private String trimToNull(String value) {
+        return value == null || value.trim().isEmpty() ? null : value.trim();
+    }
+
+    private String firstNonBlank(String... values) {
+        if (values == null) {
+            return null;
+        }
+        for (String value : values) {
+            if (value != null && !value.trim().isEmpty()) {
+                return value.trim();
+            }
+        }
+        return null;
     }
 }

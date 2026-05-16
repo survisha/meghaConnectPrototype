@@ -522,6 +522,25 @@
         <span>{{ documents.length }} file(s)</span>
       </div>
 
+      <div class="document-row" *ngIf="canUploadSupportingDocument()" style="margin:0.75rem 0">
+        <mat-icon>upload_file</mat-icon>
+        <div>
+          <strong>Supporting Document</strong>
+          <span>{{ selectedSupportingDocument?.name || 'Upload proof or post-meeting supporting file' }}</span>
+        </div>
+        <input #supportingDocInput type="file" hidden (change)="onSupportingDocumentSelected($event)">
+        <button mat-stroked-button type="button" (click)="supportingDocInput.click()" [disabled]="supportingDocumentUploading">
+          <mat-icon>attach_file</mat-icon>
+          Choose
+        </button>
+        <button mat-raised-button color="primary" type="button"
+                (click)="uploadSupportingDocument()"
+                [disabled]="!selectedSupportingDocument || supportingDocumentUploading">
+          <mat-icon>cloud_upload</mat-icon>
+          Upload
+        </button>
+      </div>
+
       <div class="documents-loading" *ngIf="documentsLoading">
         <mat-spinner diameter="28"></mat-spinner>
         <span>Loading documents...</span>
@@ -592,7 +611,7 @@
                 class="reschedule-action"
                 [disabled]="!canRescheduleAppointment(appointment) || actionUpdating"
                 (click)="openReschedule(appointment)"
-                matTooltip="Reschedule"
+                matTooltip="Schedule"
                 matTooltipPosition="above">
           <mat-icon>event</mat-icon>
         </button>
@@ -689,7 +708,7 @@
 <ng-template #appointmentRescheduleDialog>
   <div class="action-dialog-title" mat-dialog-title>
     <div>
-      <span class="eyebrow">Reschedule Appointment</span>
+      <span class="eyebrow">Schedule Appointment</span>
       <h2>{{ selectedAppointment?.applicationId }}</h2>
     </div>
     <button mat-icon-button aria-label="Close reschedule dialog" (click)="closeAppointmentRescheduleDialog()">
@@ -717,7 +736,7 @@
             [disabled]="!rescheduleDate || actionUpdating"
             (click)="confirmReschedule()">
       <mat-icon>event</mat-icon>
-      Confirm Reschedule
+      Confirm Schedule
     </button>
   </mat-dialog-actions>
 </ng-template>

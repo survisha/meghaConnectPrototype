@@ -48,6 +48,11 @@ public class HcmActionDto {
     
     // HCM remarks
     private String hcmRemarks;
+    private String decision;
+    private String departmentCode;
+    private String departmentName;
+    private String createdBy;
+    private String createdByRole;
     
     // Gesture info
     private String gestureType; // RIGHT_SWIPE, LEFT_SWIPE

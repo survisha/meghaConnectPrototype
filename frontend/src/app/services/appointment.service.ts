@@ -65,6 +65,18 @@ export interface CmoReviewRequest {
   notifyDeo?: boolean;
 }
 
+export interface AppointmentRemark {
+  id?: number;
+  appointmentId?: number;
+  hcmRemarks?: string;
+  decision?: string;
+  departmentCode?: string;
+  departmentName?: string;
+  createdBy?: string;
+  createdByRole?: string;
+  createdAt?: string;
+}
+
 export interface PilotImportRowResult {
   rowNumber: number;
   srNo?: string;
@@ -198,6 +210,11 @@ export class AppointmentService {
     }).pipe(map(res => this.normalizeAppointment(this.unwrapData(res))));
   }
 
+  rescheduleAppointmentDate(id: number, request: { scheduledDate: string; scheduledTime: string; eventId?: number }): Observable<Appointment> {
+    return this.http.post<unknown>(`${this.baseUrl}/${id}/reschedule`, request)
+      .pipe(map(res => this.normalizeAppointment(this.unwrapData(res))));
+  }
+
   updateStatus(id: number, status: string, remarks?: string): Observable<Appointment> {
     return this.http.patch<unknown>(`${this.baseUrl}/${id}/status`, { status, remarks })
       .pipe(map(res => this.normalizeAppointment(this.unwrapData(res))));
@@ -219,6 +236,47 @@ export class AppointmentService {
 
   assignAppointmentsToEvent(eventId: number, appointmentIds: number[], remarks = 'Scheduled'): Observable<ScheduleEvent> {
     return this.http.post<ScheduleEvent>(`${this.baseUrl}/assign-event`, { eventId, appointmentIds, remarks });
+  }
+
+  getHcmActionAppointments(date: string): Observable<Appointment[]> {
+    const params = new HttpParams().set('date', date);
+    return this.http.get<unknown>(`${this.baseUrl}/hcm-actions`, { params }).pipe(
+      map(res => {
+        const data = this.unwrapData<unknown>(res);
+        const rows = Array.isArray(data) ? data : [];
+        return rows.map(row => this.normalizeAppointment(row));
+      })
+    );
+  }
+
+  getRemarks(appointmentId: number): Observable<AppointmentRemark[]> {
+    return this.http.get<unknown>(`${this.baseUrl}/${appointmentId}/remarks`).pipe(
+      map(res => {
+        const data = this.unwrapData<unknown>(res);
+        return Array.isArray(data) ? data.map((row: any) => ({
+          id: row.id,
+          appointmentId: row.appointmentId,
+          hcmRemarks: row.hcmRemarks,
+          decision: row.decision,
+          departmentCode: row.departmentCode,
+          departmentName: row.departmentName,
+          createdBy: row.createdBy,
+          createdByRole: row.createdByRole,
+          createdAt: row.createdAt,
+        })) : [];
+      })
+    );
+  }
+
+  addRemark(appointmentId: number, payload: { hcmRemarks: string; decision?: string; departmentCode?: string }): Observable<AppointmentRemark> {
+    return this.http.post<AppointmentRemark>(`${this.baseUrl}/${appointmentId}/remarks`, payload);
+  }
+
+  uploadSupportingDocument(appointmentId: number, file: File): Observable<AppointmentDocument> {
+    const formData = new FormData();
+    formData.append('file', file, file.name);
+    return this.http.post<unknown>(`${this.baseUrl}/${appointmentId}/supporting-documents`, formData)
+      .pipe(map(res => this.normalizeDocument(this.unwrapData(res))));
   }
 
   markForPublicDarbar(id: number, remarks = 'Follow-up'): Observable<unknown> {

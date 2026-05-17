@@ -28,7 +28,7 @@ public class PublicIdentificationController {
     private final PublicIdentificationService publicIdentificationService;
 
     @GetMapping("/citizens/{citizenId}/full-history")
-    @PreAuthorize("hasAnyRole('ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO_OFFICER','APPROVER')")
+    @PreAuthorize("hasAnyRole('HCM','ADMIN','OSD','DATA_ENTRY_OPERATOR')")
     @Operation(summary = "Get full citizen history", description = "Returns scheme and appointment history for public identification.")
     public ResponseEntity<PublicIdentificationHistoryDto> getFullHistory(
             @PathVariable Long citizenId,

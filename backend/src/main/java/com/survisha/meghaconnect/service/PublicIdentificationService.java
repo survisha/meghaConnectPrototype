@@ -25,7 +25,7 @@ public class PublicIdentificationService {
     private final AppointmentRepository appointmentRepository;
     private final AuditLogService auditLogService;
 
-    @Transactional(readOnly = true)
+    @Transactional
     public PublicIdentificationHistoryDto getCitizenFullHistory(Long citizenId, String actor) {
         Visitor citizen = visitorRepository.findById(citizenId)
                 .orElseThrow(() -> new ResourceNotFoundException("Citizen not found"));

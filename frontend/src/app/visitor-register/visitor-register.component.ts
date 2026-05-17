@@ -18,6 +18,7 @@ import { MatStepperModule } from '@angular/material/stepper';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LanguageSelectorComponent } from '../shared/language-selector/language-selector.component';
 import { apiErrorMessage } from '../shared/api-error.util';
+import { CameraCaptureService, CameraFacingMode } from '../shared/camera-capture.service';
 
 type KycStep = 'id-entry' | 'otp-verification' | 'photo-capture' | 'additional-details' | 'kyc-complete';
 type MobileValidationType = 'warning' | 'error' | 'success' | '';
@@ -199,6 +200,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   showCamera = false;
   isCameraActive = false;
   capturedPhotoUrl = '';
+  cameraFacingMode: CameraFacingMode = 'user';
 
   // KYC confidence indicator (R009)
   kycConfidenceScore = 0;
@@ -226,7 +228,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     private kycService: VisitorKycService,
     private auth: AuthService,
     private cdr: ChangeDetectorRef,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private cameraCapture: CameraCaptureService
   ) {
     // Detect DEO mode from route snapshot URL segments
     this.isDeoMode = this.route.snapshot.url.some(segment => segment.path === 'register-visitor');
@@ -885,18 +888,15 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   async openCamera() {
     try {
       this.errorMsg = '';
-      this.videoStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
-      });
-      
+      this.stopCamera();
+      this.videoStream = await this.cameraCapture.open(this.cameraFacingMode);
       this.isCameraActive = true;  // Changed from showCamera to isCameraActive
       
       // Wait for next tick to ensure video element exists
       setTimeout(() => {
         const videoElement = document.getElementById('camera-preview') as HTMLVideoElement;
         if (videoElement && this.videoStream) {
-          videoElement.srcObject = this.videoStream;
-          videoElement.play();
+          this.cameraCapture.attach(videoElement, this.videoStream);
         }
       }, 100);
     } catch {
@@ -911,18 +911,14 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const canvas = document.createElement('canvas');
-    canvas.width = videoElement.videoWidth;
-    canvas.height = videoElement.videoHeight;
-    
-    const context = canvas.getContext('2d');
-    if (!context) {
+    let photoData: string;
+    try {
+      photoData = this.cameraCapture.capture(videoElement);
+    } catch {
       this.errorMsg = this.t('ERROR_FAILED_CAPTURE_PHOTO');
       return;
     }
 
-    context.drawImage(videoElement, 0, 0);
-    const photoData = canvas.toDataURL('image/jpeg', 0.8);
     this.form.livePhoto = photoData;
     this.capturedPhotoUrl = photoData;  // Set for display
     this.photoCaptured = true;
@@ -939,10 +935,19 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   }
 
   stopCamera() {
-    if (this.videoStream) {
-      this.videoStream.getTracks().forEach(track => track.stop());
-      this.videoStream = null;
+    this.cameraCapture.stop(this.videoStream);
+    this.videoStream = null;
+  }
+
+  switchCamera() {
+    this.cameraFacingMode = this.cameraCapture.toggle(this.cameraFacingMode);
+    if (this.isCameraActive) {
+      this.openCamera();
     }
+  }
+
+  get cameraFacingLabel(): string {
+    return this.cameraCapture.label(this.cameraFacingMode);
   }
 
   // ── STEP 4: FACE VALIDATION ─────────────────────────────────────────────

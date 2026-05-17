@@ -22,5 +22,6 @@ public class GuestAppointmentRequest {
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     private LocalDate preferredDate;
     private String remarks;
+    private String livePhotoBase64;
     private MultipartFile supportingDocument;
 }

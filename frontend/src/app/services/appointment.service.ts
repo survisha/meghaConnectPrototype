@@ -49,6 +49,7 @@ export interface GuestAppointmentRequest {
   reasonForAppointment: string;
   preferredDate?: string;
   remarks?: string;
+  livePhotoBase64?: string;
   supportingDocument?: File | null;
 }
 
@@ -205,6 +206,7 @@ export class AppointmentService {
     this.appendIfPresent(formData, 'referredByName', request.referredByName);
     this.appendIfPresent(formData, 'preferredDate', request.preferredDate);
     this.appendIfPresent(formData, 'remarks', request.remarks);
+    this.appendIfPresent(formData, 'livePhotoBase64', request.livePhotoBase64);
     if (request.supportingDocument) {
       formData.append('supportingDocument', request.supportingDocument, request.supportingDocument.name);
     }

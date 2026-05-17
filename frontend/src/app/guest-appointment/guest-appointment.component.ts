@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -13,6 +13,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { AppointmentService, GuestAppointmentRequest } from '../services/appointment.service';
 import { ReferenceDataDto, ReferenceDataService } from '../services/reference-data.service';
 import { apiErrorMessage } from '../shared/api-error.util';
+import { CameraCaptureService, CameraFacingMode } from '../shared/camera-capture.service';
 
 @Component({
   selector: 'app-guest-appointment',
@@ -34,7 +35,7 @@ import { apiErrorMessage } from '../shared/api-error.util';
   templateUrl: './guest-appointment.component.html',
   styleUrls: ['./guest-appointment.component.scss'],
 })
-export class GuestAppointmentComponent implements OnInit {
+export class GuestAppointmentComponent implements OnInit, OnDestroy {
   referredOffices: ReferenceDataDto[] = [];
   visitorCategories: ReferenceDataDto[] = [];
   submitting = false;
@@ -42,6 +43,10 @@ export class GuestAppointmentComponent implements OnInit {
   referenceId = '';
   supportingDocument: File | null = null;
   preferredDate: Date | null = null;
+  videoStream: MediaStream | null = null;
+  isCameraActive = false;
+  capturedPhotoUrl = '';
+  cameraFacingMode: CameraFacingMode = 'user';
 
   form: GuestAppointmentRequest = {
     fullName: '',
@@ -53,7 +58,8 @@ export class GuestAppointmentComponent implements OnInit {
 
   constructor(
     private appointmentService: AppointmentService,
-    private referenceDataService: ReferenceDataService
+    private referenceDataService: ReferenceDataService,
+    private cameraCapture: CameraCaptureService
   ) {}
 
   ngOnInit(): void {
@@ -67,6 +73,10 @@ export class GuestAppointmentComponent implements OnInit {
     });
   }
 
+  ngOnDestroy(): void {
+    this.stopCamera();
+  }
+
   submit(): void {
     this.errorMsg = '';
     if (!this.isValid()) return;
@@ -74,10 +84,12 @@ export class GuestAppointmentComponent implements OnInit {
     this.appointmentService.createGuestAppointment({
       ...this.form,
       preferredDate: this.preferredDate ? this.toDateParam(this.preferredDate) : undefined,
+      livePhotoBase64: this.capturedPhotoUrl,
       supportingDocument: this.supportingDocument,
     }).subscribe({
       next: response => {
         this.referenceId = response.referenceId;
+        this.stopCamera();
         this.submitting = false;
       },
       error: error => {
@@ -96,6 +108,8 @@ export class GuestAppointmentComponent implements OnInit {
     this.referenceId = '';
     this.supportingDocument = null;
     this.preferredDate = null;
+    this.stopCamera();
+    this.capturedPhotoUrl = '';
     this.form = {
       fullName: '',
       mobileNumber: '',
@@ -103,6 +117,58 @@ export class GuestAppointmentComponent implements OnInit {
       referredOffice: '',
       reasonForAppointment: '',
     };
+  }
+
+  async openCamera(): Promise<void> {
+    try {
+      this.errorMsg = '';
+      this.stopCamera();
+      this.videoStream = await this.cameraCapture.open(this.cameraFacingMode);
+      this.isCameraActive = true;
+      setTimeout(() => {
+        const videoElement = document.getElementById('guest-camera-preview') as HTMLVideoElement;
+        if (videoElement && this.videoStream) {
+          this.cameraCapture.attach(videoElement, this.videoStream);
+        }
+      }, 100);
+    } catch {
+      this.errorMsg = 'Camera access was denied or is unavailable.';
+      this.isCameraActive = false;
+    }
+  }
+
+  capturePhoto(): void {
+    const videoElement = document.getElementById('guest-camera-preview') as HTMLVideoElement;
+    if (!videoElement) {
+      this.errorMsg = 'Camera is not initialized.';
+      return;
+    }
+    try {
+      this.capturedPhotoUrl = this.cameraCapture.capture(videoElement);
+      this.stopCamera();
+    } catch {
+      this.errorMsg = 'Unable to capture photo. Please try again.';
+    }
+  }
+
+  retakePhoto(): void {
+    this.capturedPhotoUrl = '';
+    this.openCamera();
+  }
+
+  closeCamera(): void {
+    this.stopCamera();
+  }
+
+  switchCamera(): void {
+    this.cameraFacingMode = this.cameraCapture.toggle(this.cameraFacingMode);
+    if (this.isCameraActive) {
+      this.openCamera();
+    }
+  }
+
+  get cameraFacingLabel(): string {
+    return this.cameraCapture.label(this.cameraFacingMode);
   }
 
   private isValid(): boolean {
@@ -119,7 +185,17 @@ export class GuestAppointmentComponent implements OnInit {
       this.errorMsg = 'Reason for appointment must be at least 10 characters.';
       return false;
     }
+    if (!this.capturedPhotoUrl) {
+      this.errorMsg = 'Please capture guest photo before submitting.';
+      return false;
+    }
     return true;
+  }
+
+  private stopCamera(): void {
+    this.cameraCapture.stop(this.videoStream);
+    this.videoStream = null;
+    this.isCameraActive = false;
   }
 
   private toDateParam(date: Date): string {

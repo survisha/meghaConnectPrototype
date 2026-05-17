@@ -206,6 +206,7 @@ public class AppointmentService {
             throw new MeghaConnectException(ErrorCodeConstants.INVALID_FIELD_VALUE,
                 "Reason for appointment must be at least 10 characters.", HttpStatus.BAD_REQUEST.value());
         }
+        String guestPhotoPath = storeGuestPhotoIfPresent(safeRequest.getLivePhotoBase64());
 
         Visitor visitor = Visitor.builder()
             .fullName(fullName)
@@ -218,6 +219,8 @@ public class AppointmentService {
             .kycType("NONE")
             .kycVerified(false)
             .kycStatus("NOT_VERIFIED")
+            .photoStoragePath(guestPhotoPath)
+            .livePhotoPath(guestPhotoPath)
             .build();
         Visitor savedVisitor = visitorRepository.save(visitor);
 
@@ -1060,6 +1063,24 @@ public class AppointmentService {
 
     private String trimToNull(String value) {
         return value == null || value.trim().isEmpty() ? null : value.trim();
+    }
+
+    private String storeGuestPhotoIfPresent(String livePhotoBase64) {
+        if (trimToNull(livePhotoBase64) == null) {
+            return null;
+        }
+        try {
+            return fileStorageService.storeVisitorPhotoBase64(livePhotoBase64);
+        } catch (VisitorRegistrationValidationException e) {
+            throw e;
+        } catch (IOException e) {
+            throw new MeghaConnectException(
+                    ErrorCodeConstants.FILE_UPLOAD_FAILED,
+                    "Guest photo storage failed.",
+                    500,
+                    e
+            );
+        }
     }
 
     private void auditAppointmentAssociates(String associates, Appointment appointment, String actor) {

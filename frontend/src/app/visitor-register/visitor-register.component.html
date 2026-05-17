@@ -405,6 +405,10 @@
               <mat-icon>photo_camera</mat-icon> {{ 'CAPTURE_PHOTO' | translate }}
             </button>
 
+            <button *ngIf="!hasAadhaarResidentImage && isCameraActive" mat-stroked-button color="primary" style="white-space:nowrap" (click)="switchCamera()">
+              <mat-icon>cameraswitch</mat-icon> {{ cameraFacingLabel }}
+            </button>
+
             <button *ngIf="!hasAadhaarResidentImage && capturedPhotoUrl && !isCameraActive" mat-stroked-button color="primary" style="white-space:nowrap" (click)="retakePhoto()">
               <mat-icon>refresh</mat-icon> {{ 'RETAKE_PHOTO' | translate }}
             </button>

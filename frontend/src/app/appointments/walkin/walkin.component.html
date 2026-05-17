@@ -296,6 +296,10 @@
                   <mat-icon>camera</mat-icon>
                   Capture
                 </button>
+                <button *ngIf="visitorCameraActive" mat-stroked-button type="button" (click)="switchVisitorCamera()">
+                  <mat-icon>cameraswitch</mat-icon>
+                  {{ visitorCameraFacingLabel }}
+                </button>
                 <button *ngIf="visitorUpdatePhoto && !visitorCameraActive" mat-stroked-button type="button" (click)="retakeVisitorPhoto()">
                   <mat-icon>refresh</mat-icon>
                   Retake

@@ -14,6 +14,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { CameraCaptureService, CameraFacingMode } from '../../shared/camera-capture.service';
 
 @Component({
   selector: 'app-walkin',
@@ -48,6 +49,7 @@ export class WalkinComponent implements OnDestroy {
   savingVisitorUpdate = false;
   visitorCameraStream: MediaStream | null = null;
   visitorCameraActive = false;
+  visitorCameraFacingMode: CameraFacingMode = 'user';
 
   agendaTypes = [
     { label: 'Scheme availment (CM)', value: 'Scheme availment (CM)' },
@@ -61,7 +63,8 @@ export class WalkinComponent implements OnDestroy {
   constructor(
     private visitorSearchService: VisitorSearchService,
     private appointmentService: AppointmentService,
-    private router: Router
+    private router: Router,
+    private cameraCapture: CameraCaptureService
   ) {}
 
   ngOnDestroy() {
@@ -136,15 +139,13 @@ export class WalkinComponent implements OnDestroy {
   async openVisitorCamera() {
     try {
       this.visitorUpdateError = '';
-      this.visitorCameraStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
-      });
+      this.stopVisitorCamera();
+      this.visitorCameraStream = await this.cameraCapture.open(this.visitorCameraFacingMode);
       this.visitorCameraActive = true;
       setTimeout(() => {
         const video = document.getElementById('deo-camera-preview') as HTMLVideoElement;
         if (video && this.visitorCameraStream) {
-          video.srcObject = this.visitorCameraStream;
-          video.play();
+          this.cameraCapture.attach(video, this.visitorCameraStream);
         }
       }, 100);
     } catch {
@@ -159,17 +160,13 @@ export class WalkinComponent implements OnDestroy {
       return;
     }
 
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const context = canvas.getContext('2d');
-    if (!context) {
+    try {
+      this.visitorUpdatePhoto = this.cameraCapture.capture(video);
+    } catch {
       this.visitorUpdateError = 'Unable to capture photo.';
       return;
     }
 
-    context.drawImage(video, 0, 0);
-    this.visitorUpdatePhoto = canvas.toDataURL('image/jpeg', 0.8);
     this.stopVisitorCamera();
     this.visitorUpdateMsg = 'Photo captured. Save updates to attach it to this visitor.';
   }
@@ -180,11 +177,20 @@ export class WalkinComponent implements OnDestroy {
   }
 
   stopVisitorCamera() {
-    if (this.visitorCameraStream) {
-      this.visitorCameraStream.getTracks().forEach(track => track.stop());
-      this.visitorCameraStream = null;
-    }
+    this.cameraCapture.stop(this.visitorCameraStream);
+    this.visitorCameraStream = null;
     this.visitorCameraActive = false;
+  }
+
+  switchVisitorCamera() {
+    this.visitorCameraFacingMode = this.cameraCapture.toggle(this.visitorCameraFacingMode);
+    if (this.visitorCameraActive) {
+      this.openVisitorCamera();
+    }
+  }
+
+  get visitorCameraFacingLabel(): string {
+    return this.cameraCapture.label(this.visitorCameraFacingMode);
   }
 
   saveVisitorUpdates() {

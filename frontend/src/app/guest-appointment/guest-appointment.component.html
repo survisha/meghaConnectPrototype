@@ -70,6 +70,52 @@
             <mat-datepicker #preferredPicker></mat-datepicker>
           </mat-form-field>
 
+          <section class="guest-photo-section full-width">
+            <div class="photo-section-header">
+              <div>
+                <h2>Guest Photo *</h2>
+                <p>Capture a clear live photo for appointment verification.</p>
+              </div>
+              <span>{{ cameraFacingLabel }}</span>
+            </div>
+
+            <div class="camera-section">
+              <div *ngIf="!isCameraActive && !capturedPhotoUrl" class="camera-placeholder">
+                <mat-icon>photo_camera</mat-icon>
+                <p>Click below to start camera</p>
+              </div>
+
+              <video *ngIf="isCameraActive" id="guest-camera-preview" autoplay playsinline></video>
+
+              <div *ngIf="capturedPhotoUrl && !isCameraActive" class="photo-preview">
+                <img [src]="capturedPhotoUrl" alt="Captured guest photo">
+              </div>
+            </div>
+
+            <div class="camera-actions">
+              <button *ngIf="!isCameraActive && !capturedPhotoUrl" mat-raised-button color="primary" type="button" (click)="openCamera()">
+                <mat-icon>photo_camera</mat-icon>
+                Open Camera
+              </button>
+              <button *ngIf="isCameraActive" mat-raised-button color="primary" type="button" (click)="capturePhoto()">
+                <mat-icon>photo_camera</mat-icon>
+                Capture Photo
+              </button>
+              <button *ngIf="isCameraActive" mat-stroked-button type="button" (click)="switchCamera()">
+                <mat-icon>cameraswitch</mat-icon>
+                Switch Camera
+              </button>
+              <button *ngIf="isCameraActive" mat-stroked-button type="button" (click)="closeCamera()">
+                <mat-icon>close</mat-icon>
+                Close
+              </button>
+              <button *ngIf="capturedPhotoUrl && !isCameraActive" mat-stroked-button type="button" (click)="retakePhoto()">
+                <mat-icon>refresh</mat-icon>
+                Retake Photo
+              </button>
+            </div>
+          </section>
+
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Reason for appointment *</mat-label>
             <textarea matInput name="reasonForAppointment" [(ngModel)]="form.reasonForAppointment" rows="4" required></textarea>

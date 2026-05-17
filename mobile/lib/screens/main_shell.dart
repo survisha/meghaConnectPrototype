@@ -18,6 +18,7 @@ import 'audit_trail_screen.dart';
 import 'grievance_screen.dart';
 import 'visitor_dashboard_screen.dart';
 import 'approver_screen.dart';
+import 'guest_appointment_screen.dart';
 
 class _NavItem {
   final String label;
@@ -103,6 +104,17 @@ final _navTree = <_NavItem>[
           UserRole.OSD,
           UserRole.DATA_ENTRY_OPERATOR,
           UserRole.PUBLIC
+        ],
+      ),
+      _NavItem(
+        label: 'Guest Registration',
+        icon: Icons.person_add_alt_1_outlined,
+        route: 'guest_registration',
+        roles: [
+          UserRole.ADMIN,
+          UserRole.OSD,
+          UserRole.DATA_ENTRY_OPERATOR,
+          UserRole.CMO_OFFICER,
         ],
       ),
       _NavItem(
@@ -219,6 +231,8 @@ class _MainShellState extends State<MainShell> {
       case 'new_appointment':
       case 'walkin':
         return NewAppointmentScreen(isWalkIn: route == 'walkin');
+      case 'guest_registration':
+        return const GuestAppointmentScreen();
       case 'calendar':
         return const CalendarScreen();
       case 'approver':

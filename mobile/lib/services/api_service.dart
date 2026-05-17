@@ -35,6 +35,27 @@ class ApiService {
     return headers;
   }
 
+  static Future<Map<String, String>> _authHeaders() async {
+    final token = await getToken();
+    final headers = <String, String>{};
+    if (token != null) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+    return headers;
+  }
+
+  static String _messageFromResponse(http.Response response, String fallback) {
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) {
+        return decoded['message']?.toString() ??
+            decoded['errorMessage']?.toString() ??
+            fallback;
+      }
+    } catch (_) {}
+    return fallback;
+  }
+
   // Maps a role string from the backend (e.g. "ROLE_HCM" or "HCM") to a UserRole.
   static UserRole _parseRole(String raw) {
     final normalized = raw.startsWith('ROLE_') ? raw.substring(5) : raw;
@@ -402,11 +423,100 @@ class ApiService {
             body: jsonEncode(body),
           )
           .timeout(const Duration(seconds: 20));
-      if (resp.statusCode == 200 || resp.statusCode == 201) {
-        return jsonDecode(resp.body) as Map<String, dynamic>;
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        final decoded = jsonDecode(resp.body);
+        if (decoded is Map<String, dynamic>) {
+          final data = decoded['data'];
+          return data is Map<String, dynamic> ? data : decoded;
+        }
+      }
+      return {
+        'success': false,
+        'message': _messageFromResponse(
+          resp,
+          'Unable to submit appointment. Please try again.',
+        ),
+      };
+    } catch (_) {
+      return {
+        'success': false,
+        'message': 'Network error. Please try again.',
+      };
+    }
+  }
+
+  static Future<List<Map<String, String>>> getReferenceData(
+      String type) async {
+    try {
+      final headers = await _authHeaders();
+      final resp = await http
+          .get(
+            _u('/reference/$type'),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 20));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        final decoded = jsonDecode(resp.body);
+        final rows = decoded is List
+            ? decoded
+            : decoded is Map<String, dynamic> && decoded['data'] is List
+                ? decoded['data'] as List<dynamic>
+                : <dynamic>[];
+        return rows.whereType<Map>().map((row) {
+          final code = row['code']?.toString() ?? '';
+          final value = row['value']?.toString() ?? code;
+          return {'code': code, 'value': value};
+        }).where((row) {
+          return row['code']!.isNotEmpty;
+        }).toList();
       }
     } catch (_) {}
-    return null;
+    return [];
+  }
+
+  static Future<Map<String, dynamic>> createGuestAppointment({
+    required Map<String, String> fields,
+    required String livePhotoBase64,
+    String? supportingDocumentPath,
+    String? supportingDocumentName,
+  }) async {
+    try {
+      final request = http.MultipartRequest('POST', _u('/guest-appointments'));
+      request.headers.addAll(await _authHeaders());
+      fields.forEach((key, value) {
+        final trimmed = value.trim();
+        if (trimmed.isNotEmpty) request.fields[key] = trimmed;
+      });
+      request.fields['livePhotoBase64'] = livePhotoBase64;
+
+      final documentPath = supportingDocumentPath?.trim();
+      if (documentPath != null && documentPath.isNotEmpty) {
+        request.files.add(await http.MultipartFile.fromPath(
+          'supportingDocument',
+          documentPath,
+          filename: supportingDocumentName,
+        ));
+      }
+
+      final streamed = await request.send().timeout(const Duration(seconds: 45));
+      final response = await http.Response.fromStream(streamed);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map<String, dynamic>) return decoded;
+      }
+      return {
+        'success': false,
+        'message': _messageFromResponse(
+          response,
+          'Unable to submit guest appointment.',
+        ),
+      };
+    } catch (_) {
+      return {
+        'success': false,
+        'message': 'Network error. Please try again.',
+      };
+    }
   }
 
   static Future<Map<String, dynamic>?> updateAppointmentStatus(

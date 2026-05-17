@@ -40,6 +40,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
   String? _contextError;
   String? _submittedAppId;
   Map<String, dynamic>? _selectedVisitor;
+  List<Map<String, dynamic>> _searchResults = [];
 
   static const _agendaTypes = ['A1', 'A2', 'A3', 'A4', 'B1', 'B2'];
   static const _locations = ['SHILLONG', 'TURA', 'DELHI', 'OTHERS'];
@@ -121,6 +122,8 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
     final result = await ApiService.createAppointment({
       'applicantId': visitorId,
       'eventType': _agendaType,
+      'subject': _agendaDescriptions[_agendaType] ?? _agendaType,
+      'appointmentType': _agendaDescriptions[_agendaType] ?? _agendaType,
       'agendaType': _agendaDescriptions[_agendaType] ?? _agendaType,
       'agendaBrief': _agendaBriefCtrl.text.trim(),
       'requestedLocation': _location,
@@ -129,8 +132,9 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
     if (!mounted) return;
     setState(() {
       _loading = false;
-      if (result == null) {
-        _contextError = 'Unable to submit appointment. Please try again.';
+      if (result == null || result['success'] == false) {
+        _contextError = result?['message']?.toString() ??
+            'Unable to submit appointment. Please try again.';
       } else {
         _submittedAppId =
             result['applicationId'] as String? ?? result['id']?.toString();
@@ -161,6 +165,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
       _searching = true;
       _contextError = null;
       _selectedVisitor = null;
+      _searchResults = [];
     });
     final results = await ApiService.searchVisitors(
       mobile: _searchMobileCtrl.text,
@@ -174,7 +179,13 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
         _contextError =
             'No visitor found. Register the visitor first, then create the appointment.';
       } else {
-        _selectedVisitor = results.first as Map<String, dynamic>;
+        _searchResults = results
+            .whereType<Map>()
+            .map((row) => Map<String, dynamic>.from(row))
+            .toList();
+        if (_searchResults.length == 1) {
+          _selectedVisitor = _searchResults.first;
+        }
       }
     });
   }
@@ -369,6 +380,45 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
         if (_selectedVisitor != null) ...[
           const SizedBox(height: 14),
           _VisitorSummary(visitor: _selectedVisitor!),
+        ],
+        if (_searchResults.length > 1 && _selectedVisitor == null) ...[
+          const SizedBox(height: 14),
+          Text(
+            'Select Visitor',
+            style: TextStyle(
+              color: Colors.grey[700],
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 8),
+          ..._searchResults.map((visitor) {
+            final name = visitor['fullName']?.toString() ?? 'Visitor';
+            final phone = visitor['phoneNumber']?.toString() ?? '';
+            final epic = visitor['epicNumber']?.toString() ?? '';
+            return Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: const Color(0xFFE8EAF6),
+                  foregroundColor: const Color(0xFF1A237E),
+                  child: Text(name.isEmpty ? 'V' : name[0].toUpperCase()),
+                ),
+                title: Text(name),
+                subtitle: Text([
+                  if (phone.isNotEmpty) phone,
+                  if (epic.isNotEmpty) epic,
+                ].join(' · ')),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  setState(() {
+                    _selectedVisitor = visitor;
+                    _contextError = null;
+                  });
+                },
+              ),
+            );
+          }),
         ],
         if (_contextError != null && _selectedVisitor == null) ...[
           const SizedBox(height: 12),

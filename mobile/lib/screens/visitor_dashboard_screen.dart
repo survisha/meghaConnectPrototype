@@ -6,6 +6,7 @@ import '../services/navigation_service.dart';
 import '../core/i18n/app_i18n.dart';
 import '../widgets/megha_ui.dart';
 import 'new_appointment_screen.dart';
+import 'guest_appointment_screen.dart';
 
 class _SummaryCard {
   final String label;
@@ -363,6 +364,18 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      _QuickActionBtn(
+                        icon: Icons.person_add_alt_1_outlined,
+                        label: 'Guest\nRegistration',
+                        color: const Color(0xFF0F766E),
+                        onTap: () => _openGuestRegistration(context),
+                      ),
+                      const Spacer(flex: 2),
+                    ],
+                  ),
                   const SizedBox(height: 20),
 
                   // My Appointments
@@ -489,6 +502,21 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
             foregroundColor: Colors.white,
           ),
           body: const NewAppointmentScreen(isPublic: true),
+        ),
+      ),
+    );
+  }
+
+  void _openGuestRegistration(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          appBar: AppBar(
+            title: const Text('Guest Registration'),
+            backgroundColor: MeghaColors.primary,
+            foregroundColor: Colors.white,
+          ),
+          body: const GuestAppointmentScreen(),
         ),
       ),
     );

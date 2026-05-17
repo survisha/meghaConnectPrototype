@@ -85,6 +85,12 @@ final _allQuickActions = <_QuickAction>[
       'walkin',
       Color(0xFF2E7D32),
       [UserRole.ADMIN, UserRole.OSD, UserRole.DATA_ENTRY_OPERATOR]),
+  const _QuickAction(
+      'Guest Registration',
+      Icons.person_add_alt_1_outlined,
+      'guest_registration',
+      Color(0xFF0F766E),
+      [UserRole.ADMIN, UserRole.OSD, UserRole.DATA_ENTRY_OPERATOR]),
   const _QuickAction('Apply for Scheme', Icons.workspace_premium_outlined,
       'schemes', Color(0xFFB45309), [UserRole.ADMIN, UserRole.OSD]),
   const _QuickAction(

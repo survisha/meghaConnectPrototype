@@ -5,6 +5,37 @@ import { catchError } from 'rxjs/operators';
 import { Visitor } from '../models';
 import { environment } from '../../environments/environment';
 
+export interface PublicIdentificationHistory {
+  citizenId: number;
+  citizenName: string;
+  photoUrl?: string;
+  visitCount: number;
+  lastVisitedAt?: string;
+  schemes: CitizenSchemeHistory[];
+  appointments: CitizenAppointmentHistory[];
+}
+
+export interface CitizenSchemeHistory {
+  id: number;
+  schemeName: string;
+  projectName?: string;
+  appliedDate?: string;
+  status: string;
+  amount?: number;
+  remarks?: string;
+}
+
+export interface CitizenAppointmentHistory {
+  appointmentId: number;
+  applicationId?: string;
+  dateTime?: string;
+  department?: string;
+  officerName?: string;
+  purpose?: string;
+  status: string;
+  remarks?: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class VisitorSearchService {
 
@@ -45,6 +76,12 @@ export class VisitorSearchService {
   getById(id: number): Observable<Visitor | null> {
     return this.http.get<Visitor>(`${this.baseUrl}/${id}`).pipe(
       catchError(error => this.nullOnNotFound(error))
+    );
+  }
+
+  getPublicIdentificationHistory(citizenId: number): Observable<PublicIdentificationHistory> {
+    return this.http.get<PublicIdentificationHistory>(
+      `${environment.apiUrl}/public-identification/citizens/${citizenId}/full-history`
     );
   }
 

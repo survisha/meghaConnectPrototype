@@ -1,7 +1,12 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { VisitorSearchService } from '../services/visitor-search.service';
+import {
+  CitizenAppointmentHistory,
+  CitizenSchemeHistory,
+  PublicIdentificationHistory,
+  VisitorSearchService
+} from '../services/visitor-search.service';
 import { Visitor } from '../models';
 import { environment } from '../../environments/environment';
 import { apiErrorMessage } from '../shared/api-error.util';
@@ -39,19 +44,27 @@ export class PublicIdentificationComponent {
   errorMessage = '';
   selectedPhotoLoadFailed = false;
   selectedPhotoPreviewOpen = false;
+  historyLoading = false;
+  historyError = '';
+  fullHistoryOpen = false;
+  citizenHistory: PublicIdentificationHistory | null = null;
 
   districts = ['East Khasi Hills','West Khasi Hills','Ri Bhoi','East Jaintia Hills','West Jaintia Hills','East Garo Hills','West Garo Hills','South Garo Hills','North Garo Hills'];
 
-  schemeHistoryColumns: string[] = ['scheme', 'year', 'amount', 'status'];
-  meetingHistoryColumns: string[] = ['date', 'agenda', 'outcome'];
-  schemeHistory: { scheme: string; year: string; amount: string; status: string }[] = [];
-  meetingHistory: { date: string; agenda: string; outcome: string }[] = [];
+  schemeHistoryColumns: string[] = ['scheme', 'appliedDate', 'amount', 'status'];
+  meetingHistoryColumns: string[] = ['date', 'department', 'purpose', 'status'];
+  schemeHistory: CitizenSchemeHistory[] = [];
+  meetingHistory: CitizenAppointmentHistory[] = [];
 
   constructor(private visitorSearchService: VisitorSearchService) {}
 
   populateHistory() {
     this.schemeHistory = [];
     this.meetingHistory = [];
+    this.citizenHistory = null;
+    this.historyError = '';
+    this.historyLoading = false;
+    this.fullHistoryOpen = false;
   }
 
   search() {
@@ -102,6 +115,7 @@ export class PublicIdentificationComponent {
     this.selectedPhotoLoadFailed = false;
     this.selectedPhotoPreviewOpen = false;
     this.populateHistory();
+    this.loadCitizenHistory(p.id);
   }
 
   clearSearch() {
@@ -128,6 +142,62 @@ export class PublicIdentificationComponent {
     return formatted || '-';
   }
 
+  formatDateTime(value?: string | null): string {
+    if (!value) {
+      return '-';
+    }
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+    return date.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+  }
+
+  formatCurrency(value?: number | null): string {
+    if (value === null || value === undefined) {
+      return '-';
+    }
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(value);
+  }
+
+  statusLabel(status?: string | null): string {
+    return this.displayValue(status?.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase()));
+  }
+
+  statusClass(status?: string | null): string {
+    const normalized = (status || '').toUpperCase();
+    if (['APPROVED', 'COMPLETED', 'RESOLVED', 'HCM_ACCEPTED', 'APPROVED_WITH_DATE_TIME'].includes(normalized)) {
+      return 'status-success';
+    }
+    if (['REJECTED', 'CANCELLED', 'HCM_REJECTED'].includes(normalized)) {
+      return 'status-danger';
+    }
+    if (['PENDING', 'SUBMITTED', 'CMO_REVIEW', 'APPROVER_REVIEW', 'HCM_PENDING', 'SCHEDULED'].includes(normalized)) {
+      return 'status-warn';
+    }
+    return 'status-info';
+  }
+
+  get latestSchemes(): CitizenSchemeHistory[] {
+    return this.schemeHistory.slice(0, 3);
+  }
+
+  get latestMeetings(): CitizenAppointmentHistory[] {
+    return this.meetingHistory.slice(0, 3);
+  }
+
+  get hasAnyHistory(): boolean {
+    return this.schemeHistory.length > 0 || this.meetingHistory.length > 0;
+  }
+
+  toggleFullHistory(): void {
+    this.fullHistoryOpen = !this.fullHistoryOpen;
+  }
+
   get selectedPhotoUrl(): string {
     return this.getVisitorPhotoUrl(this.selected);
   }
@@ -150,11 +220,15 @@ export class PublicIdentificationComponent {
 
   private setResults(visitors: Visitor[], criteria: SearchCriteria): void {
     this.results = (visitors || []).filter(visitor => this.matchesCriteria(visitor, criteria));
-    this.selected = this.results[0] || null;
     this.selectedPhotoLoadFailed = false;
     this.selectedPhotoPreviewOpen = false;
     this.searching = false;
-    this.populateHistory();
+    if (this.results[0]) {
+      this.select(this.results[0]);
+    } else {
+      this.selected = null;
+      this.populateHistory();
+    }
   }
 
   private handleSearchError(error: unknown): void {
@@ -198,6 +272,30 @@ export class PublicIdentificationComponent {
 
   private onlyDigits(value?: string | null): string {
     return (value || '').replace(/\D/g, '');
+  }
+
+  private loadCitizenHistory(citizenId: number): void {
+    this.historyLoading = true;
+    this.historyError = '';
+    this.visitorSearchService.getPublicIdentificationHistory(citizenId).subscribe({
+      next: history => {
+        this.historyLoading = false;
+        this.citizenHistory = history;
+        this.schemeHistory = history.schemes || [];
+        this.meetingHistory = history.appointments || [];
+        if (this.selected && this.selected.id === citizenId && history.photoUrl) {
+          this.selected = { ...this.selected, photoUrl: history.photoUrl };
+          this.selectedPhotoLoadFailed = false;
+        }
+      },
+      error: error => {
+        this.historyLoading = false;
+        this.historyError = apiErrorMessage(error, 'Unable to load citizen history. Please try again.');
+        this.schemeHistory = [];
+        this.meetingHistory = [];
+        this.citizenHistory = null;
+      },
+    });
   }
 
   private getVisitorPhotoUrl(visitor?: Visitor | null): string {

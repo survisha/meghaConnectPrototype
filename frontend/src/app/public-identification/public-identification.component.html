@@ -165,31 +165,63 @@
         <div class="section-card">
           <div class="section-card-header">
             <mat-icon>history</mat-icon> Scheme &amp; Meeting History
+            <span *ngIf="citizenHistory" class="visit-count-pill">
+              {{ citizenHistory.visitCount }} visit{{ citizenHistory.visitCount === 1 ? '' : 's' }}
+            </span>
           </div>
           <div class="section-card-body">
+            <div *ngIf="historyLoading" class="history-loading">
+              <mat-icon>hourglass_empty</mat-icon>
+              Loading citizen history...
+            </div>
+
+            <div *ngIf="!historyLoading && historyError" class="inline-alert inline-alert-error">
+              <mat-icon>error_outline</mat-icon>
+              <span>{{ historyError }}</span>
+            </div>
+
+            <div *ngIf="!historyLoading && !historyError && !hasAnyHistory" class="empty-history">
+              No scheme or meeting history found for this citizen.
+            </div>
+
+            <ng-container *ngIf="!historyLoading && !historyError && hasAnyHistory">
+              <div class="history-summary" *ngIf="citizenHistory">
+                <div>
+                  <span>Total visits</span>
+                  <strong>{{ citizenHistory.visitCount }}</strong>
+                </div>
+                <div>
+                  <span>Last visited</span>
+                  <strong>{{ formatDateTime(citizenHistory.lastVisitedAt) }}</strong>
+                </div>
+              </div>
+
             <p style="font-weight:600;margin-bottom:0.5rem">Scheme History</p>
             <div style="margin-bottom:1rem">
-              <div *ngIf="schemeHistory.length===0" class="empty-history">No scheme history found for this visitor.</div>
-              <table *ngIf="schemeHistory.length>0" mat-table [dataSource]="schemeHistory" class="history-table">
+              <div *ngIf="schemeHistory.length===0" class="empty-history">No scheme history found for this citizen.</div>
+              <table *ngIf="schemeHistory.length>0" mat-table [dataSource]="latestSchemes" class="history-table">
                 <ng-container matColumnDef="scheme">
                   <th mat-header-cell *matHeaderCellDef>Scheme</th>
-                  <td mat-cell *matCellDef="let s">{{ s.scheme }}</td>
+                  <td mat-cell *matCellDef="let s">
+                    <strong>{{ displayValue(s.schemeName) }}</strong>
+                    <div class="history-subtext">{{ displayValue(s.projectName) }}</div>
+                  </td>
                 </ng-container>
                 
-                <ng-container matColumnDef="year">
-                  <th mat-header-cell *matHeaderCellDef>Year</th>
-                  <td mat-cell *matCellDef="let s">{{ s.year }}</td>
+                <ng-container matColumnDef="appliedDate">
+                  <th mat-header-cell *matHeaderCellDef>Applied</th>
+                  <td mat-cell *matCellDef="let s">{{ formatDateTime(s.appliedDate) }}</td>
                 </ng-container>
                 
                 <ng-container matColumnDef="amount">
                   <th mat-header-cell *matHeaderCellDef>Amount</th>
-                  <td mat-cell *matCellDef="let s">{{ s.amount }}</td>
+                  <td mat-cell *matCellDef="let s">{{ formatCurrency(s.amount) }}</td>
                 </ng-container>
                 
                 <ng-container matColumnDef="status">
                   <th mat-header-cell *matHeaderCellDef>Status</th>
                   <td mat-cell *matCellDef="let s">
-                    <mat-chip class="status-chip status-success">{{ s.status }}</mat-chip>
+                    <mat-chip class="status-chip" [ngClass]="statusClass(s.status)">{{ statusLabel(s.status) }}</mat-chip>
                   </td>
                 </ng-container>
                 
@@ -201,26 +233,76 @@
             <mat-divider style="margin: 1rem 0"></mat-divider>
             
             <p style="font-weight:600;margin-bottom:0.5rem">Meeting History</p>
-            <div *ngIf="meetingHistory.length===0" class="empty-history">No meeting history found for this visitor.</div>
-            <table *ngIf="meetingHistory.length>0" mat-table [dataSource]="meetingHistory" class="history-table">
+            <div *ngIf="meetingHistory.length===0" class="empty-history">No meeting history found for this citizen.</div>
+            <table *ngIf="meetingHistory.length>0" mat-table [dataSource]="latestMeetings" class="history-table">
               <ng-container matColumnDef="date">
                 <th mat-header-cell *matHeaderCellDef>Date</th>
-                <td mat-cell *matCellDef="let m">{{ m.date }}</td>
+                <td mat-cell *matCellDef="let m">{{ formatDateTime(m.dateTime) }}</td>
               </ng-container>
               
-              <ng-container matColumnDef="agenda">
-                <th mat-header-cell *matHeaderCellDef>Agenda</th>
-                <td mat-cell *matCellDef="let m">{{ m.agenda }}</td>
+              <ng-container matColumnDef="department">
+                <th mat-header-cell *matHeaderCellDef>Department / Officer</th>
+                <td mat-cell *matCellDef="let m">
+                  <strong>{{ displayValue(m.department) }}</strong>
+                  <div class="history-subtext">{{ displayValue(m.officerName) }}</div>
+                </td>
               </ng-container>
               
-              <ng-container matColumnDef="outcome">
-                <th mat-header-cell *matHeaderCellDef>Outcome</th>
-                <td mat-cell *matCellDef="let m">{{ m.outcome }}</td>
+              <ng-container matColumnDef="purpose">
+                <th mat-header-cell *matHeaderCellDef>Purpose</th>
+                <td mat-cell *matCellDef="let m">{{ displayValue(m.purpose) }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="status">
+                <th mat-header-cell *matHeaderCellDef>Status</th>
+                <td mat-cell *matCellDef="let m">
+                  <mat-chip class="status-chip" [ngClass]="statusClass(m.status)">{{ statusLabel(m.status) }}</mat-chip>
+                </td>
               </ng-container>
               
               <tr mat-header-row *matHeaderRowDef="meetingHistoryColumns"></tr>
               <tr mat-row *matRowDef="let row; columns: meetingHistoryColumns;"></tr>
             </table>
+
+              <div *ngIf="schemeHistory.length > latestSchemes.length || meetingHistory.length > latestMeetings.length" class="full-history-actions">
+                <button mat-stroked-button color="primary" (click)="toggleFullHistory()">
+                  <mat-icon>{{ fullHistoryOpen ? 'expand_less' : 'expand_more' }}</mat-icon>
+                  {{ fullHistoryOpen ? 'Hide Full Citizen History' : 'View Full Citizen History' }}
+                </button>
+              </div>
+
+              <div *ngIf="fullHistoryOpen" class="full-history-panel">
+                <div class="full-history-title">Full Citizen History</div>
+
+                <div class="full-history-section">
+                  <div class="full-history-subtitle">All Scheme Applications</div>
+                  <div *ngFor="let s of schemeHistory" class="history-card">
+                    <div>
+                      <strong>{{ displayValue(s.schemeName) }}</strong>
+                      <span>{{ formatDateTime(s.appliedDate) }}</span>
+                    </div>
+                    <p>{{ displayValue(s.projectName) }}</p>
+                    <p *ngIf="s.remarks">{{ s.remarks }}</p>
+                    <mat-chip class="status-chip" [ngClass]="statusClass(s.status)">{{ statusLabel(s.status) }}</mat-chip>
+                  </div>
+                  <div *ngIf="schemeHistory.length === 0" class="empty-history">No scheme history found for this citizen.</div>
+                </div>
+
+                <div class="full-history-section">
+                  <div class="full-history-subtitle">All Appointment / Meeting History</div>
+                  <div *ngFor="let m of meetingHistory" class="history-card">
+                    <div>
+                      <strong>{{ displayValue(m.purpose) }}</strong>
+                      <span>{{ formatDateTime(m.dateTime) }}</span>
+                    </div>
+                    <p>{{ displayValue(m.department) }}<span *ngIf="m.officerName"> - {{ m.officerName }}</span></p>
+                    <p *ngIf="m.remarks">{{ m.remarks }}</p>
+                    <mat-chip class="status-chip" [ngClass]="statusClass(m.status)">{{ statusLabel(m.status) }}</mat-chip>
+                  </div>
+                  <div *ngIf="meetingHistory.length === 0" class="empty-history">No meeting history found for this citizen.</div>
+                </div>
+              </div>
+            </ng-container>
           </div>
         </div>
       </div>

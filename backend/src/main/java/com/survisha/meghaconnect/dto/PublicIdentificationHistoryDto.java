@@ -53,5 +53,8 @@ public class PublicIdentificationHistoryDto {
         private String purpose;
         private String status;
         private String remarks;
+        private String role;
+        private String primaryVisitorName;
+        private List<AssociateVisitorDto> groupMembers;
     }
 }

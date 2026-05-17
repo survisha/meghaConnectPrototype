@@ -4,6 +4,7 @@ import com.survisha.meghaconnect.entity.Appointment;
 import lombok.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class AppointmentDto {
@@ -43,6 +44,7 @@ public class AppointmentDto {
     private String shortNotes;
     private Boolean isWalkIn;
     private Integer meetingCountLast6Months;
+    private List<AssociateVisitorDto> associates;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

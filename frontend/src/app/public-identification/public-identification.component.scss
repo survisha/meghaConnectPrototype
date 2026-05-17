@@ -263,6 +263,46 @@
   }
 }
 
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.primary-role {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.associate-role {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.group-members {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  margin: 0.45rem 0;
+
+  strong {
+    width: 100%;
+    font-size: 0.76rem;
+    color: #374151;
+  }
+
+  span {
+    padding: 0.18rem 0.45rem;
+    border-radius: 999px;
+    background: #f3f4f6;
+    color: #374151;
+    font-size: 0.72rem;
+  }
+}
+
 // Material Table Styles for History Tables
 .history-table {
   width: 100%;

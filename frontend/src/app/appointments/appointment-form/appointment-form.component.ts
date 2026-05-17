@@ -17,16 +17,9 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { AiDocumentService, AiExtractedFields, AiDocumentAnalysisResponse, DuplicateCheckResponse } from '../../services/ai-document.service';
 import { SchemeService } from '../../services/scheme.service';
 import { VisitorService } from '../../services/visitor.service';
+import { AssociateCitizen, VisitorSearchService } from '../../services/visitor-search.service';
 import { AuthService } from '../../services/auth.service';
 import { apiErrorMessage } from '../../shared/api-error.util';
-
-interface Associate {
-  name: string;
-  phoneNumber: string;
-  epicNumber: string;
-  designation: string;
-  address: string;
-}
 
 interface DocumentUpload {
   type: 'APPLICATION_LETTER' | 'PLANS_ESTIMATES' | 'BANK_DETAILS' | 'MLA_APPROVAL_LETTER' | 'ORG_REGISTRATION_CERTIFICATE' | 'CM_CARE_ELIGIBILITY' | 'CM_CARE_HOSPITAL' | 'CM_CARE_SUPPORTING';
@@ -89,8 +82,13 @@ export class AppointmentFormComponent implements OnInit {
 
   // Associate visitors – R013
   includeAssociates = false;
-  associates: Associate[] = [];
-  newAssociate: Associate = { name: '', phoneNumber: '', epicNumber: '', designation: '', address: '' };
+  associates: AssociateCitizen[] = [];
+  associateSearchQuery = '';
+  associateSearchResults: AssociateCitizen[] = [];
+  associateSearching = false;
+  associateSearchError = '';
+  associateValidationError = '';
+  readonly maxAssociates = 10;
 
   // AI state – R004/R005/R006/R007
   aiAnalysisLoading = false;
@@ -193,14 +191,81 @@ export class AppointmentFormComponent implements OnInit {
     }
   }
 
-  addAssociate() {
-    if (!this.newAssociate.name.trim()) return;
-    this.associates = [...this.associates, { ...this.newAssociate }];
-    this.newAssociate = { name: '', phoneNumber: '', epicNumber: '', designation: '', address: '' };
+  searchAssociates() {
+    const query = this.associateSearchQuery.trim();
+    this.associateSearchError = '';
+    this.associateValidationError = '';
+    this.associateSearchResults = [];
+    if (query.length < 2) {
+      this.associateSearchError = 'Enter mobile number, EPIC, or at least 2 letters of the citizen name.';
+      return;
+    }
+    this.associateSearching = true;
+    this.visitorSearchService.searchAssociateCitizens(query).subscribe({
+      next: results => {
+        this.associateSearching = false;
+        this.associateSearchResults = results || [];
+        if (this.associateSearchResults.length === 0) {
+          this.associateSearchError = 'Citizen must register in the portal before being added as an associate visitor.';
+        }
+      },
+      error: err => {
+        this.associateSearching = false;
+        this.associateSearchError = apiErrorMessage(err, 'Unable to search registered citizens.');
+      }
+    });
+  }
+
+  addAssociate(candidate: AssociateCitizen) {
+    this.associateValidationError = '';
+    const citizenId = candidate?.citizenId;
+    if (!citizenId) {
+      this.associateValidationError = 'Citizen must register in the portal before being added as an associate visitor.';
+      return;
+    }
+    if (this.associates.length >= this.maxAssociates) {
+      this.associateValidationError = `Maximum ${this.maxAssociates} associate visitors can be added.`;
+      return;
+    }
+    const primaryId = Number(this.visitorId || 0);
+    if (primaryId && citizenId === primaryId) {
+      this.associateValidationError = 'Primary citizen cannot be added again as an associate visitor.';
+      return;
+    }
+    if (this.associates.some(a => a.citizenId === citizenId)) {
+      this.associateValidationError = 'Duplicate associate visitors are not allowed.';
+      return;
+    }
+    if ((candidate.status || 'ACTIVE').toUpperCase() !== 'ACTIVE') {
+      this.associateValidationError = 'This citizen is inactive or blocked and cannot be added as an associate visitor.';
+      return;
+    }
+    this.associates = [...this.associates, candidate];
+    this.associateSearchResults = this.associateSearchResults.filter(item => item.citizenId !== citizenId);
   }
 
   removeAssociate(index: number) {
     this.associates = this.associates.filter((_, i) => i !== index);
+  }
+
+  associatePhotoUrl(candidate: AssociateCitizen): string {
+    return this.normalizePhotoSource(candidate.photoUrl || '');
+  }
+
+  isKycPending(status?: string): boolean {
+    return (status || '').toUpperCase() === 'KYC_PENDING' || (status || '').toUpperCase() === 'PENDING';
+  }
+
+  statusClass(status?: string): string {
+    const normalized = (status || '').toUpperCase();
+    if (['PHOTO_MATCHED', 'DEMOGRAPHIC_MATCHED', 'VERIFIED', 'APPROVED', 'ACTIVE'].includes(normalized)) return 'status-success';
+    if (['KYC_PENDING', 'PENDING', 'MANUAL_VERIFICATION_REQUIRED'].includes(normalized)) return 'status-warn';
+    if (['FAILED', 'REJECTED', 'BLOCKED', 'INACTIVE'].includes(normalized)) return 'status-danger';
+    return 'status-info';
+  }
+
+  displayStatus(status?: string): string {
+    return (status || 'PENDING').replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
   }
 
   getOrganizationTypeLabel(): string {
@@ -327,6 +392,7 @@ export class AppointmentFormComponent implements OnInit {
     private aiDocumentService: AiDocumentService,
     private schemeService: SchemeService,
     private visitorService: VisitorService,
+    private visitorSearchService: VisitorSearchService,
     private auth: AuthService,
     private route: ActivatedRoute
   ) {}
@@ -418,6 +484,23 @@ export class AppointmentFormComponent implements OnInit {
       this.errorMsg = 'Please complete the appointment agenda, location, and purpose before submitting.';
       return;
     }
+    if (this.includeAssociates) {
+      const invalidAssociate = this.associates.some(a => !a.citizenId);
+      if (invalidAssociate) {
+        this.errorMsg = 'Every associate visitor must be selected from registered citizens.';
+        return;
+      }
+      const primaryId = Number(visitorId || 0);
+      if (primaryId && this.associates.some(a => a.citizenId === primaryId)) {
+        this.errorMsg = 'Primary citizen cannot be added again as an associate visitor.';
+        return;
+      }
+      const uniqueIds = new Set(this.associates.map(a => a.citizenId));
+      if (uniqueIds.size !== this.associates.length) {
+        this.errorMsg = 'Duplicate associate visitors are not allowed.';
+        return;
+      }
+    }
 
     // Validate required documents are uploaded
     const requiredDocs = this.documents.filter(d => d.isVisible && d.isRequired);
@@ -463,7 +546,10 @@ export class AppointmentFormComponent implements OnInit {
 
     // Add associates
     if (this.includeAssociates) {
-      formData.append('associates', JSON.stringify(this.associates));
+      formData.append('associates', JSON.stringify(this.associates.map(a => ({
+        citizenId: a.citizenId,
+        remarks: a.remarks || a.relationship || ''
+      }))));
     }
 
     // Add document files
@@ -490,6 +576,17 @@ export class AppointmentFormComponent implements OnInit {
         this.errorMsg = apiErrorMessage(err, 'Submission failed. Please try again.');
       },
     });
+  }
+
+  private normalizePhotoSource(value: string): string {
+    const source = value.trim();
+    if (!source) return '';
+    if (source.startsWith('data:image/') || source.startsWith('blob:') || /^https?:\/\//i.test(source)) {
+      return source;
+    }
+    const origin = environment.apiUrl.replace(/\/api\/v1\/?$/i, '');
+    const cleanPath = source.replace(/^\/+/, '');
+    return `${origin}/${cleanPath.startsWith('uploads/') ? cleanPath : `uploads/${cleanPath}`}`;
   }
 }
 

@@ -22,6 +22,14 @@ public interface VisitorRepository extends JpaRepository<Visitor, Long>, JpaSpec
     @Query("SELECT v FROM Visitor v WHERE LOWER(v.fullName) LIKE LOWER(CONCAT('%', :name, '%'))")
     List<Visitor> searchByName(@Param("name") String name);
 
+    @Query("SELECT v FROM Visitor v WHERE " +
+            "LOWER(v.fullName) LIKE LOWER(CONCAT('%', :query, '%')) " +
+            "OR v.phoneNumber LIKE CONCAT('%', :query, '%') " +
+            "OR UPPER(v.epicNumber) = UPPER(:query) " +
+            "OR v.maskedIdentityNumber LIKE CONCAT('%', :query, '%') " +
+            "ORDER BY v.fullName")
+    List<Visitor> searchRegisteredCitizens(@Param("query") String query);
+
     @Query("SELECT v FROM Visitor v WHERE v.constituency = :constituency ORDER BY v.fullName")
     List<Visitor> findByConstituency(@Param("constituency") String constituency);
 

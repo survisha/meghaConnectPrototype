@@ -284,59 +284,76 @@
 
         <ng-container *ngIf="includeAssociates">
           <div class="info-box" style="margin-bottom:1rem">
-            Associates will be recorded but will not create separate applications.
+            Associate visitors must already be registered in the portal. Search and select existing citizens only.
           </div>
 
-          <!-- Add associate form -->
+          <!-- Registered citizen search -->
           <div style="padding:1rem;background:#f9fafb;border-radius:8px;margin-bottom:1rem;border:1px solid #e5e7eb">
             <div style="font-weight:600;font-size:0.85rem;margin-bottom:0.75rem;color:#374151">Add Associate</div>
-            <div class="form-grid">
-              <mat-form-field appearance="outline" class="form-group">
-                <mat-label>Name *</mat-label>
-                <input matInput [(ngModel)]="newAssociate.name" placeholder="Full name" />
+            <div class="associate-search-row">
+              <mat-form-field appearance="outline" class="associate-search-input">
+                <mat-label>Search registered citizen</mat-label>
+                <mat-icon matPrefix>search</mat-icon>
+                <input
+                  matInput
+                  [(ngModel)]="associateSearchQuery"
+                  (keyup.enter)="searchAssociates()"
+                  placeholder="Search registered citizen by mobile number, EPIC, or name" />
               </mat-form-field>
-              
-              <mat-form-field appearance="outline" class="form-group">
-                <mat-label>Phone Number</mat-label>
-                <input matInput [(ngModel)]="newAssociate.phoneNumber" placeholder="10-digit mobile" />
-              </mat-form-field>
-              
-              <mat-form-field appearance="outline" class="form-group">
-                <mat-label>EPIC Number</mat-label>
-                <input matInput [(ngModel)]="newAssociate.epicNumber" placeholder="Voter ID" />
-              </mat-form-field>
-              
-              <mat-form-field appearance="outline" class="form-group">
-                <mat-label>Designation</mat-label>
-                <mat-select [(ngModel)]="newAssociate.designation" placeholder="Select">
-                  <mat-option *ngFor="let d of designations" [value]="d">{{ d }}</mat-option>
-                </mat-select>
-              </mat-form-field>
-              
-              <mat-form-field appearance="outline" class="form-group" style="grid-column:1/-1">
-                <mat-label>Address</mat-label>
-                <input matInput [(ngModel)]="newAssociate.address" placeholder="Address" />
-              </mat-form-field>
+              <button mat-stroked-button color="primary" (click)="searchAssociates()" [disabled]="associateSearching">
+                <mat-icon>person_search</mat-icon>
+                {{ associateSearching ? 'Searching...' : 'Search' }}
+              </button>
             </div>
-            <button mat-stroked-button (click)="addAssociate()" [disabled]="!newAssociate.name.trim()">
-              <mat-icon>add</mat-icon> Add Associate
-            </button>
+
+            <div *ngIf="associateSearchError" class="associate-error">{{ associateSearchError }}</div>
+            <div *ngIf="associateValidationError" class="associate-error">{{ associateValidationError }}</div>
+
+            <div *ngIf="associateSearchResults.length > 0" class="associate-results">
+              <div *ngFor="let candidate of associateSearchResults" class="associate-result-card">
+                <img *ngIf="associatePhotoUrl(candidate)" [src]="associatePhotoUrl(candidate)" alt="Citizen photo" />
+                <div *ngIf="!associatePhotoUrl(candidate)" class="associate-photo-fallback">
+                  {{ (candidate.fullName || '?')[0] }}
+                </div>
+                <div class="associate-result-main">
+                  <div class="associate-name">{{ candidate.fullName }}</div>
+                  <div class="associate-meta">
+                    ID: {{ candidate.citizenId }} · {{ candidate.mobileNumber || 'No mobile' }} · {{ candidate.epicReference || candidate.aadhaarReference || 'No ID reference' }}
+                  </div>
+                  <div class="associate-meta">{{ candidate.addressSummary || 'Address not available' }}</div>
+                  <div class="associate-badges">
+                    <span class="status-pill" [ngClass]="statusClass(candidate.kycStatus)">
+                      {{ isKycPending(candidate.kycStatus) ? 'KYC Pending' : displayStatus(candidate.kycStatus) }}
+                    </span>
+                    <span class="status-pill" [ngClass]="statusClass(candidate.status)">{{ displayStatus(candidate.status) }}</span>
+                  </div>
+                </div>
+                <button mat-stroked-button color="primary" (click)="addAssociate(candidate)">
+                  <mat-icon>add</mat-icon> Add
+                </button>
+              </div>
+            </div>
           </div>
 
           <!-- Associates list -->
           <div *ngIf="associates.length > 0">
             <div style="font-weight:600;font-size:0.85rem;margin-bottom:0.5rem;color:#374151">Added Associates ({{ associates.length }})</div>
-            <div *ngFor="let a of associates; let i = index" style="display:flex;align-items:center;justify-content:space-between;padding:0.6rem 0.85rem;border:1px solid #e5e7eb;border-radius:6px;margin-bottom:0.5rem;background:white">
-              <div>
-                <div style="font-weight:600;font-size:0.9rem;color:#1f2937">{{ a.name }}</div>
-                <div style="font-size:0.8rem;color:#6b7280">{{ a.phoneNumber || '–' }} · {{ a.designation || '–' }}</div>
+            <div *ngFor="let a of associates; let i = index" class="associate-selected-row">
+              <img *ngIf="associatePhotoUrl(a)" [src]="associatePhotoUrl(a)" alt="Associate photo" />
+              <div *ngIf="!associatePhotoUrl(a)" class="associate-photo-fallback small">{{ (a.fullName || '?')[0] }}</div>
+              <div class="associate-result-main">
+                <div class="associate-name">{{ a.fullName }}</div>
+                <div class="associate-meta">ID: {{ a.citizenId }} · {{ a.mobileNumber || '–' }} · {{ a.epicReference || a.aadhaarReference || '–' }}</div>
+                <span class="status-pill" [ngClass]="statusClass(a.kycStatus)">
+                  {{ isKycPending(a.kycStatus) ? 'KYC Pending' : displayStatus(a.kycStatus) }}
+                </span>
               </div>
               <button mat-icon-button color="warn" (click)="removeAssociate(i)">
                 <mat-icon>delete</mat-icon>
               </button>
             </div>
           </div>
-          <div *ngIf="associates.length === 0" class="info-box">No associates added. Click "Add Associate" above to add one.</div>
+          <div *ngIf="associates.length === 0" class="info-box">No associates added. Search for a registered citizen above to add one.</div>
         </ng-container>
 
         <div *ngIf="!includeAssociates" class="info-box">

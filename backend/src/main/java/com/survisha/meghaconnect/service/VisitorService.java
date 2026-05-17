@@ -2,6 +2,7 @@ package com.survisha.meghaconnect.service;
 
 import com.survisha.meghaconnect.entity.Visitor;
 import com.survisha.meghaconnect.repository.VisitorRepository;
+import com.survisha.meghaconnect.dto.AssociateVisitorDto;
 import com.survisha.meghaconnect.dto.PublicRegistrationDto;
 import com.survisha.meghaconnect.dto.VisitorDto;
 import com.survisha.meghaconnect.exception.*;
@@ -56,6 +57,22 @@ public class VisitorService {
 
     public Optional<VisitorDto> findByIdDto(Long id) {
         return findById(id).map(this::toDto);
+    }
+
+    @Transactional
+    public List<AssociateVisitorDto> searchAssociateCitizens(String query, String actor) {
+        String value = trimToNull(query);
+        if (value == null || value.length() < 2) {
+            return List.of();
+        }
+        List<AssociateVisitorDto> results = visitorRepository.searchRegisteredCitizens(value).stream()
+                .limit(20)
+                .map(this::toAssociateVisitorDto)
+                .toList();
+        auditLogService.log("Visitor", null, "ASSOCIATE_CITIZEN_SEARCH",
+                "Associate citizen searched: " + value + ", results=" + results.size(),
+                firstNonBlank(actor, "associate-search"));
+        return results;
     }
 
     public List<Visitor> findAllByPhone(String phone) {
@@ -281,6 +298,30 @@ public class VisitorService {
                 .photoPath(visitor.getPhotoPath())
                 .createdAt(visitor.getCreatedAt())
                 .updatedAt(visitor.getUpdatedAt())
+                .build();
+    }
+
+    public AssociateVisitorDto toAssociateVisitorDto(Visitor visitor) {
+        if (visitor == null) {
+            return null;
+        }
+        return AssociateVisitorDto.builder()
+                .citizenId(visitor.getId())
+                .fullName(visitor.getFullName())
+                .mobileNumber(visitor.getPhoneNumber())
+                .epicReference(maskReference(visitor.getEpicNumber()))
+                .aadhaarReference(firstNonBlank(visitor.getMaskedIdentityNumber(), maskAadhaarForResponse(visitor.getAadhaarNumber())))
+                .addressSummary(firstNonBlank(
+                        visitor.getFullAddress(),
+                        visitor.getAddress(),
+                        visitor.getAddressLine(),
+                        visitor.getVillage(),
+                        visitor.getLocation()))
+                .photoUrl(firstNonBlank(visitor.getLivePhotoPath(), visitor.getPhotoStoragePath(), visitor.getPhotoPath()))
+                .kycStatus(firstNonBlank(visitor.getKycStatus(), "PENDING"))
+                .status("ACTIVE")
+                .role("ASSOCIATE")
+                .createdAt(visitor.getCreatedAt())
                 .build();
     }
 
@@ -610,6 +651,14 @@ public class VisitorService {
             return "XXXX-XXXX-" + normalized;
         }
         return "XXXX-XXXX-" + normalized.substring(normalized.length() - 4);
+    }
+
+    private String maskReference(String value) {
+        String normalized = trimToNull(value);
+        if (normalized == null || normalized.length() <= 4) {
+            return normalized;
+        }
+        return "XXXX" + normalized.substring(normalized.length() - 4);
     }
 
     private String trimToNull(String value) {

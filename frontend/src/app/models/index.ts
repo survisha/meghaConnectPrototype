@@ -109,10 +109,27 @@ export interface Appointment {
   hcmRemarks?: string;
   shortNotes?: string;
   directions?: Direction[];
+  associates?: AssociateCitizen[];
   isWalkIn?: boolean;
   createdAt?: string;
   submittedAt?: string;
   updatedAt?: string;
+}
+
+export interface AssociateCitizen {
+  id?: number;
+  citizenId: number;
+  fullName: string;
+  mobileNumber?: string;
+  epicReference?: string;
+  aadhaarReference?: string;
+  addressSummary?: string;
+  photoUrl?: string;
+  kycStatus?: string;
+  status?: string;
+  relationship?: string;
+  remarks?: string;
+  role?: string;
 }
 
 

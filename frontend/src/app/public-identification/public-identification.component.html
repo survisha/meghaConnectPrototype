@@ -245,6 +245,7 @@
                 <td mat-cell *matCellDef="let m">
                   <strong>{{ displayValue(m.department) }}</strong>
                   <div class="history-subtext">{{ displayValue(m.officerName) }}</div>
+                  <div class="history-subtext" *ngIf="m.primaryVisitorName">Primary: {{ m.primaryVisitorName }}</div>
                 </td>
               </ng-container>
               
@@ -257,6 +258,9 @@
                 <th mat-header-cell *matHeaderCellDef>Status</th>
                 <td mat-cell *matCellDef="let m">
                   <mat-chip class="status-chip" [ngClass]="statusClass(m.status)">{{ statusLabel(m.status) }}</mat-chip>
+                  <mat-chip class="status-chip status-info" style="margin-left:0.25rem">
+                    {{ m.role === 'ASSOCIATE' ? 'Associate Visitor' : 'Primary Visitor' }}
+                  </mat-chip>
                 </td>
               </ng-container>
               
@@ -290,13 +294,26 @@
 
                 <div class="full-history-section">
                   <div class="full-history-subtitle">All Appointment / Meeting History</div>
+                  <div *ngIf="groupVisitHistory.length === 0" class="empty-history" style="margin-bottom:0.75rem">No group visit history found.</div>
                   <div *ngFor="let m of meetingHistory" class="history-card">
                     <div>
                       <strong>{{ displayValue(m.purpose) }}</strong>
                       <span>{{ formatDateTime(m.dateTime) }}</span>
                     </div>
+                    <p>
+                      <span class="role-badge" [ngClass]="m.role === 'ASSOCIATE' ? 'associate-role' : 'primary-role'">
+                        {{ m.role === 'ASSOCIATE' ? 'Associate Visitor' : 'Primary Visitor' }}
+                      </span>
+                      <span *ngIf="m.primaryVisitorName"> Primary: {{ m.primaryVisitorName }}</span>
+                    </p>
                     <p>{{ displayValue(m.department) }}<span *ngIf="m.officerName"> - {{ m.officerName }}</span></p>
                     <p *ngIf="m.remarks">{{ m.remarks }}</p>
+                    <div *ngIf="m.groupMembers?.length" class="group-members">
+                      <strong>Group members</strong>
+                      <span *ngFor="let member of m.groupMembers">
+                        {{ member.fullName }} ({{ member.mobileNumber || 'No mobile' }})
+                      </span>
+                    </div>
                     <mat-chip class="status-chip" [ngClass]="statusClass(m.status)">{{ statusLabel(m.status) }}</mat-chip>
                   </div>
                   <div *ngIf="meetingHistory.length === 0" class="empty-history">No meeting history found for this citizen.</div>

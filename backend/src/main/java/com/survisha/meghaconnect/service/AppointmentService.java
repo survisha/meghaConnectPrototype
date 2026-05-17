@@ -3,13 +3,16 @@ package com.survisha.meghaconnect.service;
 import com.survisha.meghaconnect.dto.AppointmentDto;
 import com.survisha.meghaconnect.dto.AppointmentDocumentDto;
 import com.survisha.meghaconnect.dto.AppointmentMultipartRequest;
+import com.survisha.meghaconnect.dto.AssociateVisitorDto;
 import com.survisha.meghaconnect.dto.GuestAppointmentRequest;
 import com.survisha.meghaconnect.dto.GuestAppointmentResponse;
+import com.survisha.meghaconnect.entity.AssociateMapping;
 import com.survisha.meghaconnect.entity.Appointment;
 import com.survisha.meghaconnect.entity.DocumentUpload;
 import com.survisha.meghaconnect.entity.SchemeApplication;
 import com.survisha.meghaconnect.entity.Visitor;
 import com.survisha.meghaconnect.repository.AppointmentRepository;
+import com.survisha.meghaconnect.repository.AssociateMappingRepository;
 import com.survisha.meghaconnect.repository.DocumentUploadRepository;
 import com.survisha.meghaconnect.repository.ScheduleEventRepository;
 import com.survisha.meghaconnect.repository.SchemeApplicationRepository;
@@ -41,6 +44,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.LinkedHashSet;
 
 @Service
 @RequiredArgsConstructor
@@ -85,6 +89,7 @@ public class AppointmentService {
     );
 
     private final AppointmentRepository appointmentRepository;
+    private final AssociateMappingRepository associateMappingRepository;
     private final VisitorRepository visitorRepository;
     private final DocumentUploadRepository documentUploadRepository;
     private final ScheduleEventRepository scheduleEventRepository;
@@ -367,6 +372,7 @@ public class AppointmentService {
         appt.setUpdatedBy(createdBy);
 
         Appointment saved = appointmentRepository.save(appt);
+        saveAppointmentAssociates(toAssociatesJson(dto.getAssociates()), saved, applicant, createdBy);
         auditLogService.log("Appointment", saved.getId(), "CREATED",
             "New appointment created: " + appId, createdBy);
         return saved;
@@ -441,7 +447,7 @@ public class AppointmentService {
         Appointment saved = appointmentRepository.save(appt);
         saveSchemeApplicationIfRequired(safeForm, saved, applicant, schemeType, actor);
         saveAppointmentDocuments(request, saved, applicant, appId, actor);
-        auditAppointmentAssociates(safeForm.getAssociates(), saved, actor);
+        saveAppointmentAssociates(safeForm.getAssociates(), saved, applicant, actor);
 
         auditLogService.log("Appointment", saved.getId(), "SUBMITTED",
             "Appointment submitted: " + appId, actor);
@@ -533,9 +539,45 @@ public class AppointmentService {
             .shortNotes(appointment.getShortNotes())
             .isWalkIn(appointment.getIsWalkIn())
             .meetingCountLast6Months(appointment.getMeetingCountLast6Months())
+            .associates(toAssociateDtos(appointment))
             .createdAt(appointment.getCreatedAt())
             .updatedAt(appointment.getUpdatedAt())
             .build();
+    }
+
+    public List<AssociateVisitorDto> toAssociateDtos(Appointment appointment) {
+        if (appointment == null || appointment.getId() == null) {
+            return List.of();
+        }
+        return associateMappingRepository.findByAppointment_IdOrderByCreatedAtAsc(appointment.getId())
+                .stream()
+                .map(mapping -> toAssociateDto(mapping, "ASSOCIATE"))
+                .toList();
+    }
+
+    private AssociateVisitorDto toAssociateDto(AssociateMapping mapping, String role) {
+        if (mapping == null) {
+            return null;
+        }
+        Visitor citizen = mapping.getPerson();
+        return AssociateVisitorDto.builder()
+                .id(mapping.getId())
+                .citizenId(citizen != null ? citizen.getId() : null)
+                .fullName(citizen != null ? citizen.getFullName() : mapping.getAssociateName())
+                .mobileNumber(citizen != null ? citizen.getPhoneNumber() : mapping.getAssociatePhone())
+                .epicReference(maskReference(citizen != null ? citizen.getEpicNumber() : mapping.getAssociateEpic()))
+                .aadhaarReference(citizen != null ? firstNonBlank(citizen.getMaskedIdentityNumber(), maskAadhaarForResponse(citizen.getAadhaarNumber())) : null)
+                .addressSummary(citizen != null
+                        ? firstNonBlank(citizen.getFullAddress(), citizen.getAddress(), citizen.getAddressLine(), citizen.getLocation())
+                        : mapping.getAssociateAddress())
+                .photoUrl(citizen != null ? firstNonBlank(citizen.getLivePhotoPath(), citizen.getPhotoStoragePath(), citizen.getPhotoPath()) : null)
+                .kycStatus(citizen != null ? firstNonBlank(citizen.getKycStatus(), "PENDING") : null)
+                .status("ACTIVE")
+                .relationship(mapping.getRelationship())
+                .remarks(mapping.getRelationship())
+                .role(role)
+                .createdAt(mapping.getCreatedAt())
+                .build();
     }
 
     @Transactional
@@ -812,6 +854,14 @@ public class AppointmentService {
         return "XXXX-XXXX-" + normalized.substring(normalized.length() - 4);
     }
 
+    private String maskReference(String value) {
+        String normalized = trimToNull(value);
+        if (normalized == null || normalized.length() <= 4) {
+            return normalized;
+        }
+        return "XXXX" + normalized.substring(normalized.length() - 4);
+    }
+
     private AppointmentDocumentDto toDocumentDto(DocumentUpload document) {
         Appointment appointment = document.getAppointment();
         return AppointmentDocumentDto.builder()
@@ -1083,16 +1133,98 @@ public class AppointmentService {
         }
     }
 
-    private void auditAppointmentAssociates(String associates, Appointment appointment, String actor) {
+    private void saveAppointmentAssociates(String associates, Appointment appointment, Visitor applicant, String actor) {
         if (associates == null || associates.trim().isEmpty() || "[]".equals(associates.trim())) {
             return;
         }
+        List<Map<String, Object>> associateRequests;
         try {
-            objectMapper.readValue(associates, new TypeReference<List<Map<String, String>>>() {});
+            associateRequests = objectMapper.readValue(associates, new TypeReference<List<Map<String, Object>>>() {});
         } catch (Exception e) {
             auditLogService.log("Appointment", appointment.getId(), "ASSOCIATES_PARSE_ERROR",
                     "Failed to parse associates JSON: " + e.getMessage(), actor);
+            throw new MeghaConnectException(ErrorCodeConstants.INVALID_FIELD_VALUE,
+                    "Associate visitors payload is invalid.", HttpStatus.BAD_REQUEST.value());
         }
+        if (associateRequests == null || associateRequests.isEmpty()) {
+            return;
+        }
+
+        LinkedHashSet<Long> associateCitizenIds = new LinkedHashSet<>();
+        Map<Long, String> remarksByCitizenId = new HashMap<>();
+        for (Map<String, Object> item : associateRequests) {
+            Long citizenId = longValue(item != null ? firstNonNull(item.get("citizenId"), item.get("id")) : null);
+            if (citizenId == null || citizenId <= 0) {
+                throw new MeghaConnectException(ErrorCodeConstants.MISSING_REQUIRED_FIELD,
+                        "Every associate visitor must be selected from registered citizens.", HttpStatus.BAD_REQUEST.value());
+            }
+            if (!associateCitizenIds.add(citizenId)) {
+                throw new MeghaConnectException(ErrorCodeConstants.DUPLICATE_ENTRY,
+                        "Duplicate associate visitors are not allowed.", HttpStatus.CONFLICT.value());
+            }
+            Object remarksValue = firstNonNull(item.get("remarks"), item.get("relationship"));
+            remarksByCitizenId.put(citizenId, remarksValue == null ? null : trimToNull(remarksValue.toString()));
+        }
+
+        if (applicant != null && associateCitizenIds.contains(applicant.getId())) {
+            throw new MeghaConnectException(ErrorCodeConstants.INVALID_FIELD_VALUE,
+                    "Primary citizen cannot be added again as an associate visitor.", HttpStatus.BAD_REQUEST.value());
+        }
+
+        List<Visitor> associateCitizens = visitorRepository.findAllById(associateCitizenIds);
+        if (associateCitizens.size() != associateCitizenIds.size()) {
+            throw new MeghaConnectException(ErrorCodeConstants.CONTENT_NOT_FOUND,
+                    "Citizen must register in the portal before being added as an associate visitor.", HttpStatus.BAD_REQUEST.value());
+        }
+
+        for (Visitor citizen : associateCitizens) {
+            if (associateMappingRepository.existsByAppointment_IdAndPerson_Id(appointment.getId(), citizen.getId())) {
+                throw new MeghaConnectException(ErrorCodeConstants.DUPLICATE_ENTRY,
+                        "Duplicate associate visitors are not allowed.", HttpStatus.CONFLICT.value());
+            }
+            String remarks = remarksByCitizenId.get(citizen.getId());
+            AssociateMapping mapping = AssociateMapping.builder()
+                    .appointment(appointment)
+                    .person(citizen)
+                    .relationship(remarks)
+                    .associateName(citizen.getFullName())
+                    .associatePhone(citizen.getPhoneNumber())
+                    .associateEpic(citizen.getEpicNumber())
+                    .associateDesignation(citizen.getDesignation())
+                    .associateAddress(firstNonBlank(citizen.getFullAddress(), citizen.getAddress(), citizen.getAddressLine(), citizen.getLocation()))
+                    .build();
+            mapping.setCreatedBy(actor);
+            mapping.setUpdatedBy(actor);
+            AssociateMapping savedMapping = associateMappingRepository.save(mapping);
+            auditLogService.log("Appointment", appointment.getId(), "ASSOCIATE_CITIZEN_ADDED",
+                    "Associate citizen added: citizenId=" + citizen.getId() + ", mappingId=" + savedMapping.getId(), actor);
+        }
+        auditLogService.log("Appointment", appointment.getId(), "ASSOCIATES_SAVED",
+                "Appointment created with " + associateCitizens.size() + " associate visitor(s).", actor);
+    }
+
+    private String toAssociatesJson(List<AssociateVisitorDto> associates) {
+        if (associates == null || associates.isEmpty()) {
+            return null;
+        }
+        try {
+            return objectMapper.writeValueAsString(associates);
+        } catch (Exception e) {
+            throw new MeghaConnectException(ErrorCodeConstants.INVALID_FIELD_VALUE,
+                    "Associate visitors payload is invalid.", HttpStatus.BAD_REQUEST.value());
+        }
+    }
+
+    private Object firstNonNull(Object... values) {
+        if (values == null) {
+            return null;
+        }
+        for (Object value : values) {
+            if (value != null) {
+                return value;
+            }
+        }
+        return null;
     }
 
     private MultipartFile convertPartToMultipartFile(Part part) throws IOException {

@@ -15,6 +15,23 @@ export interface PublicIdentificationHistory {
   appointments: CitizenAppointmentHistory[];
 }
 
+export interface AssociateCitizen {
+  id?: number;
+  citizenId: number;
+  fullName: string;
+  mobileNumber?: string;
+  epicReference?: string;
+  aadhaarReference?: string;
+  addressSummary?: string;
+  photoUrl?: string;
+  kycStatus?: string;
+  status?: string;
+  relationship?: string;
+  remarks?: string;
+  role?: 'PRIMARY' | 'ASSOCIATE' | string;
+  createdAt?: string;
+}
+
 export interface CitizenSchemeHistory {
   id: number;
   schemeName: string;
@@ -34,6 +51,9 @@ export interface CitizenAppointmentHistory {
   purpose?: string;
   status: string;
   remarks?: string;
+  role?: 'PRIMARY' | 'ASSOCIATE' | string;
+  primaryVisitorName?: string;
+  groupMembers?: AssociateCitizen[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -83,6 +103,11 @@ export class VisitorSearchService {
     return this.http.get<PublicIdentificationHistory>(
       `${environment.apiUrl}/public-identification/citizens/${citizenId}/full-history`
     );
+  }
+
+  searchAssociateCitizens(query: string): Observable<AssociateCitizen[]> {
+    const params = new HttpParams().set('query', query.trim());
+    return this.http.get<AssociateCitizen[]>(`${this.baseUrl}/associate-search`, { params });
   }
 
   create(visitor: Partial<Visitor>): Observable<Visitor> {

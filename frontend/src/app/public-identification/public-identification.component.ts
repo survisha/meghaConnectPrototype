@@ -194,6 +194,10 @@ export class PublicIdentificationComponent {
     return this.schemeHistory.length > 0 || this.meetingHistory.length > 0;
   }
 
+  get groupVisitHistory(): CitizenAppointmentHistory[] {
+    return this.meetingHistory.filter(item => item.role === 'ASSOCIATE' || (item.groupMembers?.length || 0) > 0);
+  }
+
   toggleFullHistory(): void {
     this.fullHistoryOpen = !this.fullHistoryOpen;
   }

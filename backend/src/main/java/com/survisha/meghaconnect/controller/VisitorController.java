@@ -1,6 +1,7 @@
 package com.survisha.meghaconnect.controller;
 
 import com.survisha.meghaconnect.dto.VisitorDto;
+import com.survisha.meghaconnect.dto.AssociateVisitorDto;
 import com.survisha.meghaconnect.entity.Visitor;
 import com.survisha.meghaconnect.service.VisitorService;
 import com.survisha.meghaconnect.util.RequestContextUtil;
@@ -112,6 +113,15 @@ public class VisitorController {
     public ResponseEntity<List<VisitorDto>> findByDistrict(@PathVariable String district) {
         logEndpoint("/api/v1/visitors/search/district/{district}");
         return ResponseEntity.ok(visitorService.findByDistrictDtos(district));
+    }
+
+    @GetMapping("/associate-search")
+    @PreAuthorize("hasAnyRole('PUBLIC','HCM','ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO_OFFICER','APPROVER')")
+    public ResponseEntity<List<AssociateVisitorDto>> searchAssociateCitizens(@RequestParam String query,
+                                                                             @AuthenticationPrincipal UserDetails user) {
+        logEndpoint("/api/v1/visitors/associate-search");
+        String actor = user != null ? user.getUsername() : "associate-search";
+        return ResponseEntity.ok(visitorService.searchAssociateCitizens(query, actor));
     }
 
     @GetMapping("/{id}")

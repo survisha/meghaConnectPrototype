@@ -1,11 +1,13 @@
 package com.survisha.meghaconnect.service;
 
 import com.survisha.meghaconnect.dto.PublicIdentificationHistoryDto;
+import com.survisha.meghaconnect.entity.AssociateMapping;
 import com.survisha.meghaconnect.entity.Appointment;
 import com.survisha.meghaconnect.entity.SchemeApplication;
 import com.survisha.meghaconnect.entity.Visitor;
 import com.survisha.meghaconnect.exception.ResourceNotFoundException;
 import com.survisha.meghaconnect.repository.AppointmentRepository;
+import com.survisha.meghaconnect.repository.AssociateMappingRepository;
 import com.survisha.meghaconnect.repository.SchemeApplicationRepository;
 import com.survisha.meghaconnect.repository.VisitorRepository;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +16,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Comparator;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -23,7 +28,9 @@ public class PublicIdentificationService {
     private final VisitorRepository visitorRepository;
     private final SchemeApplicationRepository schemeApplicationRepository;
     private final AppointmentRepository appointmentRepository;
+    private final AssociateMappingRepository associateMappingRepository;
     private final AuditLogService auditLogService;
+    private final AppointmentService appointmentService;
 
     @Transactional
     public PublicIdentificationHistoryDto getCitizenFullHistory(Long citizenId, String actor) {
@@ -31,7 +38,9 @@ public class PublicIdentificationService {
                 .orElseThrow(() -> new ResourceNotFoundException("Citizen not found"));
 
         List<SchemeApplication> schemeApplications = schemeApplicationRepository.findByApplicant_IdOrderByCreatedAtDesc(citizenId);
-        List<Appointment> appointments = appointmentRepository.findByApplicant_IdOrderByCreatedAtDesc(citizenId);
+        List<Appointment> primaryAppointments = appointmentRepository.findByApplicant_IdOrderByCreatedAtDesc(citizenId);
+        List<AssociateMapping> associateMappings = associateMappingRepository.findByPerson_IdOrderByCreatedAtDesc(citizenId);
+        List<Appointment> appointments = mergeAppointments(primaryAppointments, associateMappings);
 
         LocalDateTime lastVisitedAt = appointments.stream()
                 .map(this::latestAppointmentTime)
@@ -59,7 +68,7 @@ public class PublicIdentificationService {
                         .toList())
                 .appointments(appointments.stream()
                         .sorted(Comparator.comparing(this::latestAppointmentTime, Comparator.nullsLast(Comparator.reverseOrder())))
-                        .map(this::toAppointmentHistory)
+                        .map(appointment -> toAppointmentHistory(appointment, citizenId))
                         .toList())
                 .build();
     }
@@ -76,7 +85,9 @@ public class PublicIdentificationService {
                 .build();
     }
 
-    private PublicIdentificationHistoryDto.AppointmentHistoryItem toAppointmentHistory(Appointment appointment) {
+    private PublicIdentificationHistoryDto.AppointmentHistoryItem toAppointmentHistory(Appointment appointment, Long citizenId) {
+        boolean primary = appointment.getApplicant() != null && appointment.getApplicant().getId().equals(citizenId);
+        Visitor primaryVisitor = appointment.getApplicant();
         return PublicIdentificationHistoryDto.AppointmentHistoryItem.builder()
                 .appointmentId(appointment.getId())
                 .applicationId(appointment.getApplicationId())
@@ -86,7 +97,26 @@ public class PublicIdentificationService {
                 .purpose(firstNonBlank(appointment.getSubject(), appointment.getAgendaBrief(), appointment.getAgendaType(), appointment.getReasonForAppointment()))
                 .status(appointment.getStatus() != null ? appointment.getStatus().name() : "")
                 .remarks(firstNonBlank(appointment.getHcmRemarks(), appointment.getApproverRemarks(), appointment.getCmoRemarks(), appointment.getShortNotes(), appointment.getRejectionReason()))
+                .role(primary ? "PRIMARY" : "ASSOCIATE")
+                .primaryVisitorName(primaryVisitor != null ? primaryVisitor.getFullName() : "")
+                .groupMembers(appointmentService.toAssociateDtos(appointment))
                 .build();
+    }
+
+    private List<Appointment> mergeAppointments(List<Appointment> primaryAppointments, List<AssociateMapping> associateMappings) {
+        Map<Long, Appointment> byId = new LinkedHashMap<>();
+        for (Appointment appointment : primaryAppointments) {
+            if (appointment != null && appointment.getId() != null) {
+                byId.put(appointment.getId(), appointment);
+            }
+        }
+        for (AssociateMapping mapping : associateMappings) {
+            Appointment appointment = mapping.getAppointment();
+            if (appointment != null && appointment.getId() != null) {
+                byId.putIfAbsent(appointment.getId(), appointment);
+            }
+        }
+        return new ArrayList<>(byId.values());
     }
 
     private LocalDateTime latestAppointmentTime(Appointment appointment) {

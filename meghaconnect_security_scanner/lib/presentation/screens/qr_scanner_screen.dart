@@ -39,7 +39,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Scan QR'),
+        title: const Text('QR Code Scanner'),
         actions: [
           IconButton(
             tooltip: 'Manual token',

@@ -14,6 +14,7 @@ import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,7 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.format.DateTimeFormatter;
+import java.util.Base64;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.HashMap;
 
@@ -49,6 +52,7 @@ public class VisitorPassService {
 
     private final AppointmentRepository appointmentRepository;
     private final QrTokenService qrTokenService;
+    private final FileStorageService fileStorageService;
 
     @Transactional(readOnly = true)
     public Map<String, Object> getPassDetails(Long appointmentId, Long visitorId) {
@@ -62,6 +66,7 @@ public class VisitorPassService {
         details.put("scheduledDateTime", appointment.getScheduledDateTime());
         details.put("location", appointment.getRequestedLocation() != null ? appointment.getRequestedLocation().name() : "");
         details.put("status", "ACTIVE");
+        details.put("visitorPhoto", loadVisitorPhotoDataUri(visitor).orElse(null));
         details.put("downloadUrl", "/api/v1/appointments/" + appointment.getId() + "/visitor-pass/download");
         return details;
     }
@@ -134,6 +139,8 @@ public class VisitorPassService {
                 drawLine(content, 56, y, 540, y);
                 y -= 28;
 
+                drawVisitorPhoto(document, content, visitor, 422, 610, 104, 124);
+
                 y = row(content, y, "Application ID", appointment.getApplicationId());
                 y = row(content, y, "Appointment ID", String.valueOf(appointment.getId()));
                 y = row(content, y, "Applicant Name", applicantName);
@@ -143,7 +150,7 @@ public class VisitorPassService {
                 y = row(content, y, "Location", location);
                 y = row(content, y, "Agenda Type", firstNonBlank(appointment.getAgendaType(), appointment.getAppointmentType(), "Appointment"));
 
-                drawText(content, PDType1Font.HELVETICA_BOLD, 11, 56, 438, "Secure scan code");
+                drawText(content, PDType1Font.HELVETICA_BOLD, 11, 56, 438, "QR Code Scanner");
                 drawTokenCode(content, qrToken, 56, 355, 480, 72);
                 drawText(content, PDType1Font.HELVETICA, 7, 56, 342, qrToken);
 
@@ -170,6 +177,56 @@ public class VisitorPassService {
     private float bullet(PDPageContentStream content, float y, String value) throws IOException {
         drawText(content, PDType1Font.HELVETICA, 10, 70, y, "- " + value);
         return y - 16;
+    }
+
+    private void drawVisitorPhoto(PDDocument document,
+                                  PDPageContentStream content,
+                                  Visitor visitor,
+                                  float x,
+                                  float y,
+                                  float width,
+                                  float height) throws IOException {
+        drawText(content, PDType1Font.HELVETICA_BOLD, 9, x, y + height + 10, "Visitor Photo");
+        content.addRect(x, y, width, height);
+        content.stroke();
+
+        Optional<String> dataUri = loadVisitorPhotoDataUri(visitor);
+        if (dataUri.isEmpty()) {
+            drawText(content, PDType1Font.HELVETICA, 8, x + 10, y + (height / 2), "Photo not available");
+            return;
+        }
+
+        try {
+            byte[] bytes = decodeDataUri(dataUri.get());
+            PDImageXObject image = PDImageXObject.createFromByteArray(document, bytes, "visitor-photo");
+            float imageWidth = image.getWidth();
+            float imageHeight = image.getHeight();
+            float scale = Math.min((width - 8) / imageWidth, (height - 8) / imageHeight);
+            float drawWidth = imageWidth * scale;
+            float drawHeight = imageHeight * scale;
+            float drawX = x + (width - drawWidth) / 2;
+            float drawY = y + (height - drawHeight) / 2;
+            content.drawImage(image, drawX, drawY, drawWidth, drawHeight);
+        } catch (IllegalArgumentException | IOException e) {
+            drawText(content, PDType1Font.HELVETICA, 8, x + 10, y + (height / 2), "Photo not available");
+        }
+    }
+
+    private Optional<String> loadVisitorPhotoDataUri(Visitor visitor) {
+        if (visitor == null) {
+            return Optional.empty();
+        }
+        return fileStorageService.loadImageDataUri(firstNonBlank(
+                visitor.getLivePhotoPath(),
+                visitor.getPhotoStoragePath(),
+                visitor.getPhotoPath()
+        ));
+    }
+
+    private byte[] decodeDataUri(String dataUri) {
+        int commaIndex = dataUri.indexOf(',');
+        String payload = commaIndex >= 0 ? dataUri.substring(commaIndex + 1) : dataUri;
+        return Base64.getDecoder().decode(payload);
     }
 
     private void drawText(PDPageContentStream content, PDType1Font font, int size, float x, float y, String text) throws IOException {

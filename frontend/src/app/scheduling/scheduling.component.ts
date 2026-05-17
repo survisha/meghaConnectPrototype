@@ -391,8 +391,8 @@ export class SchedulingComponent implements OnInit {
     const updatedEvent: Partial<ScheduleEvent> = {
       title: droppedEvent.title,
       eventType: droppedEvent.eventType,
-      startTime: newStart.toISOString(),
-      endTime: newEnd.toISOString(),
+      startTime: this.toLocalDateTime(newStart),
+      endTime: this.toLocalDateTime(newEnd),
       location: droppedEvent.location,
       travelTimeMinutes: droppedEvent.travelTimeMinutes,
       description: droppedEvent.description,

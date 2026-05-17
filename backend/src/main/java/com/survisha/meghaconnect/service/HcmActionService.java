@@ -99,7 +99,10 @@ public class HcmActionService {
             .findByScheduledDateTimeGreaterThanEqualAndScheduledDateTimeLessThanOrderByScheduledDateTimeAsc(
                 target.atStartOfDay(),
                 target.plusDays(1).atStartOfDay()
-            );
+            )
+            .stream()
+            .filter(this::isPendingHcmAction)
+            .toList();
     }
 
     public HcmActionDto addRemark(Long appointmentId, HcmActionDto actionDto, String actor, String actorRole) {
@@ -357,6 +360,16 @@ public class HcmActionService {
             appointment.setScheduledDurationMinutes(30);
         }
         appointmentRepository.save(appointment);
+    }
+
+    private boolean isPendingHcmAction(Appointment appointment) {
+        if (appointment == null || appointment.getStatus() == null) {
+            return false;
+        }
+        return switch (appointment.getStatus()) {
+            case HCM_ACCEPTED, HCM_REJECTED, FORWARDED_TO_DEPARTMENT, COMPLETED, CANCELLED, REJECTED -> false;
+            default -> true;
+        };
     }
 
     private String resolveDepartmentName(String departmentCode) {

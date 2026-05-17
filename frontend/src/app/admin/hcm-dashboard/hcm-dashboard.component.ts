@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
-import { Appointment } from '../../models';
+import { Appointment, AppointmentStatus } from '../../models';
 import { AppointmentRemark, AppointmentService } from '../../services/appointment.service';
 import { ReferenceDataDto, ReferenceDataService } from '../../services/reference-data.service';
 import { MatCardModule } from '@angular/material/card';
@@ -140,6 +140,7 @@ export class HcmDashboardComponent implements OnInit {
       .subscribe({
         next: page => {
           this.appointments = (page ?? [])
+            .filter(appointment => this.isPendingHcmActionAppointment(appointment))
             .map(appointment => this.mapAppointmentCard(appointment));
           this.clearApiError('appointments');
           this.loadingAppointments = false;
@@ -427,11 +428,15 @@ export class HcmDashboardComponent implements OnInit {
    */
   submitAction(endpoint: string, payload: any) {
     this.submittingAction = true;
+    const handledAppointmentId = endpoint.includes('/accept') ? this.selectedAppointment?.id : null;
     this.http.post(`${environment.apiUrl}/hcm/actions${endpoint}`, payload)
       .subscribe({
         next: () => {
           this.clearApiError('submitAction');
           alert('Action submitted successfully');
+          if (handledAppointmentId) {
+            this.appointments = this.appointments.filter(item => item.id !== handledAppointmentId);
+          }
           this.resetActionForm();
           this.showActionMenu = false;
           this.selectedAppointment = null;
@@ -582,5 +587,17 @@ export class HcmDashboardComponent implements OnInit {
   private toDateParam(date: Date): string {
     const pad = (part: number) => part.toString().padStart(2, '0');
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  }
+
+  private isPendingHcmActionAppointment(appointment: Appointment): boolean {
+    const handledStatuses: AppointmentStatus[] = [
+      'HCM_ACCEPTED',
+      'HCM_REJECTED',
+      'FORWARDED_TO_DEPARTMENT',
+      'COMPLETED',
+      'CANCELLED',
+      'REJECTED',
+    ];
+    return !handledStatuses.includes(appointment.status);
   }
 }

@@ -47,6 +47,10 @@ public class EpicVerificationResponse {
     private String code;                      // HTTP status code (200, 400, etc.)
     private String message;                   // "Success" or error message
     private EpicVerificationData data;        // Strongly-typed response data
+    private Boolean success;
+    private Boolean canProceed;
+    private String kycStatus;
+    private String kycProvider;
     @Builder.Default
     private String requestId = RequestContextUtil.getRequestId();
     

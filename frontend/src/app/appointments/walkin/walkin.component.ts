@@ -111,6 +111,9 @@ export class WalkinComponent implements OnDestroy {
       this.errorMsg = 'Select an existing visitor before opening the appointment form.';
       return;
     }
+    if (this.isKycPending(this.foundPerson)) {
+      this.errorMsg = 'Citizen KYC is pending. Appointment can be created, but KYC should be verified later.';
+    }
     this.router.navigate(['/appointments/new'], {
       queryParams: {
         visitorId: this.foundPerson.id,
@@ -118,6 +121,15 @@ export class WalkinComponent implements OnDestroy {
         walkin: true,
       }
     });
+  }
+
+  isKycPending(visitor: Visitor | null): boolean {
+    return !!visitor && (visitor.kycStatus === 'KYC_PENDING' || visitor.kycStatus === 'PENDING');
+  }
+
+  kycStatusLabel(visitor: Visitor | null): string {
+    if (!visitor) return 'PENDING';
+    return (visitor.kycStatus || 'PENDING').replace(/_/g, ' ');
   }
 
   addAssociate() {

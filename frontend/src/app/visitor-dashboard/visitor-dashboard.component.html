@@ -5,6 +5,12 @@
   <div *ngIf="successMsg" class="success-message" style="margin-bottom:1rem">
     {{ successMsg }}
   </div>
+  <div *ngIf="isKycPending" class="warning-message" style="margin-bottom:1rem">
+    Your KYC verification is pending because the verification service is currently unavailable. Please try again later.
+    <button type="button" class="btn-small btn-outline-small" style="margin-left:0.75rem" [disabled]="retryingKyc" (click)="retryKycVerification()">
+      {{ retryingKyc ? 'Retrying...' : 'Retry KYC Verification' }}
+    </button>
+  </div>
 
   <!-- KPI Cards -->
   <div class="kpi-grid">
@@ -101,9 +107,13 @@
           <div class="profile-row">
             <span class="profile-label">KYC Status</span>
             <p-tag
-              [value]="visitorProfile.kycVerified ? 'VERIFIED' : 'PENDING'"
+              [value]="kycStatusLabel"
               [severity]="visitorProfile.kycVerified ? 'success' : 'warn'">
             </p-tag>
+          </div>
+          <div class="profile-row" *ngIf="visitorProfile.kycFailureReason">
+            <span class="profile-label">KYC Note</span>
+            <span class="profile-value">{{ visitorProfile.kycFailureReason }}</span>
           </div>
 
           <!-- R009: AI KYC Confidence Indicator -->

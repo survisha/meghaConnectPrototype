@@ -20,6 +20,9 @@ public class AadhaarQrResponseDto {
     private String qrDataUri;           // data:image/png;base64,...
     private String errorMessage;
     private String maskedMobile;        // For user reference
+    private Boolean canProceed;
+    private String kycStatus;
+    private String kycProvider;
     @Builder.Default
     private String requestId = RequestContextUtil.getRequestId();
 }

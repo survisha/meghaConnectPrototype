@@ -39,9 +39,20 @@ public class Visitor extends BaseEntity {
     @Column(length = 10)
     private String kycType;
 
+    @Column(length = 20)
+    private String kycProvider;
+
     private Boolean kycVerified;
 
     private java.time.LocalDateTime kycVerifiedAt;
+
+    @Column(columnDefinition = "TEXT")
+    private String kycFailureReason;
+
+    @Column(length = 100)
+    private String kycRequestId;
+
+    private java.time.LocalDateTime kycLastAttemptAt;
 
     /**
      * Path / object-key in the configured file store.
@@ -151,7 +162,7 @@ public class Visitor extends BaseEntity {
 
     /**
      * Granular KYC status:
-     * PENDING | PHOTO_MATCHED | DEMOGRAPHIC_MATCHED | FAILED | NOT_VERIFIED | MANUAL_VERIFICATION_REQUIRED
+     * PENDING | KYC_PENDING | PHOTO_MATCHED | DEMOGRAPHIC_MATCHED | FAILED | NOT_VERIFIED | MANUAL_VERIFICATION_REQUIRED
      */
     @Column(length = 50)
     private String kycStatus;

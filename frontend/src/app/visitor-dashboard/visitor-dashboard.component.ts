@@ -6,6 +6,7 @@ import { environment } from '../../environments/environment';
 import { AuthService } from '../services/auth.service';
 import { AppointmentService } from '../services/appointment.service';
 import { GrievanceService } from '../services/grievance.service';
+import { VisitorKycService } from '../services/visitor-kyc.service';
 import { Appointment } from '../models';
 import { Tag } from 'primeng/tag';
 import { AiChatbotComponent } from '../ai-chatbot/ai-chatbot.component';
@@ -22,6 +23,9 @@ interface VisitorProfile {
   district: string;
   kycStatus?: string;
   kycConfidence?: number;
+  kycProvider?: string;
+  kycFailureReason?: string;
+  kycRequestId?: string;
   livePhotoPath?: string;
   photoStoragePath?: string;
   photoPath?: string;
@@ -50,6 +54,7 @@ export class VisitorDashboardComponent implements OnInit {
   successMsg = '';
   selectedAppointment: Appointment | null = null;
   downloadingPassId: number | null = null;
+  retryingKyc = false;
 
   visitorProfile: VisitorProfile | null = null;
   visitorPhotoUrl = '';
@@ -62,7 +67,8 @@ export class VisitorDashboardComponent implements OnInit {
     public auth: AuthService,
     private http: HttpClient,
     private appointmentService: AppointmentService,
-    private grievanceService: GrievanceService
+    private grievanceService: GrievanceService,
+    private visitorKycService: VisitorKycService
   ) {}
 
   ngOnInit() {
@@ -266,6 +272,46 @@ export class VisitorDashboardComponent implements OnInit {
     return !!this.visitorPhotoUrl && !this.photoLoadFailed;
   }
 
+  get isKycPending(): boolean {
+    return this.visitorProfile?.kycStatus === 'KYC_PENDING'
+      || (!this.visitorProfile?.kycVerified && this.visitorProfile?.kycStatus === 'PENDING');
+  }
+
+  get kycStatusLabel(): string {
+    if (this.visitorProfile?.kycVerified) return 'VERIFIED';
+    return (this.visitorProfile?.kycStatus || 'PENDING').replace(/_/g, ' ');
+  }
+
+  retryKycVerification(): void {
+    const visitorId = Number(sessionStorage.getItem('megha_visitor_id') || 0);
+    if (!visitorId || this.retryingKyc) {
+      return;
+    }
+    this.errorMsg = '';
+    this.successMsg = '';
+    this.retryingKyc = true;
+    this.visitorKycService.retryKyc(visitorId).subscribe({
+      next: res => {
+        this.retryingKyc = false;
+        if (this.visitorProfile) {
+          this.visitorProfile = {
+            ...this.visitorProfile,
+            kycStatus: res.kycStatus,
+            kycProvider: res.kycProvider,
+            kycVerified: !!res.success,
+          };
+        }
+        this.successMsg = res.message || (res.success
+          ? 'KYC verification completed successfully.'
+          : 'KYC service is still unavailable. Please try after some time.');
+      },
+      error: err => {
+        this.retryingKyc = false;
+        this.errorMsg = apiErrorMessage(err, 'Unable to retry KYC verification.');
+      }
+    });
+  }
+
   togglePhotoPreview(): void {
     if (!this.canViewPhoto) {
       return;
@@ -302,6 +348,9 @@ export class VisitorDashboardComponent implements OnInit {
     }
     if (this.visitorProfile.kycStatus === 'MANUAL_VERIFICATION_REQUIRED') {
       return { score: this.visitorProfile.kycConfidence ?? 45, label: 'Manual Verification Required', color: '#dc2626' };
+    }
+    if (this.visitorProfile.kycStatus === 'KYC_PENDING') {
+      return { score: 0, label: 'KYC Pending', color: '#b45309' };
     }
     return null;
   }

@@ -14,8 +14,11 @@ public class VisitorDto {
     private String aadhaarNumber;
     /** EPIC | AADHAR | NONE */
     private String kycType;
+    private String kycProvider;
     private Boolean kycVerified;
     private String kycStatus;
+    private String kycFailureReason;
+    private String kycRequestId;
     private LocalDate dateOfBirth;
     private String gender;
     private String designation;

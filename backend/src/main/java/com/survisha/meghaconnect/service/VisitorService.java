@@ -28,6 +28,7 @@ public class VisitorService {
 
     private final VisitorRepository visitorRepository;
     private final FileStorageService fileStorageService;
+    private final AuditLogService auditLogService;
 
     public Optional<Visitor> findByPhone(String phone) {
         return visitorRepository.findByPhoneNumber(phone).stream().findFirst();
@@ -252,8 +253,11 @@ public class VisitorService {
                 .epicNumber(visitor.getEpicNumber())
                 .aadhaarNumber(maskAadhaarForResponse(visitor.getAadhaarNumber()))
                 .kycType(visitor.getKycType())
+                .kycProvider(visitor.getKycProvider())
                 .kycVerified(visitor.getKycVerified())
                 .kycStatus(visitor.getKycStatus())
+                .kycFailureReason(visitor.getKycFailureReason())
+                .kycRequestId(visitor.getKycRequestId())
                 .dateOfBirth(visitor.getDateOfBirth())
                 .gender(visitor.getGender())
                 .designation(visitor.getDesignation())
@@ -367,12 +371,15 @@ public class VisitorService {
         if (Boolean.TRUE.equals(dto.getManualVerification())) {
             kycStatus = "MANUAL_VERIFICATION_REQUIRED";
         } else if (dto.getKycStatus() != null && !dto.getKycStatus().trim().isEmpty()) {
-            kycStatus = dto.getKycStatus().trim();
+            kycStatus = normalizeKycStatus(dto.getKycStatus());
         } else {
             kycStatus = "PENDING";
         }
 
         boolean kycVerified = "PHOTO_MATCHED".equals(kycStatus) || "DEMOGRAPHIC_MATCHED".equals(kycStatus);
+        String kycProvider = firstNonBlank(dto.getKycProvider(), kycType);
+        String kycFailureReason = trimToNull(dto.getKycFailureReason());
+        String kycRequestId = trimToNull(dto.getKycRequestId());
 
         boolean outsideMeghalaya = Boolean.TRUE.equals(dto.getOutsideMeghalaya());
         if (!outsideMeghalaya && trimToNull(dto.getDistrict()) == null) {
@@ -402,8 +409,12 @@ public class VisitorService {
                 .epicNumber(normalizedEpic)
                 .aadhaarNumber(maskedAadhaar)
                 .kycType(kycType)
+                .kycProvider(kycProvider)
                 .kycVerified(kycVerified)
                 .kycVerifiedAt(kycVerified ? DateTimeUtil.nowIST() : null)
+                .kycFailureReason(kycVerified ? null : kycFailureReason)
+                .kycRequestId(kycRequestId)
+                .kycLastAttemptAt("KYC_PENDING".equals(kycStatus) ? DateTimeUtil.nowIST() : null)
                 .kycStatus(kycStatus)
                 .dateOfBirth(parseDate(dto.getDateOfBirth()))
                 .gender(trimToNull(dto.getGender()))
@@ -438,7 +449,14 @@ public class VisitorService {
                 .maskedIdentityNumber(trimToNull(dto.getMaskedIdentityNumber()))
                 .build();
 
-        return visitorRepository.save(visitor);
+        Visitor saved = visitorRepository.save(visitor);
+        if ("KYC_PENDING".equals(kycStatus)) {
+            auditLogService.log("Visitor", saved.getId(), "KYC_PENDING_PROCEEDED",
+                    "Visitor registered with KYC pending. Provider=" + kycProvider
+                            + ", requestId=" + firstNonBlank(kycRequestId, RequestContextUtil.getRequestId()),
+                    "visitor_" + saved.getId());
+        }
+        return saved;
     }
 
     private void validateKycCompletion(PublicRegistrationDto dto) {
@@ -450,13 +468,76 @@ public class VisitorService {
             return;
         }
 
-        String status = trimToNull(dto.getKycStatus());
-        if (status == null || "PENDING".equalsIgnoreCase(status) || "FAILED".equalsIgnoreCase(status)) {
+        String status = normalizeKycStatus(dto.getKycStatus());
+        if ("KYC_PENDING".equals(status) && Boolean.TRUE.equals(dto.getAllowKycPending())
+                && trimToNull(dto.getKycFailureReason()) != null) {
+            return;
+        }
+        if (status == null || "PENDING".equalsIgnoreCase(status) || "KYC_PENDING".equalsIgnoreCase(status)
+                || "FAILED".equalsIgnoreCase(status)) {
             throw new VisitorRegistrationValidationException(
                     ErrorCodeConstants.KYC_STATUS_INVALID,
                     "KYC verification must be completed before registration"
             );
         }
+    }
+
+    @Transactional
+    public Visitor retryKyc(Long visitorId, String actor) {
+        Visitor visitor = visitorRepository.findById(visitorId)
+                .orElseThrow(() -> new VisitorNotFoundException(visitorId));
+        visitor.setKycLastAttemptAt(DateTimeUtil.nowIST());
+        visitor.setUpdatedBy(firstNonBlank(actor, "visitor_" + visitorId));
+        return visitorRepository.save(visitor);
+    }
+
+    @Transactional
+    public Visitor markKycVerified(Long visitorId, String status, String requestId, String actor) {
+        Visitor visitor = visitorRepository.findById(visitorId)
+                .orElseThrow(() -> new VisitorNotFoundException(visitorId));
+        visitor.setKycStatus(normalizeKycStatus(firstNonBlank(status, "DEMOGRAPHIC_MATCHED")));
+        visitor.setKycVerified(true);
+        visitor.setKycVerifiedAt(DateTimeUtil.nowIST());
+        visitor.setKycFailureReason(null);
+        visitor.setKycRequestId(trimToNull(requestId));
+        visitor.setKycLastAttemptAt(DateTimeUtil.nowIST());
+        visitor.setUpdatedBy(firstNonBlank(actor, "visitor_" + visitorId));
+        Visitor saved = visitorRepository.save(visitor);
+        auditLogService.log("Visitor", saved.getId(), "KYC_RETRY_VERIFIED",
+                "KYC status changed from pending to verified. requestId=" + firstNonBlank(requestId, RequestContextUtil.getRequestId()),
+                firstNonBlank(actor, "visitor_" + visitorId));
+        return saved;
+    }
+
+    @Transactional
+    public Visitor markKycRetryFailed(Long visitorId, String reason, String requestId, String actor) {
+        Visitor visitor = visitorRepository.findById(visitorId)
+                .orElseThrow(() -> new VisitorNotFoundException(visitorId));
+        visitor.setKycStatus("KYC_PENDING");
+        visitor.setKycVerified(false);
+        visitor.setKycFailureReason(trimToNull(reason));
+        visitor.setKycRequestId(trimToNull(requestId));
+        visitor.setKycLastAttemptAt(DateTimeUtil.nowIST());
+        visitor.setUpdatedBy(firstNonBlank(actor, "visitor_" + visitorId));
+        Visitor saved = visitorRepository.save(visitor);
+        auditLogService.log("Visitor", saved.getId(), "KYC_RETRY_SERVICE_UNAVAILABLE",
+                "KYC retry failed due to provider/service issue. requestId=" + firstNonBlank(requestId, RequestContextUtil.getRequestId()),
+                firstNonBlank(actor, "visitor_" + visitorId));
+        return saved;
+    }
+
+    private String normalizeKycStatus(String status) {
+        String value = trimToNull(status);
+        if (value == null) {
+            return null;
+        }
+        if ("VERIFIED".equalsIgnoreCase(value)) {
+            return "DEMOGRAPHIC_MATCHED";
+        }
+        if ("MANUAL_REVIEW".equalsIgnoreCase(value)) {
+            return "MANUAL_VERIFICATION_REQUIRED";
+        }
+        return value.trim().toUpperCase();
     }
 
     private String resolveLivePhotoPath(PublicRegistrationDto dto) {

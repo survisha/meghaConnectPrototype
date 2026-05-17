@@ -97,6 +97,11 @@
           <span>{{ successMsg }}</span>
         </div>
 
+        <div *ngIf="kycPendingAllowed && !submitted" class="status-msg warning-msg">
+          <mat-icon>pending_actions</mat-icon>
+          <span>KYC service is temporarily unavailable. You can continue with registration, but your KYC status will remain Pending.</span>
+        </div>
+
         <!-- STEP 1: ID Entry -->
         <ng-container *ngIf="currentStep === 'id-entry'">
           <div class="section-title">{{ 'STEP_1_ENTER_ID_DETAILS' | translate }}</div>
@@ -288,6 +293,16 @@
               <span *ngIf="!loading"><mat-icon>check</mat-icon> {{ 'VERIFY_OTP' | translate }}</span>
               <span *ngIf="loading"><mat-icon class="spin-icon">sync</mat-icon> {{ 'VERIFYING' | translate }}</span>
             </button>
+            <button
+              *ngIf="kycPendingAllowed"
+              mat-raised-button
+              color="accent"
+              class="flex-1"
+              [disabled]="loading"
+              (click)="continueWithKycPending()">
+              <mat-icon>pending_actions</mat-icon>
+              Continue with KYC Pending
+            </button>
           </div>
 
           <div *ngIf="otpSent && !showQrCode && form.idType === 'EPIC'" style="text-align:center;margin-top:1rem">
@@ -351,6 +366,11 @@
           <div *ngIf="!hasAadhaarResidentImage" class="kyc-notice" style="background:#f0fdf4;border-color:#86efac">
             <mat-icon style="color:#16a34a">check_circle</mat-icon>
             {{ 'CAPTURE_LIVE_PHOTO_NOTICE' | translate }}
+          </div>
+
+          <div *ngIf="form.kycStatus === 'KYC_PENDING'" class="kyc-notice" style="background:#fffbeb;border-color:#f59e0b">
+            <mat-icon style="color:#b45309">pending_actions</mat-icon>
+            KYC is pending because the verification service is unavailable. Capture a photo and complete basic details manually.
           </div>
 
           <!-- Auto-populated demographics (read-only) -->
@@ -529,7 +549,13 @@
             <span *ngIf="form.kycStatus === 'PHOTO_MATCHED'"><strong>{{ 'KYC_VERIFIED_PHOTO' | translate }}</strong> {{ 'COMPLETE_REMAINING_DETAILS' | translate }}</span>
             <span *ngIf="form.kycStatus === 'DEMOGRAPHIC_MATCHED'"><strong>{{ 'KYC_VERIFIED_DEMOGRAPHIC' | translate }}</strong> {{ 'COMPLETE_REMAINING_DETAILS' | translate }}</span>
             <span *ngIf="form.kycStatus === 'MANUAL_VERIFICATION_REQUIRED'"><strong>{{ 'MANUAL_VERIFICATION_REQUIRED' | translate }}</strong> {{ 'YOUR_KYC_MANUAL_DEO' | translate }}</span>
+            <span *ngIf="form.kycStatus === 'KYC_PENDING'"><strong>KYC Pending.</strong> Verification can be retried after the service is available.</span>
           </div>
+
+          <mat-form-field appearance="outline" class="full-width" *ngIf="form.kycStatus === 'KYC_PENDING'">
+            <mat-label>Full Name *</mat-label>
+            <input matInput type="text" [(ngModel)]="form.fullName" placeholder="Enter citizen full name" />
+          </mat-form-field>
 
           <!-- R009: AI KYC Confidence Indicator -->
           <div *ngIf="kycConfidenceScore > 0" style="margin-bottom:1rem;padding:0.85rem 1rem;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px">
@@ -703,14 +729,17 @@
                   <span *ngIf="form.kycStatus === 'PHOTO_MATCHED'">{{ 'PHOTO_MATCHED' | translate }}</span>
                   <span *ngIf="form.kycStatus === 'DEMOGRAPHIC_MATCHED'">{{ 'CONFIDENCE_DEMOGRAPHIC' | translate }}</span>
                   <span *ngIf="form.kycStatus === 'MANUAL_VERIFICATION_REQUIRED'">{{ 'CONFIDENCE_MANUAL' | translate }}</span>
-                  <span *ngIf="!form.kycStatus || form.kycStatus === 'PENDING'">{{ 'PENDING' | translate }}</span>
+                  <span *ngIf="!form.kycStatus || form.kycStatus === 'PENDING' || form.kycStatus === 'KYC_PENDING'">{{ 'PENDING' | translate }}</span>
                 </strong>
               </div>
               <p style="font-size:0.85rem;color:#6b7280;margin:0">
                 <span *ngIf="form.kycStatus === 'MANUAL_VERIFICATION_REQUIRED'">
                   {{ 'YOUR_KYC_MANUAL_DEO' | translate }}
                 </span>
-                <span *ngIf="form.kycStatus !== 'MANUAL_VERIFICATION_REQUIRED'">
+                <span *ngIf="form.kycStatus === 'KYC_PENDING'">
+                  KYC verification is pending because the external verification service was unavailable.
+                </span>
+                <span *ngIf="form.kycStatus !== 'MANUAL_VERIFICATION_REQUIRED' && form.kycStatus !== 'KYC_PENDING'">
                   {{ 'YOUR_IDENTITY_VERIFIED_COMPLETE' | translate }}
                 </span>
               </p>

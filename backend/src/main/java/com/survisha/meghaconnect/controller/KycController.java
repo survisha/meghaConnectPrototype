@@ -97,13 +97,22 @@ public class KycController {
 
         // Call EPIC verification service
         EpicVerificationResponse response = epicVerificationService.verifyEpic(request);
+        response.setKycProvider("EPIC");
 
         // Return based on API response code
         if ("200".equals(response.getCode())) {
+            response.setSuccess(true);
+            response.setCanProceed(false);
+            response.setKycStatus("DEMOGRAPHIC_MATCHED");
             return ResponseEntity.ok(response);
         } else if ("503".equals(response.getCode())) {
+            response.setSuccess(false);
+            response.setCanProceed(true);
+            response.setKycStatus("KYC_PENDING");
             return ResponseEntity.status(503).body(response);
         } else {
+            response.setSuccess(false);
+            response.setCanProceed(false);
             return ResponseEntity.badRequest().body(response);
         }
     }
@@ -208,8 +217,14 @@ public class KycController {
         AadhaarQrResponseDto response = ovseKycService.generateQrCode();
 
         if (response.isSuccess()) {
+            response.setCanProceed(false);
+            response.setKycStatus("PHOTO_MATCHED");
+            response.setKycProvider("AADHAAR");
             return ResponseEntity.ok(response);
         } else {
+            response.setCanProceed(true);
+            response.setKycStatus("KYC_PENDING");
+            response.setKycProvider("AADHAAR");
             return ResponseEntity.status(503).body(response);  // Service unavailable
         }
     }

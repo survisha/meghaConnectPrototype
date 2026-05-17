@@ -104,4 +104,9 @@ public class VisitorAuthController {
     public ResponseEntity<Map<String, Object>> getProfile(@PathVariable Long visitorId) {
         return ResponseEntity.ok(visitorAuthService.getProfile(visitorId));
     }
+
+    @PostMapping("/profile/{visitorId}/kyc/retry")
+    public ResponseEntity<Map<String, Object>> retryKyc(@PathVariable Long visitorId) {
+        return ResponseEntity.ok(visitorAuthService.retryKyc(visitorId));
+    }
 }

@@ -1,5 +1,7 @@
 package com.survisha.meghaconnect.service;
 
+import com.survisha.meghaconnect.dto.EpicVerificationRequest;
+import com.survisha.meghaconnect.dto.EpicVerificationResponse;
 import com.survisha.meghaconnect.dto.PublicRegistrationDto;
 import com.survisha.meghaconnect.entity.Visitor;
 import com.survisha.meghaconnect.exception.ErrorCodeConstants;
@@ -39,6 +41,8 @@ public class VisitorAuthService {
     private final VisitorService visitorService;
     private final RequestValidationService validationService;
     private final FileStorageService fileStorageService;
+    private final EpicVerificationService epicVerificationService;
+    private final AuditLogService auditLogService;
 
     public Map<String, Object> checkMobile(Map<String, String> body) {
         String phone = validationService.requirePhone(body != null ? body.get(ValidationConstants.FIELD_PHONE_NUMBER) : null);
@@ -141,6 +145,8 @@ public class VisitorAuthService {
         response.put("fullName", visitor.getFullName() != null ? visitor.getFullName() : "Visitor");
         response.put("visitorId", visitor.getId() != null ? visitor.getId() : 0L);
         response.put("role", "PUBLIC");
+        response.put("kycStatus", visitor.getKycStatus() != null ? visitor.getKycStatus() : "PENDING");
+        response.put("kycPending", "KYC_PENDING".equalsIgnoreCase(visitor.getKycStatus()));
         response.put("message", "Login successful");
         return response;
     }
@@ -221,7 +227,12 @@ public class VisitorAuthService {
         response.put("visitorId", saved.getId());
         response.put("kycStatus", saved.getKycStatus());
         response.put("kycType", saved.getKycType());
-        response.put("message", "Visitor registration completed successfully.");
+        response.put("kycProvider", saved.getKycProvider());
+        response.put("requestId", RequestContextUtil.getRequestId());
+        response.put("canProceed", true);
+        response.put("message", "KYC_PENDING".equalsIgnoreCase(saved.getKycStatus())
+                ? "Registration completed with KYC pending. Please retry verification later."
+                : "Visitor registration completed successfully.");
         return response;
     }
 
@@ -237,8 +248,11 @@ public class VisitorAuthService {
         response.put("epicNumber", visitor.getEpicNumber() != null ? visitor.getEpicNumber() : "");
         response.put("aadhaarNumber", visitor.getAadhaarNumber() != null ? visitor.getAadhaarNumber() : "");
         response.put("kycType", visitor.getKycType() != null ? visitor.getKycType() : "NONE");
+        response.put("kycProvider", visitor.getKycProvider() != null ? visitor.getKycProvider() : visitor.getKycType());
         response.put("kycVerified", Boolean.TRUE.equals(visitor.getKycVerified()));
         response.put("kycStatus", visitor.getKycStatus() != null ? visitor.getKycStatus() : "PENDING");
+        response.put("kycFailureReason", visitor.getKycFailureReason() != null ? visitor.getKycFailureReason() : "");
+        response.put("kycRequestId", visitor.getKycRequestId() != null ? visitor.getKycRequestId() : "");
         response.put("designation", visitor.getDesignation() != null ? visitor.getDesignation() : "");
         response.put("address", visitor.getAddress() != null ? visitor.getAddress() : "");
         response.put("fullAddress", visitor.getFullAddress() != null ? visitor.getFullAddress() : "");
@@ -261,6 +275,76 @@ public class VisitorAuthService {
         response.put("photoBase64", livePhotoBase64);
         response.put("photoUrl", livePhotoBase64);
         return response;
+    }
+
+    public Map<String, Object> retryKyc(Long visitorId) {
+        Visitor visitor = visitorService.retryKyc(visitorId, "visitor_" + visitorId);
+        auditLogService.log("Visitor", visitorId, "KYC_RETRY_ATTEMPTED",
+                "KYC retry attempted. Provider=" + firstNonBlank(visitor.getKycProvider(), visitor.getKycType()),
+                "visitor_" + visitorId);
+
+        if (!ValidationConstants.ID_TYPE_EPIC.equalsIgnoreCase(visitor.getKycType())) {
+            Visitor updated = visitorService.markKycRetryFailed(
+                    visitorId,
+                    "Aadhaar retry requires a fresh QR verification from the registration screen.",
+                    RequestContextUtil.getRequestId(),
+                    "visitor_" + visitorId);
+            return retryResponse(updated, false,
+                    "KYC service is still unavailable. Please try after some time.");
+        }
+
+        EpicVerificationResponse epicResponse = epicVerificationService.verifyEpic(EpicVerificationRequest.builder()
+                .epicNumber(visitor.getEpicNumber())
+                .visitorName(visitor.getFullName())
+                .phoneNumber(visitor.getPhoneNumber())
+                .build());
+
+        if (epicResponse != null && epicResponse.isSuccess()) {
+            Visitor updated = visitorService.markKycVerified(
+                    visitorId,
+                    "DEMOGRAPHIC_MATCHED",
+                    epicResponse.getRequestId(),
+                    "visitor_" + visitorId);
+            return retryResponse(updated, true, "KYC verification completed successfully.");
+        }
+
+        if (epicResponse != null && isServiceUnavailable(epicResponse.getCode(), epicResponse.getMessage())) {
+            Visitor updated = visitorService.markKycRetryFailed(
+                    visitorId,
+                    epicResponse.getMessage(),
+                    epicResponse.getRequestId(),
+                    "visitor_" + visitorId);
+            return retryResponse(updated, false,
+                    "KYC service is still unavailable. Please try after some time.");
+        }
+
+        Map<String, Object> response = retryResponse(visitor, false,
+                epicResponse != null ? epicResponse.getMessage() : "KYC verification failed.");
+        response.put("hardFailure", true);
+        return response;
+    }
+
+    private Map<String, Object> retryResponse(Visitor visitor, boolean verified, String message) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", verified);
+        response.put("visitorId", visitor.getId());
+        response.put("kycStatus", visitor.getKycStatus());
+        response.put("kycProvider", firstNonBlank(visitor.getKycProvider(), visitor.getKycType()));
+        response.put("requestId", RequestContextUtil.getRequestId());
+        response.put("message", message);
+        response.put("canProceed", true);
+        return response;
+    }
+
+    private boolean isServiceUnavailable(String code, String message) {
+        String text = (code + " " + message).toLowerCase();
+        return "503".equals(code)
+                || text.contains("unavailable")
+                || text.contains("timeout")
+                || text.contains("gateway")
+                || text.contains("provider")
+                || text.contains("ovse")
+                || text.contains("client error");
     }
 
     private String firstNonBlank(String... values) {

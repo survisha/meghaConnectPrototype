@@ -65,6 +65,10 @@ export interface AadhaarQrResponse {
   qrDataUri: string;
   maskedMobile?: string;
   errorMessage?: string;
+  canProceed?: boolean;
+  kycStatus?: string;
+  kycProvider?: string;
+  requestId?: string;
 }
 
 export interface EpicVerificationRequest {
@@ -119,6 +123,9 @@ export interface EpicVerificationResponse {
   verifiedName?: string;
   nameMatchScore?: number;
   idFound?: boolean;
+  canProceed?: boolean;
+  kycStatus?: string;
+  kycProvider?: string;
 }
 
 export interface KycDataResponse {
@@ -242,6 +249,26 @@ export class VisitorKycService {
    */
   getAadhaarKycResult(txnId: string): Observable<KycDataResponse> {
     return this.http.get<KycDataResponse>(`${environment.apiUrl}/kyc/aadhaar/result/${txnId}`);
+  }
+
+  retryKyc(visitorId: number): Observable<{
+    success: boolean;
+    message: string;
+    kycStatus: string;
+    kycProvider?: string;
+    requestId?: string;
+    canProceed?: boolean;
+    hardFailure?: boolean;
+  }> {
+    return this.http.post<{
+      success: boolean;
+      message: string;
+      kycStatus: string;
+      kycProvider?: string;
+      requestId?: string;
+      canProceed?: boolean;
+      hardFailure?: boolean;
+    }>(`${environment.apiUrl}/visitor/auth/profile/${visitorId}/kyc/retry`, {});
   }
 
   /**

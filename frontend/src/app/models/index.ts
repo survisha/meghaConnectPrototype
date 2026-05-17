@@ -16,7 +16,7 @@ export type AppointmentStatus =
   | 'REJECTED' | 'SCHEDULED' | 'FORWARDED_TO_DEPARTMENT'
   | 'SUPPORTING_DOCUMENT_REQUIRED' | 'COMPLETED' | 'CANCELLED';
 
-export type KycStatus = 'PENDING' | 'VERIFIED' | 'REJECTED';
+export type KycStatus = 'PENDING' | 'KYC_PENDING' | 'PHOTO_MATCHED' | 'DEMOGRAPHIC_MATCHED' | 'FAILED' | 'MANUAL_VERIFICATION_REQUIRED' | 'VERIFIED' | 'REJECTED';
 
 export type DocumentType = 
   | 'EPIC_SCAN' | 'APPLICATION_LETTER' | 'PLANS_ESTIMATES' 
@@ -53,6 +53,10 @@ export interface Visitor {
   dateOfBirth?: string;
   outsideMeghalaya?: boolean;
   kycStatus?: KycStatus;
+  kycType?: string;
+  kycProvider?: string;
+  kycFailureReason?: string;
+  kycRequestId?: string;
 }
 
 export interface AppointmentDocument {

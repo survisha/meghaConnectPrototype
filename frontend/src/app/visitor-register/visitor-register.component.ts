@@ -52,6 +52,9 @@ interface VisitorRegistrationForm {
   livePhoto: string;
   photoFromId: string;
   kycStatus?: string;
+  kycProvider?: string;
+  kycFailureReason?: string;
+  kycRequestId?: string;
   borrowerAddressHouseNumber?: string;
   borrowerAddressSectionNumber?: string;
   relativeNameOnVoterId?: string;
@@ -103,6 +106,8 @@ interface VerifiedKycData {
   voterIdVerificationCompletionTimestamp?: string;
   aadhaarClientTxnId?: string;
   aadhaarAppId?: string;
+  kycFailureReason?: string;
+  kycRequestId?: string;
 }
 
 @Component({
@@ -187,13 +192,17 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   otpSent = false;  // Flag to show OTP field
   otpVerified = false;
   photoCaptured = false;
-  kycStatus: 'PHOTO_MATCHED' | 'DEMOGRAPHIC_MATCHED' | 'FAILED' | 'MANUAL_VERIFICATION_REQUIRED' | '' = '';
+  kycStatus: 'PHOTO_MATCHED' | 'DEMOGRAPHIC_MATCHED' | 'FAILED' | 'MANUAL_VERIFICATION_REQUIRED' | 'KYC_PENDING' | '' = '';
   kycStatusMessage = '';
   maskedPhone = '';
   otpCode = '';
   manualPhone = '';  // Optional mobile number for manual verification
   manualVerification = false;  // Flag if manual mobile was provided
   actualPhoneNumber = '';  // Store actual 10-digit phone number
+  kycPendingAllowed = false;
+  kycPendingProvider: 'EPIC' | 'AADHAAR' | '' = '';
+  kycPendingReason = '';
+  kycPendingRequestId = '';
   
   // Camera state
   videoStream: MediaStream | null = null;
@@ -271,7 +280,12 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   }
 
   get canValidateId(): boolean {
-    if (this.form.idType === 'EPIC') {
+    if (this.kycPendingAllowed || this.form.kycStatus === 'KYC_PENDING') {
+      this.kycStatus = 'KYC_PENDING';
+      this.form.kycStatus = 'KYC_PENDING';
+      this.kycConfidenceScore = 0;
+      this.kycConfidenceLabel = 'Pending';
+    } else if (this.form.idType === 'EPIC') {
       const hasValidEpic = /^[A-Za-z]{3}[0-9]{7}$/.test(this.form.epicNumber);
       const hasValidName = this.form.visitorName && this.form.visitorName.trim().length > 0;
       return hasValidEpic && !!hasValidName;
@@ -372,6 +386,10 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       },
       error: err => {
         this.loading = false;
+        if (this.isKycServiceUnavailable(err)) {
+          this.offerKycPendingFallback('EPIC', apiErrorMessage(err, 'Election Commission API is currently unavailable'), err?.error?.requestId);
+          return;
+        }
         this.errorMsg = apiErrorMessage(err, this.t('ERROR_FAILED_VERIFY_EPIC_TRY'));
       }
     });
@@ -444,11 +462,15 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
           // Start polling for KYC result
           this.startPollingKycResult();
         } else {
-          this.errorMsg = res.errorMessage || this.t('ERROR_FAILED_GENERATE_QR');
+          this.offerKycPendingFallback('AADHAAR', res.errorMessage || this.t('ERROR_FAILED_GENERATE_QR'), res.requestId);
         }
       },
       error: err => {
         this.loading = false;
+        if (this.isKycServiceUnavailable(err)) {
+          this.offerKycPendingFallback('AADHAAR', apiErrorMessage(err, this.t('ERROR_QR_GENERATION_FAILED')), err?.error?.requestId);
+          return;
+        }
         this.errorMsg = apiErrorMessage(err, this.t('ERROR_QR_GENERATION_FAILED'));
       },
     });
@@ -712,6 +734,65 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
         || this.getAadhaarValue(response, 'address', 'regionalAddress', 'fullAddress')
         || this.getAadhaarImage(response)
       );
+  }
+
+  private isKycServiceUnavailable(error: any): boolean {
+    const status = Number(error?.status ?? error?.error?.status ?? error?.error?.code ?? 0);
+    const message = String(error?.error?.message || error?.error?.errorMessage || error?.message || '').toLowerCase();
+    return status === 503
+      || message.includes('unavailable')
+      || message.includes('timeout')
+      || message.includes('ovse')
+      || message.includes('sdk')
+      || message.includes('gateway')
+      || message.includes('client error')
+      || message.includes('provider');
+  }
+
+  private offerKycPendingFallback(provider: 'EPIC' | 'AADHAAR', reason: string, requestId?: string) {
+    this.loading = false;
+    this.kycPendingAllowed = true;
+    this.kycPendingProvider = provider;
+    this.kycPendingReason = reason || 'KYC service is temporarily unavailable.';
+    this.kycPendingRequestId = requestId || '';
+    this.errorMsg = 'KYC service is temporarily unavailable. You can continue with registration, but your KYC status will remain Pending.';
+    this.successMsg = '';
+  }
+
+  continueWithKycPending() {
+    if (!this.kycPendingAllowed || !this.form.idType) {
+      return;
+    }
+    if (this.form.idType === 'EPIC' && !this.isManualPhoneValid) {
+      this.errorMsg = this.t('ERROR_VALID_10_DIGIT_MOBILE');
+      return;
+    }
+
+    this.stopCamera();
+    this.actualPhoneNumber = this.form.idType === 'EPIC' ? this.manualPhone : this.form.phoneNumber;
+    this.form.phoneNumber = this.actualPhoneNumber;
+    this.form.fullName = this.form.fullName || this.form.visitorName;
+    this.form.kycStatus = 'KYC_PENDING';
+    this.form.kycProvider = this.kycPendingProvider || this.form.idType;
+    this.form.kycFailureReason = this.kycPendingReason;
+    this.form.kycRequestId = this.kycPendingRequestId;
+    this.kycStatus = 'KYC_PENDING';
+    this.kycConfidenceScore = 0;
+    this.kycConfidenceLabel = 'Pending';
+    this.verifiedKycData = {
+      kycVerified: false,
+      kycType: this.form.idType,
+      kycReferenceId: this.kycPendingRequestId,
+      visitorName: this.form.fullName,
+      epicNumber: this.form.idType === 'EPIC' ? this.form.epicNumber : undefined,
+      maskedIdentityNumber: this.form.idType === 'AADHAAR' ? this.maskAadhaar(this.form.aadhaarNumber) : this.maskEpic(this.form.epicNumber),
+      kycFailureReason: this.kycPendingReason,
+      kycRequestId: this.kycPendingRequestId,
+    };
+    this.idValidated = true;
+    this.errorMsg = '';
+    this.successMsg = 'Continue with registration. KYC status will remain Pending until verification is retried.';
+    this.currentStep = 'photo-capture';
   }
 
   private getAadhaarImage(response: any): string {
@@ -1088,6 +1169,10 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       gender: this.form.gender,
       dateOfBirth: this.form.dateOfBirth,
       kycStatus: this.form.kycStatus || this.kycStatus,
+      kycProvider: this.form.kycProvider || this.form.idType,
+      kycFailureReason: this.form.kycFailureReason || this.kycPendingReason,
+      kycRequestId: this.form.kycRequestId || this.kycPendingRequestId,
+      allowKycPending: this.form.kycStatus === 'KYC_PENDING',
       kycReferenceId: this.verifiedKycData.kycReferenceId,
       maskedIdentityNumber: this.form.maskedIdentityNumber,
       borrowerAddressHouseNumber: this.form.borrowerAddressHouseNumber,
@@ -1120,13 +1205,16 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       payload['manualVerification'] = true;
     }
 
-    this.http.post<{ success: boolean; message: string }>(`${environment.apiUrl}/visitor/auth/register`, payload).subscribe({
+    this.http.post<{ success: boolean; message: string; kycStatus?: string; kycProvider?: string; requestId?: string; canProceed?: boolean }>(`${environment.apiUrl}/visitor/auth/register`, payload).subscribe({
       next: res => {
         this.loading = false;
         if (res.success) {
+          if (res.kycStatus) {
+            this.form.kycStatus = res.kycStatus;
+          }
           this.submitted = true;
           this.currentStep = 'kyc-complete';
-          this.successMsg = this.t('REGISTRATION_SUCCESS');
+          this.successMsg = res.message || this.t('REGISTRATION_SUCCESS');
         } else {
           this.errorMsg = res.message || this.t('ERROR_REGISTRATION_FAILED');
         }
@@ -1200,6 +1288,10 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.maskedPhone = '';
     this.manualPhone = '';
     this.manualVerification = false;
+    this.kycPendingAllowed = false;
+    this.kycPendingProvider = '';
+    this.kycPendingReason = '';
+    this.kycPendingRequestId = '';
     this.actualPhoneNumber = '';
     this.mobileValidationMsg = '';
     this.mobileValidationType = '';
@@ -1232,6 +1324,10 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.kycConfidenceLabel = '';
     this.loading = false;
     this.verifiedKycData = null;
+    this.kycPendingAllowed = false;
+    this.kycPendingProvider = '';
+    this.kycPendingReason = '';
+    this.kycPendingRequestId = '';
 
     // Clear ID-specific form fields
     this.form.epicNumber = '';

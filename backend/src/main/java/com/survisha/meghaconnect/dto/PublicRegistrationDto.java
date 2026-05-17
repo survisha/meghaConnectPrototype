@@ -72,7 +72,11 @@ public class PublicRegistrationDto {
      * PENDING | PHOTO_MATCHED | DEMOGRAPHIC_MATCHED | FAILED | MANUAL_VERIFICATION_REQUIRED
      */
     private String kycStatus;
+    private String kycProvider;
     private String kycReferenceId;
+    private String kycFailureReason;
+    private String kycRequestId;
+    private Boolean allowKycPending;
     private String maskedIdentityNumber;
     private String relativeNameOnVoterId;
     private String borrowerAddressHouseNumber;

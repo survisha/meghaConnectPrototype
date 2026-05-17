@@ -3,6 +3,7 @@ package com.survisha.meghaconnect.dto;
 import java.time.LocalDate;
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.multipart.MultipartFile;
 
 @Getter
@@ -18,6 +19,7 @@ public class GuestAppointmentRequest {
     private String referredOffice;
     private String referredByName;
     private String reasonForAppointment;
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     private LocalDate preferredDate;
     private String remarks;
     private MultipartFile supportingDocument;

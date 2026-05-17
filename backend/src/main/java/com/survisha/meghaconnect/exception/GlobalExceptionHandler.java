@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -180,6 +181,25 @@ public class GlobalExceptionHandler {
                 ErrorCodeConstants.GENERAL_ERROR,
                 "Validation failed",
                 "VALIDATION-" + System.nanoTime(),
+                HttpStatus.BAD_REQUEST.value(),
+                request
+        );
+        response.setDetails(fieldErrors);
+        logHandledException(response, ex);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler(BindException.class)
+    public ResponseEntity<ErrorResponse> handleBindException(BindException ex, WebRequest request) {
+        Map<String, String> fieldErrors = new HashMap<>();
+        for (FieldError error : ex.getBindingResult().getFieldErrors()) {
+            fieldErrors.put(error.getField(), error.getDefaultMessage());
+        }
+
+        ErrorResponse response = buildError(
+                ErrorCodeConstants.GENERAL_ERROR,
+                "Validation failed",
+                "BIND-" + System.nanoTime(),
                 HttpStatus.BAD_REQUEST.value(),
                 request
         );

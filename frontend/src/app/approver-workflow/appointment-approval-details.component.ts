@@ -183,6 +183,25 @@ export class AppointmentApprovalDetailsComponent implements OnInit {
     return colors[status] || '#6b7280';
   }
 
+  get associateCount(): number {
+    return this.appointment?.associates?.length || 0;
+  }
+
+  associateKycLabel(status?: string): string {
+    return (status || 'PENDING').replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  associateKycClass(status?: string): string {
+    const normalized = (status || '').toUpperCase();
+    if (['PHOTO_MATCHED', 'DEMOGRAPHIC_MATCHED', 'VERIFIED'].includes(normalized)) {
+      return 'chip-success';
+    }
+    if (['KYC_PENDING', 'PENDING', 'MANUAL_VERIFICATION_REQUIRED'].includes(normalized)) {
+      return 'chip-warning';
+    }
+    return 'chip-neutral';
+  }
+
   private triggerBlobDownload(blob: Blob, fileName: string): void {
     const objectUrl = URL.createObjectURL(blob);
     const anchor = document.createElement('a');

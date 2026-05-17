@@ -422,6 +422,10 @@
         {{ getStatusLabel(selectedAppointment.status) }}
       </mat-chip>
       <span class="event-badge" [class]="'type-' + selectedAppointment.eventType">{{ selectedAppointment.eventType }}</span>
+      <span class="associate-count-chip" *ngIf="associateCount(selectedAppointment) > 0">
+        <mat-icon>groups</mat-icon>
+        {{ associateCount(selectedAppointment) }} associate{{ associateCount(selectedAppointment) === 1 ? '' : 's' }}
+      </span>
       <span>{{ (selectedAppointment.submittedAt || selectedAppointment.createdAt) | date:'medium' }}</span>
     </div>
 
@@ -483,6 +487,28 @@
         <span>Updated: {{ selectedAppointment.updatedAt ? (selectedAppointment.updatedAt | date:'dd-MMM-yyyy hh:mm a') : '-' }}</span>
       </div>
     </div>
+
+    <section class="detail-section associate-detail-section" *ngIf="associateCount(selectedAppointment) > 0">
+      <div class="documents-title">
+        <h3>Associate Visitors</h3>
+        <span>{{ associateCount(selectedAppointment) }} registered citizen{{ associateCount(selectedAppointment) === 1 ? '' : 's' }} mapped</span>
+      </div>
+
+      <div class="associate-detail-list">
+        <div class="associate-detail-card" *ngFor="let associate of selectedAppointment.associates">
+          <div class="associate-avatar">{{ (associate.fullName || '?')[0] }}</div>
+          <div class="associate-copy">
+            <strong>{{ associate.fullName || '—' }}</strong>
+            <span>Citizen ID: {{ associate.citizenId || '—' }} · {{ associate.mobileNumber || 'No mobile' }}</span>
+            <span>ID Ref: {{ associate.epicReference || associate.aadhaarReference || '—' }}</span>
+            <span>{{ associate.addressSummary || 'Address not available' }}</span>
+          </div>
+          <mat-chip class="status-chip" [ngClass]="associateKycClass(associate.kycStatus)">
+            {{ associate.kycStatus === 'KYC_PENDING' ? 'KYC Pending' : associateKycLabel(associate.kycStatus) }}
+          </mat-chip>
+        </div>
+      </div>
+    </section>
 
     <section class="detail-section" *ngIf="selectedAppointment.appointmentSource === 'GUEST'">
       <h3>Guest Appointment Details</h3>

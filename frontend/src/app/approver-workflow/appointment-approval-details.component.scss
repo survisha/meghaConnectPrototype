@@ -82,6 +82,25 @@
           font-weight: 800;
         }
 
+        .associate-count-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.35rem;
+          min-height: 34px;
+          padding: 0.35rem 0.8rem;
+          border-radius: 6px;
+          background: #fef3c7;
+          color: #92400e;
+          font-size: 0.85rem;
+          font-weight: 800;
+
+          mat-icon {
+            font-size: 18px;
+            width: 18px;
+            height: 18px;
+          }
+        }
+
         .appointment-title {
           h2 {
             margin: 0;
@@ -206,6 +225,93 @@
         margin: 1.5rem 0;
       }
 
+      .associate-summary-panel {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        margin-top: 1.25rem;
+        padding: 0.9rem 1rem;
+        border: 1px solid #fde68a;
+        border-radius: 8px;
+        background: #fffbeb;
+        color: #92400e;
+
+        mat-icon {
+          color: #b45309;
+        }
+
+        strong,
+        span {
+          display: block;
+        }
+
+        span {
+          margin-top: 0.2rem;
+          font-size: 0.82rem;
+          color: #78350f;
+        }
+      }
+
+      .associate-tab-header {
+        margin-bottom: 1rem;
+
+        h3 {
+          margin: 0;
+          color: #1f2937;
+          font-size: 1.05rem;
+        }
+
+        p {
+          margin: 0.25rem 0 0;
+          color: #6b7280;
+          font-size: 0.86rem;
+        }
+      }
+
+      .associate-detail-list {
+        display: grid;
+        gap: 0.75rem;
+      }
+
+      .associate-detail-card {
+        display: flex;
+        align-items: center;
+        gap: 0.85rem;
+        padding: 0.85rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background: #fff;
+      }
+
+      .associate-avatar {
+        width: 46px;
+        height: 46px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #e8eaf6;
+        color: #1a237e;
+        font-weight: 800;
+        flex-shrink: 0;
+      }
+
+      .associate-copy {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .associate-name {
+        font-weight: 800;
+        color: #1f2937;
+      }
+
+      .associate-meta {
+        margin-top: 0.12rem;
+        color: #6b7280;
+        font-size: 0.8rem;
+      }
+
       .action-buttons {
         display: flex;
         gap: 1rem;
@@ -313,6 +419,11 @@
       color: #dc2626;
       margin-right: 0.5rem;
     }
+  }
+
+  .chip-neutral {
+    background: #f3f4f6 !important;
+    color: #4b5563 !important;
   }
 }
 

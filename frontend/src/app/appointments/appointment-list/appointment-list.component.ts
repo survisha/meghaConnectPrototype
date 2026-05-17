@@ -1091,6 +1091,31 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     });
   }
 
+  associateCount(appointment: Appointment | null = this.selectedAppointment) {
+    return appointment?.associates?.length || 0;
+  }
+
+  associateKycLabel(status?: string) {
+    return (status || 'PENDING')
+      .replace(/_/g, ' ')
+      .toLowerCase()
+      .replace(/\b\w/g, char => char.toUpperCase());
+  }
+
+  associateKycClass(status?: string) {
+    const normalized = (status || '').toUpperCase();
+    if (['PHOTO_MATCHED', 'DEMOGRAPHIC_MATCHED', 'VERIFIED'].includes(normalized)) {
+      return 'status-success';
+    }
+    if (['KYC_PENDING', 'PENDING', 'MANUAL_VERIFICATION_REQUIRED'].includes(normalized)) {
+      return 'status-warn';
+    }
+    if (['FAILED', 'REJECTED', 'BLOCKED', 'INACTIVE'].includes(normalized)) {
+      return 'status-danger';
+    }
+    return 'status-info';
+  }
+
   closeViewDetails() {
     this.dialog.closeAll();
     this.selectedAppointment = null;

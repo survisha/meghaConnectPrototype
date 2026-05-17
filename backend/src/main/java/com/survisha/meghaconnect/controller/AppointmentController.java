@@ -318,7 +318,7 @@ public class AppointmentController {
 
     @Operation(summary = "Submit CMO review", description = "Persist CMO category/location review, missing information note, and forwarding status")
     @PostMapping("/{id}/cmo-review")
-    @PreAuthorize("hasAnyRole('CMO_OFFICER','OSD','ADMIN')")
+    @PreAuthorize("hasAnyRole('CMO_OFFICER','HCM','OSD','ADMIN')")
     public ResponseEntity<AppointmentDto> submitCmoReview(
             @PathVariable Long id,
             @RequestBody Map<String, Object> body,

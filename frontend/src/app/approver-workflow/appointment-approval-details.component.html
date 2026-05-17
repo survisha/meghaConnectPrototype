@@ -27,6 +27,10 @@
         <div class="type-badge">
           {{ appointment.eventType }}
         </div>
+        <div class="associate-count-badge" *ngIf="associateCount > 0">
+          <mat-icon>groups</mat-icon>
+          {{ associateCount }} associate{{ associateCount === 1 ? '' : 's' }}
+        </div>
         <div class="appointment-title">
           <h2>{{ appointment.applicantName }}</h2>
           <p>{{ appointment.applicantPhone }}</p>
@@ -80,6 +84,14 @@
             </div>
           </div>
 
+          <div class="associate-summary-panel" *ngIf="associateCount > 0">
+            <mat-icon>groups</mat-icon>
+            <div>
+              <strong>{{ associateCount }} registered associate citizen{{ associateCount === 1 ? '' : 's' }} mapped</strong>
+              <span>Open the Associate Visitors tab to view citizen details.</span>
+            </div>
+          </div>
+
           <mat-divider class="section-divider"></mat-divider>
 
           <div class="action-buttons">
@@ -128,16 +140,39 @@
       </mat-tab>
 
       <!-- Associate Visitors Tab -->
-      <mat-tab label="Associate Visitors" *ngIf="appointment.associates && appointment.associates.length > 0">
+      <mat-tab *ngIf="appointment.associates && appointment.associates.length > 0">
+        <ng-template mat-tab-label>
+          Associate Visitors ({{ associateCount }})
+        </ng-template>
 
         <mat-card class="tab-content">
-          <mat-list>
-            <mat-list-item *ngFor="let associate of appointment.associates">
-              <mat-icon matListItemIcon>person</mat-icon>
-              <div matListItemTitle>{{ associate.name }}</div>
-              <div matListItemLine>{{ associate.phone }}</div>
-            </mat-list-item>
-          </mat-list>
+          <div class="associate-tab-header">
+            <h3>{{ associateCount }} registered citizen{{ associateCount === 1 ? '' : 's' }} mapped to this appointment</h3>
+            <p>These citizens are attending along with the primary applicant.</p>
+          </div>
+
+          <div class="associate-detail-list">
+            <div class="associate-detail-card" *ngFor="let associate of appointment.associates">
+              <div class="associate-avatar">
+                {{ (associate.fullName || '?')[0] }}
+              </div>
+              <div class="associate-copy">
+                <div class="associate-name">{{ associate.fullName || '—' }}</div>
+                <div class="associate-meta">
+                  Citizen ID: {{ associate.citizenId || '—' }} · {{ associate.mobileNumber || 'No mobile' }}
+                </div>
+                <div class="associate-meta">
+                  ID Ref: {{ associate.epicReference || associate.aadhaarReference || '—' }}
+                </div>
+                <div class="associate-meta">
+                  {{ associate.addressSummary || 'Address not available' }}
+                </div>
+              </div>
+              <mat-chip [class]="associateKycClass(associate.kycStatus)">
+                {{ associate.kycStatus === 'KYC_PENDING' ? 'KYC Pending' : associateKycLabel(associate.kycStatus) }}
+              </mat-chip>
+            </div>
+          </div>
         </mat-card>
       </mat-tab>
 

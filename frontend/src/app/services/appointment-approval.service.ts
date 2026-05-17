@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
+import { AssociateCitizen } from '../models';
 
 export interface AppointmentApproval {
   appointmentId: number;
@@ -18,7 +19,7 @@ export interface AppointmentApproval {
   schemeType?: string;
   estimatedCost?: number;
   mlaMdcApproved?: boolean;
-  associates?: any[];
+  associates?: AssociateCitizen[];
   documents?: any[];
   cmoRemarks?: string;
   approverRemarks?: string;
@@ -62,7 +63,7 @@ export class AppointmentApprovalService {
    * Get appointment details for approval view
    */
   getAppointmentDetails(appointmentId: number): Observable<AppointmentApproval> {
-    return this.http.get<unknown>(`${this.apiUrl}/${appointmentId}/approval-details`).pipe(
+    return this.http.get<unknown>(`${this.apiUrl}/${appointmentId}`).pipe(
       map(res => this.normalizeApproval(this.unwrapData(res)))
     );
   }

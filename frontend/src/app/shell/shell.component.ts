@@ -29,7 +29,7 @@ export class ShellComponent implements OnInit {
     { labelKey: 'CALENDAR_SCHEDULE', icon: 'event', route: '/scheduling',
       roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER'] },
     { labelKey: 'HCM_ACTIONS', icon: 'task_alt', route: '/hcm/appointments',
-      roles: ['HCM'] },
+      roles: ['HCM','OSD','ADMIN'] },
     {
       labelKey: 'APPOINTMENTS', icon: 'groups', expanded: false,
       roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER','DATA_ENTRY_OPERATOR','PUBLIC'],

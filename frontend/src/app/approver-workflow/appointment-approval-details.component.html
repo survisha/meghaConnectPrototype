@@ -257,7 +257,7 @@
                       [disabled]="approvalForm.invalid || submitting">
                 <mat-icon *ngIf="!submitting">check</mat-icon>
                 <mat-spinner *ngIf="submitting" diameter="20"></mat-spinner>
-                {{ submitting ? 'Processing...' : 'Approve & Forward' }}
+                {{ submitting ? 'Processing...' : 'Approve' }}
               </button>
 
               <button mat-raised-button (click)="scheduleAppointment()">

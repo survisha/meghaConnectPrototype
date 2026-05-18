@@ -28,6 +28,7 @@ import java.util.Set;
 public class ScheduleEventService {
 
     private static final List<Appointment.AppointmentStatus> FOLLOWUP_STATUSES = List.of(
+        Appointment.AppointmentStatus.APPROVED,
         Appointment.AppointmentStatus.FOLLOWUP,
         Appointment.AppointmentStatus.SELECTED_FOR_PUBLIC_DARBAR
     );
@@ -148,7 +149,7 @@ public class ScheduleEventService {
             if (!FOLLOWUP_STATUSES.contains(appointment.getStatus())) {
                 throw workflowException(
                     ErrorCodeConstants.APPT_INVALID_STATUS,
-                    "Only FOLLOWUP applications can be assigned to an event.",
+                    "Only APPROVED or FOLLOWUP applications can be assigned to an event.",
                     HttpStatus.CONFLICT
                 );
             }

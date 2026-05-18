@@ -125,6 +125,9 @@
 
             <!-- Action buttons (visible on tap) -->
             <mat-card-actions>
+              <button mat-button (click)="openAppointmentDetails(apt, $event)">
+                <mat-icon>visibility</mat-icon> View
+              </button>
               <button mat-button (click)="showRightSwipeOptions(apt.id)">
                 <mat-icon>check_circle</mat-icon> Accept/Modify
               </button>
@@ -194,6 +197,14 @@
                 <div class="detail-row" *ngIf="item.hcmRemarks">
                   <strong>HCM Remarks:</strong>
                   <p class="remarks">{{ item.hcmRemarks }}</p>
+                </div>
+                <div class="detail-row" *ngIf="item.departmentName || item.departmentCode">
+                  <strong>Department:</strong>
+                  {{ item.departmentName || item.departmentCode }}
+                </div>
+                <div class="detail-row" *ngIf="item.createdBy || item.createdByRole">
+                  <strong>Updated By:</strong>
+                  {{ item.createdByRole || '-' }} / {{ item.createdBy || '-' }}
                 </div>
               </div>
             </mat-card-content>
@@ -357,6 +368,109 @@
             <mat-icon>cancel</mat-icon> Reject
           </button>
         </ng-container>
+      </div>
+    </div>
+  </div>
+
+  <!-- Appointment Details Modal -->
+  <div *ngIf="showDetailsDialog" class="action-modal-overlay" (click)="closeAppointmentDetails()">
+    <div class="action-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Appointment Details</h2>
+        <button mat-icon-button (click)="closeAppointmentDetails()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      <div class="modal-body" *ngIf="selectedDetailAppointment as appointment">
+        <div class="appointment-info">
+          <p><strong>{{ appointment.applicationId }}</strong></p>
+          <p>{{ appointment.subject || appointment.agendaType || 'Appointment' }}</p>
+        </div>
+
+        <div class="appointment-details">
+          <div class="detail-row">
+            <strong>Citizen:</strong> {{ appointment.applicant.fullName || appointment.applicantName || '—' }}
+          </div>
+          <div class="detail-row">
+            <strong>Mobile:</strong> {{ appointment.applicant.phoneNumber || appointment.applicantPhone || '—' }}
+          </div>
+          <div class="detail-row">
+            <strong>EPIC:</strong> {{ appointment.applicant.epicNumber || '—' }}
+          </div>
+          <div class="detail-row">
+            <strong>KYC Status:</strong> {{ appointment.applicant.kycStatus || '—' }}
+          </div>
+          <div class="detail-row">
+            <strong>Schedule:</strong> {{ formatDateTime(appointment.scheduledDateTime) }}
+          </div>
+          <div class="detail-row">
+            <strong>Status:</strong> {{ appointment.status }}
+          </div>
+          <div class="detail-row">
+            <strong>Department:</strong> {{ appointment.department || 'Not allocated' }}
+          </div>
+          <div class="detail-row" *ngIf="appointment.agendaBrief">
+            <strong>Purpose:</strong>
+            <p class="remarks">{{ appointment.agendaBrief }}</p>
+          </div>
+          <div class="detail-row" *ngIf="appointment.cmoRemarks">
+            <strong>CMO Remarks:</strong>
+            <p class="remarks">{{ appointment.cmoRemarks }}</p>
+          </div>
+          <div class="detail-row" *ngIf="appointment.approverRemarks">
+            <strong>Approver Remarks:</strong>
+            <p class="remarks">{{ appointment.approverRemarks }}</p>
+          </div>
+          <div class="detail-row" *ngIf="appointment.hcmRemarks">
+            <strong>HCM/OSD Remarks:</strong>
+            <p class="remarks">{{ appointment.hcmRemarks }}</p>
+          </div>
+        </div>
+
+        <div class="notes-history">
+          <h3>Visitor History</h3>
+          <div class="history-loading" *ngIf="loadingCitizenHistory">
+            <mat-spinner diameter="24"></mat-spinner>
+            <span>Loading visitor history...</span>
+          </div>
+          <div class="detail-row" *ngIf="!loadingCitizenHistory && citizenHistory">
+            <strong>Total Visits:</strong>
+            {{ citizenHistory.visitCount || 0 }}
+          </div>
+          <div class="detail-row" *ngIf="!loadingCitizenHistory && citizenHistory?.lastVisitedAt">
+            <strong>Last Visit:</strong>
+            {{ formatDateTime(citizenHistory?.lastVisitedAt) }}
+          </div>
+          <div class="documents-error" *ngIf="!loadingCitizenHistory && citizenHistoryError">
+            <mat-icon>error_outline</mat-icon>
+            {{ citizenHistoryError }}
+          </div>
+          <div class="empty-state" *ngIf="!loadingCitizenHistory && !citizenHistoryError && citizenAppointmentHistory.length === 0">
+            <mat-icon>history</mat-icon>
+            <p>No previous visitor history found.</p>
+          </div>
+          <div class="note-row" *ngFor="let visit of citizenAppointmentHistory | slice:0:5">
+            <strong>{{ visit.applicationId || ('Appointment #' + visit.appointmentId) }}</strong>
+            <span>{{ visit.role || 'PRIMARY' }} · {{ visit.status }}</span>
+            <p>{{ visit.purpose || 'No purpose recorded.' }}</p>
+            <em>{{ formatDateTime(visit.dateTime) }} · {{ visit.department || 'No department' }}</em>
+          </div>
+        </div>
+
+        <div class="notes-history" *ngIf="remarksHistory.length > 0">
+          <h3>HCM / OSD Notes History</h3>
+          <div class="note-row" *ngFor="let note of remarksHistory">
+            <strong>{{ note.decision || 'Remark' }}</strong>
+            <span>{{ note.departmentName || note.departmentCode || 'No department' }}</span>
+            <p>{{ note.hcmRemarks }}</p>
+            <em>{{ note.createdByRole || '-' }} / {{ note.createdBy || '-' }} · {{ formatDateTime(note.createdAt) }}</em>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button mat-raised-button color="primary" (click)="closeAppointmentDetails()">Close</button>
       </div>
     </div>
   </div>

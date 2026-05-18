@@ -24,7 +24,7 @@
           <mat-icon matPrefix>search</mat-icon>
         </mat-form-field>
 
-        <button mat-stroked-button type="button" (click)="exportFilteredToCsv()" [disabled]="filtered.length === 0">
+        <button mat-stroked-button type="button" (click)="openExportDialog()" [disabled]="filtered.length === 0 || exportPreparing">
           <mat-icon>download</mat-icon>
           Export CSV
         </button>
@@ -540,6 +540,10 @@
 
     <section class="detail-section">
       <h3>Agenda</h3>
+      <div class="detail-row" *ngIf="selectedAppointment.department">
+        <span>Allocated Department</span>
+        <strong>{{ selectedAppointment.department }}</strong>
+      </div>
       <div class="detail-row">
         <span>Type</span>
         <strong>{{ selectedAppointment.agendaType || selectedAppointment.subject || '—' }}</strong>
@@ -569,8 +573,32 @@
         </div>
 
         <div class="remark-card" *ngIf="selectedAppointment.hcmRemarks">
-          <span class="field-label">HCM Remarks</span>
+          <span class="field-label">HCM / OSD Remarks</span>
           <div class="description-box">{{ selectedAppointment.hcmRemarks }}</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="detail-section"
+             *ngIf="selectedAppointmentRemarksLoading || selectedAppointmentRemarksError || selectedAppointmentRemarks.length > 0">
+      <h3>HCM / OSD Action History</h3>
+      <div class="documents-loading" *ngIf="selectedAppointmentRemarksLoading">
+        <mat-spinner diameter="28"></mat-spinner>
+        <span>Loading HCM/OSD remarks...</span>
+      </div>
+      <div class="documents-error" *ngIf="!selectedAppointmentRemarksLoading && selectedAppointmentRemarksError">
+        <mat-icon>error_outline</mat-icon>
+        {{ selectedAppointmentRemarksError }}
+      </div>
+      <div class="remarks-list" *ngIf="!selectedAppointmentRemarksLoading && selectedAppointmentRemarks.length > 0">
+        <div class="remark-card" *ngFor="let note of selectedAppointmentRemarks">
+          <span class="field-label">
+            {{ note.createdByRole || 'HCM/OSD' }} / {{ note.createdBy || '-' }}
+          </span>
+          <strong>{{ note.decision || 'Remark' }}</strong>
+          <span>{{ note.departmentName || note.departmentCode || selectedAppointment.department || 'No department allocated' }}</span>
+          <div class="description-box">{{ note.hcmRemarks || '—' }}</div>
+          <small>{{ note.createdAt | date:'medium' }}</small>
         </div>
       </div>
     </section>
@@ -662,7 +690,7 @@
                 class="approve-action"
                 [disabled]="!canApproveOrReject(appointment) || actionUpdating"
                 (click)="openApprove(appointment)"
-                matTooltip="Approve & Forward to HCM"
+                matTooltip="Approve"
                 matTooltipPosition="above">
           <mat-icon>check_circle</mat-icon>
         </button>
@@ -771,7 +799,62 @@
             [disabled]="actionUpdating"
             (click)="confirmAction()">
       <mat-icon>{{ pendingAction === 'APPROVE' ? 'check' : 'close' }}</mat-icon>
-      {{ pendingAction === 'APPROVE' ? 'Approve & Push to HCM' : 'Confirm Reject' }}
+      {{ pendingAction === 'APPROVE' ? 'Approve' : 'Confirm Reject' }}
+    </button>
+  </mat-dialog-actions>
+</ng-template>
+
+<ng-template #appointmentExportDialog>
+  <div class="action-dialog-title" mat-dialog-title>
+    <div>
+      <span class="eyebrow">Export Appointments</span>
+      <h2>{{ filtered.length }} record{{ filtered.length === 1 ? '' : 's' }}</h2>
+    </div>
+    <button mat-icon-button aria-label="Close export dialog" (click)="closeExportDialog()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <mat-dialog-content class="action-dialog-content">
+    <p style="margin-top:0;color:#4b5563">
+      Select the data groups to include in the CSV. HCM/OSD action history includes remarks, forwarded department, decision, and actioned-by details.
+    </p>
+
+    <div style="display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap">
+      <button mat-stroked-button type="button" (click)="setAllExportOptions(true)">
+        <mat-icon>select_all</mat-icon>
+        Select All
+      </button>
+      <button mat-stroked-button type="button" (click)="setAllExportOptions(false)">
+        <mat-icon>deselect</mat-icon>
+        Clear
+      </button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:0.5rem 1rem">
+      <mat-checkbox [(ngModel)]="exportOptions.basic">Appointment basic details</mat-checkbox>
+      <mat-checkbox [(ngModel)]="exportOptions.citizen">Citizen / visitor profile</mat-checkbox>
+      <mat-checkbox [(ngModel)]="exportOptions.guest">Guest appointment details</mat-checkbox>
+      <mat-checkbox [(ngModel)]="exportOptions.schedule">Schedule details</mat-checkbox>
+      <mat-checkbox [(ngModel)]="exportOptions.workflow">CMO / Approver / latest HCM remarks</mat-checkbox>
+      <mat-checkbox [(ngModel)]="exportOptions.hcmActions">HCM / OSD action history and department forwarding</mat-checkbox>
+      <mat-checkbox [(ngModel)]="exportOptions.associates">Associate visitors</mat-checkbox>
+    </div>
+
+    <div *ngIf="!canExportWithCurrentOptions" style="margin-top:1rem;color:#991b1b">
+      Select at least one data group to export.
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end" class="action-dialog-actions">
+    <button mat-stroked-button type="button" (click)="closeExportDialog()" [disabled]="exportPreparing">Cancel</button>
+    <button mat-raised-button
+            color="primary"
+            type="button"
+            (click)="exportFilteredToCsv()"
+            [disabled]="!canExportWithCurrentOptions || exportPreparing">
+      <mat-icon>{{ exportPreparing ? 'hourglass_empty' : 'download' }}</mat-icon>
+      {{ exportPreparing ? 'Preparing...' : 'Export CSV' }}
     </button>
   </mat-dialog-actions>
 </ng-template>
@@ -793,10 +876,19 @@
       <span>{{ selectedAppointment.applicant.fullName || selectedAppointment.applicantName || '—' }}</span>
     </div>
 
-    <mat-form-field appearance="outline" class="full-width-field">
-      <mat-label>New Date &amp; Time *</mat-label>
-      <input matInput type="datetime-local" [(ngModel)]="rescheduleDate" />
-    </mat-form-field>
+    <div class="cmo-form-grid">
+      <mat-form-field appearance="outline">
+        <mat-label>Schedule Date *</mat-label>
+        <input matInput [matDatepicker]="schedulePicker" [(ngModel)]="rescheduleDate" placeholder="Select date">
+        <mat-datepicker-toggle matSuffix [for]="schedulePicker"></mat-datepicker-toggle>
+        <mat-datepicker #schedulePicker></mat-datepicker>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Schedule Time *</mat-label>
+        <input matInput type="time" [(ngModel)]="rescheduleTime">
+      </mat-form-field>
+    </div>
   </mat-dialog-content>
 
   <mat-dialog-actions align="end" class="action-dialog-actions">
@@ -804,7 +896,7 @@
     <button mat-raised-button
             type="button"
             color="accent"
-            [disabled]="!rescheduleDate || actionUpdating"
+            [disabled]="!rescheduleDate || !rescheduleTime || actionUpdating"
             (click)="confirmReschedule()">
       <mat-icon>event</mat-icon>
       Confirm Schedule

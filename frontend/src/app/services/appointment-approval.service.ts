@@ -78,9 +78,9 @@ export class AppointmentApprovalService {
   /**
    * CMO approves and forwards to Joint Secretary
    */
-  approveAndForward(appointmentId: number, remarks: string): Observable<any> {
+  approveAndForward(appointmentId: number, remarks: string, status: 'APPROVER_REVIEW' | 'APPROVED' = 'APPROVER_REVIEW'): Observable<any> {
     return this.http.put(`${this.apiUrl}/${appointmentId}/status`, {
-      status: 'APPROVER_REVIEW',
+      status,
       remarks
     });
   }
@@ -91,7 +91,7 @@ export class AppointmentApprovalService {
   rejectAppointment(appointmentId: number, rejectReason: string): Observable<any> {
     return this.http.put(`${this.apiUrl}/${appointmentId}/status`, {
       remarks: rejectReason,
-      status: 'HCM_REJECTED'
+      status: 'REJECTED'
     });
   }
 

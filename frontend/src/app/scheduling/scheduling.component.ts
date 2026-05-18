@@ -61,7 +61,7 @@ export class SchedulingComponent implements OnInit {
   publicDarbarAssignmentLoading = false;
   publicDarbarAssignmentError = '';
   publicDarbarRemarks = 'Scheduled';
-  private readonly followUpStatuses: AppointmentStatus[] = ['FOLLOWUP'];
+  private readonly followUpStatuses: AppointmentStatus[] = ['APPROVED', 'FOLLOWUP'];
 
   hours = Array.from({ length: 13 }, (_, i) => `${String(i + 8).padStart(2,'0')}:00`);
 
@@ -273,7 +273,7 @@ export class SchedulingComponent implements OnInit {
     const assignedIds = new Set((this.selectedEvent.appointments ?? []).map(item => item.id));
     this.publicDarbarCandidatesLoading = true;
     this.publicDarbarAssignmentError = '';
-    this.appointmentService.getAllAppointments(0, 1000, 'FOLLOWUP').subscribe({
+    this.appointmentService.getAllAppointments(0, 1000, 'APPROVED,FOLLOWUP').subscribe({
       next: page => {
         this.publicDarbarCandidates = (page.content ?? [])
           .filter(appointment => this.isFollowUpStatus(appointment.status))
@@ -283,7 +283,7 @@ export class SchedulingComponent implements OnInit {
       },
       error: error => {
         this.publicDarbarCandidates = [];
-        this.publicDarbarAssignmentError = apiErrorMessage(error, 'Unable to load follow-up applications.');
+        this.publicDarbarAssignmentError = apiErrorMessage(error, 'Unable to load approved/follow-up applications.');
         this.publicDarbarCandidatesLoading = false;
       }
     });

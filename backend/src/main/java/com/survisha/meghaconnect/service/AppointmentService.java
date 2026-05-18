@@ -68,9 +68,14 @@ public class AppointmentService {
     );
 
     private static final List<Appointment.AppointmentStatus> APPROVER_VISIBLE_STATUSES = Arrays.asList(
+        Appointment.AppointmentStatus.APPROVER_REVIEW,
         Appointment.AppointmentStatus.APPROVED,
+        Appointment.AppointmentStatus.HCM_ACCEPTED,
+        Appointment.AppointmentStatus.FORWARDED_TO_DEPARTMENT,
         Appointment.AppointmentStatus.FOLLOWUP,
-        Appointment.AppointmentStatus.SCHEDULED
+        Appointment.AppointmentStatus.SCHEDULED,
+        Appointment.AppointmentStatus.COMPLETED,
+        Appointment.AppointmentStatus.HCM_REJECTED
     );
 
     private static final Set<String> DUPLICATE_ALLOWED_FINAL_SCHEME_STATUSES = Set.of(
@@ -601,7 +606,7 @@ public class AppointmentService {
         validateStatusTransition(appt, newStatus);
         appt.setStatus(newStatus);
         if (remarks != null) {
-            if (newStatus == Appointment.AppointmentStatus.APPROVED || newStatus == Appointment.AppointmentStatus.CMO_REVIEW) {
+            if (newStatus == Appointment.AppointmentStatus.APPROVER_REVIEW || newStatus == Appointment.AppointmentStatus.CMO_REVIEW) {
                 appt.setCmoRemarks(remarks);
             } else {
                 appt.setApproverRemarks(remarks);
@@ -816,9 +821,17 @@ public class AppointmentService {
 
     private void validateStatusTransition(Appointment appointment, Appointment.AppointmentStatus newStatus) {
         if (newStatus == Appointment.AppointmentStatus.APPROVED) {
+            if (appointment.getStatus() != Appointment.AppointmentStatus.APPROVER_REVIEW
+                    && appointment.getStatus() != Appointment.AppointmentStatus.APPROVED) {
+                invalidTransition("Only APPROVER_REVIEW applications can be approved by Approver.");
+            }
+            return;
+        }
+        if (newStatus == Appointment.AppointmentStatus.APPROVER_REVIEW) {
             if (appointment.getStatus() != Appointment.AppointmentStatus.SUBMITTED
-                    && appointment.getStatus() != Appointment.AppointmentStatus.CMO_REVIEW) {
-                invalidTransition("Only SUBMITTED or CMO_REVIEW applications can be approved by CMO.");
+                    && appointment.getStatus() != Appointment.AppointmentStatus.CMO_REVIEW
+                    && appointment.getStatus() != Appointment.AppointmentStatus.APPROVER_REVIEW) {
+                invalidTransition("Only SUBMITTED or CMO_REVIEW applications can be forwarded to Approver.");
             }
             return;
         }

@@ -15,6 +15,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AppointmentApprovalService, AppointmentApproval } from '../services/appointment-approval.service';
 import { DocumentService } from '../services/document.service';
+import { AuthService } from '../services/auth.service';
 import { MatDialog } from '@angular/material/dialog';
 import { apiErrorMessage } from '../shared/api-error.util';
 
@@ -58,6 +59,7 @@ export class AppointmentApprovalDetailsComponent implements OnInit {
     private router: Router,
     private fb: FormBuilder,
     private dialog: MatDialog,
+    private auth: AuthService,
     private documentService: DocumentService
   ) {
     this.approvalForm = this.fb.group({
@@ -100,9 +102,13 @@ export class AppointmentApprovalDetailsComponent implements OnInit {
     this.submitting = true;
     const remarks = this.approvalForm.get('remarks')?.value;
 
-    this.appointmentService.approveAndForward(this.appointmentId, remarks).subscribe({
+    const targetStatus = this.auth.hasRole('APPROVER') && this.appointment?.status === 'APPROVER_REVIEW'
+      ? 'APPROVED'
+      : 'APPROVER_REVIEW';
+
+    this.appointmentService.approveAndForward(this.appointmentId, remarks, targetStatus).subscribe({
       next: () => {
-        alert('Appointment approved and forwarded to next approver');
+        alert(targetStatus === 'APPROVED' ? 'Appointment approved by Approver' : 'Appointment forwarded to Approver');
         this.router.navigate(['/appointments/pending-approvals']);
         this.submitting = false;
       },
@@ -177,6 +183,7 @@ export class AppointmentApprovalDetailsComponent implements OnInit {
       'SUBMITTED': '#1e40af',
       'CMO_REVIEW': '#ea580c',
       'APPROVER_REVIEW': '#7c3aed',
+      'APPROVED': '#15803d',
       'HCM_PENDING': '#0891b2',
       'SCHEDULED': '#059669'
     };

@@ -6,6 +6,11 @@ import { environment } from '../../../environments/environment';
 import { Appointment, AppointmentStatus } from '../../models';
 import { AppointmentRemark, AppointmentService } from '../../services/appointment.service';
 import { ReferenceDataDto, ReferenceDataService } from '../../services/reference-data.service';
+import {
+  CitizenAppointmentHistory,
+  PublicIdentificationHistory,
+  VisitorSearchService
+} from '../../services/visitor-search.service';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -30,6 +35,7 @@ interface HcmAppointmentCard {
   type: string;
   category: string;
   description?: string;
+  appointment: Appointment;
 }
 
 interface HcmActionDto {
@@ -44,6 +50,11 @@ interface HcmActionDto {
   snoozedUntil?: string;
   clarificationRequested?: string;
   hcmRemarks?: string;
+  decision?: string;
+  departmentCode?: string;
+  departmentName?: string;
+  createdBy?: string;
+  createdByRole?: string;
   gestureType?: string;
   originalDateTime?: string;
   originalLocation?: string;
@@ -85,7 +96,11 @@ export class HcmDashboardComponent implements OnInit {
   selectedDate: Date = new Date();
   departments: ReferenceDataDto[] = [];
   remarksHistory: AppointmentRemark[] = [];
+  citizenHistory: PublicIdentificationHistory | null = null;
+  citizenAppointmentHistory: CitizenAppointmentHistory[] = [];
   loadingRemarks = false;
+  loadingCitizenHistory = false;
+  citizenHistoryError = '';
   pendingWorkItems: HcmActionDto[] = [];
   loadingAppointments = false;
   loadingPendingWork = false;
@@ -105,6 +120,8 @@ export class HcmDashboardComponent implements OnInit {
   // Action modals
   showActionMenu = false;
   selectedAppointment: any = null;
+  selectedDetailAppointment: Appointment | null = null;
+  showDetailsDialog = false;
   selectedActionType: string = '';
   
   // Form data for actions
@@ -122,6 +139,7 @@ export class HcmDashboardComponent implements OnInit {
     private http: HttpClient,
     private appointmentService: AppointmentService,
     private referenceDataService: ReferenceDataService,
+    private visitorSearchService: VisitorSearchService,
   ) {}
   
   ngOnInit() {
@@ -334,6 +352,23 @@ export class HcmDashboardComponent implements OnInit {
       }
     });
   }
+
+  openAppointmentDetails(card: HcmAppointmentCard, event?: Event) {
+    event?.stopPropagation();
+    this.selectedDetailAppointment = card.appointment;
+    this.showDetailsDialog = true;
+    this.loadRemarks(card.id);
+    this.loadCitizenHistory(card.appointment);
+  }
+
+  closeAppointmentDetails() {
+    this.showDetailsDialog = false;
+    this.selectedDetailAppointment = null;
+    this.citizenHistory = null;
+    this.citizenAppointmentHistory = [];
+    this.citizenHistoryError = '';
+    this.loadingCitizenHistory = false;
+  }
   
   /**
    * Accept appointment with suggested date/time (Right Swipe - Option 1)
@@ -346,7 +381,9 @@ export class HcmDashboardComponent implements OnInit {
       originalDateTime: this.toApiDateTime(this.selectedAppointment.dateTime),
       originalLocation: this.selectedAppointment.location,
       appointmentSubject: this.selectedAppointment.subject,
-      hcmRemarks: this.actionFormData.remarks
+      hcmRemarks: this.actionFormData.remarks,
+      decision: this.actionFormData.decision,
+      departmentCode: this.actionFormData.departmentCode
     };
     
     this.submitAction(`/appointment/${this.selectedAppointment.id}/accept`, payload);
@@ -363,7 +400,9 @@ export class HcmDashboardComponent implements OnInit {
       originalDateTime: this.toApiDateTime(this.selectedAppointment.dateTime),
       originalLocation: this.selectedAppointment.location,
       appointmentSubject: this.selectedAppointment.subject,
-      hcmRemarks: this.actionFormData.remarks
+      hcmRemarks: this.actionFormData.remarks,
+      decision: this.actionFormData.decision,
+      departmentCode: this.actionFormData.departmentCode
     };
     
     this.submitAction(`/appointment/${this.selectedAppointment.id}/mark-important`, payload);
@@ -383,7 +422,9 @@ export class HcmDashboardComponent implements OnInit {
       originalDateTime: this.toApiDateTime(this.selectedAppointment.dateTime),
       originalLocation: this.selectedAppointment.location,
       appointmentSubject: this.selectedAppointment.subject,
-      hcmRemarks: this.actionFormData.remarks
+      hcmRemarks: this.actionFormData.remarks,
+      decision: this.actionFormData.decision,
+      departmentCode: this.actionFormData.departmentCode
     };
     
     this.submitAction(`/appointment/${this.selectedAppointment.id}/modify`, payload);
@@ -400,7 +441,9 @@ export class HcmDashboardComponent implements OnInit {
       originalDateTime: this.toApiDateTime(this.selectedAppointment.dateTime),
       originalLocation: this.selectedAppointment.location,
       appointmentSubject: this.selectedAppointment.subject,
-      hcmRemarks: this.actionFormData.remarks
+      hcmRemarks: this.actionFormData.remarks,
+      decision: this.actionFormData.decision,
+      departmentCode: this.actionFormData.departmentCode
     };
     
     this.submitAction(`/appointment/${this.selectedAppointment.id}/snooze`, payload);
@@ -417,7 +460,9 @@ export class HcmDashboardComponent implements OnInit {
       originalDateTime: this.toApiDateTime(this.selectedAppointment.dateTime),
       originalLocation: this.selectedAppointment.location,
       appointmentSubject: this.selectedAppointment.subject,
-      hcmRemarks: this.actionFormData.remarks
+      hcmRemarks: this.actionFormData.remarks,
+      decision: this.actionFormData.decision,
+      departmentCode: this.actionFormData.departmentCode
     };
     
     this.submitAction(`/appointment/${this.selectedAppointment.id}/reject`, payload);
@@ -512,6 +557,7 @@ export class HcmDashboardComponent implements OnInit {
       type: appointment.appointmentType || appointment.eventType || 'Appointment',
       category: appointment.department || appointment.agendaType || 'General',
       description: appointment.agendaBrief || appointment.shortNotes || appointment.cmoRemarks || appointment.approverRemarks,
+      appointment,
     };
   }
 
@@ -534,6 +580,11 @@ export class HcmDashboardComponent implements OnInit {
       snoozedUntil: raw.snoozedUntil,
       clarificationRequested: raw.clarificationRequested,
       hcmRemarks: raw.hcmRemarks,
+      decision: raw.decision,
+      departmentCode: raw.departmentCode,
+      departmentName: raw.departmentName,
+      createdBy: raw.createdBy,
+      createdByRole: raw.createdByRole,
       gestureType: raw.gestureType,
       originalDateTime: raw.originalDateTime,
       originalLocation: raw.originalLocation || 'Not specified',
@@ -568,6 +619,37 @@ export class HcmDashboardComponent implements OnInit {
 
   private syncApiErrors(): void {
     this.errorMsg = Array.from(this.apiErrors.values()).join(' ');
+  }
+
+  private loadCitizenHistory(appointment: Appointment): void {
+    const citizenId = appointment.applicantId || appointment.applicant?.id;
+    this.citizenHistory = null;
+    this.citizenAppointmentHistory = [];
+    this.citizenHistoryError = '';
+
+    if (!citizenId) {
+      this.citizenHistoryError = 'Visitor history is not available for this appointment.';
+      return;
+    }
+
+    this.loadingCitizenHistory = true;
+    this.visitorSearchService.getPublicIdentificationHistory(citizenId).subscribe({
+      next: history => {
+        if (this.selectedDetailAppointment?.id !== appointment.id) {
+          return;
+        }
+        this.citizenHistory = history;
+        this.citizenAppointmentHistory = history.appointments || [];
+        this.loadingCitizenHistory = false;
+      },
+      error: error => {
+        if (this.selectedDetailAppointment?.id !== appointment.id) {
+          return;
+        }
+        this.citizenHistoryError = apiErrorMessage(error, 'Unable to load visitor history.');
+        this.loadingCitizenHistory = false;
+      },
+    });
   }
 
   private toApiDateTime(value: string | Date | null | undefined): string | null {

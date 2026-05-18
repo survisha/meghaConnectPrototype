@@ -128,6 +128,13 @@
             <version>2.0.30</version>
         </dependency>
 
+        <!-- QR code generation for visitor passes -->
+        <dependency>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>core</artifactId>
+            <version>3.5.3</version>
+        </dependency>
+
         <!-- Apache POI: Word (DOCX/DOC) text extraction (R004/R014) -->
         <dependency>
             <groupId>org.apache.poi</groupId>

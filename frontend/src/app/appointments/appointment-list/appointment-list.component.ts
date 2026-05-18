@@ -3,8 +3,8 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
-import { of } from 'rxjs';
-import { AppointmentDocumentAiNotes, AiNotesStatus, AppointmentService } from '../../services/appointment.service';
+import { forkJoin, of } from 'rxjs';
+import { AppointmentDocumentAiNotes, AiNotesStatus, AppointmentRemark, AppointmentService } from '../../services/appointment.service';
 import { AuthService } from '../../services/auth.service';
 import { DocumentService } from '../../services/document.service';
 import { ReferenceDataService } from '../../services/reference-data.service';
@@ -44,6 +44,16 @@ type AppointmentSortColumn =
   | 'createdAt'
   | 'aiNotes';
 
+interface AppointmentExportOptions {
+  basic: boolean;
+  citizen: boolean;
+  guest: boolean;
+  schedule: boolean;
+  workflow: boolean;
+  hcmActions: boolean;
+  associates: boolean;
+}
+
 @Component({
   selector: 'app-appointment-list',
   standalone: true,
@@ -78,6 +88,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   @ViewChild('documentPreviewDialog') documentPreviewDialog!: TemplateRef<unknown>;
   @ViewChild('appointmentRemarksDialog') appointmentRemarksDialog!: TemplateRef<unknown>;
   @ViewChild('appointmentRescheduleDialog') appointmentRescheduleDialog!: TemplateRef<unknown>;
+  @ViewChild('appointmentExportDialog') appointmentExportDialog!: TemplateRef<unknown>;
   @ViewChild('aiNotesDialog') aiNotesDialog!: TemplateRef<unknown>;
   @ViewChild('cmoModifyDialog') cmoModifyDialog!: TemplateRef<unknown>;
   @ViewChild('cmoMissingInfoDialog') cmoMissingInfoDialog!: TemplateRef<unknown>;
@@ -97,6 +108,9 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   selectedSupportingDocument: File | null = null;
   documentPreviewError = '';
   documents: AppointmentDocument[] = [];
+  selectedAppointmentRemarks: AppointmentRemark[] = [];
+  selectedAppointmentRemarksLoading = false;
+  selectedAppointmentRemarksError = '';
   documentsLoading = false;
   documentsError = '';
   search = '';
@@ -108,12 +122,14 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   loading = false;
   bulkUpdating = false;
   eventAssigning = false;
+  exportPreparing = false;
   eventsLoading = false;
   actionUpdating = false;
   cmoActionUpdating = false;
   errorMsg = '';
   remarksText = '';
-  rescheduleDate = '';
+  rescheduleDate: Date | null = null;
+  rescheduleTime = '10:00';
   pendingAction: 'APPROVE' | 'REJECT' | null = null;
   cmoModifyEventType: EventType = 'A4';
   cmoModifyLocation: Location = 'SHILLONG';
@@ -140,13 +156,14 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   statusOptions = [
     { label: 'All Statuses', value: '' },
     { label: 'Submitted', value: 'SUBMITTED' },
-    { label: 'Approved', value: 'APPROVED' },
+      { label: 'Approved by Approver', value: 'APPROVED' },
     { label: 'CMO Review', value: 'CMO_REVIEW' },
     { label: 'Approver Review', value: 'APPROVER_REVIEW' },
     { label: 'Follow-up', value: 'FOLLOWUP' },
     { label: 'Scheduled for Public Durbar', value: 'SCHEDULED_FOR_PUBLIC_DARBAR' },
     { label: 'HCM Pending', value: 'HCM_PENDING' },
     { label: 'HCM ACCEPTED', value: 'HCM_ACCEPTED' },
+    { label: 'Forwarded to Department', value: 'FORWARDED_TO_DEPARTMENT' },
     { label: 'Scheduled', value: 'SCHEDULED' },
     { label: 'Completed', value: 'COMPLETED' },
   ];
@@ -176,6 +193,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   private documentPreviewDialogRef?: MatDialogRef<unknown>;
   private appointmentRemarksDialogRef?: MatDialogRef<unknown>;
   private appointmentRescheduleDialogRef?: MatDialogRef<unknown>;
+  private appointmentExportDialogRef?: MatDialogRef<unknown>;
   private aiNotesDialogRef?: MatDialogRef<unknown>;
   private cmoModifyDialogRef?: MatDialogRef<unknown>;
   private cmoMissingInfoDialogRef?: MatDialogRef<unknown>;
@@ -185,6 +203,15 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     'CMO_REVIEW',
   ]);
   private readonly followUpStatuses: AppointmentStatus[] = ['FOLLOWUP'];
+  exportOptions: AppointmentExportOptions = {
+    basic: true,
+    citizen: true,
+    guest: true,
+    schedule: true,
+    workflow: true,
+    hcmActions: true,
+    associates: true,
+  };
 
   constructor(
     private appointmentService: AppointmentService,
@@ -207,7 +234,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
 
   private configureRoleDefaults() {
     if (this.auth.hasRole('APPROVER') && !this.auth.hasRole('ADMIN', 'OSD')) {
-      this.filterStatus = 'APPROVED';
+      this.filterStatus = 'APPROVER_REVIEW';
     } else if (this.auth.hasRole('CMO_OFFICER') && !this.auth.hasRole('ADMIN', 'OSD')) {
       this.filterStatus = 'SUBMITTED';
     }
@@ -493,7 +520,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   get canAssignSelectedToEvent() {
     return this.auth.hasRole('APPROVER', 'ADMIN', 'OSD') &&
       this.selectedAppointments.length > 0 &&
-      this.selectedAppointments.every(appointment => this.isFollowUpStatus(appointment.status));
+      this.selectedAppointments.every(appointment => appointment.status === 'APPROVED' || this.isFollowUpStatus(appointment.status));
   }
 
   markSelectedFollowUp() {
@@ -711,7 +738,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   }
 
   canApproveOrReject(appointment: Appointment | null) {
-    return this.canUseApproverActions(appointment) && appointment?.status === 'HCM_PENDING';
+    return this.canUseApproverActions(appointment) && appointment?.status === 'APPROVER_REVIEW';
   }
 
   canRescheduleAppointment(appointment: Appointment | null) {
@@ -777,7 +804,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
       eventType: this.cmoModifyEventType,
       requestedLocation: this.cmoModifyLocation,
       cmoRemarks: this.cmoModifyRemarks,
-      status: 'APPROVED',
+      status: 'APPROVER_REVIEW',
       notifyApplicant: false,
       notifyDeo: false,
     }).pipe(finalize(() => this.cmoActionUpdating = false))
@@ -786,7 +813,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
           this.selectedAppointment = updated;
           this.replaceAppointment(updated);
           this.cmoModifyDialogRef?.close();
-          this.snackBar.open(`${updated.applicationId} approved.`, 'Close', { duration: 5000, panelClass: ['success-snackbar'] });
+          this.snackBar.open(`${updated.applicationId} forwarded to Approver.`, 'Close', { duration: 5000, panelClass: ['success-snackbar'] });
         },
         error: error => this.snackBar.open(apiErrorMessage(error, 'Failed to update appointment.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] })
       });
@@ -829,7 +856,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
       eventType: appointment.eventType,
       requestedLocation: appointment.requestedLocation,
       cmoRemarks: appointment.cmoRemarks,
-      status: 'APPROVED',
+      status: 'APPROVER_REVIEW',
       notifyApplicant: false,
       notifyDeo: false,
     }).pipe(finalize(() => this.cmoActionUpdating = false))
@@ -837,7 +864,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
         next: updated => {
           this.selectedAppointment = updated;
           this.replaceAppointment(updated);
-          this.snackBar.open(`${updated.applicationId} approved.`, 'Close', { duration: 5000, panelClass: ['success-snackbar'] });
+          this.snackBar.open(`${updated.applicationId} forwarded to Approver.`, 'Close', { duration: 5000, panelClass: ['success-snackbar'] });
         },
         error: error => this.snackBar.open(apiErrorMessage(error, 'Failed to forward appointment.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] })
       });
@@ -879,7 +906,10 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
 
   openReschedule(appointment: Appointment) {
     this.selectedAppointment = appointment;
-    this.rescheduleDate = '';
+    this.rescheduleDate = appointment.scheduledDateTime ? new Date(appointment.scheduledDateTime) : null;
+    this.rescheduleTime = appointment.scheduledDateTime
+      ? this.toTimeInputValue(new Date(appointment.scheduledDateTime))
+      : '10:00';
     this.appointmentRescheduleDialogRef = this.dialog.open(this.appointmentRescheduleDialog, {
       width: '460px',
       maxWidth: '94vw',
@@ -888,7 +918,8 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     });
     this.appointmentRescheduleDialogRef.afterClosed().subscribe(() => {
       this.appointmentRescheduleDialogRef = undefined;
-      this.rescheduleDate = '';
+      this.rescheduleDate = null;
+      this.rescheduleTime = '10:00';
     });
   }
 
@@ -918,7 +949,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     if (!this.selectedAppointment || !this.pendingAction || this.actionUpdating) return;
     const appointment = this.selectedAppointment;
     const action = this.pendingAction;
-    const newStatus: AppointmentStatus = action === 'APPROVE' ? 'HCM_ACCEPTED' : 'HCM_REJECTED';
+    const newStatus: AppointmentStatus = action === 'APPROVE' ? 'APPROVED' : 'REJECTED';
 
     this.actionUpdating = true;
     this.appointmentService.updateStatus(appointment.id, newStatus, this.remarksText)
@@ -929,7 +960,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
           this.replaceAppointment(updated);
           this.appointmentRemarksDialogRef?.close();
           const message = action === 'APPROVE'
-            ? `${updated.applicationId} approved and pushed to HCM queue.`
+            ? `${updated.applicationId} approved by Approver. It can now be scheduled.`
             : `${updated.applicationId} has been rejected.`;
           this.snackBar.open(message, 'Close', {
             duration: 5000,
@@ -941,11 +972,13 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   }
 
   confirmReschedule() {
-    if (!this.selectedAppointment || !this.rescheduleDate || this.actionUpdating) return;
+    if (!this.selectedAppointment || !this.rescheduleDate || !this.rescheduleTime || this.actionUpdating) return;
     const appointment = this.selectedAppointment;
+    const scheduledDateTime = this.combineDateAndTime(this.rescheduleDate, this.rescheduleTime);
+    if (!scheduledDateTime) return;
     this.actionUpdating = true;
     this.appointmentService.rescheduleAppointment(appointment.id, {
-      scheduledDateTime: new Date(this.rescheduleDate).toISOString().slice(0, 19),
+      scheduledDateTime,
       durationMinutes: 30
     }).pipe(finalize(() => this.actionUpdating = false))
       .subscribe({
@@ -953,6 +986,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
           this.selectedAppointment = updated;
           this.replaceAppointment(updated);
           this.appointmentRescheduleDialogRef?.close();
+          this.loadScheduleEvents();
           this.snackBar.open(`Appointment scheduled successfully.`, 'Close', { duration: 5000 });
         },
         error: error => this.snackBar.open(apiErrorMessage(error, 'Failed to reschedule.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] })
@@ -1004,48 +1038,158 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     return status === filterStatus;
   }
 
+  openExportDialog() {
+    this.appointmentExportDialogRef = this.dialog.open(this.appointmentExportDialog, {
+      width: '620px',
+      maxWidth: '94vw',
+      autoFocus: false,
+      panelClass: 'appointment-action-dialog-panel'
+    });
+    this.appointmentExportDialogRef.afterClosed().subscribe(() => {
+      this.appointmentExportDialogRef = undefined;
+    });
+  }
+
+  closeExportDialog() {
+    this.appointmentExportDialogRef?.close();
+  }
+
+  setAllExportOptions(value: boolean) {
+    Object.keys(this.exportOptions).forEach(key => {
+      this.exportOptions[key as keyof AppointmentExportOptions] = value;
+    });
+  }
+
+  get canExportWithCurrentOptions() {
+    return this.filtered.length > 0 && Object.values(this.exportOptions).some(Boolean);
+  }
+
   exportFilteredToCsv() {
-    const headers = [
-      'Application ID',
-      'Applicant',
-      'Phone',
-      'EPIC Number',
-      'Designation',
-      'Address',
-      'District',
-      'Constituency',
-      'Agenda',
-      'Agenda Brief',
-      'Event Type',
-      'Location',
-      'Status',
-      'Meeting Count Last 6 Months',
-      'Submitted',
-      'Created At',
-      'Updated At',
-    ];
-    const rows = this.filtered.map(appointment => [
-      appointment.applicationId,
-      appointment.applicant?.fullName || appointment.applicantName || '',
-      appointment.applicant?.phoneNumber || appointment.applicantPhone || '',
-      appointment.applicant?.epicNumber || '',
-      appointment.applicant?.designation || '',
-      this.applicantAddress(appointment),
-      appointment.applicant?.district || '',
-      appointment.applicant?.constituency || '',
-      appointment.agendaType || appointment.subject || '',
-      appointment.agendaBrief || '',
-      appointment.eventType,
-      appointment.requestedLocation,
-      this.getStatusLabel(appointment.status),
-      appointment.meetingCountLast6Months ?? '',
-      appointment.submittedAt || appointment.createdAt || '',
-      appointment.createdAt || '',
-      appointment.updatedAt || '',
-    ]);
-    const csv = [headers, ...rows].map(row => row.map(value => this.csvCell(value)).join(',')).join('\r\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-    this.triggerBlobDownload(blob, `appointments-${new Date().toISOString().slice(0, 10)}.csv`);
+    if (!this.canExportWithCurrentOptions || this.exportPreparing) return;
+    const appointments = [...this.filtered];
+    this.exportPreparing = true;
+    const remarksSource = this.exportOptions.hcmActions
+      ? forkJoin(appointments.map(appointment =>
+          this.appointmentService.getRemarks(appointment.id).pipe(catchError(() => of([] as AppointmentRemark[])))
+        ))
+      : of([] as AppointmentRemark[][]);
+
+    remarksSource
+      .pipe(finalize(() => this.exportPreparing = false))
+      .subscribe({
+        next: remarksRows => {
+          const remarksByAppointmentId = new Map<number, AppointmentRemark[]>();
+          appointments.forEach((appointment, index) => {
+            remarksByAppointmentId.set(appointment.id, remarksRows[index] ?? []);
+          });
+          const { headers, rows } = this.buildAppointmentExport(appointments, remarksByAppointmentId);
+          const csv = [headers, ...rows].map(row => row.map(value => this.csvCell(value)).join(',')).join('\r\n');
+          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+          this.triggerBlobDownload(blob, `appointments-${new Date().toISOString().slice(0, 10)}.csv`);
+          this.closeExportDialog();
+        },
+        error: error => this.snackBar.open(apiErrorMessage(error, 'Unable to export appointments.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] })
+      });
+  }
+
+  private buildAppointmentExport(appointments: Appointment[], remarksByAppointmentId: Map<number, AppointmentRemark[]>) {
+    const columns: Array<{ header: string; value: (appointment: Appointment, remarks: AppointmentRemark[]) => unknown }> = [];
+    if (this.exportOptions.basic) {
+      columns.push(
+        { header: 'Application ID', value: appointment => appointment.applicationId },
+        { header: 'Appointment ID', value: appointment => appointment.id },
+        { header: 'Source', value: appointment => appointment.appointmentSource || 'CITIZEN' },
+        { header: 'Status', value: appointment => this.getStatusLabel(appointment.status) },
+        { header: 'Event Type', value: appointment => appointment.eventType },
+        { header: 'Location', value: appointment => appointment.requestedLocation },
+        { header: 'Agenda', value: appointment => appointment.agendaType || appointment.subject || '' },
+        { header: 'Purpose / Agenda Brief', value: appointment => appointment.agendaBrief || appointment.reasonForAppointment || '' },
+        { header: 'Short Notes', value: appointment => appointment.shortNotes || '' },
+        { header: 'Created At', value: appointment => appointment.createdAt || '' },
+        { header: 'Submitted At', value: appointment => appointment.submittedAt || appointment.createdAt || '' },
+        { header: 'Updated At', value: appointment => appointment.updatedAt || '' },
+      );
+    }
+    if (this.exportOptions.citizen) {
+      columns.push(
+        { header: 'Applicant Name', value: appointment => appointment.applicant?.fullName || appointment.applicantName || appointment.guestName || '' },
+        { header: 'Applicant Phone', value: appointment => appointment.applicant?.phoneNumber || appointment.applicantPhone || appointment.guestMobile || '' },
+        { header: 'EPIC Number', value: appointment => appointment.applicant?.epicNumber || '' },
+        { header: 'KYC Status', value: appointment => appointment.applicant?.kycStatus || '' },
+        { header: 'Designation', value: appointment => this.getDisplayDesignation(appointment) },
+        { header: 'Address', value: appointment => this.applicantAddress(appointment) || appointment.guestAddress || '' },
+        { header: 'District', value: appointment => appointment.applicant?.district || '' },
+        { header: 'Constituency', value: appointment => appointment.applicant?.constituency || '' },
+        { header: 'Meeting Count Last 6 Months', value: appointment => appointment.meetingCountLast6Months ?? '' },
+      );
+    }
+    if (this.exportOptions.guest) {
+      columns.push(
+        { header: 'Guest Reference ID', value: appointment => appointment.guestReferenceId || '' },
+        { header: 'Guest Name', value: appointment => appointment.guestName || '' },
+        { header: 'Guest Mobile', value: appointment => appointment.guestMobile || '' },
+        { header: 'Guest Email', value: appointment => appointment.guestEmail || '' },
+        { header: 'Organization', value: appointment => appointment.organizationName || '' },
+        { header: 'Guest Designation', value: appointment => appointment.guestDesignation || '' },
+        { header: 'Visitor Category', value: appointment => appointment.visitorCategory || '' },
+        { header: 'Referred Office', value: appointment => appointment.referredOffice || '' },
+        { header: 'Referred By', value: appointment => appointment.referredByName || '' },
+        { header: 'Preferred Date', value: appointment => appointment.preferredDate || '' },
+      );
+    }
+    if (this.exportOptions.schedule) {
+      columns.push(
+        { header: 'Scheduled Date Time', value: appointment => appointment.scheduledDateTime || '' },
+        { header: 'Scheduled Duration Minutes', value: appointment => appointment.scheduledDurationMinutes ?? '' },
+      );
+    }
+    if (this.exportOptions.workflow) {
+      columns.push(
+        { header: 'CMO Remarks', value: appointment => appointment.cmoRemarks || '' },
+        { header: 'Approver Remarks', value: appointment => appointment.approverRemarks || '' },
+        { header: 'Latest HCM / OSD Remarks', value: appointment => appointment.hcmRemarks || '' },
+        { header: 'Allocated / Forwarded Department', value: appointment => appointment.department || '' },
+      );
+    }
+    if (this.exportOptions.hcmActions) {
+      columns.push(
+        { header: 'HCM / OSD Action Count', value: (_appointment, remarks) => remarks.length },
+        { header: 'HCM / OSD Decisions', value: (_appointment, remarks) => this.joinRemarks(remarks, 'decision') },
+        { header: 'Departments Forwarded', value: (appointment, remarks) => this.joinDepartments(appointment, remarks) },
+        { header: 'HCM / OSD Remarks History', value: (_appointment, remarks) => this.joinRemarks(remarks, 'hcmRemarks') },
+        { header: 'HCM / OSD Actioned By', value: (_appointment, remarks) => remarks.map(note => [note.createdByRole, note.createdBy].filter(Boolean).join('/')).filter(Boolean).join(' | ') },
+        { header: 'HCM / OSD Actioned At', value: (_appointment, remarks) => remarks.map(note => note.createdAt).filter(Boolean).join(' | ') },
+      );
+    }
+    if (this.exportOptions.associates) {
+      columns.push(
+        { header: 'Associate Count', value: appointment => appointment.associates?.length || 0 },
+        { header: 'Associate Names', value: appointment => (appointment.associates || []).map(item => item.fullName).filter(Boolean).join(' | ') },
+        { header: 'Associate Mobiles', value: appointment => (appointment.associates || []).map(item => item.mobileNumber).filter(Boolean).join(' | ') },
+        { header: 'Associate KYC Status', value: appointment => (appointment.associates || []).map(item => item.kycStatus).filter(Boolean).join(' | ') },
+        { header: 'Associate Remarks', value: appointment => (appointment.associates || []).map(item => item.remarks || item.relationship).filter(Boolean).join(' | ') },
+      );
+    }
+
+    return {
+      headers: columns.map(column => column.header),
+      rows: appointments.map(appointment => {
+        const remarks = remarksByAppointmentId.get(appointment.id) ?? [];
+        return columns.map(column => column.value(appointment, remarks));
+      }),
+    };
+  }
+
+  private joinRemarks(remarks: AppointmentRemark[], key: 'decision' | 'hcmRemarks') {
+    return remarks.map(note => note[key]).filter(Boolean).join(' | ');
+  }
+
+  private joinDepartments(appointment: Appointment, remarks: AppointmentRemark[]) {
+    const values = [
+      appointment.department,
+      ...remarks.map(note => note.departmentName || note.departmentCode),
+    ].filter(Boolean) as string[];
+    return Array.from(new Set(values)).join(' | ');
   }
 
   private parseAppointmentDate(appointment: Appointment): Date | null {
@@ -1067,6 +1211,25 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     return value;
   }
 
+  private combineDateAndTime(date: Date | null, time: string | null | undefined): string | null {
+    if (!date || !time) return null;
+    const [hours, minutes] = time.split(':').map(value => Number(value));
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+    const value = new Date(date);
+    value.setHours(hours, minutes, 0, 0);
+    return this.toLocalDateTime(value);
+  }
+
+  private toLocalDateTime(date: Date): string {
+    const pad = (part: number) => part.toString().padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+  }
+
+  private toTimeInputValue(date: Date): string {
+    const pad = (part: number) => part.toString().padStart(2, '0');
+    return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  }
+
   private csvCell(value: unknown) {
     const text = value === null || value === undefined ? '' : String(value);
     return `"${text.replace(/"/g, '""')}"`;
@@ -1083,6 +1246,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     this.selectedAppointment = appointment;
     this.loadVisitorPhoto(appointment);
     this.loadDocuments(appointment.id);
+    this.loadAppointmentRemarks(appointment.id);
     this.dialog.open(this.appointmentDetailsDialog, {
       width: '940px',
       maxWidth: '96vw',
@@ -1122,7 +1286,22 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     this.clearVisitorPhotoState();
     this.documents = [];
     this.documentsError = '';
+    this.selectedAppointmentRemarks = [];
+    this.selectedAppointmentRemarksError = '';
+    this.selectedAppointmentRemarksLoading = false;
     this.selectedSupportingDocument = null;
+  }
+
+  private loadAppointmentRemarks(appointmentId: number) {
+    this.selectedAppointmentRemarks = [];
+    this.selectedAppointmentRemarksError = '';
+    this.selectedAppointmentRemarksLoading = true;
+    this.appointmentService.getRemarks(appointmentId)
+      .pipe(finalize(() => this.selectedAppointmentRemarksLoading = false))
+      .subscribe({
+        next: remarks => this.selectedAppointmentRemarks = remarks,
+        error: error => this.selectedAppointmentRemarksError = apiErrorMessage(error, 'Unable to load HCM/OSD remarks.')
+      });
   }
 
   private loadVisitorPhoto(appointment: Appointment) {

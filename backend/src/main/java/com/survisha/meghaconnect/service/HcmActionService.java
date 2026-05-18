@@ -68,6 +68,11 @@ public class HcmActionService {
             ? actionDto.getAcceptedDateTime()
             : DateTimeUtil.nowIST();
 
+        String actor = actorFromRequest(request);
+        String actorRole = roleFromRequest(request);
+        String departmentCode = trimToNull(actionDto.getDepartmentCode());
+        String departmentName = resolveDepartmentName(departmentCode);
+
         HcmAction action = HcmAction.builder()
             .appointmentId(appointmentId)
             .actionType("ACCEPT")
@@ -75,13 +80,18 @@ public class HcmActionService {
             .gestureType("RIGHT_SWIPE")
             .acceptedDateTime(acceptedDateTime)
             .hcmRemarks(actionDto.getHcmRemarks())
+            .decision(actionDto.getDecision())
+            .departmentCode(departmentCode)
+            .departmentName(departmentName)
+            .createdBy(actor)
+            .createdByRole(actorRole)
             .originalDateTime(actionDto.getOriginalDateTime())
             .originalLocation(actionDto.getOriginalLocation())
             .appointmentSubject(actionDto.getAppointmentSubject())
             .build();
         
         HcmAction saved = hcmActionRepository.save(action);
-        updateAppointmentAfterHcmAcceptance(appointmentId, acceptedDateTime, actionDto.getHcmRemarks());
+        updateAppointmentAfterHcmAcceptance(appointmentId, acceptedDateTime, actionDto.getHcmRemarks(), departmentName, departmentCode, actor);
         log.info("Appointment accepted by HCM: appointmentId={}", appointmentId);
         return convertToDto(saved);
     }
@@ -349,17 +359,46 @@ public class HcmActionService {
             .build();
     }
 
-    private void updateAppointmentAfterHcmAcceptance(Long appointmentId, LocalDateTime acceptedDateTime, String hcmRemarks) {
+    private void updateAppointmentAfterHcmAcceptance(Long appointmentId,
+                                                     LocalDateTime acceptedDateTime,
+                                                     String hcmRemarks,
+                                                     String departmentName,
+                                                     String departmentCode,
+                                                     String actor) {
         Appointment appointment = appointmentRepository.findById(appointmentId)
             .orElseThrow(() -> new IllegalArgumentException("Appointment not found: " + appointmentId));
 
         appointment.setStatus(Appointment.AppointmentStatus.HCM_ACCEPTED);
         appointment.setHcmRemarks(hcmRemarks);
+        if (departmentName != null || departmentCode != null) {
+            appointment.setDepartment(departmentName != null ? departmentName : departmentCode);
+        }
         appointment.setScheduledDateTime(acceptedDateTime);
         if (appointment.getScheduledDurationMinutes() == null) {
             appointment.setScheduledDurationMinutes(30);
         }
+        appointment.setUpdatedBy(actor);
         appointmentRepository.save(appointment);
+    }
+
+    private String actorFromRequest(HttpServletRequest request) {
+        try {
+            String token = jwtUtils.extractTokenFromRequest(request);
+            String subject = token != null ? jwtUtils.extractUsernameFromToken(token) : null;
+            return trimToNull(subject) != null ? subject : "system";
+        } catch (Exception e) {
+            return "system";
+        }
+    }
+
+    private String roleFromRequest(HttpServletRequest request) {
+        try {
+            String token = jwtUtils.extractTokenFromRequest(request);
+            String role = token != null ? jwtUtils.getRoleFromToken(token) : null;
+            return trimToNull(role) != null ? role : "SYSTEM";
+        } catch (Exception e) {
+            return "SYSTEM";
+        }
     }
 
     private boolean isPendingHcmAction(Appointment appointment) {

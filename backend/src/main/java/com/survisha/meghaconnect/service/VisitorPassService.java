@@ -8,6 +8,12 @@ import com.survisha.meghaconnect.exception.ErrorCodeConstants;
 import com.survisha.meghaconnect.exception.MeghaConnectException;
 import com.survisha.meghaconnect.repository.AppointmentRepository;
 import com.survisha.meghaconnect.util.DateTimeUtil;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.EncodeHintType;
+import com.google.zxing.MultiFormatWriter;
+import com.google.zxing.WriterException;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 import lombok.RequiredArgsConstructor;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -19,10 +25,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.imageio.ImageIO;
+import java.awt.Color;
+import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
+import java.util.EnumMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -38,17 +48,7 @@ public class VisitorPassService {
             Appointment.AppointmentStatus.APPROVED_WITH_DATE_TIME,
             Appointment.AppointmentStatus.SCHEDULED_FOR_PUBLIC_DARBAR
     );
-    private static final Map<Character, String> CODE39 = Map.ofEntries(
-            Map.entry('0', "nnnwwnwnn"), Map.entry('1', "wnnwnnnnw"),
-            Map.entry('2', "nnwwnnnnw"), Map.entry('3', "wnwwnnnnn"),
-            Map.entry('4', "nnnwwnnnw"), Map.entry('5', "wnnwwnnnn"),
-            Map.entry('6', "nnwwwnnnn"), Map.entry('7', "nnnwnnwnw"),
-            Map.entry('8', "wnnwnnwnn"), Map.entry('9', "nnwwnnwnn"),
-            Map.entry('A', "wnnnnwnnw"), Map.entry('B', "nnwnnwnnw"),
-            Map.entry('C', "wnwnnwnnn"), Map.entry('D', "nnnnwwnnw"),
-            Map.entry('E', "wnnnwwnnn"), Map.entry('F', "nnwnwwnnn"),
-            Map.entry('*', "nwnnwnwnn")
-    );
+    private static final int QR_IMAGE_SIZE = 320;
 
     private final AppointmentRepository appointmentRepository;
     private final QrTokenService qrTokenService;
@@ -151,10 +151,10 @@ public class VisitorPassService {
                 y = row(content, y, "Agenda Type", firstNonBlank(appointment.getAgendaType(), appointment.getAppointmentType(), "Appointment"));
 
                 drawText(content, PDType1Font.HELVETICA_BOLD, 11, 56, 438, "QR Code Scanner");
-                drawTokenCode(content, qrToken, 56, 355, 480, 72);
-                drawText(content, PDType1Font.HELVETICA, 7, 56, 342, qrToken);
+                drawQrCode(document, content, qrToken, 56, 286, 142, 142);
+                drawText(content, PDType1Font.HELVETICA, 7, 214, 374, qrToken);
 
-                y = 300;
+                y = 250;
                 drawText(content, PDType1Font.HELVETICA_BOLD, 12, 56, y, "Instructions");
                 y -= 18;
                 y = bullet(content, y, "Carry valid ID proof.");
@@ -229,6 +229,18 @@ public class VisitorPassService {
         return Base64.getDecoder().decode(payload);
     }
 
+    private void drawQrCode(PDDocument document,
+                            PDPageContentStream content,
+                            String token,
+                            float x,
+                            float y,
+                            float width,
+                            float height) throws IOException {
+        byte[] qrPng = createQrPng(token);
+        PDImageXObject qrImage = PDImageXObject.createFromByteArray(document, qrPng, "visitor-pass-qr");
+        content.drawImage(qrImage, x, y, width, height);
+    }
+
     private void drawText(PDPageContentStream content, PDType1Font font, int size, float x, float y, String text) throws IOException {
         content.beginText();
         content.setFont(font, size);
@@ -243,30 +255,25 @@ public class VisitorPassService {
         content.stroke();
     }
 
-    private void drawTokenCode(PDPageContentStream content, String token, float x, float y, float width, float height) throws IOException {
-        String value = "*" + safe(token).toUpperCase().replaceAll("[^0-9A-F]", "") + "*";
-        int modules = 0;
-        for (int i = 0; i < value.length(); i++) {
-            String pattern = CODE39.getOrDefault(value.charAt(i), CODE39.get('0'));
-            for (int j = 0; j < pattern.length(); j++) {
-                modules += pattern.charAt(j) == 'w' ? 3 : 1;
-            }
-            modules += 1;
-        }
-        float narrow = width / Math.max(modules, 1);
-        float cursor = x;
-        for (int i = 0; i < value.length(); i++) {
-            String pattern = CODE39.getOrDefault(value.charAt(i), CODE39.get('0'));
-            for (int j = 0; j < pattern.length(); j++) {
-                float barWidth = narrow * (pattern.charAt(j) == 'w' ? 3 : 1);
-                if (j % 2 == 0) {
-                    content.addRect(cursor, y, barWidth, height);
+    private byte[] createQrPng(String token) throws IOException {
+        Map<EncodeHintType, Object> hints = new EnumMap<>(EncodeHintType.class);
+        hints.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.M);
+        hints.put(EncodeHintType.MARGIN, 2);
+
+        try {
+            BitMatrix matrix = new MultiFormatWriter().encode(safe(token), BarcodeFormat.QR_CODE, QR_IMAGE_SIZE, QR_IMAGE_SIZE, hints);
+            BufferedImage image = new BufferedImage(QR_IMAGE_SIZE, QR_IMAGE_SIZE, BufferedImage.TYPE_INT_RGB);
+            for (int y = 0; y < QR_IMAGE_SIZE; y++) {
+                for (int x = 0; x < QR_IMAGE_SIZE; x++) {
+                    image.setRGB(x, y, matrix.get(x, y) ? Color.BLACK.getRGB() : Color.WHITE.getRGB());
                 }
-                cursor += barWidth;
             }
-            cursor += narrow;
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            ImageIO.write(image, "png", out);
+            return out.toByteArray();
+        } catch (WriterException e) {
+            throw new IOException("Unable to generate visitor pass QR code.", e);
         }
-        content.fill();
     }
 
     private String firstNonBlank(String... values) {

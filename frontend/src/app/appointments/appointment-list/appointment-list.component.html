@@ -645,8 +645,13 @@
         </button>
       </div>
       <div class="cmo-form-grid">
+        <mat-form-field appearance="outline" class="full-width-field">
+          <mat-label>Decision</mat-label>
+          <input matInput [(ngModel)]="jtSecDecisionText" placeholder="Forwarded for verification">
+        </mat-form-field>
+
         <mat-form-field appearance="outline">
-          <mat-label>Department</mat-label>
+          <mat-label>Forward to Department</mat-label>
           <mat-select [(ngModel)]="jtSecDepartmentCode">
             <mat-option value="">No department</mat-option>
             <mat-option *ngFor="let department of departments" [value]="department.value">
@@ -656,8 +661,8 @@
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="full-width-field">
-          <mat-label>Remarks *</mat-label>
-          <textarea matInput [(ngModel)]="jtSecRemarksText" rows="4"></textarea>
+          <mat-label>Add Remarks / Notes</mat-label>
+          <textarea matInput [(ngModel)]="jtSecRemarksText" rows="3"></textarea>
         </mat-form-field>
       </div>
 
@@ -667,8 +672,8 @@
                 type="button"
                 [disabled]="actionUpdating"
                 (click)="saveJtSecForwarding()">
-          <mat-icon>{{ jtSecRemarkId ? 'save' : 'send' }}</mat-icon>
-          {{ jtSecRemarkId ? 'Update Remark' : 'Save Remark' }}
+          <mat-icon>save</mat-icon>
+          Save Remarks
         </button>
       </div>
     </section>

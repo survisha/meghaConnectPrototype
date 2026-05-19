@@ -137,6 +137,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   cmoActionUpdating = false;
   errorMsg = '';
   remarksText = '';
+  jtSecDecisionText = '';
   jtSecRemarksText = '';
   jtSecDepartmentCode = '';
   jtSecRemarkId: number | null = null;
@@ -841,15 +842,13 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
 
   canEditJtSecRemark(note: AppointmentRemark) {
     if (!this.canUseJtSecForwarding(this.selectedAppointment) || !note.id) return false;
-    const currentUsername = this.auth.user()?.username;
-    return note.id === this.latestEditableJtSecRemarkId()
-      && note.createdBy === currentUsername
-      && ['APPROVER', 'APPROVER_JT_SECY'].includes(note.createdByRole || '');
+    return true;
   }
 
   editJtSecRemark(note: AppointmentRemark) {
     if (!this.canEditJtSecRemark(note)) return;
     this.jtSecRemarkId = note.id ?? null;
+    this.jtSecDecisionText = note.decision ?? '';
     this.jtSecRemarksText = note.hcmRemarks ?? '';
     this.jtSecDepartmentCode = note.departmentCode ?? '';
   }
@@ -1125,7 +1124,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     const appointment = this.selectedAppointment;
     const payload = {
       hcmRemarks: remarks,
-      decision: this.jtSecDepartmentCode ? 'FORWARDED_TO_DEPARTMENT' : 'REMARK',
+      decision: this.jtSecDecisionText.trim() || (this.jtSecDepartmentCode ? 'FORWARDED_TO_DEPARTMENT' : 'REMARK'),
       departmentCode: this.jtSecDepartmentCode || undefined,
     };
     const request = this.jtSecRemarkId
@@ -1677,7 +1676,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
       .subscribe({
         next: remarks => {
           this.selectedAppointmentRemarks = remarks;
-          if (this.jtSecRemarkId && !this.canEditLoadedJtSecRemark()) {
+          if (this.jtSecRemarkId && !remarks.some(note => note.id === this.jtSecRemarkId)) {
             this.resetJtSecRemarkForm();
           }
         },
@@ -1686,22 +1685,10 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   }
 
   private resetJtSecRemarkForm() {
+    this.jtSecDecisionText = '';
     this.jtSecRemarksText = '';
     this.jtSecDepartmentCode = '';
     this.jtSecRemarkId = null;
-  }
-
-  private latestEditableJtSecRemarkId() {
-    if (!this.canUseJtSecForwarding(this.selectedAppointment)) return null;
-    const currentUsername = this.auth.user()?.username;
-    const ownLatestRemark = this.selectedAppointmentRemarks.find(note =>
-      note.createdBy === currentUsername && ['APPROVER', 'APPROVER_JT_SECY'].includes(note.createdByRole || '')
-    );
-    return ownLatestRemark?.id ?? null;
-  }
-
-  private canEditLoadedJtSecRemark() {
-    return this.jtSecRemarkId === this.latestEditableJtSecRemarkId();
   }
 
   private loadVisitorPhoto(appointment: Appointment) {

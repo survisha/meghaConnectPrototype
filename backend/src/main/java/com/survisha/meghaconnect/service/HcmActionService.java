@@ -175,13 +175,6 @@ public class HcmActionService {
         if (!appointmentId.equals(action.getAppointmentId()) || !"REMARK".equals(action.getActionType())) {
             throw new IllegalArgumentException("Remark does not belong to this appointment.");
         }
-        HcmAction latestOwnRemark = hcmActionRepository
-            .findFirstByAppointmentIdAndActionTypeAndCreatedByOrderByCreatedAtDesc(appointmentId, "REMARK", actor)
-            .orElseThrow(() -> new IllegalArgumentException("No editable remark found for current user."));
-        if (!latestOwnRemark.getId().equals(remarkId)) {
-            throw new IllegalArgumentException("Only the latest remark created by the current user can be edited.");
-        }
-
         Appointment appointment = appointmentRepository.findById(appointmentId)
             .orElseThrow(() -> new IllegalArgumentException("Appointment not found: " + appointmentId));
         String departmentCode = trimToNull(actionDto != null ? actionDto.getDepartmentCode() : null);

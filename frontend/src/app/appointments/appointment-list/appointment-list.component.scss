@@ -483,6 +483,25 @@
   gap: 0.35rem;
 }
 
+.remark-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+
+  button {
+    width: 32px;
+    height: 32px;
+    flex: 0 0 auto;
+  }
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
 .documents-title {
   display: flex;
   align-items: center;

@@ -1,6 +1,6 @@
 export type UserRole =
   | 'HCM' | 'ADMIN' | 'OSD'
-  | 'APPROVER' | 'CMO_OFFICER'
+  | 'APPROVER' | 'APPROVER_JT_SECY' | 'CMO_OFFICER'
   | 'CMO' | 'DATA_ENTRY_OPERATOR'
   | 'SECURITY' | 'PUBLIC' | 'CITIZEN';
 

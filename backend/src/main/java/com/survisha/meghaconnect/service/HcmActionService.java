@@ -34,6 +34,7 @@ public class HcmActionService {
     private final HcmActionRepository hcmActionRepository;
     private final AppointmentRepository appointmentRepository;
     private final ReferenceDataRepository referenceDataRepository;
+    private final AuditLogService auditLogService;
     private final JwtUtils jwtUtils;
     
     /**
@@ -118,7 +119,7 @@ public class HcmActionService {
     public HcmActionDto addRemark(Long appointmentId, HcmActionDto actionDto, String actor, String actorRole) {
         Appointment appointment = appointmentRepository.findById(appointmentId)
             .orElseThrow(() -> new IllegalArgumentException("Appointment not found: " + appointmentId));
-        if (appointment.getScheduledDateTime() == null && appointment.getStatus() != Appointment.AppointmentStatus.SCHEDULED) {
+        if (isHcmOrOsd(actorRole) && appointment.getScheduledDateTime() == null && appointment.getStatus() != Appointment.AppointmentStatus.SCHEDULED) {
             throw new IllegalArgumentException("HCM/OSD remarks can be added only for scheduled appointments.");
         }
 
@@ -144,7 +145,9 @@ public class HcmActionService {
             .build();
         HcmAction saved = hcmActionRepository.save(action);
 
-        if (remarks != null) {
+        if (remarks != null && isApproverRole(actorRole)) {
+            appointment.setApproverRemarks(remarks);
+        } else if (remarks != null) {
             appointment.setHcmRemarks(remarks);
         }
         if (departmentCode != null) {
@@ -155,6 +158,58 @@ public class HcmActionService {
         }
         appointment.setUpdatedBy(actor);
         appointmentRepository.save(appointment);
+        auditLogService.log("Appointment", appointmentId, "REMARK_ADDED",
+            actorRole + " remarks added" + (departmentCode != null ? " and forwarded to " + (departmentName != null ? departmentName : departmentCode) : ""),
+            actor);
+        if (departmentCode != null) {
+            auditLogService.log("Appointment", appointmentId, "FORWARDED_TO_DEPARTMENT",
+                actorRole + " forwarded appointment to " + (departmentName != null ? departmentName : departmentCode),
+                actor);
+        }
+        return convertToDto(saved);
+    }
+
+    public HcmActionDto updateRemark(Long appointmentId, Long remarkId, HcmActionDto actionDto, String actor, String actorRole) {
+        HcmAction action = hcmActionRepository.findById(remarkId)
+            .orElseThrow(() -> new IllegalArgumentException("Remark not found: " + remarkId));
+        if (!appointmentId.equals(action.getAppointmentId()) || !"REMARK".equals(action.getActionType())) {
+            throw new IllegalArgumentException("Remark does not belong to this appointment.");
+        }
+        HcmAction latestOwnRemark = hcmActionRepository
+            .findFirstByAppointmentIdAndActionTypeAndCreatedByOrderByCreatedAtDesc(appointmentId, "REMARK", actor)
+            .orElseThrow(() -> new IllegalArgumentException("No editable remark found for current user."));
+        if (!latestOwnRemark.getId().equals(remarkId)) {
+            throw new IllegalArgumentException("Only the latest remark created by the current user can be edited.");
+        }
+
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+            .orElseThrow(() -> new IllegalArgumentException("Appointment not found: " + appointmentId));
+        String departmentCode = trimToNull(actionDto != null ? actionDto.getDepartmentCode() : null);
+        String departmentName = resolveDepartmentName(departmentCode);
+        String remarks = trimToNull(actionDto != null ? actionDto.getHcmRemarks() : null);
+        String decision = trimToNull(actionDto != null ? actionDto.getDecision() : null);
+
+        action.setHcmRemarks(remarks);
+        action.setDecision(decision);
+        action.setDepartmentCode(departmentCode);
+        action.setDepartmentName(departmentName);
+        HcmAction saved = hcmActionRepository.save(action);
+
+        if (remarks != null && isApproverRole(actorRole)) {
+            appointment.setApproverRemarks(remarks);
+        } else if (remarks != null) {
+            appointment.setHcmRemarks(remarks);
+        }
+        if (departmentCode != null) {
+            appointment.setDepartment(departmentName != null ? departmentName : departmentCode);
+            appointment.setStatus(Appointment.AppointmentStatus.FORWARDED_TO_DEPARTMENT);
+            auditLogService.log("Appointment", appointmentId, "FORWARDED_TO_DEPARTMENT",
+                actorRole + " forwarded appointment to " + (departmentName != null ? departmentName : departmentCode),
+                actor);
+        }
+        appointment.setUpdatedBy(actor);
+        appointmentRepository.save(appointment);
+        auditLogService.log("Appointment", appointmentId, "REMARK_EDITED", actorRole + " remarks edited", actor);
         return convertToDto(saved);
     }
     
@@ -409,6 +464,16 @@ public class HcmActionService {
             case HCM_ACCEPTED, HCM_REJECTED, FORWARDED_TO_DEPARTMENT, COMPLETED, CANCELLED, REJECTED -> false;
             default -> true;
         };
+    }
+
+    private boolean isHcmOrOsd(String actorRole) {
+        String role = trimToNull(actorRole);
+        return "HCM".equals(role) || "OSD".equals(role) || "ADMIN".equals(role);
+    }
+
+    private boolean isApproverRole(String actorRole) {
+        String role = trimToNull(actorRole);
+        return "APPROVER".equals(role) || "APPROVER_JT_SECY".equals(role);
     }
 
     private String resolveDepartmentName(String departmentCode) {

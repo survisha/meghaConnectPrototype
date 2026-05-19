@@ -10,6 +10,7 @@ import com.survisha.meghaconnect.dto.ScheduleEventDto;
 import com.survisha.meghaconnect.entity.Appointment;
 import com.survisha.meghaconnect.service.AppointmentDocumentAiNotesService;
 import com.survisha.meghaconnect.service.AppointmentService;
+import com.survisha.meghaconnect.service.AuditLogService;
 import com.survisha.meghaconnect.service.HcmActionService;
 import com.survisha.meghaconnect.service.ScheduleEventService;
 import com.survisha.meghaconnect.service.VisitorPassService;
@@ -56,6 +57,7 @@ public class AppointmentController {
     private final ScheduleEventService scheduleEventService;
     private final HcmActionService hcmActionService;
     private final VisitorPassService visitorPassService;
+    private final AuditLogService auditLogService;
 
     @Operation(summary = "Get all appointments", description = "Retrieve paginated list of all appointments")
     @ApiResponses(value = {
@@ -239,13 +241,39 @@ public class AppointmentController {
     }
 
     @PostMapping("/{id}/remarks")
-    @PreAuthorize("hasAnyRole('HCM','OSD','ADMIN')")
+    @PreAuthorize("hasAnyRole('HCM','OSD','ADMIN','APPROVER','APPROVER_JT_SECY')")
     public ResponseEntity<HcmActionDto> addRemark(@PathVariable Long id,
                                                   @RequestBody HcmActionDto body,
                                                   Authentication authentication) {
         logEndpoint("/api/v1/appointments/{id}/remarks");
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(hcmActionService.addRemark(id, body, actor(authentication), role(authentication)));
+    }
+
+    @PutMapping("/{id}/remarks/{remarkId}")
+    @PreAuthorize("hasAnyRole('APPROVER','APPROVER_JT_SECY')")
+    public ResponseEntity<HcmActionDto> updateRemark(@PathVariable Long id,
+                                                     @PathVariable Long remarkId,
+                                                     @RequestBody HcmActionDto body,
+                                                     Authentication authentication) {
+        logEndpoint("/api/v1/appointments/{id}/remarks/{remarkId}");
+        return ResponseEntity.ok(hcmActionService.updateRemark(id, remarkId, body, actor(authentication), role(authentication)));
+    }
+
+    @PostMapping("/export-audit")
+    @PreAuthorize("hasAnyRole('CMO','CMO_OFFICER','APPROVER','APPROVER_JT_SECY')")
+    public ResponseEntity<Void> auditPdfExport(@RequestBody Map<String, Object> body,
+                                               Authentication authentication) {
+        logEndpoint("/api/v1/appointments/export-audit");
+        List<Long> appointmentIds = longList(body != null ? body.get("appointmentIds") : null);
+        Object selectedCount = body != null ? body.get("selectedCount") : appointmentIds.size();
+        Object filters = body != null ? body.get("filters") : null;
+        auditLogService.log("Appointment", null, "PDF_EXPORT",
+            "Appointment Agenda List PDF exported. selectedCount=" + selectedCount
+                + ", filters=" + filters
+                + ", appointmentIds=" + appointmentIds,
+            actor(authentication));
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping(value = "/{id}/supporting-documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

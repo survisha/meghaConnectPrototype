@@ -17,6 +17,8 @@ public interface HcmActionRepository extends JpaRepository<HcmAction, Long> {
     List<HcmAction> findByAppointmentIdOrderByCreatedAtDesc(Long appointmentId);
 
     List<HcmAction> findByAppointmentIdAndActionTypeOrderByCreatedAtDesc(Long appointmentId, String actionType);
+
+    Optional<HcmAction> findFirstByAppointmentIdAndActionTypeAndCreatedByOrderByCreatedAtDesc(Long appointmentId, String actionType, String createdBy);
     
     /**
      * Find the most recent action for an appointment

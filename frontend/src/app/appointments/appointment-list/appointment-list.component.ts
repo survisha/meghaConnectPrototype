@@ -30,6 +30,8 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { apiErrorMessage } from '../../shared/api-error.util';
 import { CameraCaptureService, CameraFacingMode } from '../../shared/camera-capture.service';
 
@@ -135,6 +137,9 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   cmoActionUpdating = false;
   errorMsg = '';
   remarksText = '';
+  jtSecRemarksText = '';
+  jtSecDepartmentCode = '';
+  jtSecRemarkId: number | null = null;
   rescheduleDate: Date | null = null;
   rescheduleTime = '10:00';
   pendingAction: 'APPROVE' | 'REJECT' | null = null;
@@ -151,6 +156,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   selectedAiNotes: AppointmentDocumentAiNotes[] = [];
   selectedAppointmentIds = new Set<number>();
   availableEvents: ScheduleEvent[] = [];
+  departments: Array<{ label: string; value: string }> = [];
   selectedEventId: number | null = null;
   eventTypeOptions: Array<{ label: string; value: EventType | '' }> = [{ label: 'All Types', value: '' }];
   displayedColumns: string[] = ['select', 'applicant', 'designation', 'constituency', 'agenda', 'eventType', 'location', 'status', 'createdAt', 'aiNotes', 'actions'];
@@ -241,6 +247,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.configureRoleDefaults();
     this.loadAppointmentTypes();
+    this.loadDepartments();
     this.loadScheduleEvents();
     this.loadAppointments();
   }
@@ -266,6 +273,17 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
       },
       error: error => {
         this.errorMsg = apiErrorMessage(error, 'Unable to load appointment types.');
+      }
+    });
+  }
+
+  private loadDepartments() {
+    this.referenceDataService.getByType('DEPARTMENT').subscribe({
+      next: values => {
+        this.departments = (values ?? []).map(item => ({ label: item.value, value: item.code }));
+      },
+      error: error => {
+        this.snackBar.open(apiErrorMessage(error, 'Unable to load departments.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] });
       }
     });
   }
@@ -494,6 +512,10 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     return s.replace(/_/g, ' ');
   }
 
+  getStatusFilterLabel() {
+    return this.filterStatus ? this.getStatusLabel(this.filterStatus as AppointmentStatus) : 'All';
+  }
+
   getDisplayName(appointment: Appointment) {
     return appointment.guestName || appointment.applicant?.fullName || appointment.applicantName || '-';
   }
@@ -542,11 +564,11 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   }
 
   canSelectAppointments() {
-    return this.auth.hasRole('APPROVER', 'ADMIN', 'OSD');
+    return this.auth.hasRole('APPROVER', 'APPROVER_JT_SECY', 'CMO_OFFICER', 'CMO', 'ADMIN', 'OSD');
   }
 
   canSelectAppointment(appointment: Appointment) {
-    return this.canSelectAppointments() && (appointment.status === 'APPROVED' || this.isFollowUpStatus(appointment.status));
+    return this.canSelectAppointments() && !!appointment;
   }
 
   toggleSelection(appointment: Appointment, checked: boolean) {
@@ -580,7 +602,11 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   }
 
   get selectedAppointments() {
-    return this.appointments.filter(appointment => this.selectedAppointmentIds.has(appointment.id));
+    return this.filtered.filter(appointment => this.selectedAppointmentIds.has(appointment.id));
+  }
+
+  get canExportPdf() {
+    return this.auth.hasRole('CMO_OFFICER', 'CMO', 'APPROVER', 'APPROVER_JT_SECY');
   }
 
   get canMarkSelectedFollowUp() {
@@ -807,6 +833,29 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
 
   canUseApproverActions(appointment: Appointment | null) {
     return !!appointment && this.auth.hasRole('HCM', 'ADMIN', 'OSD', 'APPROVER');
+  }
+
+  canUseJtSecForwarding(appointment: Appointment | null) {
+    return !!appointment && this.auth.hasRole('APPROVER', 'APPROVER_JT_SECY');
+  }
+
+  canEditJtSecRemark(note: AppointmentRemark) {
+    if (!this.canUseJtSecForwarding(this.selectedAppointment) || !note.id) return false;
+    const currentUsername = this.auth.user()?.username;
+    return note.id === this.latestEditableJtSecRemarkId()
+      && note.createdBy === currentUsername
+      && ['APPROVER', 'APPROVER_JT_SECY'].includes(note.createdByRole || '');
+  }
+
+  editJtSecRemark(note: AppointmentRemark) {
+    if (!this.canEditJtSecRemark(note)) return;
+    this.jtSecRemarkId = note.id ?? null;
+    this.jtSecRemarksText = note.hcmRemarks ?? '';
+    this.jtSecDepartmentCode = note.departmentCode ?? '';
+  }
+
+  cancelJtSecRemarkEdit() {
+    this.resetJtSecRemarkForm();
   }
 
   canApproveOrReject(appointment: Appointment | null) {
@@ -1065,6 +1114,38 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
       });
   }
 
+  saveJtSecForwarding() {
+    const remarks = this.jtSecRemarksText.trim();
+    if (!this.selectedAppointment || !this.canUseJtSecForwarding(this.selectedAppointment) || this.actionUpdating) return;
+    if (!remarks) {
+      this.snackBar.open('Please enter remarks before saving.', 'Close', { duration: 3000, panelClass: ['error-snackbar'] });
+      return;
+    }
+
+    const appointment = this.selectedAppointment;
+    const payload = {
+      hcmRemarks: remarks,
+      decision: this.jtSecDepartmentCode ? 'FORWARDED_TO_DEPARTMENT' : 'REMARK',
+      departmentCode: this.jtSecDepartmentCode || undefined,
+    };
+    const request = this.jtSecRemarkId
+      ? this.appointmentService.updateRemark(appointment.id, this.jtSecRemarkId, payload)
+      : this.appointmentService.addRemark(appointment.id, payload);
+
+    this.actionUpdating = true;
+    request.pipe(finalize(() => this.actionUpdating = false))
+      .subscribe({
+        next: note => {
+          const wasEditing = Boolean(this.jtSecRemarkId);
+          this.resetJtSecRemarkForm();
+          this.loadAppointmentRemarks(appointment.id);
+          this.loadAppointmentById(appointment.id);
+          this.snackBar.open(wasEditing ? 'JtSec remark updated.' : 'JtSec remark saved.', 'Close', { duration: 5000, panelClass: ['success-snackbar'] });
+        },
+        error: error => this.snackBar.open(apiErrorMessage(error, 'Failed to save JtSec remarks.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] })
+      });
+  }
+
   onSupportingDocumentSelected(event: Event) {
     const input = event.target as HTMLInputElement;
     this.selectedSupportingDocument = input.files?.[0] ?? null;
@@ -1171,6 +1252,16 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     this.applyFilter();
   }
 
+  private loadAppointmentById(appointmentId: number) {
+    this.appointmentService.getAppointmentById(appointmentId)
+      .pipe(catchError(() => of(null)))
+      .subscribe(updated => {
+        if (!updated) return;
+        this.selectedAppointment = updated;
+        this.replaceAppointment(updated);
+      });
+  }
+
   private isFollowUpStatus(status: AppointmentStatus) {
     return this.followUpStatuses.includes(status);
   }
@@ -1183,57 +1274,190 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   }
 
   openExportDialog() {
-    this.appointmentExportDialogRef = this.dialog.open(this.appointmentExportDialog, {
-      width: '620px',
-      maxWidth: '94vw',
-      autoFocus: false,
-      panelClass: 'appointment-action-dialog-panel'
-    });
-    this.appointmentExportDialogRef.afterClosed().subscribe(() => {
-      this.appointmentExportDialogRef = undefined;
-    });
+    this.exportSelectedToPdf();
   }
 
   closeExportDialog() {
     this.appointmentExportDialogRef?.close();
   }
 
-  setAllExportOptions(value: boolean) {
-    Object.keys(this.exportOptions).forEach(key => {
-      this.exportOptions[key as keyof AppointmentExportOptions] = value;
-    });
-  }
-
   get canExportWithCurrentOptions() {
-    return this.filtered.length > 0 && Object.values(this.exportOptions).some(Boolean);
+    return this.canExportPdf && this.selectedAppointments.length > 0;
   }
 
-  exportFilteredToCsv() {
-    if (!this.canExportWithCurrentOptions || this.exportPreparing) return;
-    const appointments = [...this.filtered];
-    this.exportPreparing = true;
-    const remarksSource = this.exportOptions.hcmActions
-      ? forkJoin(appointments.map(appointment =>
-          this.appointmentService.getRemarks(appointment.id).pipe(catchError(() => of([] as AppointmentRemark[])))
-        ))
-      : of([] as AppointmentRemark[][]);
+  exportSelectedToPdf() {
+    if (!this.canExportPdf || this.exportPreparing) return;
+    const appointments = [...this.selectedAppointments];
+    if (appointments.length === 0) {
+      this.snackBar.open('Please select at least one appointment to export.', 'Close', { duration: 4000, panelClass: ['error-snackbar'] });
+      return;
+    }
 
-    remarksSource
+    this.exportPreparing = true;
+    const remarksSource = forkJoin(appointments.map(appointment =>
+      this.appointmentService.getRemarks(appointment.id).pipe(catchError(() => of([] as AppointmentRemark[])))
+    ));
+    const photoSource = forkJoin(appointments.map(appointment =>
+      this.loadExportPhoto(appointment).catch(() => null)
+    ));
+
+    forkJoin({ remarksRows: remarksSource, photoRows: photoSource })
       .pipe(finalize(() => this.exportPreparing = false))
       .subscribe({
-        next: remarksRows => {
+        next: ({ remarksRows, photoRows }) => {
           const remarksByAppointmentId = new Map<number, AppointmentRemark[]>();
           appointments.forEach((appointment, index) => {
             remarksByAppointmentId.set(appointment.id, remarksRows[index] ?? []);
           });
-          const { headers, rows } = this.buildAppointmentExport(appointments, remarksByAppointmentId);
-          const csv = [headers, ...rows].map(row => row.map(value => this.csvCell(value)).join(',')).join('\r\n');
-          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-          this.triggerBlobDownload(blob, `appointments-${new Date().toISOString().slice(0, 10)}.csv`);
+          this.generateAppointmentPdf(appointments, remarksByAppointmentId, photoRows);
+          this.auditPdfExport(appointments);
           this.closeExportDialog();
         },
         error: error => this.snackBar.open(apiErrorMessage(error, 'Unable to export appointments.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] })
       });
+  }
+
+  private generateAppointmentPdf(
+    appointments: Appointment[],
+    remarksByAppointmentId: Map<number, AppointmentRemark[]>,
+    photoRows: Array<string | null>
+  ) {
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const generatedAt = new Date();
+    const photoByRow = new Map<number, string>();
+    photoRows.forEach((photo, index) => {
+      if (photo) photoByRow.set(index, photo);
+    });
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.text('Appointment Agenda List', 14, 14);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.text(`Generated: ${generatedAt.toLocaleString()}`, 14, 21);
+    doc.text(`From Date: ${this.filterFromDate ? this.filterFromDate.toLocaleDateString() : 'All'}`, 14, 27);
+    doc.text(`To Date: ${this.filterToDate ? this.filterToDate.toLocaleDateString() : 'All'}`, 70, 27);
+    doc.text(`Status: ${this.filterStatus ? this.getStatusLabel(this.filterStatus as AppointmentStatus) : 'All'}`, 126, 27);
+
+    autoTable(doc, {
+      startY: 34,
+      head: [['S.No', 'Applicant Name', 'Agenda', 'Brief Agenda / Brief Description', 'Mobile Number', 'Visitor Photo', 'Remarks']],
+      body: appointments.map((appointment, index) => [
+        index + 1,
+        this.getDisplayName(appointment),
+        appointment.agendaType || appointment.subject || '-',
+        appointment.agendaBrief || appointment.reasonForAppointment || appointment.applicant?.briefDescription || '-',
+        this.getDisplayPhone(appointment),
+        photoByRow.has(index) ? '' : 'No Photo',
+        this.exportRemarks(appointment, remarksByAppointmentId.get(appointment.id) ?? []),
+      ]),
+      theme: 'grid',
+      styles: { font: 'helvetica', fontSize: 8, cellPadding: 2, overflow: 'linebreak', valign: 'middle' },
+      headStyles: { fillColor: [31, 41, 55], textColor: 255, fontStyle: 'bold' },
+      columnStyles: {
+        0: { cellWidth: 12, halign: 'center' },
+        1: { cellWidth: 36 },
+        2: { cellWidth: 34 },
+        3: { cellWidth: 70 },
+        4: { cellWidth: 28 },
+        5: { cellWidth: 28, minCellHeight: 24, halign: 'center' },
+        6: { cellWidth: 70 },
+      },
+      margin: { left: 14, right: 14 },
+      didParseCell: data => {
+        if (data.section === 'body' && data.column.index === 5) {
+          data.cell.styles.minCellHeight = 24;
+        }
+      },
+      didDrawCell: data => {
+        if (data.section !== 'body' || data.column.index !== 5) return;
+        const photo = photoByRow.get(data.row.index);
+        if (!photo) return;
+        try {
+          doc.addImage(photo, this.imageFormat(photo), data.cell.x + 5, data.cell.y + 2, 18, 18);
+        } catch {
+          doc.setFontSize(8);
+          doc.text('No Photo', data.cell.x + 5, data.cell.y + 12);
+        }
+      },
+    });
+
+    doc.save(`appointment-agenda-list-${generatedAt.toISOString().slice(0, 10)}.pdf`);
+  }
+
+  private exportRemarks(appointment: Appointment, remarks: AppointmentRemark[]) {
+    const values = [
+      appointment.cmoRemarks,
+      appointment.approverRemarks,
+      appointment.hcmRemarks,
+      ...remarks.map(note => note.hcmRemarks),
+    ].filter(Boolean) as string[];
+    return Array.from(new Set(values)).join('\n') || '-';
+  }
+
+  private async loadExportPhoto(appointment: Appointment): Promise<string | null> {
+    const directPhoto = await this.toPdfImageData(this.resolveVisitorPhoto(appointment.applicant));
+    if (directPhoto) return directPhoto;
+
+    const visitorId = appointment.applicantId || appointment.applicant?.id;
+    if (!visitorId) return null;
+
+    const visitor = await new Promise<any | null>(resolve => {
+      this.visitorService.getById(visitorId)
+        .pipe(catchError(() => of(null)))
+        .subscribe(value => resolve(value));
+    });
+    return this.toPdfImageData(this.resolveVisitorPhoto(visitor));
+  }
+
+  private async toPdfImageData(value?: string | null): Promise<string | null> {
+    const photo = (value || '').trim();
+    if (!photo) return null;
+    if (photo.startsWith('data:image/')) return photo;
+    if (/^[A-Za-z0-9+/=]+$/.test(photo) && photo.length > 100) {
+      return `data:image/jpeg;base64,${photo}`;
+    }
+    if (/^https?:\/\//i.test(photo) || photo.startsWith('/')) {
+      return this.imageUrlToDataUri(photo).catch(() => null);
+    }
+    return null;
+  }
+
+  private imageUrlToDataUri(url: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.crossOrigin = 'anonymous';
+      image.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = image.naturalWidth;
+        canvas.height = image.naturalHeight;
+        const context = canvas.getContext('2d');
+        if (!context) {
+          reject(new Error('Canvas is unavailable.'));
+          return;
+        }
+        context.drawImage(image, 0, 0);
+        resolve(canvas.toDataURL('image/jpeg', 0.82));
+      };
+      image.onerror = () => reject(new Error('Image load failed.'));
+      image.src = url;
+    });
+  }
+
+  private imageFormat(dataUri: string): 'JPEG' | 'PNG' {
+    return dataUri.toLowerCase().startsWith('data:image/png') ? 'PNG' : 'JPEG';
+  }
+
+  private auditPdfExport(appointments: Appointment[]) {
+    this.appointmentService.auditPdfExport({
+      selectedCount: appointments.length,
+      appointmentIds: appointments.map(appointment => appointment.id),
+      filters: {
+        fromDate: this.filterFromDate ? this.toLocalDate(this.filterFromDate) : undefined,
+        toDate: this.filterToDate ? this.toLocalDate(this.filterToDate) : undefined,
+        status: this.filterStatus || undefined,
+      },
+    }).pipe(catchError(() => of(undefined))).subscribe();
   }
 
   private buildAppointmentExport(appointments: Appointment[], remarksByAppointmentId: Map<number, AppointmentRemark[]>) {
@@ -1369,6 +1593,11 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
   }
 
+  private toLocalDate(date: Date): string {
+    const pad = (part: number) => part.toString().padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  }
+
   private toTimeInputValue(date: Date): string {
     const pad = (part: number) => part.toString().padStart(2, '0');
     return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
@@ -1433,6 +1662,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     this.selectedAppointmentRemarks = [];
     this.selectedAppointmentRemarksError = '';
     this.selectedAppointmentRemarksLoading = false;
+    this.resetJtSecRemarkForm();
     this.selectedSupportingDocument = null;
     this.stopProofCamera();
     this.clearProofCapture();
@@ -1445,9 +1675,33 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     this.appointmentService.getRemarks(appointmentId)
       .pipe(finalize(() => this.selectedAppointmentRemarksLoading = false))
       .subscribe({
-        next: remarks => this.selectedAppointmentRemarks = remarks,
+        next: remarks => {
+          this.selectedAppointmentRemarks = remarks;
+          if (this.jtSecRemarkId && !this.canEditLoadedJtSecRemark()) {
+            this.resetJtSecRemarkForm();
+          }
+        },
         error: error => this.selectedAppointmentRemarksError = apiErrorMessage(error, 'Unable to load HCM/OSD remarks.')
       });
+  }
+
+  private resetJtSecRemarkForm() {
+    this.jtSecRemarksText = '';
+    this.jtSecDepartmentCode = '';
+    this.jtSecRemarkId = null;
+  }
+
+  private latestEditableJtSecRemarkId() {
+    if (!this.canUseJtSecForwarding(this.selectedAppointment)) return null;
+    const currentUsername = this.auth.user()?.username;
+    const ownLatestRemark = this.selectedAppointmentRemarks.find(note =>
+      note.createdBy === currentUsername && ['APPROVER', 'APPROVER_JT_SECY'].includes(note.createdByRole || '')
+    );
+    return ownLatestRemark?.id ?? null;
+  }
+
+  private canEditLoadedJtSecRemark() {
+    return this.jtSecRemarkId === this.latestEditableJtSecRemarkId();
   }
 
   private loadVisitorPhoto(appointment: Appointment) {

@@ -100,6 +100,16 @@ export interface AppointmentRemark {
   createdAt?: string;
 }
 
+export interface AppointmentPdfExportAuditRequest {
+  selectedCount: number;
+  appointmentIds: number[];
+  filters: {
+    fromDate?: string;
+    toDate?: string;
+    status?: string;
+  };
+}
+
 export interface PilotImportRowResult {
   rowNumber: number;
   srNo?: string;
@@ -326,6 +336,14 @@ export class AppointmentService {
     return this.http.post<AppointmentRemark>(`${this.baseUrl}/${appointmentId}/remarks`, payload);
   }
 
+  updateRemark(appointmentId: number, remarkId: number, payload: { hcmRemarks: string; decision?: string; departmentCode?: string }): Observable<AppointmentRemark> {
+    return this.http.put<AppointmentRemark>(`${this.baseUrl}/${appointmentId}/remarks/${remarkId}`, payload);
+  }
+
+  auditPdfExport(payload: AppointmentPdfExportAuditRequest): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/export-audit`, payload);
+  }
+
   uploadSupportingDocument(appointmentId: number, file: File): Observable<AppointmentDocument> {
     const formData = new FormData();
     formData.append('file', file, file.name);
@@ -387,6 +405,11 @@ export class AppointmentService {
       photoStoragePath: applicantRaw.photoStoragePath,
       photoPath: applicantRaw.photoPath,
       designation: applicantRaw.designation ?? raw.guestDesignation ?? raw.designation ?? '',
+      address: applicantRaw.address ?? raw.address,
+      fullAddress: applicantRaw.fullAddress ?? raw.fullAddress,
+      address1: applicantRaw.address1 ?? raw.address1,
+      addressLine: applicantRaw.addressLine ?? raw.addressLine,
+      outsideMeghalaya: applicantRaw.outsideMeghalaya ?? raw.outsideMeghalaya,
       district: applicantRaw.district ?? raw.district ?? '',
       constituency: applicantRaw.constituency ?? '',
       booth: applicantRaw.booth ?? '',
@@ -394,6 +417,8 @@ export class AppointmentService {
       partNumber: applicantRaw.partNumber ?? applicantRaw.pollingPartNo,
       pollingPartNo: applicantRaw.pollingPartNo,
       village: applicantRaw.village,
+      agendaType: applicantRaw.agendaType,
+      briefDescription: applicantRaw.briefDescription,
       briefProfile: applicantRaw.briefProfile,
       kycStatus: applicantRaw.kycStatus,
     };

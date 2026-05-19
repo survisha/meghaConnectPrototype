@@ -4,12 +4,12 @@ export type CameraFacingMode = 'user' | 'environment';
 
 @Injectable({ providedIn: 'root' })
 export class CameraCaptureService {
-  async open(facingMode: CameraFacingMode): Promise<MediaStream> {
+  async open(facingMode: CameraFacingMode, deviceId?: string): Promise<MediaStream> {
     if (!navigator.mediaDevices?.getUserMedia) {
       throw new Error('Camera is not available on this device.');
     }
 
-    const constraints = this.constraintsFor(facingMode);
+    const constraints = deviceId ? this.deviceConstraintsFor(deviceId) : this.constraintsFor(facingMode);
     try {
       return await navigator.mediaDevices.getUserMedia(constraints);
     } catch (error) {
@@ -20,6 +20,14 @@ export class CameraCaptureService {
         video: { width: { ideal: 640 }, height: { ideal: 480 } }
       });
     }
+  }
+
+  async listVideoDevices(): Promise<MediaDeviceInfo[]> {
+    if (!navigator.mediaDevices?.enumerateDevices) {
+      return [];
+    }
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    return devices.filter(device => device.kind === 'videoinput');
   }
 
   attach(videoElement: HTMLVideoElement, stream: MediaStream): void {
@@ -58,10 +66,24 @@ export class CameraCaptureService {
     return facingMode === 'user' ? 'Front camera' : 'Back camera';
   }
 
+  deviceLabel(device: MediaDeviceInfo, index: number): string {
+    return device.label || `Camera ${index + 1}`;
+  }
+
   private constraintsFor(facingMode: CameraFacingMode): MediaStreamConstraints {
     return {
       video: {
         facingMode: { ideal: facingMode },
+        width: { ideal: 640 },
+        height: { ideal: 480 },
+      }
+    };
+  }
+
+  private deviceConstraintsFor(deviceId: string): MediaStreamConstraints {
+    return {
+      video: {
+        deviceId: { exact: deviceId },
         width: { ideal: 640 },
         height: { ideal: 480 },
       }

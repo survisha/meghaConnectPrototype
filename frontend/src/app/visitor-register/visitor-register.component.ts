@@ -19,6 +19,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LanguageSelectorComponent } from '../shared/language-selector/language-selector.component';
 import { apiErrorMessage } from '../shared/api-error.util';
 import { CameraCaptureService, CameraFacingMode } from '../shared/camera-capture.service';
+import { ReferenceDataService } from '../services/reference-data.service';
 
 type KycStep = 'id-entry' | 'otp-verification' | 'photo-capture' | 'additional-details' | 'kyc-complete';
 type MobileValidationType = 'warning' | 'error' | 'success' | '';
@@ -44,7 +45,7 @@ interface VisitorRegistrationForm {
   gender: string;
   dateOfBirth: string;
   outsideState: boolean;
-  idType: 'EPIC' | 'AADHAAR' | '';
+  idType: 'EPIC' | 'AADHAAR' | 'NONE' | '';
   epicNumber: string;
   visitorName: string;     // Name as on voter card (for EPIC verification)
   aadhaarNumber: string;
@@ -69,6 +70,8 @@ interface VisitorRegistrationForm {
   aadhaarClientTxnId?: string;
   aadhaarAppId?: string;
   maskedIdentityNumber?: string;
+  agendaType?: string;
+  briefDescription?: string;
 }
 
 interface RegistrationCheckResponse {
@@ -81,7 +84,7 @@ interface RegistrationCheckResponse {
 
 interface VerifiedKycData {
   kycVerified: boolean;
-  kycType: 'EPIC' | 'AADHAAR';
+  kycType: 'EPIC' | 'AADHAAR' | 'NONE';
   kycReferenceId?: string;
   visitorName?: string;
   mobile?: string;
@@ -105,6 +108,8 @@ interface VerifiedKycData {
   relativeName?: string;
   pollingPartNo?: string;
   pollingStationAddress?: string;
+  agendaType?: string;
+  briefDescription?: string;
   nameMatchScore?: number;
   idFound?: boolean;
   voterIdVerificationCompletionTimestamp?: string;
@@ -167,15 +172,13 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     otp: '',
     livePhoto: '',
     photoFromId: '',
+    agendaType: '',
+    briefDescription: '',
   };
 
   // Reference data
   designations: { code: string; value: string }[] = [];
-  districts = [
-    'East Khasi Hills', 'West Khasi Hills', 'South West Khasi Hills', 'Ri Bhoi',
-    'East Jaintia Hills', 'West Jaintia Hills', 'East Garo Hills', 'West Garo Hills',
-    'South Garo Hills', 'North Garo Hills', 'Eastern West Khasi Hills'
-  ];
+  agendaTypes: string[] = [];
 
   // UI state
   errorMsg = '';
@@ -214,6 +217,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   isCameraActive = false;
   capturedPhotoUrl = '';
   cameraFacingMode: CameraFacingMode = 'user';
+  cameraDevices: MediaDeviceInfo[] = [];
+  selectedCameraDeviceId = '';
 
   // KYC confidence indicator (R009)
   kycConfidenceScore = 0;
@@ -242,7 +247,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     private auth: AuthService,
     private cdr: ChangeDetectorRef,
     private translate: TranslateService,
-    private cameraCapture: CameraCaptureService
+    private cameraCapture: CameraCaptureService,
+    private referenceDataService: ReferenceDataService
   ) {
     // Detect DEO mode from route snapshot URL segments
     this.isDeoMode = this.route.snapshot.url.some(segment => segment.path === 'register-visitor');
@@ -256,6 +262,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.loadDesignations();
+    this.loadAgendaTypes();
+    this.loadCameraDevices();
   }
 
   ngOnDestroy() {
@@ -284,12 +292,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   }
 
   get canValidateId(): boolean {
-    if (this.kycPendingAllowed || this.form.kycStatus === 'KYC_PENDING') {
-      this.kycStatus = 'KYC_PENDING';
-      this.form.kycStatus = 'KYC_PENDING';
-      this.kycConfidenceScore = 0;
-      this.kycConfidenceLabel = 'Pending';
-    } else if (this.form.idType === 'EPIC') {
+    if (this.form.idType === 'EPIC') {
       const hasValidEpic = /^[A-Za-z]{3}[0-9]{7}$/.test(this.form.epicNumber);
       const hasValidName = this.form.visitorName && this.form.visitorName.trim().length > 0;
       return hasValidEpic && !!hasValidName;
@@ -297,7 +300,22 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     if (this.form.idType === 'AADHAAR') {
       return /^\d{12}$/.test(this.form.aadhaarNumber);
     }
+    if (this.form.idType === 'NONE') {
+      return !!this.form.fullName.trim() && this.isManualPhoneValid && !this.duplicateRegistrationBlocked;
+    }
     return false;
+  }
+
+  loadAgendaTypes() {
+    this.referenceDataService.getByType('CM_AGENDA_MEETING').subscribe({
+      next: data => {
+        this.agendaTypes = (data || []).map(item => item.value).filter(Boolean);
+      },
+      error: err => {
+        this.agendaTypes = [];
+        this.errorMsg = apiErrorMessage(err, 'Unable to load agenda types.');
+      }
+    });
   }
 
   get isManualPhoneValid(): boolean {
@@ -330,6 +348,12 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
     this.errorMsg = '';
     this.loading = true;
+
+    // Check if Aadhaar OVSE flow should be used
+    if (this.form.idType === 'NONE') {
+      this.checkRegistrationStatus(true);
+      return;
+    }
 
     // Check if Aadhaar OVSE flow should be used
     if (this.form.idType === 'AADHAAR') {
@@ -640,7 +664,12 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       sectionNumber,
       relativeName: data.relativenameonvoterid || data.relativemameonvoterid || '',
       pollingPartNo: polling.pollingpartno || polling.pollingPartNo || '',
-      pollingStationAddress: polling.pollingstationaddress || polling.pollingStationAddress || '',
+      pollingStationAddress: polling.pollingstationaddress
+        || polling.pollingStationAddress
+        || polling.pollingstationpartname
+        || polling.pollingStationPartName
+        || polling.pollingStationPartname
+        || '',
       nameMatchScore: Number.isFinite(nameMatchScore) ? nameMatchScore : 0,
       idFound: Boolean(data.idFound ?? response?.idFound ?? false),
       voterIdVerificationCompletionTimestamp: data.voteridverificationcompletiontimestamp || '',
@@ -802,6 +831,34 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.idValidated = true;
     this.errorMsg = '';
     this.successMsg = 'Continue with registration. KYC status will remain Pending until verification is retried.';
+    this.currentStep = 'photo-capture';
+  }
+
+  continueWithNoId() {
+    if (!this.form.fullName.trim()) {
+      this.errorMsg = 'Full name is required.';
+      return;
+    }
+    if (!this.isManualPhoneValid) {
+      this.errorMsg = this.t('ERROR_VALID_10_DIGIT_MOBILE');
+      return;
+    }
+    this.actualPhoneNumber = this.manualPhone;
+    this.form.phoneNumber = this.manualPhone;
+    this.form.kycStatus = 'KYC_PENDING';
+    this.form.kycProvider = 'NONE';
+    this.kycStatus = 'KYC_PENDING';
+    this.kycConfidenceScore = 0;
+    this.kycConfidenceLabel = 'Pending';
+    this.verifiedKycData = {
+      kycVerified: false,
+      kycType: 'NONE',
+      visitorName: this.form.fullName,
+      mobile: this.form.phoneNumber,
+    };
+    this.idValidated = true;
+    this.errorMsg = '';
+    this.successMsg = 'Continue with photo capture. KYC status will be Pending.';
     this.currentStep = 'photo-capture';
   }
 
@@ -980,8 +1037,9 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     try {
       this.errorMsg = '';
       this.stopCamera();
-      this.videoStream = await this.cameraCapture.open(this.cameraFacingMode);
+      this.videoStream = await this.cameraCapture.open(this.cameraFacingMode, this.selectedCameraDeviceId || undefined);
       this.isCameraActive = true;  // Changed from showCamera to isCameraActive
+      this.loadCameraDevices();
       
       // Wait for next tick to ensure video element exists
       setTimeout(() => {
@@ -990,8 +1048,10 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
           this.cameraCapture.attach(videoElement, this.videoStream);
         }
       }, 100);
-    } catch {
-      this.errorMsg = this.t('CAMERA_ACCESS_DENIED');
+    } catch (err) {
+      this.errorMsg = err instanceof Error && err.message
+        ? err.message
+        : this.t('CAMERA_ACCESS_DENIED');
     }
   }
 
@@ -1031,9 +1091,32 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   }
 
   switchCamera() {
+    this.selectedCameraDeviceId = '';
     this.cameraFacingMode = this.cameraCapture.toggle(this.cameraFacingMode);
     if (this.isCameraActive) {
       this.openCamera();
+    }
+  }
+
+  onCameraDeviceChange(deviceId: string) {
+    this.selectedCameraDeviceId = deviceId;
+    if (this.isCameraActive) {
+      this.openCamera();
+    }
+  }
+
+  cameraDeviceLabel(device: MediaDeviceInfo, index: number): string {
+    return this.cameraCapture.deviceLabel(device, index);
+  }
+
+  private async loadCameraDevices() {
+    try {
+      this.cameraDevices = await this.cameraCapture.listVideoDevices();
+      if (!this.selectedCameraDeviceId && this.cameraDevices.length) {
+        this.selectedCameraDeviceId = this.cameraDevices[0].deviceId;
+      }
+    } catch {
+      this.cameraDevices = [];
     }
   }
 
@@ -1067,6 +1150,11 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       this.form.kycStatus = 'DEMOGRAPHIC_MATCHED';
       this.kycConfidenceScore = this.kycConfidenceScore || 75;
       this.kycConfidenceLabel = this.kycConfidenceLabel || this.t('CONFIDENCE_DEMOGRAPHIC');
+    } else if (this.form.idType === 'NONE') {
+      this.kycStatus = 'KYC_PENDING';
+      this.form.kycStatus = 'KYC_PENDING';
+      this.kycConfidenceScore = 0;
+      this.kycConfidenceLabel = 'Pending';
     } else if (!this.form.kycStatus) {
       this.kycStatus = 'PHOTO_MATCHED';
       this.form.kycStatus = 'PHOTO_MATCHED';
@@ -1198,6 +1286,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       idFound: this.form.idFound,
       aadhaarClientTxnId: this.form.aadhaarClientTxnId,
       aadhaarAppId: this.form.aadhaarAppId,
+      agendaType: this.form.agendaType,
+      briefDescription: this.form.briefDescription,
     };
 
     if (this.form.idType === 'EPIC') {
@@ -1217,7 +1307,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       payload['manualVerification'] = true;
     }
 
-    this.http.post<{ success: boolean; message: string; kycStatus?: string; kycProvider?: string; requestId?: string; canProceed?: boolean }>(`${environment.apiUrl}/visitor/auth/register`, payload).subscribe({
+    this.http.post<{ success: boolean; message: string; visitorId?: number; kycStatus?: string; kycProvider?: string; requestId?: string; canProceed?: boolean }>(`${environment.apiUrl}/visitor/auth/register`, payload).subscribe({
       next: res => {
         this.loading = false;
         if (res.success) {
@@ -1227,6 +1317,11 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
           this.submitted = true;
           this.currentStep = 'kyc-complete';
           this.successMsg = res.message || this.t('REGISTRATION_SUCCESS');
+          if (this.isDeoMode && this.auth.hasRole('DATA_ENTRY_OPERATOR') && res.visitorId) {
+            this.router.navigate(['/appointments/new'], {
+              queryParams: { visitorId: res.visitorId, source: 'walkin', walkin: 'true' }
+            });
+          }
         } else {
           this.errorMsg = res.message || this.t('ERROR_REGISTRATION_FAILED');
         }
@@ -1345,6 +1440,14 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.form.epicNumber = '';
     this.form.visitorName = '';
     this.form.aadhaarNumber = '';
+    if (idType === 'NONE') {
+      this.form.kycStatus = 'KYC_PENDING';
+      this.form.kycProvider = 'NONE';
+      this.kycStatus = 'KYC_PENDING';
+    } else {
+      this.form.kycStatus = '';
+      this.form.kycProvider = '';
+    }
     this.form.livePhoto = '';
     this.form.photoFromId = '';
 
@@ -1444,6 +1547,10 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
         }
 
         if (proceedAfterCheck) {
+          if (this.form.idType === 'NONE') {
+            this.continueWithNoId();
+            return;
+          }
           this.verifyEpic();
         }
       },
@@ -1550,6 +1657,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       otp: '',
       livePhoto: '',
       photoFromId: '',
+      agendaType: '',
+      briefDescription: '',
     };
     this.errorMsg = '';
     this.successMsg = '';

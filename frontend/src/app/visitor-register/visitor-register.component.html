@@ -115,8 +115,16 @@
               <mat-radio-button value="AADHAAR">
                 <mat-icon>badge</mat-icon> {{ 'AADHAAR_CARD' | translate }}
               </mat-radio-button>
+              <mat-radio-button value="NONE">
+                <mat-icon>person</mat-icon> No ID
+              </mat-radio-button>
             </mat-radio-group>
           </div>
+
+          <mat-form-field appearance="outline" class="full-width" *ngIf="form.idType === 'NONE'">
+            <mat-label>Full Name *</mat-label>
+            <input matInput type="text" [(ngModel)]="form.fullName" placeholder="Enter visitor full name" />
+          </mat-form-field>
 
           <mat-form-field appearance="outline" class="full-width" *ngIf="form.idType === 'EPIC'">
             <mat-label>{{ 'EPIC_NUMBER' | translate }} *</mat-label>
@@ -168,7 +176,7 @@
           </mat-form-field>
 
           <!-- Mobile Number Field (only for EPIC) -->
-          <mat-form-field appearance="outline" class="full-width" *ngIf="!otpSent && form.idType === 'EPIC'">
+          <mat-form-field appearance="outline" class="full-width" *ngIf="!otpSent && (form.idType === 'EPIC' || form.idType === 'NONE')">
             <mat-label>{{ 'MOBILE_NUMBER' | translate }} *</mat-label>
             <input
               matInput
@@ -188,7 +196,7 @@
           </mat-form-field>
 
           <div
-            *ngIf="mobileValidationMsg && !otpSent && form.idType === 'EPIC'"
+            *ngIf="mobileValidationMsg && !otpSent && (form.idType === 'EPIC' || form.idType === 'NONE')"
             class="mobile-validation-msg"
             [ngClass]="mobileValidationType">
             <mat-icon>{{ mobileValidationIcon }}</mat-icon>
@@ -235,9 +243,14 @@
             </div>
           </div>
 
-          <div class="kyc-notice" *ngIf="!otpSent && form.idType !== 'AADHAAR'">
+          <div class="kyc-notice" *ngIf="!otpSent && form.idType === 'EPIC'">
             <mat-icon>info</mat-icon>
             {{ 'WILL_VALIDATE_ID_SEND_OTP' | translate }}
+          </div>
+
+          <div class="kyc-notice" *ngIf="form.idType === 'NONE'" style="background:#fffbeb;border-color:#f59e0b">
+            <mat-icon style="color:#b45309">pending_actions</mat-icon>
+            No ID registration will skip EPIC/Aadhaar verification and keep KYC status as Pending.
           </div>
 
           <div class="kyc-notice" *ngIf="!showQrCode && form.idType === 'AADHAAR'" style="background:#f0fdf4;border-color:#86efac">
@@ -292,6 +305,15 @@
               (click)="verifyOtp()">
               <span *ngIf="!loading"><mat-icon>check</mat-icon> {{ 'VERIFY_OTP' | translate }}</span>
               <span *ngIf="loading"><mat-icon class="spin-icon">sync</mat-icon> {{ 'VERIFYING' | translate }}</span>
+            </button>
+            <button
+              *ngIf="form.idType === 'NONE'"
+              mat-raised-button
+              color="primary"
+              class="flex-1"
+              [disabled]="loading || !canValidateId"
+              (click)="validateId()">
+              <mat-icon>arrow_forward</mat-icon> Continue
             </button>
             <button
               *ngIf="kycPendingAllowed"
@@ -399,6 +421,16 @@
           </div>
 
           <!-- Camera controls -->
+          <mat-form-field appearance="outline" class="full-width" *ngIf="!hasAadhaarResidentImage && cameraDevices.length > 1">
+            <mat-label>Camera</mat-label>
+            <mat-select [ngModel]="selectedCameraDeviceId" (ngModelChange)="onCameraDeviceChange($event)">
+              <mat-option *ngFor="let device of cameraDevices; let i = index" [value]="device.deviceId">
+                {{ cameraDeviceLabel(device, i) }}
+              </mat-option>
+            </mat-select>
+            <mat-hint>Select laptop camera or external USB camera.</mat-hint>
+          </mat-form-field>
+
           <div class="camera-section">
             <div *ngIf="!isCameraActive && !capturedPhotoUrl" class="camera-placeholder">
               <mat-icon style="font-size:3rem;width:3rem;height:3rem;color:#9ca3af">photo_camera</mat-icon>
@@ -501,6 +533,10 @@
                 <label>{{ 'CONSTITUENCY' | translate }}</label>
                 <span>{{ form.constituency || 'N/A' }}</span>
               </div>
+              <div *ngIf="form.idType === 'EPIC'">
+                <label>Assembly Constituency No.</label>
+                <span>{{ form.assemblyConstituencyNumber || 'N/A' }}</span>
+              </div>
               <div>
                 <label>{{ 'BOOTH_VILLAGE' | translate }}</label>
                 <span>{{ form.boothVillage || form.booth || 'N/A' }}</span>
@@ -512,10 +548,6 @@
               <div *ngIf="form.idType === 'EPIC'">
                 <label>{{ 'POLLING_PART_NO' | translate }}</label>
                 <span>{{ form.pollingPartNo || 'N/A' }}</span>
-              </div>
-              <div *ngIf="form.idType === 'EPIC'">
-                <label>{{ 'POLLING_STATION' | translate }}</label>
-                <span>{{ form.pollingStationAddress || 'N/A' }}</span>
               </div>
               <div *ngIf="form.idType === 'EPIC'">
                 <label>{{ 'NAME_MATCH_SCORE' | translate }}</label>
@@ -703,6 +735,18 @@
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>{{ 'EMAIL_OPTIONAL' | translate }}</mat-label>
             <input matInput type="email" [(ngModel)]="form.email" [placeholder]="'ENTER_EMAIL' | translate" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Agenda Type</mat-label>
+            <mat-select [(ngModel)]="form.agendaType" placeholder="Select agenda">
+              <mat-option *ngFor="let agenda of agendaTypes" [value]="agenda">{{ agenda }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Brief Description</mat-label>
+            <textarea matInput rows="3" [(ngModel)]="form.briefDescription" placeholder="Short note for this walk-in registration"></textarea>
           </mat-form-field>
 
           <div style="display:flex;gap:1rem;margin-top:1.5rem">

@@ -1141,7 +1141,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   }
 
   canUploadSupportingDocument() {
-    return this.auth.hasRole('APPROVER', 'CMO_OFFICER', 'ADMIN', 'OSD');
+    return this.auth.hasRole('APPROVER', 'CMO_OFFICER', 'ADMIN', 'OSD', 'DATA_ENTRY_OPERATOR');
   }
 
   private replaceAppointment(updated: Appointment) {

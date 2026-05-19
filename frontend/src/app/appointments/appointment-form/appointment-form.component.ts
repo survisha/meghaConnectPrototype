@@ -20,6 +20,7 @@ import { VisitorService } from '../../services/visitor.service';
 import { AssociateCitizen, VisitorSearchService } from '../../services/visitor-search.service';
 import { AuthService } from '../../services/auth.service';
 import { apiErrorMessage } from '../../shared/api-error.util';
+import { ReferenceDataService } from '../../services/reference-data.service';
 
 interface DocumentUpload {
   type: 'APPLICATION_LETTER' | 'PLANS_ESTIMATES' | 'BANK_DETAILS' | 'MLA_APPROVAL_LETTER' | 'ORG_REGISTRATION_CERTIFICATE' | 'CM_CARE_ELIGIBILITY' | 'CM_CARE_HOSPITAL' | 'CM_CARE_SUPPORTING';
@@ -57,6 +58,8 @@ export class AppointmentFormComponent implements OnInit {
   loading = false;
   errorMsg = '';
   submittedAppId = '';
+  submittedAppointmentId: number | null = null;
+  submittedTokenNumber = '';
   visitorId = '';
   visitorProfile: any | null = null;
   isWalkInFlow = false;
@@ -68,7 +71,7 @@ export class AppointmentFormComponent implements OnInit {
 
   form = {
     fullName: '', phoneNumber: '', epicNumber: '', designation: '',
-    district: '', constituency: '', booth: '', address: '',
+    district: '', constituency: '', booth: '', partNumber: '', address: '',
     agendaType: '', requestedLocation: '', lastMeetingDate: '',
     agendaBrief: '', schemeType: '', projectName: '', projectCategory: '',
     beneficiaryType: '', beneficiaryCount: '', estimatedCost: '',
@@ -103,9 +106,9 @@ export class AppointmentFormComponent implements OnInit {
   // Document tracking
   visitorKycStatus: 'PENDING' | 'VERIFIED' | 'REJECTED' | null = null;
   documents: DocumentUpload[] = [
-    { type: 'APPLICATION_LETTER', label: 'Application Letter / Project Proposal', isRequired: true, isVisible: true },
+    { type: 'APPLICATION_LETTER', label: 'Application Letter / Project Proposal', isRequired: false, isVisible: true },
     { type: 'PLANS_ESTIMATES', label: 'Plans & Estimates (up to 3)', isRequired: false, isVisible: false },
-    { type: 'BANK_DETAILS', label: 'Bank Account Details', isRequired: true, isVisible: true },
+    { type: 'BANK_DETAILS', label: 'Bank Account Details', isRequired: false, isVisible: true },
     { type: 'MLA_APPROVAL_LETTER', label: 'MLA/MDC/Community Leader Approval Letter', isRequired: false, isVisible: false },
     { type: 'ORG_REGISTRATION_CERTIFICATE', label: 'Organisation Registration Certificate', isRequired: false, isVisible: false },
     { type: 'CM_CARE_ELIGIBILITY', label: 'CM Care – Eligibility Proof', isRequired: false, isVisible: false },
@@ -125,7 +128,7 @@ export class AppointmentFormComponent implements OnInit {
     'East Jaintia Hills', 'West Jaintia Hills', 'East Garo Hills', 'West Garo Hills',
     'South Garo Hills', 'North Garo Hills', 'Eastern West Khasi Hills'
   ];
-  agendaTypes = ['Scheme availment (CM)', 'Governance', 'Trade & Commerce', 'Political Discussion', 'Public Grievance'];
+  agendaTypes: string[] = [];
   schemeTypes = ['CMSDF', 'CMSG', 'CM Care', 'CM Connect', 'CM Elevate', 'Others'];
   schemeHistoryOptions = ['CMSDF', 'CMSG', 'CM Care', 'CM Connect', 'CM Elevate', 'Focus+'];
   applicationTypes = [
@@ -394,13 +397,15 @@ export class AppointmentFormComponent implements OnInit {
     private visitorService: VisitorService,
     private visitorSearchService: VisitorSearchService,
     private auth: AuthService,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private referenceDataService: ReferenceDataService
   ) {}
 
   ngOnInit() {
     this.isWalkInFlow = this.route.snapshot.queryParamMap.get('source') === 'walkin'
       || this.route.snapshot.queryParamMap.get('walkin') === 'true';
     this.steps[0] = { label: this.isPublicUser ? 'Citizen Details' : this.isWalkInFlow ? 'Visitor Details' : 'Personal Info' };
+    this.loadAgendaTypes();
     this.loadOrganizationTypes();
     this.loadVisitorProfileIfAvailable();
     // Initial visibility update based on default form values
@@ -428,10 +433,18 @@ export class AppointmentFormComponent implements OnInit {
         this.form.designation = visitor.designation || '';
         this.form.district = visitor.district || '';
         this.form.constituency = visitor.constituency || '';
-        this.form.booth = visitor.booth || '';
+        this.form.partNumber = visitor.partNumber || visitor.pollingPartNo || '';
+        this.form.booth = visitor.boothVillage || visitor.booth || this.form.partNumber || '';
         this.form.address = visitor.fullAddress || visitor.address || visitor.addressLine || visitor.address1 || '';
+        if (visitor.agendaType && !this.form.agendaType) {
+          this.form.agendaType = visitor.agendaType;
+        }
+        if (visitor.briefDescription && !this.form.agendaBrief) {
+          this.form.agendaBrief = visitor.briefDescription;
+        }
         if (this.isWalkInFlow) {
           this.form.requestedLocation = 'Shillong';
+          this.form.agendaType = this.form.agendaType || 'Invitation';
         }
         
         // Set KYC status and update document visibility
@@ -502,14 +515,6 @@ export class AppointmentFormComponent implements OnInit {
       }
     }
 
-    // Validate required documents are uploaded
-    const requiredDocs = this.documents.filter(d => d.isVisible && d.isRequired);
-    const missingDocs = requiredDocs.filter(d => !d.fileName);
-    if (missingDocs.length > 0) {
-      this.errorMsg = `Please upload all required documents: ${missingDocs.map(d => d.label).join(', ')}`;
-      return;
-    }
-
     this.loading = true;
 
     // Create FormData to handle file uploads
@@ -526,6 +531,8 @@ export class AppointmentFormComponent implements OnInit {
     }
     formData.append('agendaType', this.form.agendaType);
     formData.append('agendaBrief', this.form.agendaBrief);
+    formData.append('registrationAgendaType', this.visitorProfile?.agendaType || this.form.agendaType || '');
+    formData.append('registrationBriefDescription', this.visitorProfile?.briefDescription || this.form.agendaBrief || '');
     formData.append('requestedLocation', this.form.requestedLocation?.toUpperCase() || 'OTHERS');
     formData.append('eventType', this.isWalkInFlow ? 'B2' : 'A1');
     formData.append('isWalkIn', this.isWalkInFlow ? 'true' : 'false');
@@ -559,7 +566,7 @@ export class AppointmentFormComponent implements OnInit {
       }
     });
 
-    this.http.post<{ success: boolean; applicationId?: string; message?: string; id?: number }>(
+    this.http.post<{ success: boolean; applicationId?: string; message?: string; id?: number; tokenNumber?: string; walkInTokenNumber?: string }>(
       `${environment.apiUrl}/appointments`, formData
     ).subscribe({
       next: res => {
@@ -567,6 +574,8 @@ export class AppointmentFormComponent implements OnInit {
         if (res.success !== false) {
           this.submitted = true;
           this.submittedAppId = res.applicationId || 'MC-' + Date.now().toString().slice(-6);
+          this.submittedAppointmentId = res.id ?? null;
+          this.submittedTokenNumber = res.tokenNumber || res.walkInTokenNumber || '';
         } else {
           this.errorMsg = res.message || 'Submission failed. Please try again.';
         }
@@ -575,6 +584,21 @@ export class AppointmentFormComponent implements OnInit {
         this.loading = false;
         this.errorMsg = apiErrorMessage(err, 'Submission failed. Please try again.');
       },
+    });
+  }
+
+  private loadAgendaTypes() {
+    this.referenceDataService.getByType('CM_AGENDA_MEETING').subscribe({
+      next: data => {
+        this.agendaTypes = (data || []).map(item => item.value).filter(Boolean);
+        if (this.isWalkInFlow && !this.form.agendaType && this.agendaTypes.includes('Invitation')) {
+          this.form.agendaType = 'Invitation';
+        }
+      },
+      error: err => {
+        this.agendaTypes = [];
+        this.errorMsg = apiErrorMessage(err, 'Unable to load agenda types.');
+      }
     });
   }
 
@@ -587,6 +611,22 @@ export class AppointmentFormComponent implements OnInit {
     const origin = environment.apiUrl.replace(/\/api\/v1\/?$/i, '');
     const cleanPath = source.replace(/^\/+/, '');
     return `${origin}/${cleanPath.startsWith('uploads/') ? cleanPath : `uploads/${cleanPath}`}`;
+  }
+
+  downloadSubmittedPass() {
+    if (!this.submittedAppointmentId) {
+      return;
+    }
+    this.http.get(`${environment.apiUrl}/appointments/${this.submittedAppointmentId}/visitor-pass/download`, {
+      responseType: 'blob',
+    }).subscribe(blob => {
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `${this.submittedTokenNumber || this.submittedAppId || 'walkin-pass'}.pdf`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    });
   }
 }
 

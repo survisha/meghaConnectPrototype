@@ -47,6 +47,10 @@ export interface Visitor {
   constituency: string;
   booth: string;
   boothVillage?: string;
+  partNumber?: string;
+  pollingPartNo?: string;
+  agendaType?: string;
+  briefDescription?: string;
   village?: string;
   location?: string;
   briefProfile?: string;
@@ -112,6 +116,7 @@ export interface Appointment {
   directions?: Direction[];
   associates?: AssociateCitizen[];
   isWalkIn?: boolean;
+  walkInTokenNumber?: string;
   createdAt?: string;
   submittedAt?: string;
   updatedAt?: string;

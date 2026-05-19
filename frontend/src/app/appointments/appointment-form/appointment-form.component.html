@@ -8,10 +8,17 @@
       <div style="margin:1.5rem auto;max-width:400px;padding:1rem;background:#f0fdf4;border:1px solid #86efac;border-radius:8px">
         <div style="font-size:0.9rem;color:#6b7280">Application ID</div>
         <div style="font-size:1.4rem;font-weight:700;color:#166534">{{ submittedAppId }}</div>
+        <ng-container *ngIf="submittedTokenNumber">
+          <div style="font-size:0.9rem;color:#6b7280;margin-top:0.75rem">Walk-in Token</div>
+          <div style="font-size:1.25rem;font-weight:700;color:#166534">{{ submittedTokenNumber }}</div>
+        </ng-container>
         <div style="font-size:0.85rem;color:#6b7280;margin-top:0.5rem">
           You will be contacted to schedule your appointment.
         </div>
       </div>
+      <button *ngIf="isWalkInFlow && submittedAppointmentId" id="appointment_downloadWalkinPassBtn" mat-stroked-button color="primary" style="margin-right:0.75rem" (click)="downloadSubmittedPass()">
+        <mat-icon>print</mat-icon> Download / Print Pass
+      </button>
       <a [routerLink]="backRoute" style="text-decoration:none">
         <button id="appointment_backToDashboardBtn" mat-raised-button color="primary">
           <mat-icon>home</mat-icon> {{ backLabel }}
@@ -76,7 +83,8 @@
             <div><span>EPIC</span><strong>{{ form.epicNumber || '—' }}</strong></div>
             <div><span>District</span><strong>{{ form.district || '—' }}</strong></div>
             <div><span>Constituency</span><strong>{{ form.constituency || '—' }}</strong></div>
-            <div><span>Booth / Village</span><strong>{{ form.booth || '—' }}</strong></div>
+            <div><span>Booth Number</span><strong>{{ form.booth || '—' }}</strong></div>
+            <div><span>Part Number</span><strong>{{ form.partNumber || '—' }}</strong></div>
             <div><span>KYC Status</span><strong>{{ visitorKycStatus || 'PENDING' }}</strong></div>
           </div>
           <div class="info-box" style="margin-top:1rem">

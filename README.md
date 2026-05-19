@@ -1,6 +1,307 @@
 # meghaConnectPrototype
 I want to create the proto type for Meghalaya Entry-Exit and handling cm schemes UI and backend structure and DB schemas to show a demo for approval of the design
 
+## Pilot/Production Deployment - MeghaConnect
+
+This section documents the separate Pilot/Production deployment for `https://www.meghaconnect.com`. It does not replace the existing UAT deployment. UAT continues to use `deploy.sh` and `https://meghaconnect.cloud/api/v1`.
+
+### UAT vs Production
+
+| Item | UAT | Pilot/Production |
+| --- | --- | --- |
+| Deploy script | `deploy.sh` | `deploy-prod.sh` |
+| Frontend URL | `https://meghaconnect.cloud` | `https://www.meghaconnect.com` |
+| API URL | `https://meghaconnect.cloud/api/v1` | `https://www.meghaconnect.com/api/v1` |
+| Angular build config | `uat` | `production` |
+| Spring profile | `dev` in current UAT script | `prod` |
+| Backend service | `meghaconnect-api` | `meghaconnect-api-prod` |
+| Backend local port | `8080` | `8082` |
+| Database | `meghaconnect_db` | `meghaconnect_prod` |
+| Backend JAR destination | `/opt/meghaconnect/backend/app.jar` | `/opt/meghaconnect/prod/backend/app.jar` |
+| Frontend destination | `/var/www/meghaconnect` | `/var/www/meghaconnect-prod` |
+| Logs | `/opt/meghaconnect/logs` | `/var/log/meghaconnect/prod` |
+| Env file | `/etc/meghaconnect/meghaconnect-api.env` | `/etc/meghaconnect/meghaconnect-api-prod.env` |
+
+### Files Added For Production
+
+- `deploy-prod.sh`
+- `frontend/src/environments/environment.prod.ts`
+- `backend/src/main/resources/application-prod.yml`
+- `deployment/nginx/meghaconnect-prod.conf`
+
+The existing UAT `deploy.sh` should remain untouched for production rollout.
+
+### Production Frontend Environment
+
+Production Angular builds use:
+
+```ts
+apiUrl: '/api/v1'
+```
+
+The production UI uses a same-origin API path so both
+`https://meghaconnect.com` and `https://www.meghaconnect.com` call their own
+host without a browser CORS hop.
+
+The replacement is configured in `frontend/angular.json` so this command uses `environment.prod.ts`:
+
+```bash
+cd frontend
+npm ci
+npx ng build --configuration production
+```
+
+Build output source:
+
+```text
+frontend/dist/frontend/
+frontend/dist/frontend/browser/   # if Angular emits browser/ output
+```
+
+Deployment destination:
+
+```text
+/var/www/meghaconnect-prod/
+```
+
+### Production Backend Configuration
+
+Production backend profile file:
+
+```text
+backend/src/main/resources/application-prod.yml
+```
+
+Important defaults:
+
+```text
+server.port=8082
+database=meghaconnect_prod
+upload path=/opt/meghaconnect/prod/uploads
+crypto key path=/opt/meghaconnect/prod/secure/crypto.key
+logs=/var/log/meghaconnect/prod
+CORS=https://www.meghaconnect.com,https://meghaconnect.com
+```
+
+Secrets must be supplied through environment variables or `/etc/meghaconnect/meghaconnect-api-prod.env`:
+
+```text
+DATABASE_USERNAME
+DATABASE_PASSWORD
+JWT_SECRET
+SMS/WhatsApp credentials, if enabled
+third-party credentials, if enabled
+```
+
+Do not hardcode production secrets in source files.
+
+Backend JAR source:
+
+```text
+backend/target/<generated-app>.jar
+```
+
+Backend JAR destination:
+
+```text
+/opt/meghaconnect/prod/backend/app.jar
+```
+
+### Production Database
+
+Create a separate production database. Do not point production to the UAT database.
+
+```sql
+CREATE DATABASE meghaconnect_prod CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE USER 'meghaconnect_prod_user'@'localhost' IDENTIFIED BY 'CHANGE_THIS_PASSWORD';
+GRANT ALL PRIVILEGES ON meghaconnect_prod.* TO 'meghaconnect_prod_user'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+Before deployment, verify `/etc/meghaconnect/meghaconnect-api-prod.env` points to a DB name ending with `_prod`. Flyway migrations are enabled by the prod profile and should run against `meghaconnect_prod`.
+
+### Run Production Deployment
+
+From the repository root on the server:
+
+```bash
+chmod +x deploy-prod.sh
+./deploy-prod.sh
+```
+
+The script will:
+
+1. Validate that production API URL is `https://www.meghaconnect.com/api/v1`.
+2. Validate that the DB name ends with `_prod`.
+3. Validate that production port is not the UAT port.
+4. Build Angular with `ng build --configuration production`.
+5. Build backend with `mvn clean package -DskipTests`.
+6. Backup the current production frontend and backend JAR.
+7. Copy frontend files to `/var/www/meghaconnect-prod/`.
+8. Copy backend JAR to `/opt/meghaconnect/prod/backend/app.jar`.
+9. Restart only `meghaconnect-api-prod`.
+10. Install/reload the production Nginx site.
+11. Run a local health check.
+
+For prebuilt artifacts:
+
+```bash
+DEPLOY_MODE=prebuilt \
+PREBUILT_FRONTEND_DIR=/path/to/release-prod/frontend \
+PREBUILT_BACKEND_JAR=/path/to/release-prod/backend/app.jar \
+./deploy-prod.sh
+```
+
+If the deploy script itself is already placed inside the release folder, this
+layout is also accepted, even if the script is inside one nested `release-prod`
+folder:
+
+```text
+/opt/release-prod/frontend/index.html
+/opt/release-prod/backend/app.jar
+```
+
+In that case run:
+
+```bash
+cd /opt/release-prod
+unset PREBUILT_FRONTEND_DIR PREBUILT_BACKEND_JAR PROJECT_ROOT
+DEPLOY_MODE=prebuilt ./deploy-prod.sh
+```
+
+You can also point the script at a release folder explicitly:
+
+```bash
+ARTIFACT_ROOT=/opt/release-prod DEPLOY_MODE=prebuilt ./deploy-prod.sh
+```
+
+### Production Nginx
+
+Reference config:
+
+```text
+deployment/nginx/meghaconnect-prod.conf
+```
+
+Installed server config:
+
+```text
+/etc/nginx/sites-available/meghaconnect-prod
+/etc/nginx/sites-enabled/meghaconnect-prod
+```
+
+Production frontend root:
+
+```text
+/var/www/meghaconnect-prod
+```
+
+Production API proxy:
+
+```text
+https://www.meghaconnect.com/api/v1 -> http://127.0.0.1:8082/api/v1
+```
+
+Minimal Nginx block:
+
+```nginx
+server {
+    listen 80;
+    server_name meghaconnect.com www.meghaconnect.com;
+
+    root /var/www/meghaconnect-prod;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api/v1/ {
+        proxy_pass http://127.0.0.1:8082/api/v1/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+To enable SSL with Certbot after DNS points to the server:
+
+```bash
+sudo certbot --nginx -d meghaconnect.com -d www.meghaconnect.com
+```
+
+Or let the script request it:
+
+```bash
+ENABLE_CERTBOT=true CERTBOT_EMAIL=admin@meghaconnect.com ./deploy-prod.sh
+```
+
+### Verify Production
+
+```bash
+curl http://127.0.0.1:8082/api/actuator/health
+curl https://www.meghaconnect.com/api/actuator/health
+sudo systemctl status meghaconnect-api-prod
+sudo journalctl -u meghaconnect-api-prod -f
+sudo tail -f /var/log/meghaconnect/prod/meghaconnect-prod.log
+```
+
+Open:
+
+```text
+https://www.meghaconnect.com
+```
+
+Confirm browser API calls go to:
+
+```text
+https://www.meghaconnect.com/api/v1
+```
+
+### Restart Production
+
+```bash
+sudo systemctl restart meghaconnect-api-prod
+sudo systemctl status meghaconnect-api-prod
+```
+
+### Rollback
+
+Backend JAR backups are stored in:
+
+```text
+/opt/meghaconnect/prod/backups/backend/
+```
+
+Frontend backups are stored in:
+
+```text
+/var/www/meghaconnect-prod-backups/
+```
+
+Rollback backend:
+
+```bash
+sudo systemctl stop meghaconnect-api-prod
+sudo cp /opt/meghaconnect/prod/backups/backend/app-YYYYMMDDHHMMSS.jar /opt/meghaconnect/prod/backend/app.jar
+sudo chown meghaconnect:meghaconnect /opt/meghaconnect/prod/backend/app.jar
+sudo systemctl start meghaconnect-api-prod
+```
+
+Rollback frontend:
+
+```bash
+sudo find /var/www/meghaconnect-prod -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+sudo tar -xzf /var/www/meghaconnect-prod-backups/frontend-prod-YYYYMMDDHHMMSS.tar.gz -C /var/www/meghaconnect-prod
+sudo chown -R www-data:www-data /var/www/meghaconnect-prod
+sudo systemctl reload nginx
+```
+
+Safety note: production rollback commands affect only production paths and `meghaconnect-api-prod`. UAT `deploy.sh`, `/var/www/meghaconnect`, `/opt/meghaconnect/backend`, and `meghaconnect-api` are not touched.
+
 ## QR scanner API examples
 
 Create a security scanner user as an admin:

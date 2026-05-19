@@ -307,9 +307,19 @@
 
       <div class="table-pagination" *ngIf="!loading">
         <div class="pagination-summary">
-          Showing {{ pageStart }}-{{ pageEnd }} of {{ filtered.length }} records
+          Showing {{ pageStart }}-{{ pageEnd }} of {{ filtered.length }} loaded records
+          <span *ngIf="serverTotalElements">
+            · Loaded {{ appointments.length }} of {{ serverTotalElements }} from server
+          </span>
         </div>
         <div class="pagination-controls">
+          <button mat-stroked-button
+                  type="button"
+                  (click)="loadMoreAppointments()"
+                  [disabled]="!hasMoreServerAppointments || loadingMoreAppointments">
+            <mat-icon>{{ loadingMoreAppointments ? 'hourglass_empty' : 'expand_more' }}</mat-icon>
+            {{ loadingMoreAppointments ? 'Loading...' : 'Load next 100' }}
+          </button>
           <mat-form-field appearance="outline" class="page-size-field">
             <mat-label>Rows</mat-label>
             <mat-select [ngModel]="pageSize" (ngModelChange)="changePageSize($event)">
@@ -638,6 +648,82 @@
           <mat-icon>cloud_upload</mat-icon>
           Upload
         </button>
+      </div>
+
+      <div class="meeting-proof-card" *ngIf="canUploadSupportingDocument()">
+        <div class="meeting-proof-header">
+          <mat-icon>add_a_photo</mat-icon>
+          <div>
+            <strong>Visitor Meeting Proof</strong>
+            <span>Capture visitor with signed document. This is saved with the attached documents.</span>
+          </div>
+        </div>
+
+        <div class="meeting-proof-body">
+          <div class="meeting-proof-frame">
+            <video *ngIf="proofCameraActive" id="appointment-proof-camera-preview" autoplay playsinline></video>
+            <img *ngIf="proofCaptureUrl && !proofCameraActive" [src]="proofCaptureUrl" alt="Visitor meeting proof">
+            <div *ngIf="!proofCameraActive && !proofCaptureUrl" class="meeting-proof-placeholder">
+              <mat-icon>photo_camera</mat-icon>
+              <span>Capture proof photo</span>
+            </div>
+          </div>
+
+          <div class="meeting-proof-actions">
+            <button *ngIf="!proofCameraActive && !proofCaptureUrl"
+                    mat-stroked-button
+                    type="button"
+                    (click)="openProofCamera()"
+                    [disabled]="supportingDocumentUploading">
+              <mat-icon>photo_camera</mat-icon>
+              Open Camera
+            </button>
+            <button *ngIf="proofCameraActive"
+                    mat-raised-button
+                    color="primary"
+                    type="button"
+                    (click)="captureMeetingProof()">
+              <mat-icon>camera</mat-icon>
+              Capture
+            </button>
+            <button *ngIf="proofCameraActive"
+                    mat-stroked-button
+                    type="button"
+                    (click)="switchProofCamera()">
+              <mat-icon>cameraswitch</mat-icon>
+              {{ proofCameraFacingLabel }}
+            </button>
+            <button *ngIf="proofCameraActive"
+                    mat-icon-button
+                    type="button"
+                    matTooltip="Close camera"
+                    (click)="stopProofCamera()">
+              <mat-icon>videocam_off</mat-icon>
+            </button>
+            <button *ngIf="proofCaptureUrl && !proofCameraActive"
+                    mat-stroked-button
+                    type="button"
+                    (click)="retakeMeetingProof()"
+                    [disabled]="supportingDocumentUploading">
+              <mat-icon>refresh</mat-icon>
+              Retake
+            </button>
+            <button *ngIf="proofCaptureUrl && !proofCameraActive"
+                    mat-raised-button
+                    color="primary"
+                    type="button"
+                    (click)="uploadMeetingProof()"
+                    [disabled]="supportingDocumentUploading">
+              <mat-icon>cloud_upload</mat-icon>
+              {{ supportingDocumentUploading ? 'Uploading...' : 'Upload Proof' }}
+            </button>
+          </div>
+        </div>
+
+        <div class="documents-error" *ngIf="proofCaptureError">
+          <mat-icon>error_outline</mat-icon>
+          {{ proofCaptureError }}
+        </div>
       </div>
 
       <div class="documents-loading" *ngIf="documentsLoading">

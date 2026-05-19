@@ -290,7 +290,7 @@
               </mat-form-field>
             </div>
 
-            <div class="photo-update-area">
+            <div *ngIf="!hasExistingVisitorPhoto" class="photo-update-area">
               <div class="photo-frame">
                 <video *ngIf="visitorCameraActive" id="deo-camera-preview" autoplay playsinline></video>
                 <img *ngIf="visitorUpdatePhoto && !visitorCameraActive" [src]="visitorUpdatePhoto" alt="Captured visitor photo" />

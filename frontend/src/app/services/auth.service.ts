@@ -39,14 +39,19 @@ export class AuthService {
 
   constructor(private router: Router, private http: HttpClient) {
     const stored = sessionStorage.getItem('megha_user');
-    if (stored) this._user.set(JSON.parse(stored));
+    if (stored) {
+      const parsed = JSON.parse(stored) as AuthUser;
+      parsed.role = this.normalizeRole(parsed.role);
+      this._user.set(parsed);
+      sessionStorage.setItem('megha_user', JSON.stringify(parsed));
+    }
   }
 
   login(username: string, password: string): Observable<boolean> {
     return this.http.post<LoginResponse>(`${environment.apiUrl}/auth/login`, { username, password }).pipe(
       tap(res => {
         // Strip Spring Security "ROLE_" prefix to match frontend UserRole type
-        const role = (res.role ?? '').replace(/^ROLE_/, '') as UserRole;
+        const role = this.normalizeRole((res.role ?? '').replace(/^ROLE_/, ''));
         const auth: AuthUser = { username: res.username, fullName: res.fullName ?? username, role };
         this._user.set(auth);
         sessionStorage.setItem('megha_user', JSON.stringify(auth));
@@ -74,4 +79,9 @@ export class AuthService {
 
   isLoggedIn() { return !!this._user(); }
   hasRole(...roles: UserRole[]) { const u = this._user(); return u ? roles.includes(u.role) : false; }
+
+  private normalizeRole(role: string): UserRole {
+    const normalized = (role || '').replace(/^ROLE_/, '').trim().toUpperCase();
+    return (normalized === 'CMO' ? 'CMO_OFFICER' : normalized) as UserRole;
+  }
 }

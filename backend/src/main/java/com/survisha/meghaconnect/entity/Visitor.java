@@ -79,6 +79,12 @@ public class Visitor extends BaseEntity {
     @Column(length = 100)
     private String constituency;
 
+    @Column(length = 50)
+    private String assemblyConstituencyNumber;
+
+    @Column(length = 200)
+    private String assemblyConstituencyName;
+
     @Column(length = 100)
     private String booth;
 

@@ -10,27 +10,57 @@ logging:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS,Asia/Kolkata} %-5level [requestId=%X{requestId:-}] [%thread] %logger{36} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss.SSS,Asia/Kolkata} %-5level [requestId=%X{requestId:-}] [%thread] %logger{36} - %msg%n"
   file:
-    name: ${LOG_FILE:logs/meghaconnect-prod.log}
+    name: ${LOG_FILE:${LOGGING_PATH:/var/log/meghaconnect/prod}/meghaconnect-prod.log}
   logback:
     rollingpolicy:
-      file-name-pattern: ${LOG_FILE_PATTERN:logs/meghaconnect-prod.%d{yyyy-MM-dd}.%i.log.gz}
+      file-name-pattern: ${LOG_FILE_PATTERN:${LOGGING_PATH:/var/log/meghaconnect/prod}/meghaconnect-prod.%d{yyyy-MM-dd}.%i.log.gz}
       max-file-size: ${LOG_FILE_MAX_SIZE:25MB}
       max-history: ${LOG_FILE_MAX_HISTORY:30}
       total-size-cap: ${LOG_FILE_TOTAL_SIZE_CAP:2GB}
 
 spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+  data:
+    redis:
+      repositories:
+        enabled: false
+  cache:
+    type: none
+  datasource:
+    url: ${DATABASE_URL:jdbc:mysql://${DB_HOST:127.0.0.1}:${DB_PORT:3306}/${DB_NAME:meghaconnect_prod}?useSSL=false&connectionTimeZone=%2B05:30&forceConnectionTimeZoneToSession=true&allowPublicKeyRetrieval=true}
+    username: ${DATABASE_USERNAME:${DB_USERNAME:}}
+    password: ${DATABASE_PASSWORD:${DB_PASSWORD:}}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:20}
+      minimum-idle: ${DB_POOL_MIN_IDLE:4}
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
   jpa:
+    hibernate:
+      ddl-auto: none
     show-sql: false
     properties:
       hibernate:
         jdbc:
           time_zone: Asia/Kolkata
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    validate-on-migrate: false
   jackson:
     time-zone: Asia/Kolkata
     serialization:
       write-dates-as-timestamps: false
 
 server:
+  address: ${SERVER_ADDRESS:127.0.0.1}
+  port: ${SERVER_PORT:8082}
   forward-headers-strategy: native
   tomcat:
     remoteip:
@@ -38,15 +68,49 @@ server:
 
 file:
   upload:
-    root-path: ${FILE_UPLOAD_ROOT:/opt/meghaconnect/uploads}
-    crypto-key-path: ${FILE_UPLOAD_CRYPTO_KEY_PATH:/opt/meghaconnect/secure/crypto.key}
+    root-path: ${FILE_UPLOAD_ROOT:/opt/meghaconnect/prod/uploads}
+    crypto-key-path: ${FILE_UPLOAD_CRYPTO_KEY_PATH:/opt/meghaconnect/prod/secure/crypto.key}
 
 meghaconnect:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://www.meghaconnect.com,https://meghaconnect.com}
   security:
     require-https: true
   storage:
     base-path: ${file.upload.root-path}
     crypto-key-path: ${file.upload.crypto-key-path}
+    base-url: ${STORAGE_BASE_URL:https://www.meghaconnect.com/api/uploads}
+    visitor-photo-path: ${STORAGE_VISITOR_PHOTO_PATH:visitor-photos}
+    allowed-types: ${STORAGE_ALLOWED_TYPES:pdf,jpg,jpeg,png,doc,docx}
+    max-file-size-mb: ${STORAGE_MAX_FILE_SIZE_MB:25}
+
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+
+management:
+  health:
+    redis:
+      enabled: false
+  endpoints:
+    enabled-by-default: true
+    web:
+      base-path: /api/actuator
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      enabled: true
+      probes:
+        enabled: true
+      show-details: when_authorized
+    info:
+      enabled: true
+    metrics:
+      enabled: true
+    prometheus:
+      enabled: true
 
 ai:
   ollama:

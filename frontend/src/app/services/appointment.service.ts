@@ -175,7 +175,7 @@ export class AppointmentService {
       .pipe(map(res => this.normalizePage(res)));
   }
 
-  getAllAppointments(page = 0, size = 20, status?: string, options?: { source?: string; referredOffice?: string }): Observable<AppointmentPage> {
+  getAllAppointments(page = 0, size = 20, status?: string, options?: { source?: string; referredOffice?: string; sort?: string }): Observable<AppointmentPage> {
     let params = new HttpParams()
       .set('page', page.toString())
       .set('size', size.toString());
@@ -187,6 +187,9 @@ export class AppointmentService {
     }
     if (options?.referredOffice) {
       params = params.set('referredOffice', options.referredOffice);
+    }
+    if (options?.sort) {
+      params = params.set('sort', options.sort);
     }
     return this.http.get<unknown>(this.baseUrl, { params })
       .pipe(map(res => this.normalizePage(res)));

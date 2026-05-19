@@ -18,6 +18,6 @@ public class PollingDetails {
     @JsonProperty("pollingpartno")
     private String pollingPartNo;
     
-    @JsonProperty("pollingstationaddress")
-    private String pollingStationAddress;
+    @JsonProperty("pollingstationpartname")
+    private String pollingstationpartname;
 }

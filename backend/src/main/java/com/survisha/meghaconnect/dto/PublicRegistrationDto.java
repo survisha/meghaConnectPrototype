@@ -78,6 +78,8 @@ public class PublicRegistrationDto {
     private String kycRequestId;
     private Boolean allowKycPending;
     private String maskedIdentityNumber;
+    private String assemblyConstituencyNumber;
+    private String assemblyConstituencyName;
     private String relativeNameOnVoterId;
     private String borrowerAddressHouseNumber;
     private String borrowerAddressSectionNumber;

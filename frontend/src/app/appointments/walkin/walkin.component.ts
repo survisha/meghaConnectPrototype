@@ -205,6 +205,17 @@ export class WalkinComponent implements OnDestroy {
     return this.cameraCapture.label(this.visitorCameraFacingMode);
   }
 
+  get hasExistingVisitorPhoto(): boolean {
+    return !!this.firstNonBlank(
+      this.foundPerson?.livePhotoBase64,
+      this.foundPerson?.photoBase64,
+      this.foundPerson?.photoUrl,
+      this.foundPerson?.livePhotoPath,
+      this.foundPerson?.photoStoragePath,
+      this.foundPerson?.photoPath
+    );
+  }
+
   saveVisitorUpdates() {
     this.visitorUpdateMsg = '';
     this.visitorUpdateError = '';
@@ -332,5 +343,9 @@ export class WalkinComponent implements OnDestroy {
       pincode: '',
       briefProfile: '',
     };
+  }
+
+  private firstNonBlank(...values: Array<string | null | undefined>): string {
+    return values.map(value => value?.trim() || '').find(Boolean) || '';
   }
 }

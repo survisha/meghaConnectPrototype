@@ -99,7 +99,9 @@ export interface EpicVerificationData {
   borrowerdateofbirth?: string;
   borroweraddressstate?: string;
   borroweraddressdistrict?: string;
+  assemblyconstituencynumber?: string;
   assemblyconstituencyname?: string;
+  assemblyConstituencyNumber?: string;
   assemblyConstituencyName?: string;
   borroweraddresshousenumber?: string;
   borroweraddresssectionnumber?: string;

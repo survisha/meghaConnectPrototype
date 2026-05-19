@@ -31,6 +31,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { apiErrorMessage } from '../../shared/api-error.util';
+import { CameraCaptureService, CameraFacingMode } from '../../shared/camera-capture.service';
 
 type SortDirection = 'asc' | 'desc';
 type AppointmentSortColumn =
@@ -106,6 +107,12 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   documentDownloadLoading = false;
   supportingDocumentUploading = false;
   selectedSupportingDocument: File | null = null;
+  proofCameraStream: MediaStream | null = null;
+  proofCameraActive = false;
+  proofCameraFacingMode: CameraFacingMode = 'environment';
+  proofCaptureUrl = '';
+  proofCaptureFile: File | null = null;
+  proofCaptureError = '';
   documentPreviewError = '';
   documents: AppointmentDocument[] = [];
   selectedAppointmentRemarks: AppointmentRemark[] = [];
@@ -150,6 +157,11 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   pageSizeOptions = [10, 25, 50];
   pageSize = 10;
   pageIndex = 0;
+  serverPageIndex = 0;
+  serverPageSize = 100;
+  serverTotalElements = 0;
+  loadingMoreAppointments = false;
+  hasMoreServerAppointments = false;
   sortColumn: AppointmentSortColumn = 'createdAt';
   sortDirection: SortDirection = 'desc';
 
@@ -222,7 +234,8 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     public auth: AuthService,
     private dialog: MatDialog,
     private sanitizer: DomSanitizer,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private cameraCapture: CameraCaptureService
   ) {}
 
   ngOnInit() {
@@ -259,26 +272,66 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
 
   private loadAppointments() {
     this.loading = true;
-    const source = this.auth.hasRole('DATA_ENTRY_OPERATOR')
-      ? this.appointmentService.getDeoAppointments(0, 100)
-      : this.auth.hasRole('APPROVER') && !this.auth.hasRole('ADMIN', 'OSD')
-      ? this.appointmentService.getApproverAppointments(0, 100)
-      : this.appointmentService.getAllAppointments(0, 100);
+    this.serverPageIndex = 0;
+    this.loadAppointmentsPage(0, false);
+  }
+
+  loadMoreAppointments() {
+    if (!this.hasMoreServerAppointments || this.loadingMoreAppointments) return;
+    this.loadingMoreAppointments = true;
+    this.loadAppointmentsPage(this.serverPageIndex + 1, true);
+  }
+
+  private loadAppointmentsPage(serverPage: number, append: boolean) {
+    const source = this.appointmentPageSource(serverPage, this.serverPageSize);
     source.subscribe({
       next: page => {
         this.errorMsg = '';
-        this.appointments = page.content ?? [];
+        const rows = page.content ?? [];
+        this.appointments = append ? this.mergeAppointments(this.appointments, rows) : rows;
+        this.serverPageIndex = page.number ?? serverPage;
+        this.serverTotalElements = page.totalElements ?? this.appointments.length;
+        this.hasMoreServerAppointments = this.appointments.length < this.serverTotalElements
+          && this.serverPageIndex + 1 < (page.totalPages ?? 1);
         this.applyFilter();
-        this.loadAiNotesForAppointments(this.appointments);
+        this.loadAiNotesForAppointments(rows);
         this.loading = false;
+        this.loadingMoreAppointments = false;
       },
       error: error => {
         this.errorMsg = apiErrorMessage(error, 'Unable to load appointments from API. Please try again.');
-        this.appointments = [];
-        this.applyFilter();
+        if (!append) {
+          this.appointments = [];
+          this.applyFilter();
+        }
         this.loading = false;
+        this.loadingMoreAppointments = false;
       }
     });
+  }
+
+  private appointmentPageSource(serverPage: number, size: number) {
+    if (this.auth.hasRole('DATA_ENTRY_OPERATOR')) {
+      return this.appointmentService.getDeoAppointments(serverPage, size);
+    }
+    if (this.auth.hasRole('APPROVER') && !this.auth.hasRole('ADMIN', 'OSD')) {
+      return this.appointmentService.getApproverAppointments(serverPage, size);
+    }
+    if (this.auth.hasRole('CMO_OFFICER') && !this.auth.hasRole('ADMIN', 'OSD')) {
+      return this.appointmentService.getAllAppointments(serverPage, size, 'SUBMITTED,CMO_REVIEW', {
+        sort: 'createdAt,desc',
+      });
+    }
+    return this.appointmentService.getAllAppointments(serverPage, size, undefined, {
+      sort: 'createdAt,desc',
+    });
+  }
+
+  private mergeAppointments(existing: Appointment[], incoming: Appointment[]) {
+    const byId = new Map<number, Appointment>();
+    existing.forEach(appointment => byId.set(appointment.id, appointment));
+    incoming.forEach(appointment => byId.set(appointment.id, appointment));
+    return Array.from(byId.values());
   }
 
   private loadScheduleEvents() {
@@ -297,6 +350,8 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.clearDocumentPreviewState();
+    this.stopProofCamera();
+    this.clearProofCapture();
     this.aiNotesPollTimers.forEach(timerId => window.clearTimeout(timerId));
     this.aiNotesPollTimers.clear();
   }
@@ -1013,6 +1068,78 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
       });
   }
 
+  async openProofCamera() {
+    try {
+      this.proofCaptureError = '';
+      this.stopProofCamera();
+      this.proofCameraStream = await this.cameraCapture.open(this.proofCameraFacingMode);
+      this.proofCameraActive = true;
+      setTimeout(() => {
+        const video = document.getElementById('appointment-proof-camera-preview') as HTMLVideoElement;
+        if (video && this.proofCameraStream) {
+          this.cameraCapture.attach(video, this.proofCameraStream);
+        }
+      }, 100);
+    } catch {
+      this.proofCaptureError = 'Camera access was blocked. Please allow camera permission and try again.';
+    }
+  }
+
+  captureMeetingProof() {
+    const video = document.getElementById('appointment-proof-camera-preview') as HTMLVideoElement;
+    if (!video) {
+      this.proofCaptureError = 'Camera is not ready yet.';
+      return;
+    }
+
+    try {
+      const dataUrl = this.cameraCapture.capture(video);
+      this.setProofCapture(dataUrl);
+    } catch {
+      this.proofCaptureError = 'Unable to capture proof photo.';
+      return;
+    }
+
+    this.stopProofCamera();
+  }
+
+  retakeMeetingProof() {
+    this.clearProofCapture();
+    this.openProofCamera();
+  }
+
+  switchProofCamera() {
+    this.proofCameraFacingMode = this.cameraCapture.toggle(this.proofCameraFacingMode);
+    if (this.proofCameraActive) {
+      this.openProofCamera();
+    }
+  }
+
+  get proofCameraFacingLabel(): string {
+    return this.cameraCapture.label(this.proofCameraFacingMode);
+  }
+
+  uploadMeetingProof() {
+    if (!this.selectedAppointment || !this.proofCaptureFile || this.supportingDocumentUploading) return;
+    this.supportingDocumentUploading = true;
+    this.appointmentService.uploadSupportingDocument(this.selectedAppointment.id, this.proofCaptureFile)
+      .pipe(finalize(() => this.supportingDocumentUploading = false))
+      .subscribe({
+        next: document => {
+          this.documents = [document, ...this.documents];
+          this.clearProofCapture();
+          this.snackBar.open('Meeting proof photo uploaded.', 'Close', { duration: 5000, panelClass: ['success-snackbar'] });
+        },
+        error: error => this.snackBar.open(apiErrorMessage(error, 'Unable to upload meeting proof photo.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] })
+      });
+  }
+
+  stopProofCamera() {
+    this.cameraCapture.stop(this.proofCameraStream);
+    this.proofCameraStream = null;
+    this.proofCameraActive = false;
+  }
+
   canUploadSupportingDocument() {
     return this.auth.hasRole('APPROVER', 'CMO_OFFICER', 'ADMIN', 'OSD');
   }
@@ -1290,6 +1417,8 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     this.selectedAppointmentRemarksError = '';
     this.selectedAppointmentRemarksLoading = false;
     this.selectedSupportingDocument = null;
+    this.stopProofCamera();
+    this.clearProofCapture();
   }
 
   private loadAppointmentRemarks(appointmentId: number) {
@@ -1537,6 +1666,35 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     anchor.click();
     anchor.remove();
     window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+  }
+
+  private setProofCapture(dataUrl: string) {
+    this.proofCaptureUrl = dataUrl;
+    this.proofCaptureFile = this.dataUrlToFile(dataUrl, this.meetingProofFileName());
+    this.proofCaptureError = '';
+  }
+
+  private clearProofCapture() {
+    this.proofCaptureUrl = '';
+    this.proofCaptureFile = null;
+    this.proofCaptureError = '';
+  }
+
+  private dataUrlToFile(dataUrl: string, fileName: string) {
+    const [header, base64Data] = dataUrl.split(',');
+    const mimeType = header.match(/data:(.*?);base64/)?.[1] || 'image/jpeg';
+    const binary = atob(base64Data || '');
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index++) {
+      bytes[index] = binary.charCodeAt(index);
+    }
+    return new File([bytes], fileName, { type: mimeType });
+  }
+
+  private meetingProofFileName() {
+    const applicationId = this.selectedAppointment?.applicationId || 'appointment';
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    return `${applicationId}-meeting-proof-${timestamp}.jpg`;
   }
 
   trackByDocumentId(index: number, doc: AppointmentDocument) {

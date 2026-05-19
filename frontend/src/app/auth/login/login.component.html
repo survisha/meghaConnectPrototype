@@ -18,14 +18,7 @@
     </div>
 
     <ng-container *ngIf="!isPublicMode">
-      <div class="form-group">
-        <label>{{ 'QUICK_DEMO_ACCESS' | translate }}</label>
-        <div class="demo-chips">
-          <button id="login_demoChip_{{d.value.u}}" type="button" *ngFor="let d of demoCredentials" class="demo-chip" (click)="selectDemo(d.value)">
-            {{ d.label.split('(')[0].trim() }}
-          </button>
-        </div>
-      </div>
+      
 
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>

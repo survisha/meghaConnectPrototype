@@ -57,6 +57,8 @@ interface VisitorRegistrationForm {
   kycRequestId?: string;
   borrowerAddressHouseNumber?: string;
   borrowerAddressSectionNumber?: string;
+  assemblyConstituencyNumber?: string;
+  assemblyConstituencyName?: string;
   relativeNameOnVoterId?: string;
   pollingPartNo?: string;
   pollingStationAddress?: string;
@@ -98,6 +100,8 @@ interface VerifiedKycData {
   maskedIdentityNumber?: string;
   houseNumber?: string;
   sectionNumber?: string;
+  assemblyConstituencyNumber?: string;
+  assemblyConstituencyName?: string;
   relativeName?: string;
   pollingPartNo?: string;
   pollingStationAddress?: string;
@@ -607,6 +611,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     const state = data.borroweraddressstate || data.state || response?.state || '';
     const district = data.borroweraddressdistrict || data.district || response?.district || '';
     const constituency = data.assemblyconstituencyname || data.assemblyConstituencyName || data.constituency || response?.constituency || '';
+    const assemblyConstituencyNumber = data.assemblyconstituencynumber || data.assemblyConstituencyNumber || '';
+    const assemblyConstituencyName = data.assemblyconstituencyname || data.assemblyConstituencyName || '';
     const boothVillage = polling.pollingstationpartname || polling.pollingStationPartName || polling.pollingStationPartname || '';
     const houseNumber = data.borroweraddresshousenumber || '';
     const sectionNumber = data.borroweraddresssectionnumber || '';
@@ -624,6 +630,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       state,
       district,
       constituency,
+      assemblyConstituencyNumber,
+      assemblyConstituencyName,
       boothVillage,
       address: this.composeEpicAddress(houseNumber, sectionNumber, district, state),
       epicNumber,
@@ -697,6 +705,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       kycStatus: this.form.kycStatus || (verified.kycType === 'EPIC' ? 'DEMOGRAPHIC_MATCHED' : 'PHOTO_MATCHED'),
       borrowerAddressHouseNumber: verified.houseNumber || '',
       borrowerAddressSectionNumber: verified.sectionNumber || '',
+      assemblyConstituencyNumber: verified.assemblyConstituencyNumber || '',
+      assemblyConstituencyName: verified.assemblyConstituencyName || verified.constituency || '',
       relativeNameOnVoterId: verified.relativeName || '',
       pollingPartNo: verified.pollingPartNo || '',
       pollingStationAddress: verified.pollingStationAddress || '',
@@ -1177,6 +1187,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       maskedIdentityNumber: this.form.maskedIdentityNumber,
       borrowerAddressHouseNumber: this.form.borrowerAddressHouseNumber,
       borrowerAddressSectionNumber: this.form.borrowerAddressSectionNumber,
+      assemblyConstituencyNumber: this.form.assemblyConstituencyNumber,
+      assemblyConstituencyName: this.form.assemblyConstituencyName,
       relativeNameOnVoterId: this.form.relativeNameOnVoterId,
       pollingPartNo: this.form.pollingPartNo,
       pollingStationAddress: this.form.pollingStationAddress,
@@ -1357,6 +1369,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.form.dateOfBirth = '';
     this.form.borrowerAddressHouseNumber = '';
     this.form.borrowerAddressSectionNumber = '';
+    this.form.assemblyConstituencyNumber = '';
+    this.form.assemblyConstituencyName = '';
     this.form.relativeNameOnVoterId = '';
     this.form.pollingPartNo = '';
     this.form.pollingStationAddress = '';

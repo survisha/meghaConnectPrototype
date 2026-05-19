@@ -165,6 +165,8 @@ public class VisitorService {
         if (dto.getPincode() != null) visitor.setPincode(trimToNull(dto.getPincode()));
         if (dto.getDistrict() != null) visitor.setDistrict(trimToNull(dto.getDistrict()));
         if (dto.getConstituency() != null) visitor.setConstituency(trimToNull(dto.getConstituency()));
+        if (dto.getAssemblyConstituencyNumber() != null) visitor.setAssemblyConstituencyNumber(trimToNull(dto.getAssemblyConstituencyNumber()));
+        if (dto.getAssemblyConstituencyName() != null) visitor.setAssemblyConstituencyName(trimToNull(dto.getAssemblyConstituencyName()));
         if (dto.getBooth() != null) visitor.setBooth(trimToNull(dto.getBooth()));
         if (dto.getBoothVillage() != null) visitor.setBoothVillage(trimToNull(dto.getBoothVillage()));
         if (dto.getVillage() != null) visitor.setVillage(trimToNull(dto.getVillage()));
@@ -287,6 +289,8 @@ public class VisitorService {
                 .pincode(visitor.getPincode())
                 .district(visitor.getDistrict())
                 .constituency(visitor.getConstituency())
+                .assemblyConstituencyNumber(visitor.getAssemblyConstituencyNumber())
+                .assemblyConstituencyName(visitor.getAssemblyConstituencyName())
                 .booth(visitor.getBooth())
                 .boothVillage(visitor.getBoothVillage())
                 .village(visitor.getVillage())
@@ -468,6 +472,8 @@ public class VisitorService {
                 .designation(dto.getDesignation())
                 .district(outsideMeghalaya ? firstNonBlank(dto.getDistrict(), "NA") : trimToNull(dto.getDistrict()))
                 .constituency(outsideMeghalaya ? firstNonBlank(dto.getConstituency(), "NA") : trimToNull(dto.getConstituency()))
+                .assemblyConstituencyNumber(trimToNull(dto.getAssemblyConstituencyNumber()))
+                .assemblyConstituencyName(trimToNull(dto.getAssemblyConstituencyName()))
                 .booth(outsideMeghalaya ? firstNonBlank(dto.getBooth(), "NA") : trimToNull(dto.getBooth()))
                 .boothVillage(outsideMeghalaya ? firstNonBlank(boothVillage, "NA") : boothVillage)
                 .village(outsideMeghalaya ? firstNonBlank(dto.getVillage(), "NA") : trimToNull(dto.getVillage()))

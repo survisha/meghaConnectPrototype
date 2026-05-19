@@ -39,7 +39,7 @@ export class ShellComponent implements OnInit {
         { labelKey: 'NEW_APPOINTMENT', icon: 'add_circle', route: '/appointments/new',
           roles: ['ADMIN','OSD','PUBLIC'] },
         { labelKey: 'WALKIN_COUNTER', icon: 'login', route: '/appointments/walkin',
-          roles: ['ADMIN','OSD','DATA_ENTRY_OPERATOR'] },
+          roles: ['ADMIN','DATA_ENTRY_OPERATOR'] },
       ]
     },
     {

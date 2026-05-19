@@ -149,7 +149,7 @@ public class EpicVerificationService {
 
         PollingDetails pollingDetails = PollingDetails.builder()
                 .pollingPartNo("14")
-                .pollingStationAddress("NAMPONG TANGSA COMMUNITY HALL")
+                .pollingstationpartname("NAMPONG TANGSA COMMUNITY HALL")
                 .build();
 
         EpicVerificationData mockData = EpicVerificationData.builder()
@@ -160,6 +160,8 @@ public class EpicVerificationService {
                 .borrowerDateOfBirth("")
                 .borrowerAddressState("Meghalaya")
                 .borrowerAddressDistrict("East Khasi Hills")
+                .assemblyConstituencyNumber("46")
+                .assemblyConstituencyName("Kukatpally")
                 .borrowerAddressHouseNumber("Not Available")
                 .borrowerAddressSectionNumber("1")
                 .accountNumber("123")

@@ -31,6 +31,8 @@ public class VisitorDto {
     private String pincode;
     private String district;
     private String constituency;
+    private String assemblyConstituencyNumber;
+    private String assemblyConstituencyName;
     private String booth;
     private String boothVillage;
     private String village;

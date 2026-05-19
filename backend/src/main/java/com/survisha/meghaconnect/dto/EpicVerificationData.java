@@ -55,6 +55,12 @@ public class EpicVerificationData {
     
     @JsonProperty("borroweraddressdistrict")
     private String borrowerAddressDistrict;
+
+    @JsonProperty("assemblyconstituencynumber")
+    private String assemblyConstituencyNumber;
+
+    @JsonProperty("assemblyconstituencyname")
+    private String assemblyConstituencyName;
     
     @JsonProperty("borroweraddresshousenumber")
     private String borrowerAddressHouseNumber;

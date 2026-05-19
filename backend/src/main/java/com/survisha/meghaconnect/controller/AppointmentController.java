@@ -143,7 +143,7 @@ public class AppointmentController {
 
     @Operation(summary = "Get visitor pass details", description = "Retrieve visitor pass metadata for a scheduled citizen appointment")
     @GetMapping("/{id}/visitor-pass")
-    @PreAuthorize("hasAnyRole('PUBLIC','CITIZEN')")
+    @PreAuthorize("hasAnyRole('PUBLIC','CITIZEN','ADMIN','OSD','DATA_ENTRY_OPERATOR','HCM','APPROVER','CMO','CMO_OFFICER','SECURITY')")
     public ResponseEntity<Map<String, Object>> getVisitorPass(@PathVariable Long id,
                                                               @AuthenticationPrincipal UserDetails user) {
         logEndpoint("/api/v1/appointments/{id}/visitor-pass");
@@ -152,7 +152,7 @@ public class AppointmentController {
 
     @Operation(summary = "Download visitor pass", description = "Download the visitor pass file for a scheduled citizen appointment")
     @GetMapping(value = "/{id}/visitor-pass/download", produces = MediaType.APPLICATION_PDF_VALUE)
-    @PreAuthorize("hasAnyRole('PUBLIC','CITIZEN')")
+    @PreAuthorize("hasAnyRole('PUBLIC','CITIZEN','ADMIN','OSD','DATA_ENTRY_OPERATOR','HCM','APPROVER','CMO','CMO_OFFICER','SECURITY')")
     public ResponseEntity<byte[]> downloadVisitorPass(@PathVariable Long id,
                                                       @AuthenticationPrincipal UserDetails user) {
         logEndpoint("/api/v1/appointments/{id}/visitor-pass/download");
@@ -232,7 +232,7 @@ public class AppointmentController {
     }
 
     @GetMapping("/{id}/remarks")
-    @PreAuthorize("hasAnyRole('HCM','OSD','ADMIN','APPROVER','CMO','CMO_OFFICER')")
+    @PreAuthorize("hasAnyRole('HCM','OSD','ADMIN','APPROVER','CMO','CMO_OFFICER','DATA_ENTRY_OPERATOR','SECURITY')")
     public ResponseEntity<List<HcmActionDto>> getRemarks(@PathVariable Long id) {
         logEndpoint("/api/v1/appointments/{id}/remarks");
         return ResponseEntity.ok(hcmActionService.getRemarksForAppointment(id));
@@ -249,7 +249,7 @@ public class AppointmentController {
     }
 
     @PostMapping(value = "/{id}/supporting-documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyRole('APPROVER','CMO','CMO_OFFICER','ADMIN','OSD')")
+    @PreAuthorize("hasAnyRole('APPROVER','CMO','CMO_OFFICER','ADMIN','OSD','DATA_ENTRY_OPERATOR')")
     public ResponseEntity<AppointmentDocumentDto> uploadSupportingDocument(@PathVariable Long id,
                                                                            @RequestParam("file") MultipartFile file,
                                                                            @AuthenticationPrincipal UserDetails user) {

@@ -11,6 +11,7 @@ public final class ValidationConstants {
 
     public static final String ID_TYPE_EPIC = "EPIC";
     public static final String ID_TYPE_AADHAAR = "AADHAAR";
+    public static final String ID_TYPE_NONE = "NONE";
 
     public static final String FIELD_PHONE_NUMBER = "phoneNumber";
     public static final String FIELD_OTP = "otp";

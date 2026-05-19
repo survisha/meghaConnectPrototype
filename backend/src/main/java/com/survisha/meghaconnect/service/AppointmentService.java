@@ -11,12 +11,14 @@ import com.survisha.meghaconnect.entity.Appointment;
 import com.survisha.meghaconnect.entity.DocumentUpload;
 import com.survisha.meghaconnect.entity.SchemeApplication;
 import com.survisha.meghaconnect.entity.Visitor;
+import com.survisha.meghaconnect.entity.WalkIn;
 import com.survisha.meghaconnect.repository.AppointmentRepository;
 import com.survisha.meghaconnect.repository.AssociateMappingRepository;
 import com.survisha.meghaconnect.repository.DocumentUploadRepository;
 import com.survisha.meghaconnect.repository.ScheduleEventRepository;
 import com.survisha.meghaconnect.repository.SchemeApplicationRepository;
 import com.survisha.meghaconnect.repository.VisitorRepository;
+import com.survisha.meghaconnect.repository.WalkInRepository;
 import com.survisha.meghaconnect.exception.*;
 import com.survisha.meghaconnect.util.DateTimeUtil;
 import com.survisha.meghaconnect.util.ValidationConstants;
@@ -104,6 +106,8 @@ public class AppointmentService {
     private final FileStorageService fileStorageService;
     private final AppointmentDocumentAiNotesService appointmentDocumentAiNotesService;
     private final QrTokenService qrTokenService;
+    private final WalkInRepository walkInRepository;
+    private final WalkInTokenService walkInTokenService;
     private final ObjectMapper objectMapper;
 
     public Page<Appointment> findAll(Pageable pageable) {
@@ -128,7 +132,15 @@ public class AppointmentService {
         Specification<Appointment> spec = (root, query, cb) -> {
             javax.persistence.criteria.Predicate predicate = cb.conjunction();
             if (!statuses.isEmpty()) {
-                predicate = cb.and(predicate, root.get("status").in(statuses));
+                javax.persistence.criteria.Predicate statusPredicate = root.get("status").in(statuses);
+                javax.persistence.criteria.Predicate walkInSourcePredicate =
+                        cb.equal(cb.upper(root.get("appointmentSource")), "WALKIN");
+                if ("WALKIN".equals(sourceValue)) {
+                    statusPredicate = cb.conjunction();
+                } else if (sourceValue == null) {
+                    statusPredicate = cb.or(statusPredicate, walkInSourcePredicate);
+                }
+                predicate = cb.and(predicate, statusPredicate);
             }
             if (sourceValue != null) {
                 predicate = cb.and(predicate, cb.equal(cb.upper(root.get("appointmentSource")), sourceValue));
@@ -417,7 +429,8 @@ public class AppointmentService {
         String actor = resolveAppointmentActor(createdBy, applicant);
         String agendaTypeValue = validationService.requireText(safeForm.getAgendaType(), "agendaType");
         Appointment.MeetingLocation location = parseMeetingLocation(safeForm.getRequestedLocation());
-        Appointment.EventType parsedEventType = parseEventType(safeForm.getEventType());
+        boolean walkIn = Boolean.TRUE.equals(safeForm.getIsWalkIn());
+        Appointment.EventType parsedEventType = walkIn ? Appointment.EventType.B2 : parseEventType(safeForm.getEventType());
         SchemeApplication.SchemeType schemeType = parseSchemeType(safeForm.getSchemeType());
         ensureSchemeApplicationIsNotDuplicate(applicant, schemeType);
         String appId = generatePublicApplicationId();
@@ -431,11 +444,14 @@ public class AppointmentService {
             .eventType(parsedEventType)
             .agendaType(agendaTypeValue)
             .agendaBrief(safeForm.getAgendaBrief())
-            .appointmentSource("CITIZEN")
-            .status(Appointment.AppointmentStatus.SUBMITTED)
+            .appointmentSource(walkIn ? "WALKIN" : "CITIZEN")
+            .appointmentType(walkIn ? "B2 Walk-in" : null)
+            .status(walkIn ? Appointment.AppointmentStatus.SCHEDULED : Appointment.AppointmentStatus.SUBMITTED)
             .requestedLocation(location)
             .mlaMdcApproved(safeForm.getMlaMdcApproved() != null && safeForm.getMlaMdcApproved())
-            .isWalkIn(Boolean.TRUE.equals(safeForm.getIsWalkIn()))
+            .isWalkIn(walkIn)
+            .scheduledDateTime(walkIn ? DateTimeUtil.nowIST() : null)
+            .scheduledDurationMinutes(walkIn ? 15 : null)
             .aiDuplicateFlag(false)
             .meetingCountLast6Months(meetingCount)
             .build();
@@ -453,6 +469,7 @@ public class AppointmentService {
         saveSchemeApplicationIfRequired(safeForm, saved, applicant, schemeType, actor);
         saveAppointmentDocuments(request, saved, applicant, appId, actor);
         saveAppointmentAssociates(safeForm.getAssociates(), saved, applicant, actor);
+        WalkIn walkInRow = walkIn ? saveWalkIn(saved, applicant, safeForm, actor) : null;
 
         auditLogService.log("Appointment", saved.getId(), "SUBMITTED",
             "Appointment submitted: " + appId, actor);
@@ -461,6 +478,10 @@ public class AppointmentService {
         response.put("success", true);
         response.put("id", saved.getId());
         response.put("applicationId", appId);
+        if (walkInRow != null) {
+            response.put("tokenNumber", walkInRow.getTokenNumber());
+            response.put("walkInTokenNumber", walkInRow.getTokenNumber());
+        }
         response.put("status", saved.getStatus().name());
         response.put("message", "Appointment request submitted successfully.");
         return response;
@@ -543,6 +564,9 @@ public class AppointmentService {
             .hcmRemarks(appointment.getHcmRemarks())
             .shortNotes(appointment.getShortNotes())
             .isWalkIn(appointment.getIsWalkIn())
+            .walkInTokenNumber(walkInRepository.findByAppointment_Id(appointment.getId())
+                    .map(WalkIn::getTokenNumber)
+                    .orElse(null))
             .meetingCountLast6Months(appointment.getMeetingCountLast6Months())
             .associates(toAssociateDtos(appointment))
             .createdAt(appointment.getCreatedAt())
@@ -1017,6 +1041,27 @@ public class AppointmentService {
         schemeApplication.setCreatedBy(actor);
         schemeApplication.setUpdatedBy(actor);
         schemeApplicationRepository.save(schemeApplication);
+    }
+
+    private WalkIn saveWalkIn(Appointment appointment, Visitor applicant, AppointmentMultipartRequest form, String actor) {
+        java.time.LocalDate tokenDate = DateTimeUtil.nowIST().toLocalDate();
+        String tokenNumber = walkInTokenService.nextToken(tokenDate);
+        WalkIn walkIn = WalkIn.builder()
+                .visitor(applicant)
+                .appointment(appointment)
+                .tokenNumber(tokenNumber)
+                .tokenDate(tokenDate)
+                .name(firstNonBlank(applicant.getFullName(), "Walk-in Visitor"))
+                .mobile(applicant.getPhoneNumber())
+                .idType(firstNonBlank(applicant.getKycType(), "NONE"))
+                .agendaType(firstNonBlank(form.getAgendaType(), form.getRegistrationAgendaType()))
+                .briefDescription(firstNonBlank(form.getAgendaBrief(), form.getRegistrationBriefDescription()))
+                .createdByDeoId(actor)
+                .status("CREATED")
+                .createdAt(DateTimeUtil.nowIST())
+                .updatedAt(DateTimeUtil.nowIST())
+                .build();
+        return walkInRepository.save(walkIn);
     }
 
     private void ensureSchemeApplicationIsNotDuplicate(Visitor applicant, SchemeApplication.SchemeType schemeType) {

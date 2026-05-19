@@ -297,6 +297,9 @@ public class VisitorService {
                 .outsideMeghalaya(visitor.getOutsideMeghalaya())
                 .location(visitor.getLocation())
                 .briefProfile(visitor.getBriefProfile())
+                .agendaType(visitor.getAgendaType())
+                .briefDescription(visitor.getBriefDescription())
+                .partNumber(visitor.getPollingPartNo())
                 .photoStoragePath(visitor.getPhotoStoragePath())
                 .livePhotoPath(visitor.getLivePhotoPath())
                 .photoPath(visitor.getPhotoPath())
@@ -439,6 +442,10 @@ public class VisitorService {
         String addressLine = firstNonBlank(dto.getAddress1(), dto.getAddressLine(), dto.getHouseNoColony(), fullAddress);
         String boothVillage = firstNonBlank(dto.getBoothVillage(), dto.getBooth());
         String location = outsideMeghalaya ? "NA" : trimToNull(dto.getLocation());
+        String constituency = firstNonBlank(
+                dto.getConstituency(),
+                formatConstituency(dto.getAssemblyConstituencyName(), dto.getAssemblyConstituencyNumber()));
+        String booth = firstNonBlank(dto.getBooth(), dto.getPollingPartNo());
 
         // TODO production hardening: encrypt or tokenize stored file paths before
         // persisting once the production file-system server contract is finalized.
@@ -471,13 +478,15 @@ public class VisitorService {
                 .address1(addressLine)
                 .designation(dto.getDesignation())
                 .district(outsideMeghalaya ? firstNonBlank(dto.getDistrict(), "NA") : trimToNull(dto.getDistrict()))
-                .constituency(outsideMeghalaya ? firstNonBlank(dto.getConstituency(), "NA") : trimToNull(dto.getConstituency()))
+                .constituency(outsideMeghalaya ? firstNonBlank(constituency, "NA") : constituency)
                 .assemblyConstituencyNumber(trimToNull(dto.getAssemblyConstituencyNumber()))
                 .assemblyConstituencyName(trimToNull(dto.getAssemblyConstituencyName()))
-                .booth(outsideMeghalaya ? firstNonBlank(dto.getBooth(), "NA") : trimToNull(dto.getBooth()))
+                .booth(outsideMeghalaya ? firstNonBlank(booth, "NA") : booth)
                 .boothVillage(outsideMeghalaya ? firstNonBlank(boothVillage, "NA") : boothVillage)
                 .village(outsideMeghalaya ? firstNonBlank(dto.getVillage(), "NA") : trimToNull(dto.getVillage()))
                 .location(location)
+                .agendaType(trimToNull(dto.getAgendaType()))
+                .briefDescription(trimToNull(dto.getBriefDescription()))
                 .outsideMeghalaya(outsideMeghalaya)
                 .photoStoragePath(photoPath)
                 .livePhotoPath(photoPath)
@@ -685,5 +694,14 @@ public class VisitorService {
             }
         }
         return null;
+    }
+
+    private String formatConstituency(String name, String number) {
+        String cleanName = trimToNull(name);
+        String cleanNumber = trimToNull(number);
+        if (cleanName != null && cleanNumber != null) {
+            return cleanName + " / " + cleanNumber;
+        }
+        return firstNonBlank(cleanName, cleanNumber);
     }
 }

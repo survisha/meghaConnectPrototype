@@ -262,8 +262,19 @@ public class VisitorAuthService {
         response.put("state", visitor.getState() != null ? visitor.getState() : "");
         response.put("pincode", visitor.getPincode() != null ? visitor.getPincode() : "");
         response.put("district", visitor.getDistrict() != null ? visitor.getDistrict() : "");
-        response.put("constituency", visitor.getConstituency() != null ? visitor.getConstituency() : "");
-        response.put("boothVillage", visitor.getBoothVillage() != null ? visitor.getBoothVillage() : "");
+        String constituency = firstNonBlank(
+                formatConstituency(visitor.getAssemblyConstituencyName(), visitor.getAssemblyConstituencyNumber()),
+                visitor.getConstituency());
+        String boothVillage = firstNonBlank(visitor.getPollingPartNo(), visitor.getBoothVillage(), visitor.getBooth());
+        response.put("constituency", constituency);
+        response.put("assemblyConstituencyName", visitor.getAssemblyConstituencyName() != null ? visitor.getAssemblyConstituencyName() : "");
+        response.put("assemblyConstituencyNumber", visitor.getAssemblyConstituencyNumber() != null ? visitor.getAssemblyConstituencyNumber() : "");
+        response.put("boothVillage", boothVillage);
+        response.put("booth", visitor.getBooth() != null ? visitor.getBooth() : "");
+        response.put("partNumber", visitor.getPollingPartNo() != null ? visitor.getPollingPartNo() : "");
+        response.put("pollingPartNo", visitor.getPollingPartNo() != null ? visitor.getPollingPartNo() : "");
+        response.put("agendaType", visitor.getAgendaType() != null ? visitor.getAgendaType() : "");
+        response.put("briefDescription", visitor.getBriefDescription() != null ? visitor.getBriefDescription() : "");
         response.put("outsideMeghalaya", Boolean.TRUE.equals(visitor.getOutsideMeghalaya()));
         response.put("location", visitor.getLocation() != null ? visitor.getLocation() : "");
         String visitorPhotoPath = firstNonBlank(visitor.getLivePhotoPath(), visitor.getPhotoStoragePath(), visitor.getPhotoPath());
@@ -357,5 +368,14 @@ public class VisitorAuthService {
             }
         }
         return "";
+    }
+
+    private String formatConstituency(String name, String number) {
+        String cleanName = firstNonBlank(name);
+        String cleanNumber = firstNonBlank(number);
+        if (!cleanName.isEmpty() && !cleanNumber.isEmpty()) {
+            return cleanName + " / " + cleanNumber;
+        }
+        return firstNonBlank(cleanName, cleanNumber);
     }
 }

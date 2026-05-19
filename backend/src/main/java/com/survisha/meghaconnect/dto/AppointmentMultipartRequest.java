@@ -33,4 +33,6 @@ public class AppointmentMultipartRequest {
     private String associates;
     private String aiSummary;
     private String aiPriorityLevel;
+    private String registrationAgendaType;
+    private String registrationBriefDescription;
 }

@@ -43,6 +43,7 @@ public class AppointmentDto {
     private String hcmRemarks;
     private String shortNotes;
     private Boolean isWalkIn;
+    private String walkInTokenNumber;
     private Integer meetingCountLast6Months;
     private List<AssociateVisitorDto> associates;
     private LocalDateTime createdAt;

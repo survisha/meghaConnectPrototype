@@ -39,6 +39,9 @@ public class VisitorDto {
     private Boolean outsideMeghalaya;
     private String location;
     private String briefProfile;
+    private String agendaType;
+    private String briefDescription;
+    private String partNumber;
     /** Relative path/key in the file store (e.g. "visitors/42/photo.jpg"). */
     private String photoStoragePath;
     private String livePhotoPath;

@@ -82,7 +82,8 @@ public class RequestValidationService {
     public String requireKycIdType(String idType) {
         String value = requireText(idType, ValidationConstants.FIELD_ID_TYPE).toUpperCase();
         if (!ValidationConstants.ID_TYPE_EPIC.equals(value)
-                && !ValidationConstants.ID_TYPE_AADHAAR.equals(value)) {
+                && !ValidationConstants.ID_TYPE_AADHAAR.equals(value)
+                && !ValidationConstants.ID_TYPE_NONE.equals(value)) {
             throw new RequestValidationException(
                     ErrorCodeConstants.INVALID_IDENTITY_DOCUMENT,
                     ErrorCodeConstants.INVALID_IDENTITY_DOCUMENT_MSG
@@ -93,6 +94,9 @@ public class RequestValidationService {
 
     public void validateKycIdentity(String idType, String idNumber) {
         String normalizedIdType = requireKycIdType(idType);
+        if (ValidationConstants.ID_TYPE_NONE.equals(normalizedIdType)) {
+            return;
+        }
         if (ValidationConstants.ID_TYPE_EPIC.equals(normalizedIdType)) {
             requireEpic(idNumber);
         } else {

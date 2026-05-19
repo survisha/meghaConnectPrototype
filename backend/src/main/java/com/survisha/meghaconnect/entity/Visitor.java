@@ -97,6 +97,12 @@ public class Visitor extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String briefProfile;
 
+    @Column(length = 200)
+    private String agendaType;
+
+    @Column(columnDefinition = "TEXT")
+    private String briefDescription;
+
     private LocalDate dateOfBirth;
 
     @Column(length = 20)

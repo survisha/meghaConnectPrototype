@@ -65,6 +65,8 @@ public class PublicRegistrationDto {
     private String pincode;
     private Boolean outsideMeghalaya;
     private String location;
+    private String agendaType;
+    private String briefDescription;
 
     // ── KYC result ───────────────────────────────────────────────
     /**

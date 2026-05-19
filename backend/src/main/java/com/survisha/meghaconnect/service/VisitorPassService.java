@@ -3,10 +3,12 @@ package com.survisha.meghaconnect.service;
 import com.survisha.meghaconnect.dto.QrTokenGenerationResult;
 import com.survisha.meghaconnect.entity.Appointment;
 import com.survisha.meghaconnect.entity.Visitor;
+import com.survisha.meghaconnect.entity.WalkIn;
 import com.survisha.meghaconnect.exception.AppointmentNotFoundException;
 import com.survisha.meghaconnect.exception.ErrorCodeConstants;
 import com.survisha.meghaconnect.exception.MeghaConnectException;
 import com.survisha.meghaconnect.repository.AppointmentRepository;
+import com.survisha.meghaconnect.repository.WalkInRepository;
 import com.survisha.meghaconnect.util.DateTimeUtil;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.EncodeHintType;
@@ -51,6 +53,7 @@ public class VisitorPassService {
     private static final int QR_IMAGE_SIZE = 320;
 
     private final AppointmentRepository appointmentRepository;
+    private final WalkInRepository walkInRepository;
     private final QrTokenService qrTokenService;
     private final FileStorageService fileStorageService;
 
@@ -63,6 +66,9 @@ public class VisitorPassService {
         details.put("appointmentId", appointment.getId());
         details.put("applicationId", appointment.getApplicationId());
         details.put("applicantName", visitor != null ? visitor.getFullName() : "");
+        details.put("mobileNumber", visitor != null ? visitor.getPhoneNumber() : "");
+        details.put("tokenNumber", walkInRepository.findByAppointment_Id(appointment.getId()).map(WalkIn::getTokenNumber).orElse(""));
+        details.put("appointmentType", Boolean.TRUE.equals(appointment.getIsWalkIn()) ? "B2 Walk-in" : firstNonBlank(appointment.getAppointmentType(), appointment.getAgendaType()));
         details.put("scheduledDateTime", appointment.getScheduledDateTime());
         details.put("location", appointment.getRequestedLocation() != null ? appointment.getRequestedLocation().name() : "");
         details.put("status", "ACTIVE");
@@ -89,11 +95,8 @@ public class VisitorPassService {
 
     private Appointment loadOwnedAppointment(Long appointmentId, Long visitorId) {
         if (visitorId == null) {
-            throw new MeghaConnectException(
-                    ErrorCodeConstants.INSUFFICIENT_PERMISSIONS,
-                    "Citizen session is required to access this visitor pass.",
-                    HttpStatus.FORBIDDEN.value()
-            );
+            return appointmentRepository.findById(appointmentId)
+                    .orElseThrow(() -> new AppointmentNotFoundException(appointmentId));
         }
         return appointmentRepository.findByIdAndApplicant_Id(appointmentId, visitorId)
                 .orElseThrow(() -> new AppointmentNotFoundException(appointmentId));
@@ -120,6 +123,9 @@ public class VisitorPassService {
     }
 
     private byte[] buildPdf(Appointment appointment, String qrToken) throws IOException {
+        if (Boolean.TRUE.equals(appointment.getIsWalkIn())) {
+            return buildWalkInPdf(appointment, qrToken);
+        }
         Visitor visitor = appointment.getApplicant();
         String applicantName = firstNonBlank(visitor != null ? visitor.getFullName() : null, appointment.getGuestName(), "Visitor");
         String mobile = firstNonBlank(visitor != null ? visitor.getPhoneNumber() : null, appointment.getGuestMobile(), "");
@@ -168,9 +174,51 @@ public class VisitorPassService {
         }
     }
 
+    private byte[] buildWalkInPdf(Appointment appointment, String qrToken) throws IOException {
+        Visitor visitor = appointment.getApplicant();
+        String applicantName = firstNonBlank(visitor != null ? visitor.getFullName() : null, appointment.getGuestName(), "Visitor");
+        String mobile = firstNonBlank(visitor != null ? visitor.getPhoneNumber() : null, appointment.getGuestMobile(), "");
+        String scheduled = appointment.getScheduledDateTime().format(DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm a"));
+        String tokenNumber = walkInRepository.findByAppointment_Id(appointment.getId()).map(WalkIn::getTokenNumber).orElse("");
+
+        try (PDDocument document = new PDDocument();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            PDPage page = new PDPage(new PDRectangle(PDRectangle.A4.getWidth(), PDRectangle.A4.getHeight() / 2));
+            document.addPage(page);
+            try (PDPageContentStream content = new PDPageContentStream(document, page)) {
+                float y = 382;
+                drawText(content, PDType1Font.HELVETICA_BOLD, 18, 36, y, "MeghaConnect Walk-in Pass");
+                y -= 22;
+                drawLine(content, 36, y, 558, y);
+                y -= 28;
+
+                y = tokenRow(content, y, "Token Number", tokenNumber);
+                y = row(content, y, "Visitor Name", applicantName);
+                y = row(content, y, "Mobile", mobile);
+                y = row(content, y, "Appointment Type", "B2 Walk-in");
+                y = row(content, y, "Date/Time", scheduled);
+                y = row(content, y, "Application ID", appointment.getApplicationId());
+                y = row(content, y, "Generated", DateTimeUtil.nowIST().format(DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm a")));
+
+                drawVisitorPhoto(document, content, visitor, 430, 252, 92, 108);
+                drawQrCode(document, content, qrToken, 416, 88, 120, 120);
+                drawText(content, PDType1Font.HELVETICA, 7, 414, 72, qrToken);
+                drawText(content, PDType1Font.HELVETICA, 8, 36, 42, "Please show this pass at the counter/security desk.");
+            }
+            document.save(out);
+            return out.toByteArray();
+        }
+    }
+
     private float row(PDPageContentStream content, float y, String label, String value) throws IOException {
         drawText(content, PDType1Font.HELVETICA_BOLD, 10, 56, y, label + ":");
         drawText(content, PDType1Font.HELVETICA, 10, 190, y, safe(value));
+        return y - 22;
+    }
+
+    private float tokenRow(PDPageContentStream content, float y, String label, String tokenNumber) throws IOException {
+        drawText(content, PDType1Font.HELVETICA_BOLD, 10, 56, y, label + ":");
+        drawTokenNumber(content, 190, y, safe(tokenNumber));
         return y - 22;
     }
 
@@ -247,6 +295,21 @@ public class VisitorPassService {
         content.newLineAtOffset(x, y);
         content.showText(safe(text));
         content.endText();
+    }
+
+    private void drawTokenNumber(PDPageContentStream content, float x, float y, String tokenNumber) throws IOException {
+        String safeToken = safe(tokenNumber);
+        if (safeToken.length() <= 4) {
+            drawText(content, PDType1Font.HELVETICA_BOLD, 12, x, y, safeToken);
+            return;
+        }
+
+        String prefix = safeToken.substring(0, safeToken.length() - 4);
+        String suffix = safeToken.substring(safeToken.length() - 4);
+        int size = 10;
+        drawText(content, PDType1Font.HELVETICA, size, x, y, prefix);
+        float prefixWidth = PDType1Font.HELVETICA.getStringWidth(prefix) / 1000f * size;
+        drawText(content, PDType1Font.HELVETICA_BOLD, 12, x + prefixWidth, y, suffix);
     }
 
     private void drawLine(PDPageContentStream content, float x1, float y1, float x2, float y2) throws IOException {

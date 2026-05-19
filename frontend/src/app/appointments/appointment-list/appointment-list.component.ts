@@ -516,6 +516,23 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     return appointment.applicant?.constituency || '-';
   }
 
+  getDisplayAddress(appointment: Appointment) {
+    if (appointment.appointmentSource === 'GUEST') {
+      return appointment.guestAddress || '-';
+    }
+
+    const addressParts = [
+      appointment.applicant?.address1,
+      appointment.applicant?.address,
+    ].map(value => value?.trim()).filter(Boolean) as string[];
+
+    const combinedAddress = Array.from(new Set(addressParts)).join(', ');
+    return combinedAddress
+      || appointment.applicant?.addressLine
+      || appointment.applicant?.fullAddress
+      || '-';
+  }
+
   getDisplayAgenda(appointment: Appointment) {
     return appointment.reasonForAppointment || appointment.agendaType || appointment.subject || '-';
   }

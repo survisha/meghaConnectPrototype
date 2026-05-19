@@ -484,7 +484,17 @@
       <div>
         <span class="field-label">District</span>
         <strong>{{ selectedAppointment.applicant.district || '—' }}</strong>
-        <span>{{ selectedAppointment.applicant.constituency || '—' }}</span>
+        <span>{{ getDisplayConstituency(selectedAppointment) }}</span>
+      </div>
+      <div>
+        <span class="field-label">Constituency</span>
+        <strong>{{ getDisplayConstituency(selectedAppointment) }}</strong>
+        <span>District: {{ selectedAppointment.applicant.district || '—' }}</span>
+      </div>
+      <div>
+        <span class="field-label">Address</span>
+        <strong>{{ getDisplayAddress(selectedAppointment) }}</strong>
+        <span *ngIf="selectedAppointment.applicant.outsideMeghalaya">Outside Meghalaya</span>
       </div>
       <div>
         <span class="field-label">Requested Location</span>

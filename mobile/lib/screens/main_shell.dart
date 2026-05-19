@@ -19,6 +19,7 @@ import 'grievance_screen.dart';
 import 'visitor_dashboard_screen.dart';
 import 'approver_screen.dart';
 import 'guest_appointment_screen.dart';
+import 'deo_home_screen.dart';
 
 class _NavItem {
   final String label;
@@ -267,6 +268,24 @@ class _MainShellState extends State<MainShell> {
     // Public users go to visitor dashboard
     if (user.role == UserRole.PUBLIC) {
       return const VisitorDashboardScreen();
+    }
+    if (user.role == UserRole.DATA_ENTRY_OPERATOR) {
+      return const DeoHomeScreen();
+    }
+    if (user.role == UserRole.APPROVER) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Appointment List'),
+          actions: [
+            IconButton(
+              tooltip: i18n.t('LOGOUT'),
+              icon: const Icon(Icons.logout),
+              onPressed: () => auth.logout(),
+            ),
+          ],
+        ),
+        body: const AppointmentsScreen(forceApproverMode: true),
+      );
     }
 
     return Scaffold(

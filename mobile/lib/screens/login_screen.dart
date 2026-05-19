@@ -201,44 +201,158 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _primaryBlue,
+      resizeToAvoidBottomInset: true,
+      backgroundColor: const Color(0xFFF4F6FB),
       body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(
-              child: Container(
-                margin: const EdgeInsets.only(top: 4),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 20,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+              ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 430),
+                    child: _buildCleanLoginCard(),
                   ),
                 ),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 8),
-                    _buildTabBar(),
-                    Expanded(
-                      child: TabBarView(
-                        controller: _tabController,
-                        children: [
-                          _buildStaffTab(),
-                          _buildPublicTab(),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
               ),
-            ),
-          ],
+            );
+          },
         ),
       ),
     );
   }
 
+  Widget _buildCleanLoginCard() {
+    final i18n = context.watch<AppI18n>();
+    return Form(
+      key: _staffFormKey,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(
+            child: Container(
+              width: 76,
+              height: 76,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(18),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Image.asset('assets/logo.png', fit: BoxFit.contain),
+            ),
+          ),
+          const SizedBox(height: 18),
+          const Text(
+            'MeghaConnect',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: _primaryBlue,
+              fontSize: 30,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Staff Login',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.grey[600], fontSize: 14),
+          ),
+          const SizedBox(height: 26),
+          Card(
+            elevation: 3,
+            surfaceTintColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextFormField(
+                    controller: _usernameCtrl,
+                    decoration: InputDecoration(
+                      labelText: i18n.t('USERNAME'),
+                      prefixIcon: const Icon(Icons.person_outline),
+                    ),
+                    validator: (v) => (v == null || v.trim().isEmpty)
+                        ? i18n.t('ENTER_USERNAME')
+                        : null,
+                    textInputAction: TextInputAction.next,
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: _passwordCtrl,
+                    obscureText: _staffObscure,
+                    decoration: InputDecoration(
+                      labelText: i18n.t('PASSWORD'),
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      suffixIcon: IconButton(
+                        icon: Icon(_staffObscure
+                            ? Icons.visibility_off
+                            : Icons.visibility),
+                        onPressed: () =>
+                            setState(() => _staffObscure = !_staffObscure),
+                      ),
+                    ),
+                    validator: (v) => (v == null || v.isEmpty)
+                        ? i18n.t('ENTER_PASSWORD')
+                        : null,
+                    textInputAction: TextInputAction.done,
+                    onFieldSubmitted: (_) => _staffLogin(),
+                  ),
+                  if (_staffError != null) ...[
+                    const SizedBox(height: 12),
+                    _buildError(_staffError!),
+                  ],
+                  const SizedBox(height: 18),
+                  SizedBox(
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: _staffLoading ? null : _staffLogin,
+                      child: _staffLoading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(
+                              i18n.t('SIGN_IN'),
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
+          _buildDemoButtons(),
+        ],
+      ),
+    );
+  }
+
+  // ignore: unused_element
   Widget _buildHeader() {
     final i18n = context.watch<AppI18n>();
     return Container(
@@ -411,6 +525,7 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
+  // ignore: unused_element
   Widget _buildTabBar() {
     final i18n = context.watch<AppI18n>();
     return Container(
@@ -442,6 +557,7 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
+  // ignore: unused_element
   Widget _buildStaffTab() {
     final i18n = context.watch<AppI18n>();
     return SingleChildScrollView(
@@ -556,6 +672,7 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
+  // ignore: unused_element
   Widget _buildPublicTab() {
     final i18n = context.watch<AppI18n>();
     return SingleChildScrollView(

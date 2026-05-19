@@ -1,15 +1,23 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../core/i18n/app_i18n.dart';
 import '../services/api_service.dart';
 import '../widgets/megha_ui.dart';
+import 'new_appointment_screen.dart';
 
 class VisitorRegistrationScreen extends StatefulWidget {
-  const VisitorRegistrationScreen({super.key});
+  final bool openAppointmentAfterSubmit;
+
+  const VisitorRegistrationScreen({
+    super.key,
+    this.openAppointmentAfterSubmit = false,
+  });
 
   @override
   State<VisitorRegistrationScreen> createState() =>
@@ -25,14 +33,19 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
   final _visitorNameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _otpCtrl = TextEditingController();
+  final _aadhaarCtrl = TextEditingController();
   final _fullNameCtrl = TextEditingController();
   final _addressCtrl = TextEditingController();
   final _districtCtrl = TextEditingController();
   final _constituencyCtrl = TextEditingController();
   final _boothCtrl = TextEditingController();
+  final _partNumberCtrl = TextEditingController();
   final _villageCtrl = TextEditingController();
   final _designationCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
+  final _agendaTypeCtrl = TextEditingController(text: 'B2');
+  final _briefDescriptionCtrl = TextEditingController();
+  final _imagePicker = ImagePicker();
 
   int _step = 0;
   String _idType = 'EPIC';
@@ -46,7 +59,9 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
   String? _qrDataUri;
   String? _aadhaarTxnId;
   String? _livePhotoDataUri;
+  String? _livePhotoPath;
   int _kycConfidence = 0;
+  bool _useFrontCamera = false;
 
   static const _steps = [
     MeghaStepData('ID Verification', Icons.badge_outlined),
@@ -72,14 +87,18 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
     _visitorNameCtrl.dispose();
     _phoneCtrl.dispose();
     _otpCtrl.dispose();
+    _aadhaarCtrl.dispose();
     _fullNameCtrl.dispose();
     _addressCtrl.dispose();
     _districtCtrl.dispose();
     _constituencyCtrl.dispose();
     _boothCtrl.dispose();
+    _partNumberCtrl.dispose();
     _villageCtrl.dispose();
     _designationCtrl.dispose();
     _emailCtrl.dispose();
+    _agendaTypeCtrl.dispose();
+    _briefDescriptionCtrl.dispose();
     super.dispose();
   }
 
@@ -95,7 +114,23 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
       _qrDataUri = null;
       _aadhaarTxnId = null;
       _otpCtrl.clear();
+      if (value == 'NONE') {
+        _kycConfidence = 0;
+      }
       _clearMessages();
+    });
+  }
+
+  void _continueWithoutKyc() {
+    if (!_idFormKey.currentState!.validate()) return;
+    setState(() {
+      _fullNameCtrl.text = _visitorNameCtrl.text.trim();
+      _step = 2;
+      _kycConfidence = 0;
+      _success = null;
+      _error = null;
+      _warning =
+          'KYC pending. Complete manual details and capture visitor photo.';
     });
   }
 
@@ -236,14 +271,32 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
     });
   }
 
-  void _capturePhoto() {
-    setState(() {
-      _photoCaptured = true;
-      _livePhotoDataUri =
-          'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=';
-      _success = context.read<AppI18n>().t('PHOTO_CAPTURED_SUCCESS');
-      _error = null;
-    });
+  Future<void> _capturePhoto() async {
+    final i18n = context.read<AppI18n>();
+    try {
+      final file = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        preferredCameraDevice:
+            _useFrontCamera ? CameraDevice.front : CameraDevice.rear,
+        imageQuality: 72,
+        maxWidth: 900,
+      );
+      if (file == null || !mounted) return;
+      final bytes = await file.readAsBytes();
+      if (!mounted) return;
+      setState(() {
+        _photoCaptured = true;
+        _livePhotoPath = file.path;
+        _livePhotoDataUri = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+        _success = i18n.t('PHOTO_CAPTURED_SUCCESS');
+        _error = null;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Unable to open camera. Please check camera permission.';
+      });
+    }
   }
 
   Future<void> _submitRegistration() async {
@@ -266,39 +319,84 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
       'fullName': _fullNameCtrl.text.trim(),
       'designation': _designationCtrl.text.trim(),
       'address': _addressCtrl.text.trim(),
+      'address1': _addressCtrl.text.trim(),
       'addressLine': _addressCtrl.text.trim(),
+      'fullAddress': _addressCtrl.text.trim(),
       'district': district,
       'constituency': _outsideMeghalaya ? 'NA' : _constituencyCtrl.text.trim(),
       'booth': booth,
       'boothVillage': booth,
+      'partNumber': _outsideMeghalaya ? 'NA' : _partNumberCtrl.text.trim(),
       'village': _outsideMeghalaya ? 'NA' : _villageCtrl.text.trim(),
       'outsideMeghalaya': _outsideMeghalaya,
       'location': _outsideMeghalaya ? 'NA' : district,
       'email': _emailCtrl.text.trim(),
       'kycType': _idType,
-      'kycStatus':
-          _idType == 'AADHAAR' ? 'PHOTO_MATCHED' : 'DEMOGRAPHIC_MATCHED',
+      'kycStatus': _idType == 'NONE'
+          ? 'KYC_PENDING'
+          : (_idType == 'AADHAAR' ? 'PHOTO_MATCHED' : 'DEMOGRAPHIC_MATCHED'),
       'livePhoto': _livePhotoDataUri,
       'aadhaarClientTxnId': _aadhaarTxnId,
+      'agendaType': _agendaTypeCtrl.text.trim(),
+      'briefDescription': _briefDescriptionCtrl.text.trim(),
     };
     if (_idType == 'EPIC') {
       payload['epicNumber'] = _epicCtrl.text.trim().toUpperCase();
+    } else if (_idType == 'AADHAAR') {
+      payload['aadhaarNumber'] = _aadhaarCtrl.text.trim();
     }
 
     final result = await ApiService.registerVisitor(payload);
     if (!mounted) return;
 
-    setState(() {
-      _loading = false;
-      if (result['success'] == true) {
+    if (result['success'] == true) {
+      if (widget.openAppointmentAfterSubmit) {
+        final visitor = _extractRegisteredVisitor(result, payload);
+        setState(() => _loading = false);
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => NewAppointmentScreen(
+              isWalkIn: true,
+              initialVisitor: visitor,
+            ),
+          ),
+        );
+        return;
+      }
+      setState(() {
+        _loading = false;
         _submitted = true;
         _step = 4;
         _success = i18n.t('REGISTRATION_SUCCESS');
-      } else {
+      });
+    } else {
+      setState(() {
+        _loading = false;
         _error = (result['message'] as String?) ??
             i18n.t('ERROR_REGISTRATION_FAILED');
-      }
-    });
+      });
+    }
+  }
+
+  Map<String, dynamic> _extractRegisteredVisitor(
+    Map<String, dynamic> result,
+    Map<String, dynamic> fallback,
+  ) {
+    final data = result['data'];
+    final visitor = data is Map<String, dynamic>
+        ? data
+        : result['visitor'] is Map<String, dynamic>
+            ? result['visitor'] as Map<String, dynamic>
+            : result;
+    return {
+      ...fallback,
+      ...visitor,
+      'id': visitor['id'] ??
+          visitor['visitorId'] ??
+          visitor['applicantId'] ??
+          result['id'] ??
+          result['visitorId'],
+    };
   }
 
   void _populateFromEpic(Map<String, dynamic> response) {
@@ -479,6 +577,11 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
                   icon: const Icon(Icons.fingerprint),
                   label: Text(i18n.t('AADHAAR_CARD')),
                 ),
+                const ButtonSegment(
+                  value: 'NONE',
+                  icon: Icon(Icons.edit_note_outlined),
+                  label: Text('None'),
+                ),
               ],
               selected: {_idType},
               onSelectionChanged: (v) => _switchIdType(v.first),
@@ -560,7 +663,21 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
                 label: i18n.t('GENERATE_OTP'),
                 onPressed: _startEpicFlow,
               ),
-            ] else ...[
+            ] else if (_idType == 'AADHAAR') ...[
+              TextFormField(
+                controller: _aadhaarCtrl,
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(12),
+                ],
+                decoration: const InputDecoration(
+                  labelText: 'Aadhaar Number',
+                  prefixIcon: Icon(Icons.fingerprint),
+                  helperText: 'Optional if Aadhaar QR flow returns reference.',
+                ),
+              ),
+              const SizedBox(height: 12),
               MeghaStatusBanner.success(i18n.t('CLICK_GENERATE_QR_AADHAAR')),
               const SizedBox(height: 14),
               if (_qrDataUri != null) _buildQrPreview(i18n),
@@ -579,6 +696,54 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
                   label: i18n.t('CONTINUE_TO_DETAILS'),
                   onPressed: _continueAfterAadhaar,
                 ),
+            ] else ...[
+              TextFormField(
+                controller: _visitorNameCtrl,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(
+                  labelText: 'Visitor Name *',
+                  prefixIcon: Icon(Icons.person_outline),
+                ),
+                validator: (v) {
+                  if (_idType != 'NONE') return null;
+                  if (v == null || v.trim().isEmpty) {
+                    return 'Enter visitor name';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _phoneCtrl,
+                keyboardType: TextInputType.phone,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(10),
+                ],
+                decoration: const InputDecoration(
+                  labelText: 'Mobile Number *',
+                  prefixIcon: Icon(Icons.phone_outlined),
+                  hintText: 'Enter 10 digit mobile number',
+                ),
+                validator: (v) {
+                  if (_idType != 'NONE') return null;
+                  if (v == null || v.length != 10) {
+                    return 'Enter a valid 10 digit mobile number';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              MeghaStatusBanner.warning(
+                'No ID selected. Visitor will be saved with KYC pending status.',
+              ),
+              const SizedBox(height: 18),
+              _PrimaryProgressButton(
+                loading: _loading,
+                icon: Icons.arrow_forward,
+                label: 'Continue',
+                onPressed: _continueWithoutKyc,
+              ),
             ],
           ],
         ),
@@ -749,28 +914,48 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    _photoCaptured
-                        ? Icons.check_circle_outline
-                        : Icons.photo_camera_outlined,
-                    size: 58,
-                    color: _photoCaptured
-                        ? const Color(0xFF16A34A)
-                        : const Color(0xFF9CA3AF),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    _photoCaptured
-                        ? i18n.t('PHOTO_CAPTURED_SUCCESS')
-                        : i18n.t('CLICK_BELOW_START_CAMERA'),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: MeghaColors.muted),
-                  ),
+                  if (_livePhotoPath != null)
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.file(
+                          File(_livePhotoPath!),
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    )
+                  else ...[
+                    Icon(
+                      _photoCaptured
+                          ? Icons.check_circle_outline
+                          : Icons.photo_camera_outlined,
+                      size: 58,
+                      color: _photoCaptured
+                          ? const Color(0xFF16A34A)
+                          : const Color(0xFF9CA3AF),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      _photoCaptured
+                          ? i18n.t('PHOTO_CAPTURED_SUCCESS')
+                          : i18n.t('CLICK_BELOW_START_CAMERA'),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: MeghaColors.muted),
+                    ),
+                  ],
                 ],
               ),
             ),
           ),
           const SizedBox(height: 14),
+          OutlinedButton.icon(
+            onPressed: () => setState(() => _useFrontCamera = !_useFrontCamera),
+            icon: const Icon(Icons.cameraswitch_outlined),
+            label:
+                Text(_useFrontCamera ? 'Use Back Camera' : 'Use Front Camera'),
+          ),
+          const SizedBox(height: 10),
           Row(
             children: [
               Expanded(
@@ -845,6 +1030,18 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
           children: [
             _buildVerifiedKycPanel(i18n),
             const SizedBox(height: 14),
+            TextFormField(
+              controller: _fullNameCtrl,
+              textCapitalization: TextCapitalization.words,
+              decoration: InputDecoration(
+                labelText: '${i18n.t('NAME')} *',
+                prefixIcon: const Icon(Icons.person_outline),
+              ),
+              validator: (v) => (v == null || v.trim().isEmpty)
+                  ? 'Enter applicant name'
+                  : null,
+            ),
+            const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               value:
                   _designationCtrl.text.isEmpty ? null : _designationCtrl.text,
@@ -920,6 +1117,16 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
             ),
             const SizedBox(height: 12),
             TextFormField(
+              controller: _partNumberCtrl,
+              enabled: !_outsideMeghalaya,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Part Number',
+                prefixIcon: Icon(Icons.confirmation_number_outlined),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
               controller: _villageCtrl,
               enabled: !_outsideMeghalaya,
               decoration:
@@ -930,6 +1137,28 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
               controller: _emailCtrl,
               keyboardType: TextInputType.emailAddress,
               decoration: InputDecoration(labelText: i18n.t('EMAIL_OPTIONAL')),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _agendaTypeCtrl,
+              textCapitalization: TextCapitalization.characters,
+              decoration: const InputDecoration(
+                labelText: 'Agenda Type',
+                prefixIcon: Icon(Icons.category_outlined),
+                helperText: 'Default for DEO walk-in is B2.',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _briefDescriptionCtrl,
+              minLines: 3,
+              maxLines: 5,
+              decoration: const InputDecoration(
+                labelText: 'Brief Description',
+                prefixIcon: Icon(Icons.description_outlined),
+                alignLabelWithHint: true,
+              ),
+              textInputAction: TextInputAction.newline,
             ),
             const SizedBox(height: 18),
             Row(
@@ -993,9 +1222,16 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
               label: i18n.t('CONSTITUENCY'), value: _constituencyCtrl.text),
           _InfoRow(label: i18n.t('BOOTH_VILLAGE'), value: _boothCtrl.text),
           _InfoRow(
-            label: _idType == 'EPIC' ? i18n.t('EPIC') : i18n.t('AADHAAR_REF'),
-            value:
-                _idType == 'EPIC' ? _epicCtrl.text : (_aadhaarTxnId ?? 'N/A'),
+            label: _idType == 'EPIC'
+                ? i18n.t('EPIC')
+                : _idType == 'AADHAAR'
+                    ? i18n.t('AADHAAR_REF')
+                    : 'KYC',
+            value: _idType == 'EPIC'
+                ? _epicCtrl.text
+                : _idType == 'AADHAAR'
+                    ? (_aadhaarTxnId ?? _aadhaarCtrl.text)
+                    : 'Pending',
           ),
           if (_kycConfidence > 0) ...[
             const SizedBox(height: 10),

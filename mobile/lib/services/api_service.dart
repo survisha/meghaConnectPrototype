@@ -412,6 +412,26 @@ class ApiService {
     return {'content': [], 'totalElements': 0};
   }
 
+  static Future<Map<String, dynamic>?> getAppointmentById(int id) async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .get(_u('/appointments/$id'), headers: headers)
+          .timeout(const Duration(seconds: 20));
+      if (resp.statusCode == 200) {
+        final decoded = jsonDecode(resp.body);
+        if (decoded is Map<String, dynamic>) {
+          final data = decoded['data'];
+          return data is Map<String, dynamic> ? data : decoded;
+        }
+      }
+      if (resp.statusCode == 401 || resp.statusCode == 403) {
+        await clearToken();
+      }
+    } catch (_) {}
+    return null;
+  }
+
   static Future<Map<String, dynamic>?> createAppointment(
       Map<String, dynamic> body) async {
     try {
@@ -445,8 +465,7 @@ class ApiService {
     }
   }
 
-  static Future<List<Map<String, String>>> getReferenceData(
-      String type) async {
+  static Future<List<Map<String, String>>> getReferenceData(String type) async {
     try {
       final headers = await _authHeaders();
       final resp = await http
@@ -498,7 +517,8 @@ class ApiService {
         ));
       }
 
-      final streamed = await request.send().timeout(const Duration(seconds: 45));
+      final streamed =
+          await request.send().timeout(const Duration(seconds: 45));
       final response = await http.Response.fromStream(streamed);
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final decoded = jsonDecode(response.body);
@@ -534,6 +554,82 @@ class ApiService {
           )
           .timeout(const Duration(seconds: 20));
       if (resp.statusCode == 200) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  static Future<List<Map<String, dynamic>>> getAppointmentRemarks(
+      int appointmentId) async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .get(_u('/appointments/$appointmentId/remarks'), headers: headers)
+          .timeout(const Duration(seconds: 20));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        final decoded = jsonDecode(resp.body);
+        final rows = decoded is List
+            ? decoded
+            : decoded is Map<String, dynamic> && decoded['data'] is List
+                ? decoded['data'] as List<dynamic>
+                : <dynamic>[];
+        return rows
+            .whereType<Map>()
+            .map((row) => Map<String, dynamic>.from(row))
+            .toList();
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  static Future<Map<String, dynamic>?> addAppointmentRemark(
+    int appointmentId, {
+    required String remarks,
+    String? decision,
+    String? departmentCode,
+  }) async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .post(
+            _u('/appointments/$appointmentId/remarks'),
+            headers: headers,
+            body: jsonEncode({
+              'hcmRemarks': remarks,
+              'decision': decision,
+              'departmentCode': departmentCode,
+            }),
+          )
+          .timeout(const Duration(seconds: 20));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  static Future<Map<String, dynamic>?> updateAppointmentRemark(
+    int appointmentId,
+    int remarkId, {
+    required String remarks,
+    String? decision,
+    String? departmentCode,
+  }) async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .put(
+            _u('/appointments/$appointmentId/remarks/$remarkId'),
+            headers: headers,
+            body: jsonEncode({
+              'hcmRemarks': remarks,
+              'decision': decision,
+              'departmentCode': departmentCode,
+            }),
+          )
+          .timeout(const Duration(seconds: 20));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
         return jsonDecode(resp.body) as Map<String, dynamic>;
       }
     } catch (_) {}

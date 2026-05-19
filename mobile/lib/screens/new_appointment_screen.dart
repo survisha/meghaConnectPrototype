@@ -9,11 +9,13 @@ import 'visitor_registration_screen.dart';
 class NewAppointmentScreen extends StatefulWidget {
   final bool isWalkIn;
   final bool isPublic;
+  final Map<String, dynamic>? initialVisitor;
 
   const NewAppointmentScreen({
     super.key,
     this.isWalkIn = false,
     this.isPublic = false,
+    this.initialVisitor,
   });
 
   @override
@@ -39,6 +41,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
   bool _visitorLoading = false;
   String? _contextError;
   String? _submittedAppId;
+  String? _submittedToken;
   Map<String, dynamic>? _selectedVisitor;
   List<Map<String, dynamic>> _searchResults = [];
 
@@ -57,6 +60,14 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.isWalkIn) _agendaType = 'B2';
+    if (widget.initialVisitor != null) {
+      _selectedVisitor = Map<String, dynamic>.from(widget.initialVisitor!);
+      _agendaBriefCtrl.text =
+          widget.initialVisitor!['briefDescription']?.toString() ?? '';
+      final agenda = widget.initialVisitor!['agendaType']?.toString();
+      if (agenda != null && _agendaTypes.contains(agenda)) _agendaType = agenda;
+    }
     Future.microtask(_loadPublicVisitor);
   }
 
@@ -138,6 +149,9 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
       } else {
         _submittedAppId =
             result['applicationId'] as String? ?? result['id']?.toString();
+        _submittedToken = result['walkInTokenNumber']?.toString() ??
+            result['tokenNumber']?.toString() ??
+            result['token']?.toString();
         _submitted = true;
       }
     });
@@ -155,6 +169,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
       _location = 'SHILLONG';
       _submitted = false;
       _submittedAppId = null;
+      _submittedToken = null;
       _contextError = null;
       if (!widget.isPublic) _selectedVisitor = null;
     });
@@ -560,6 +575,25 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                 ),
               ),
             ),
+            if (_submittedToken != null && _submittedToken!.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD1FAE5),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'Token Number: $_submittedToken',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF065F46),
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 12),
             Text(
               widget.isPublic
@@ -618,6 +652,12 @@ class _VisitorSummary extends StatelessWidget {
     final epic = visitor['epicNumber']?.toString() ?? '—';
     final district = visitor['district']?.toString() ?? '—';
     final constituency = visitor['constituency']?.toString() ?? '—';
+    final booth = visitor['booth']?.toString() ??
+        visitor['boothVillage']?.toString() ??
+        '—';
+    final part = visitor['partNumber']?.toString() ??
+        visitor['pollingPartNo']?.toString() ??
+        '—';
     final kyc = visitor['kycStatus']?.toString() ??
         (visitor['kycVerified'] == true ? 'VERIFIED' : 'PENDING');
 
@@ -668,6 +708,8 @@ class _VisitorSummary extends StatelessWidget {
               _SummaryPill(label: 'EPIC', value: epic),
               _SummaryPill(label: 'District', value: district),
               _SummaryPill(label: 'Constituency', value: constituency),
+              _SummaryPill(label: 'Booth', value: booth),
+              _SummaryPill(label: 'Part', value: part),
               _SummaryPill(label: 'KYC', value: kyc),
             ],
           ),

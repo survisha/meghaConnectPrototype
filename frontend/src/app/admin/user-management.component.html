@@ -33,6 +33,11 @@
           <td mat-cell *matCellDef="let u"><code style="background:#f3f4f6;padding:2px 6px;border-radius:4px">{{ u.username }}</code></td>
         </ng-container>
 
+        <ng-container matColumnDef="phoneNumber">
+          <th mat-header-cell *matHeaderCellDef>Mobile</th>
+          <td mat-cell *matCellDef="let u">{{ u.phoneNumber || '-' }}</td>
+        </ng-container>
+
         <!-- Role Column -->
         <ng-container matColumnDef="role">
           <th mat-header-cell *matHeaderCellDef>Role</th>
@@ -97,6 +102,11 @@
         </mat-form-field>
 
         <mat-form-field appearance="outline" style="width:100%">
+          <mat-label>Mobile</mat-label>
+          <input id="userMgmt_phoneInput" matInput [(ngModel)]="form.phoneNumber" placeholder="10-digit mobile number" maxlength="10" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" style="width:100%">
           <mat-label>Password *</mat-label>
           <input id="userMgmt_passwordInput" matInput [type]="showPassword ? 'text' : 'password'" [(ngModel)]="form.password" placeholder="Set password" />
           <button id="userMgmt_togglePasswordBtn" mat-icon-button matSuffix (click)="showPassword = !showPassword" type="button">
@@ -107,7 +117,9 @@
 
       <div class="dialog-actions">
         <button mat-button type="button" (click)="showDialog = false">Cancel</button>
-        <button mat-raised-button color="primary" type="button" (click)="save()">{{ isEdit ? 'Update' : 'Create' }}</button>
+        <button mat-raised-button color="primary" type="button" (click)="save()" [disabled]="isSaving">
+          {{ isSaving ? 'Saving...' : (isEdit ? 'Update' : 'Create') }}
+        </button>
       </div>
     </div>
   </div>

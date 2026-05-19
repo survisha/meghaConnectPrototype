@@ -1,7 +1,8 @@
 export type UserRole =
   | 'HCM' | 'ADMIN' | 'OSD'
   | 'APPROVER' | 'CMO_OFFICER'
-  | 'DATA_ENTRY_OPERATOR' | 'PUBLIC';
+  | 'CMO' | 'DATA_ENTRY_OPERATOR'
+  | 'SECURITY' | 'PUBLIC' | 'CITIZEN';
 
 export type EventType = 'A1' | 'A2' | 'A3' | 'A4' | 'B1' | 'B2';
 export type Location  = 'SHILLONG' | 'TURA' | 'DELHI' | 'OTHERS';

@@ -5,6 +5,7 @@ import lombok.*;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 
 @Getter
@@ -19,7 +20,7 @@ public class CreateUserRequest {
     private String username;
 
     @NotBlank
-    @Size(min = 8, max = 100)
+    @Size(min = 6, max = 100)
     private String password;
 
     @NotBlank
@@ -30,6 +31,7 @@ public class CreateUserRequest {
     private User.UserRole role;
 
     @Size(max = 20)
+    @Pattern(regexp = "^$|^[0-9]{10}$", message = "Phone number must be exactly 10 digits")
     private String phoneNumber;
 
     private Boolean active;

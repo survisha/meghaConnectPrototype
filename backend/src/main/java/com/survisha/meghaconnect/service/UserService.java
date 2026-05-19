@@ -21,6 +21,7 @@ import java.util.Optional;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final RoleService roleService;
     private final PasswordEncoder passwordEncoder;
 
     /**
@@ -29,6 +30,12 @@ public class UserService {
     public List<User> getAllUsers() {
         log.debug("Fetching all users");
         return userRepository.findAll();
+    }
+
+    public List<UserResponse> getAllUserResponses() {
+        return userRepository.findAll().stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     /**
@@ -67,10 +74,27 @@ public class UserService {
             );
         }
         String username = trimToNull(request.getUsername());
+        String fullName = trimToNull(request.getFullName());
+        String password = trimToNull(request.getPassword());
+        String phoneNumber = trimToNull(request.getPhoneNumber());
         if (username == null) {
             throw new MeghaConnectException(
                     ErrorCodeConstants.MISSING_REQUIRED_FIELD,
                     ErrorCodeConstants.format(ErrorCodeConstants.MISSING_REQUIRED_FIELD_MSG, "username"),
+                    400
+            );
+        }
+        if (fullName == null) {
+            throw new MeghaConnectException(
+                    ErrorCodeConstants.MISSING_REQUIRED_FIELD,
+                    ErrorCodeConstants.format(ErrorCodeConstants.MISSING_REQUIRED_FIELD_MSG, "fullName"),
+                    400
+            );
+        }
+        if (password == null) {
+            throw new MeghaConnectException(
+                    ErrorCodeConstants.MISSING_REQUIRED_FIELD,
+                    ErrorCodeConstants.format(ErrorCodeConstants.MISSING_REQUIRED_FIELD_MSG, "password"),
                     400
             );
         }
@@ -81,6 +105,13 @@ public class UserService {
                     409
             );
         }
+        if (phoneNumber != null && userRepository.existsByPhoneNumber(phoneNumber)) {
+            throw new MeghaConnectException(
+                    ErrorCodeConstants.DUPLICATE_ENTRY,
+                    ErrorCodeConstants.format(ErrorCodeConstants.DUPLICATE_ENTRY_MSG, "mobile"),
+                    409
+            );
+        }
         if (request.getRole() == null) {
             throw new MeghaConnectException(
                     ErrorCodeConstants.INVALID_ROLE,
@@ -88,13 +119,21 @@ public class UserService {
                     400
             );
         }
+        String roleName = request.getRole().name();
+        if (!roleService.existsByRoleName(roleName)) {
+            throw new MeghaConnectException(
+                    ErrorCodeConstants.ROLE_NOT_FOUND,
+                    ErrorCodeConstants.format(ErrorCodeConstants.ROLE_NOT_FOUND_MSG, roleName),
+                    400
+            );
+        }
 
         User user = User.builder()
                 .username(username)
-                .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .fullName(trimToNull(request.getFullName()))
+                .passwordHash(passwordEncoder.encode(password))
+                .fullName(fullName)
                 .role(request.getRole())
-                .phoneNumber(trimToNull(request.getPhoneNumber()))
+                .phoneNumber(phoneNumber)
                 .active(request.getActive() == null || Boolean.TRUE.equals(request.getActive()))
                 .offlineAccess(Boolean.TRUE.equals(request.getOfflineAccess()))
                 .build();

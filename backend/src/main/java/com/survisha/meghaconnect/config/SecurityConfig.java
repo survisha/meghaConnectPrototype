@@ -141,6 +141,7 @@ public class SecurityConfig {
             UserDetails userDetails = org.springframework.security.core.userdetails.User.builder()
                 .username(u.getUsername())
                 .password(u.getPasswordHash())
+                .disabled(!u.isActive())
                 .authorities(Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + u.getRole().name())))
                 .build();
             

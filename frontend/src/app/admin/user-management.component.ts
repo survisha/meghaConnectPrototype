@@ -176,6 +176,7 @@ export class UserManagementComponent implements OnInit {
     this.http.get<string[]>(`${environment.apiUrl}/roles`).subscribe({
       next: roles => {
         this.roleOptions = (roles ?? [])
+          .map(role => this.normalizeRoleName(role))
           .filter(role => role && role !== 'PUBLIC' && role !== 'CITIZEN')
           .map(role => ({ label: this.toRoleLabel(role), value: role as UserRole }));
         if (!this.roleOptions.some(option => option.value === this.form.role)) {
@@ -184,6 +185,7 @@ export class UserManagementComponent implements OnInit {
       },
       error: err => {
         this.errorMsg = err?.message || 'Unable to load roles.';
+        this.roleOptions = [];
       },
     });
   }
@@ -217,5 +219,12 @@ export class UserManagementComponent implements OnInit {
       .split('_')
       .map(part => part.charAt(0).toUpperCase() + part.slice(1))
       .join(' ');
+  }
+
+  private normalizeRoleName(role: string): string {
+    const normalized = (role ?? '').trim().toUpperCase();
+    if (normalized === 'SAIDUL_OSD') return 'OSD';
+    if (normalized === 'APPROVER_JT_SECY') return 'APPROVER';
+    return normalized;
   }
 }

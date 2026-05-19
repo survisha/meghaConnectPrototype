@@ -12,6 +12,10 @@
   background: rgba(15, 23, 42, 0.45);
 }
 
+::ng-deep .cdk-overlay-container {
+  z-index: 1300;
+}
+
 .user-dialog {
   width: min(520px, 100%);
   max-height: calc(100vh - 2rem);

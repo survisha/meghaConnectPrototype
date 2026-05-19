@@ -97,6 +97,7 @@
         <mat-form-field appearance="outline" style="width:100%">
           <mat-label>Role *</mat-label>
           <mat-select id="userMgmt_roleSelect" [(ngModel)]="form.role">
+            <mat-option *ngIf="!roleOptions.length" disabled>No roles loaded</mat-option>
             <mat-option *ngFor="let opt of roleOptions" [value]="opt.value">{{ opt.label }}</mat-option>
           </mat-select>
         </mat-form-field>

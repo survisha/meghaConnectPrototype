@@ -2,6 +2,11 @@ import { Injectable } from '@angular/core';
 
 export type CameraFacingMode = 'user' | 'environment';
 
+export interface CameraDeviceOption {
+  deviceId: string;
+  label: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class CameraCaptureService {
   async open(facingMode: CameraFacingMode, deviceId?: string): Promise<MediaStream> {
@@ -13,6 +18,9 @@ export class CameraCaptureService {
     try {
       return await navigator.mediaDevices.getUserMedia(constraints);
     } catch (error) {
+      if (deviceId) {
+        return navigator.mediaDevices.getUserMedia(this.constraintsFor(facingMode));
+      }
       if (facingMode === 'environment') {
         return navigator.mediaDevices.getUserMedia(this.constraintsFor('user'));
       }
@@ -22,12 +30,17 @@ export class CameraCaptureService {
     }
   }
 
-  async listVideoDevices(): Promise<MediaDeviceInfo[]> {
+  async listVideoDevices(): Promise<CameraDeviceOption[]> {
     if (!navigator.mediaDevices?.enumerateDevices) {
       return [];
     }
     const devices = await navigator.mediaDevices.enumerateDevices();
-    return devices.filter(device => device.kind === 'videoinput');
+    return devices
+      .filter(device => device.kind === 'videoinput')
+      .map((device, index) => ({
+        deviceId: device.deviceId,
+        label: device.label || `Camera ${index + 1}`,
+      }));
   }
 
   attach(videoElement: HTMLVideoElement, stream: MediaStream): void {
@@ -51,7 +64,7 @@ export class CameraCaptureService {
     }
 
     context.drawImage(videoElement, 0, 0);
-    return canvas.toDataURL('image/jpeg', 0.8);
+    return canvas.toDataURL('image/jpeg', 0.85);
   }
 
   stop(stream: MediaStream | null): void {
@@ -66,7 +79,7 @@ export class CameraCaptureService {
     return facingMode === 'user' ? 'Front camera' : 'Back camera';
   }
 
-  deviceLabel(device: MediaDeviceInfo, index: number): string {
+  deviceLabel(device: CameraDeviceOption, index: number): string {
     return device.label || `Camera ${index + 1}`;
   }
 
@@ -74,8 +87,8 @@ export class CameraCaptureService {
     return {
       video: {
         facingMode: { ideal: facingMode },
-        width: { ideal: 640 },
-        height: { ideal: 480 },
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
       }
     };
   }
@@ -84,8 +97,8 @@ export class CameraCaptureService {
     return {
       video: {
         deviceId: { exact: deviceId },
-        width: { ideal: 640 },
-        height: { ideal: 480 },
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
       }
     };
   }

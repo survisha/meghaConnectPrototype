@@ -18,7 +18,7 @@ import { MatStepperModule } from '@angular/material/stepper';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LanguageSelectorComponent } from '../shared/language-selector/language-selector.component';
 import { apiErrorMessage } from '../shared/api-error.util';
-import { CameraCaptureService, CameraFacingMode } from '../shared/camera-capture.service';
+import { CameraCaptureService, CameraDeviceOption, CameraFacingMode } from '../shared/camera-capture.service';
 import { ReferenceDataService } from '../services/reference-data.service';
 
 type KycStep = 'id-entry' | 'otp-verification' | 'photo-capture' | 'additional-details' | 'kyc-complete';
@@ -217,8 +217,11 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   isCameraActive = false;
   capturedPhotoUrl = '';
   cameraFacingMode: CameraFacingMode = 'user';
-  cameraDevices: MediaDeviceInfo[] = [];
+  cameraOptions: CameraDeviceOption[] = [];
   selectedCameraDeviceId = '';
+  private readonly handleCameraDeviceChange = () => {
+    void this.loadCameraDevices(true);
+  };
 
   // KYC confidence indicator (R009)
   kycConfidenceScore = 0;
@@ -264,9 +267,11 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.loadDesignations();
     this.loadAgendaTypes();
     this.loadCameraDevices();
+    navigator.mediaDevices?.addEventListener?.('devicechange', this.handleCameraDeviceChange);
   }
 
   ngOnDestroy() {
+    navigator.mediaDevices?.removeEventListener?.('devicechange', this.handleCameraDeviceChange);
     this.stopCamera();
   }
 
@@ -1039,6 +1044,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       this.stopCamera();
       this.videoStream = await this.cameraCapture.open(this.cameraFacingMode, this.selectedCameraDeviceId || undefined);
       this.isCameraActive = true;  // Changed from showCamera to isCameraActive
+      this.watchCameraDisconnect(this.videoStream);
       this.loadCameraDevices();
       
       // Wait for next tick to ensure video element exists
@@ -1049,9 +1055,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
         }
       }, 100);
     } catch (err) {
-      this.errorMsg = err instanceof Error && err.message
-        ? err.message
-        : this.t('CAMERA_ACCESS_DENIED');
+      this.stopCamera();
+      this.errorMsg = this.cameraErrorMessage(err);
     }
   }
 
@@ -1088,6 +1093,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   stopCamera() {
     this.cameraCapture.stop(this.videoStream);
     this.videoStream = null;
+    this.isCameraActive = false;
   }
 
   switchCamera() {
@@ -1105,19 +1111,61 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     }
   }
 
-  cameraDeviceLabel(device: MediaDeviceInfo, index: number): string {
+  cameraDeviceLabel(device: CameraDeviceOption, index: number): string {
     return this.cameraCapture.deviceLabel(device, index);
   }
 
-  private async loadCameraDevices() {
+  private async loadCameraDevices(fromDeviceChange = false) {
     try {
-      this.cameraDevices = await this.cameraCapture.listVideoDevices();
-      if (!this.selectedCameraDeviceId && this.cameraDevices.length) {
-        this.selectedCameraDeviceId = this.cameraDevices[0].deviceId;
+      this.cameraOptions = await this.cameraCapture.listVideoDevices();
+      if (!this.cameraOptions.length) {
+        this.selectedCameraDeviceId = '';
+        if (fromDeviceChange && this.isCameraActive) {
+          this.errorMsg = 'No camera found';
+          this.stopCamera();
+        }
+        return;
+      }
+
+      const selectedStillAvailable = this.cameraOptions.some(device => device.deviceId === this.selectedCameraDeviceId);
+      if (!this.selectedCameraDeviceId || !selectedStillAvailable) {
+        this.selectedCameraDeviceId = this.cameraOptions[0].deviceId;
+        if (fromDeviceChange && this.isCameraActive && !selectedStillAvailable) {
+          this.errorMsg = 'External camera disconnected';
+          this.openCamera();
+        }
       }
     } catch {
-      this.cameraDevices = [];
+      this.cameraOptions = [];
+      this.selectedCameraDeviceId = '';
     }
+  }
+
+  private watchCameraDisconnect(stream: MediaStream) {
+    stream.getVideoTracks().forEach(track => {
+      track.onended = () => {
+        if (!this.videoStream) return;
+        this.errorMsg = 'External camera disconnected';
+        this.stopCamera();
+      };
+    });
+  }
+
+  private cameraErrorMessage(err: unknown): string {
+    const name = err instanceof DOMException ? err.name : '';
+    if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+      return 'Camera permission denied. Please allow camera access and try again.';
+    }
+    if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+      return 'No camera found';
+    }
+    if (name === 'NotReadableError' || name === 'TrackStartError') {
+      return 'Unable to access selected camera. It may be busy in another application.';
+    }
+    if (name === 'OverconstrainedError' || name === 'ConstraintNotSatisfiedError') {
+      return 'Unable to access selected camera. Please select another camera.';
+    }
+    return err instanceof Error && err.message ? err.message : this.t('CAMERA_ACCESS_DENIED');
   }
 
   get cameraFacingLabel(): string {

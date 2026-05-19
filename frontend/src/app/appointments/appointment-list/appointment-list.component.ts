@@ -33,7 +33,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { apiErrorMessage } from '../../shared/api-error.util';
-import { CameraCaptureService, CameraFacingMode } from '../../shared/camera-capture.service';
+import { CameraCaptureService, CameraDeviceOption, CameraFacingMode } from '../../shared/camera-capture.service';
 
 type SortDirection = 'asc' | 'desc';
 type AppointmentSortColumn =
@@ -112,6 +112,8 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   proofCameraStream: MediaStream | null = null;
   proofCameraActive = false;
   proofCameraFacingMode: CameraFacingMode = 'environment';
+  proofCameraOptions: CameraDeviceOption[] = [];
+  selectedProofCameraDeviceId = '';
   proofCaptureUrl = '';
   proofCaptureFile: File | null = null;
   proofCaptureError = '';
@@ -217,6 +219,9 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   private cmoModifyDialogRef?: MatDialogRef<unknown>;
   private cmoMissingInfoDialogRef?: MatDialogRef<unknown>;
   private aiNotesPollTimers = new Map<number, number>();
+  private readonly handleProofCameraDeviceChange = () => {
+    void this.loadProofCameraDevices(true);
+  };
   private readonly cmoQueueStatuses = new Set<AppointmentStatus>([
     'SUBMITTED',
     'CMO_REVIEW',
@@ -251,6 +256,8 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     this.loadDepartments();
     this.loadScheduleEvents();
     this.loadAppointments();
+    this.loadProofCameraDevices();
+    navigator.mediaDevices?.addEventListener?.('devicechange', this.handleProofCameraDeviceChange);
   }
 
   private configureRoleDefaults() {
@@ -368,6 +375,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    navigator.mediaDevices?.removeEventListener?.('devicechange', this.handleProofCameraDeviceChange);
     this.clearDocumentPreviewState();
     this.stopProofCamera();
     this.clearProofCapture();
@@ -1169,16 +1177,19 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     try {
       this.proofCaptureError = '';
       this.stopProofCamera();
-      this.proofCameraStream = await this.cameraCapture.open(this.proofCameraFacingMode);
+      this.proofCameraStream = await this.cameraCapture.open(this.proofCameraFacingMode, this.selectedProofCameraDeviceId || undefined);
       this.proofCameraActive = true;
+      this.watchProofCameraDisconnect(this.proofCameraStream);
+      this.loadProofCameraDevices();
       setTimeout(() => {
         const video = document.getElementById('appointment-proof-camera-preview') as HTMLVideoElement;
         if (video && this.proofCameraStream) {
           this.cameraCapture.attach(video, this.proofCameraStream);
         }
       }, 100);
-    } catch {
-      this.proofCaptureError = 'Camera access was blocked. Please allow camera permission and try again.';
+    } catch (error) {
+      this.stopProofCamera();
+      this.proofCaptureError = this.proofCameraErrorMessage(error);
     }
   }
 
@@ -1206,10 +1217,22 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   }
 
   switchProofCamera() {
+    this.selectedProofCameraDeviceId = '';
     this.proofCameraFacingMode = this.cameraCapture.toggle(this.proofCameraFacingMode);
     if (this.proofCameraActive) {
       this.openProofCamera();
     }
+  }
+
+  onProofCameraDeviceChange(deviceId: string) {
+    this.selectedProofCameraDeviceId = deviceId;
+    if (this.proofCameraActive) {
+      this.openProofCamera();
+    }
+  }
+
+  proofCameraDeviceLabel(device: CameraDeviceOption, index: number): string {
+    return this.cameraCapture.deviceLabel(device, index);
   }
 
   get proofCameraFacingLabel(): string {
@@ -1235,6 +1258,59 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     this.cameraCapture.stop(this.proofCameraStream);
     this.proofCameraStream = null;
     this.proofCameraActive = false;
+  }
+
+  private async loadProofCameraDevices(fromDeviceChange = false) {
+    try {
+      this.proofCameraOptions = await this.cameraCapture.listVideoDevices();
+      if (!this.proofCameraOptions.length) {
+        this.selectedProofCameraDeviceId = '';
+        if (fromDeviceChange && this.proofCameraActive) {
+          this.proofCaptureError = 'No camera found';
+          this.stopProofCamera();
+        }
+        return;
+      }
+
+      const selectedStillAvailable = this.proofCameraOptions.some(device => device.deviceId === this.selectedProofCameraDeviceId);
+      if (!this.selectedProofCameraDeviceId || !selectedStillAvailable) {
+        this.selectedProofCameraDeviceId = this.proofCameraOptions[0].deviceId;
+        if (fromDeviceChange && this.proofCameraActive && !selectedStillAvailable) {
+          this.proofCaptureError = 'External camera disconnected';
+          this.openProofCamera();
+        }
+      }
+    } catch {
+      this.proofCameraOptions = [];
+      this.selectedProofCameraDeviceId = '';
+    }
+  }
+
+  private watchProofCameraDisconnect(stream: MediaStream) {
+    stream.getVideoTracks().forEach(track => {
+      track.onended = () => {
+        if (!this.proofCameraStream) return;
+        this.proofCaptureError = 'External camera disconnected';
+        this.stopProofCamera();
+      };
+    });
+  }
+
+  private proofCameraErrorMessage(error: unknown) {
+    const name = error instanceof DOMException ? error.name : '';
+    if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+      return 'Camera permission denied. Please allow camera access and try again.';
+    }
+    if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+      return 'No camera found';
+    }
+    if (name === 'NotReadableError' || name === 'TrackStartError') {
+      return 'Unable to access selected camera. It may be busy in another application.';
+    }
+    if (name === 'OverconstrainedError' || name === 'ConstraintNotSatisfiedError') {
+      return 'Unable to access selected camera. Please select another camera.';
+    }
+    return error instanceof Error && error.message ? error.message : 'Camera access was blocked. Please allow camera permission and try again.';
   }
 
   canUploadSupportingDocument() {

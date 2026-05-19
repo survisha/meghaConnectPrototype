@@ -421,10 +421,10 @@
           </div>
 
           <!-- Camera controls -->
-          <mat-form-field appearance="outline" class="full-width" *ngIf="!hasAadhaarResidentImage && cameraDevices.length > 1">
+          <mat-form-field appearance="outline" class="full-width" *ngIf="!hasAadhaarResidentImage && cameraOptions.length > 1">
             <mat-label>Camera</mat-label>
             <mat-select [ngModel]="selectedCameraDeviceId" (ngModelChange)="onCameraDeviceChange($event)">
-              <mat-option *ngFor="let device of cameraDevices; let i = index" [value]="device.deviceId">
+              <mat-option *ngFor="let device of cameraOptions; let i = index" [value]="device.deviceId">
                 {{ cameraDeviceLabel(device, i) }}
               </mat-option>
             </mat-select>

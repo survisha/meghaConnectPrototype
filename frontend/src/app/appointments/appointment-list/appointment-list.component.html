@@ -725,6 +725,16 @@
         </div>
 
         <div class="meeting-proof-body">
+          <mat-form-field appearance="outline" class="full-width" *ngIf="proofCameraOptions.length > 1">
+            <mat-label>Camera</mat-label>
+            <mat-select [ngModel]="selectedProofCameraDeviceId" (ngModelChange)="onProofCameraDeviceChange($event)">
+              <mat-option *ngFor="let device of proofCameraOptions; let i = index" [value]="device.deviceId">
+                {{ proofCameraDeviceLabel(device, i) }}
+              </mat-option>
+            </mat-select>
+            <mat-hint>Select laptop camera or external USB camera.</mat-hint>
+          </mat-form-field>
+
           <div class="meeting-proof-frame">
             <video *ngIf="proofCameraActive" id="appointment-proof-camera-preview" autoplay playsinline></video>
             <img *ngIf="proofCaptureUrl && !proofCameraActive" [src]="proofCaptureUrl" alt="Visitor meeting proof">

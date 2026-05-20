@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
@@ -68,10 +70,27 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
               return Center(
                 child: Padding(
                   padding: const EdgeInsets.all(24),
-                  child: Text(
-                    error.errorDetails?.message ??
-                        'Camera is unavailable on this device.',
-                    textAlign: TextAlign.center,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.no_photography_outlined,
+                        size: 48,
+                        color: Colors.redAccent,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        _scannerErrorMessage(error),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: _safeStartScanner,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Try again'),
+                      ),
+                    ],
                   ),
                 ),
               );
@@ -139,10 +158,61 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
 
   String? _firstToken(BarcodeCapture capture) {
     for (final barcode in capture.barcodes) {
-      final value = barcode.rawValue?.trim();
-      if (value != null && value.isNotEmpty) {
+      final value = _normalizeQrToken(barcode.rawValue);
+      if (value != null) {
         return value;
       }
+    }
+    return null;
+  }
+
+  String? _normalizeQrToken(String? rawValue) {
+    final raw = rawValue?.trim();
+    if (raw == null || raw.isEmpty) return null;
+
+    final fromJson = _tokenFromJson(raw);
+    if (fromJson != null) return fromJson;
+
+    final uri = Uri.tryParse(raw);
+    if (uri != null) {
+      final queryToken = _firstNonEmpty([
+        uri.queryParameters['qrToken'],
+        uri.queryParameters['qrData'],
+        uri.queryParameters['token'],
+        uri.queryParameters['passToken'],
+      ]);
+      if (queryToken != null) return queryToken;
+
+      final pathToken =
+          uri.pathSegments.isNotEmpty ? uri.pathSegments.last : '';
+      if (uri.hasScheme && pathToken.trim().isNotEmpty) {
+        return Uri.decodeComponent(pathToken.trim());
+      }
+    }
+
+    return raw;
+  }
+
+  String? _tokenFromJson(String raw) {
+    if (!raw.startsWith('{')) return null;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return null;
+      return _firstNonEmpty([
+        decoded['qrToken']?.toString(),
+        decoded['qrData']?.toString(),
+        decoded['token']?.toString(),
+        decoded['passToken']?.toString(),
+      ]);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String? _firstNonEmpty(Iterable<String?> values) {
+    for (final value in values) {
+      final trimmed = value?.trim();
+      if (trimmed != null && trimmed.isNotEmpty) return trimmed;
     }
     return null;
   }
@@ -171,7 +241,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
       if (!mounted) {
         return;
       }
-      _showMessage('Unable to validate this QR token.');
+      _showMessage('Unable to validate this QR token. Please try again.');
     } finally {
       if (mounted) {
         setState(() => _processing = false);
@@ -209,7 +279,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
     );
     controller.dispose();
 
-    final trimmed = token?.trim();
+    final trimmed = _normalizeQrToken(token);
     if (trimmed != null && trimmed.isNotEmpty) {
       await _validateToken(trimmed);
     }
@@ -245,6 +315,23 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
     } catch (_) {
       _showMessage('Camera switch is not available.');
     }
+  }
+
+  String _scannerErrorMessage(MobileScannerException error) {
+    final message = error.errorDetails?.message?.trim();
+    if (message != null && message.isNotEmpty) {
+      final lower = message.toLowerCase();
+      if (lower.contains('permission') || lower.contains('denied')) {
+        return 'Camera permission denied. Please allow camera access from app settings.';
+      }
+      if (lower.contains('in use') || lower.contains('busy')) {
+        return 'Camera is busy. Close other camera apps and try again.';
+      }
+      if (lower.contains('not found') || lower.contains('no camera')) {
+        return 'No camera found on this device.';
+      }
+    }
+    return 'Camera is unavailable on this device. You can enter the QR token manually.';
   }
 
   void _showMessage(String message) {

@@ -146,7 +146,7 @@ export class AppointmentFormComponent implements OnInit {
   organizationTypes: Array<{ value: string; label: string }> = [];
   priorityOptions: Array<'HIGH' | 'MEDIUM' | 'LOW'> = ['HIGH', 'MEDIUM', 'LOW'];
 
-  get isScheme() { return this.form.agendaType === 'Scheme availment (CM)'; }
+  get isScheme() { return this.isSchemeAgenda(this.form.agendaType); }
   get isCmCare() { return this.form.schemeType === 'CM Care'; }
   get isPublicUser() { return this.auth.hasRole('PUBLIC'); }
   get hasVisitorContext() { return this.isPublicUser || !!this.visitorId; }
@@ -380,6 +380,13 @@ export class AppointmentFormComponent implements OnInit {
     }
   }
 
+  onAgendaTypeChange() {
+    this.updateDocumentVisibility();
+    if (this.isScheme) {
+      this.step = Math.max(this.step, 1);
+    }
+  }
+
   overridePriority(level: 'HIGH' | 'MEDIUM' | 'LOW') {
     this.aiPriorityOverridden = true;
     this.overriddenPriority = level;
@@ -436,15 +443,10 @@ export class AppointmentFormComponent implements OnInit {
         this.form.partNumber = visitor.partNumber || visitor.pollingPartNo || '';
         this.form.booth = visitor.boothVillage || visitor.booth || this.form.partNumber || '';
         this.form.address = visitor.fullAddress || visitor.address || visitor.addressLine || visitor.address1 || '';
-        if (visitor.agendaType && !this.form.agendaType) {
-          this.form.agendaType = visitor.agendaType;
-        }
-        if (visitor.briefDescription && !this.form.agendaBrief) {
-          this.form.agendaBrief = visitor.briefDescription;
-        }
+        this.applyRegistrationAgenda(visitor);
         if (this.isWalkInFlow) {
           this.form.requestedLocation = 'Shillong';
-          this.form.agendaType = this.form.agendaType || 'Invitation';
+          this.applyWalkInAgendaDefault();
         }
         
         // Set KYC status and update document visibility
@@ -587,12 +589,53 @@ export class AppointmentFormComponent implements OnInit {
     });
   }
 
+  private applyRegistrationAgenda(visitor: { agendaType?: string; briefDescription?: string }) {
+    const storedAgenda = (visitor.agendaType || '').trim();
+    if (storedAgenda) {
+      this.form.agendaType = this.matchAgendaOption(storedAgenda);
+    }
+    const storedBrief = (visitor.briefDescription || '').trim();
+    if (storedBrief && !this.form.agendaBrief) {
+      this.form.agendaBrief = storedBrief;
+    }
+    this.updateDocumentVisibility();
+  }
+
+  private applyWalkInAgendaDefault() {
+    if (!this.form.agendaType && this.agendaTypes.includes('Invitation')) {
+      this.form.agendaType = 'Invitation';
+    }
+    this.updateDocumentVisibility();
+  }
+
+  private matchAgendaOption(value: string) {
+    const normalized = this.normalizeAgenda(value);
+    return this.agendaTypes.find(option => this.normalizeAgenda(option) === normalized) || value;
+  }
+
+  private isSchemeAgenda(value: string) {
+    const normalized = this.normalizeAgenda(value);
+    return normalized.includes('scheme') && normalized.includes('availment');
+  }
+
+  private normalizeAgenda(value: string) {
+    return (value || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[\s_-]+/g, ' ')
+      .replace(/[()]/g, '')
+      .trim();
+  }
+
   private loadAgendaTypes() {
     this.referenceDataService.getByType('CM_AGENDA_MEETING').subscribe({
       next: data => {
         this.agendaTypes = (data || []).map(item => item.value).filter(Boolean);
-        if (this.isWalkInFlow && !this.form.agendaType && this.agendaTypes.includes('Invitation')) {
-          this.form.agendaType = 'Invitation';
+        if (this.form.agendaType) {
+          this.form.agendaType = this.matchAgendaOption(this.form.agendaType);
+        }
+        if (this.isWalkInFlow) {
+          this.applyWalkInAgendaDefault();
         }
       },
       error: err => {

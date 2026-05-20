@@ -170,7 +170,7 @@
         <div class="form-grid">
           <mat-form-field appearance="outline" class="form-group">
             <mat-label>Agenda Type *</mat-label>
-            <mat-select id="appointment_agendaTypeSelect" [(ngModel)]="form.agendaType" (change)="updateDocumentVisibility()" placeholder="Select agenda">
+            <mat-select id="appointment_agendaTypeSelect" [(ngModel)]="form.agendaType" (selectionChange)="onAgendaTypeChange()" placeholder="Select agenda">
               <mat-option *ngFor="let a of agendaTypes" [value]="a">{{ a }}</mat-option>
             </mat-select>
           </mat-form-field>

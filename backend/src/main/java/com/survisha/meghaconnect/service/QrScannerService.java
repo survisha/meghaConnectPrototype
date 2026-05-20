@@ -30,9 +30,17 @@ import java.util.Locale;
 public class QrScannerService {
 
     private static final EnumSet<Appointment.AppointmentStatus> APPROVED_STATUSES = EnumSet.of(
+            Appointment.AppointmentStatus.APPROVED,
+            Appointment.AppointmentStatus.HCM_ACCEPTED,
             Appointment.AppointmentStatus.APPROVED_WITH_DATE_TIME,
             Appointment.AppointmentStatus.SCHEDULED_FOR_PUBLIC_DARBAR,
             Appointment.AppointmentStatus.SCHEDULED
+    );
+
+    private static final EnumSet<Appointment.AppointmentStatus> WALK_IN_ENTRY_STATUSES = EnumSet.of(
+            Appointment.AppointmentStatus.SCHEDULED,
+            Appointment.AppointmentStatus.DEO_PROCESSED,
+            Appointment.AppointmentStatus.COMPLETED
     );
 
     private static final EnumSet<Appointment.AppointmentStatus> CANCELLED_STATUSES = EnumSet.of(
@@ -257,7 +265,7 @@ public class QrScannerService {
                     HttpStatus.CONFLICT
             );
         }
-        if (!APPROVED_STATUSES.contains(appointment.getStatus())) {
+        if (!APPROVED_STATUSES.contains(appointment.getStatus()) && !isWalkInEntryEligible(appointment)) {
             throw qrException(
                     ErrorCodeConstants.QR_APPOINTMENT_NOT_VALID,
                     "Appointment is not approved.",
@@ -271,6 +279,17 @@ public class QrScannerService {
                     HttpStatus.CONFLICT
             );
         }
+    }
+
+    private boolean isWalkInEntryEligible(Appointment appointment) {
+        if (appointment == null || !Boolean.TRUE.equals(appointment.getIsWalkIn())) {
+            return false;
+        }
+        if (appointment.getEventType() != Appointment.EventType.B2
+                && !"WALKIN".equalsIgnoreCase(appointment.getAppointmentSource())) {
+            return false;
+        }
+        return WALK_IN_ENTRY_STATUSES.contains(appointment.getStatus());
     }
 
     private void validateVisitor(Visitor visitor) {

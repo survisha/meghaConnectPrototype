@@ -48,6 +48,10 @@ public class QrScannerService {
             Appointment.AppointmentStatus.REJECTED,
             Appointment.AppointmentStatus.HCM_REJECTED
     );
+    private static final EnumSet<Appointment.AppointmentStatus> KNOWN_APPOINTMENT_STATUSES =
+            EnumSet.allOf(Appointment.AppointmentStatus.class);
+    private static final EnumSet<AppointmentQrToken.QrStatus> KNOWN_QR_STATUSES =
+            EnumSet.allOf(AppointmentQrToken.QrStatus.class);
 
     private final AppointmentQrTokenRepository appointmentQrTokenRepository;
     private final VisitorMovementLogRepository visitorMovementLogRepository;
@@ -237,7 +241,10 @@ public class QrScannerService {
                     HttpStatus.BAD_REQUEST
             );
         }
-        return appointmentQrTokenRepository.findByTokenHashForUpdate(context.tokenHash)
+        return appointmentQrTokenRepository.findByTokenHashForUpdate(
+                        context.tokenHash,
+                        KNOWN_QR_STATUSES,
+                        KNOWN_APPOINTMENT_STATUSES)
                 .map(token -> {
                     context.appointmentId = token.getAppointment() != null ? token.getAppointment().getId() : null;
                     context.visitorId = token.getVisitor() != null ? token.getVisitor().getId() : null;

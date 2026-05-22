@@ -148,7 +148,7 @@ public class QrTokenService {
     }
 
     public String hashToken(String rawToken) {
-        String normalized = rawToken == null ? "" : rawToken.trim();
+        String normalized = normalizeRawToken(rawToken);
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] hash = digest.digest(normalized.getBytes(StandardCharsets.UTF_8));
@@ -160,6 +160,11 @@ public class QrTokenService {
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException("SHA-256 is not available.", e);
         }
+    }
+
+    private String normalizeRawToken(String rawToken) {
+        String normalized = rawToken == null ? "" : rawToken.trim();
+        return normalized.matches("(?i)[0-9a-f]{64}") ? normalized.toUpperCase() : normalized;
     }
 
     private String firstNonBlank(String value, String fallback) {

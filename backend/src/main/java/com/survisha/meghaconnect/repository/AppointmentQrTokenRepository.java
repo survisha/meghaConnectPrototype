@@ -24,6 +24,14 @@ public interface AppointmentQrTokenRepository extends JpaRepository<AppointmentQ
     );
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT q FROM AppointmentQrToken q JOIN FETCH q.appointment a JOIN FETCH q.visitor v WHERE q.tokenHash = :tokenHash")
-    Optional<AppointmentQrToken> findByTokenHashForUpdate(@Param("tokenHash") String tokenHash);
+    @Query("SELECT q FROM AppointmentQrToken q " +
+            "JOIN FETCH q.appointment a " +
+            "JOIN FETCH q.visitor v " +
+            "WHERE q.tokenHash = :tokenHash " +
+            "AND q.status IN :qrStatuses " +
+            "AND a.status IN :appointmentStatuses")
+    Optional<AppointmentQrToken> findByTokenHashForUpdate(
+            @Param("tokenHash") String tokenHash,
+            @Param("qrStatuses") Collection<AppointmentQrToken.QrStatus> qrStatuses,
+            @Param("appointmentStatuses") Collection<com.survisha.meghaconnect.entity.Appointment.AppointmentStatus> appointmentStatuses);
 }

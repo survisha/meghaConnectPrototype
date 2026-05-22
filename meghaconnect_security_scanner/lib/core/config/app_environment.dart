@@ -66,7 +66,7 @@ class AppEnvironment {
     return switch (name) {
       EnvironmentName.dev => 'https://meghaconnect.cloud',
       EnvironmentName.uat => 'https://meghaconnect.cloud',
-      EnvironmentName.prod => 'https://meghaconnect.cloud',
+      EnvironmentName.prod => 'https://www.meghaconnect.com',
     };
   }
 

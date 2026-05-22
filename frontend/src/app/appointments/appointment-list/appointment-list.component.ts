@@ -261,11 +261,6 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   }
 
   private configureRoleDefaults() {
-    if (this.auth.hasRole('APPROVER') && !this.auth.hasRole('ADMIN', 'OSD')) {
-      this.filterStatus = 'APPROVER_REVIEW';
-    } else if (this.auth.hasRole('CMO_OFFICER') && !this.auth.hasRole('ADMIN', 'OSD')) {
-      this.filterStatus = 'SUBMITTED';
-    }
     if (!this.canSelectAppointments()) {
       this.displayedColumns = this.displayedColumns.filter(column => column !== 'select');
     }
@@ -1416,13 +1411,15 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
 
     autoTable(doc, {
       startY: 34,
-      head: [['S.No', 'Applicant Name', 'Agenda', 'Brief Agenda / Brief Description', 'Mobile Number', 'Visitor Photo', 'Remarks']],
+      head: [['S.No', 'Token', 'Applicant Name', 'Agenda', 'Brief Agenda / Brief Description', 'Mobile Number', 'Address', 'Visitor Photo', 'Remarks']],
       body: appointments.map((appointment, index) => [
         index + 1,
+        this.exportTokenLastFour(appointment),
         this.getDisplayName(appointment),
         appointment.agendaType || appointment.subject || '-',
         appointment.agendaBrief || appointment.reasonForAppointment || appointment.applicant?.briefDescription || '-',
         this.getDisplayPhone(appointment),
+        this.applicantAddress(appointment) || appointment.guestAddress || '-',
         photoByRow.has(index) ? '' : 'No Photo',
         this.exportRemarks(appointment, remarksByAppointmentId.get(appointment.id) ?? []),
       ]),
@@ -1431,21 +1428,23 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
       headStyles: { fillColor: [31, 41, 55], textColor: 255, fontStyle: 'bold' },
       columnStyles: {
         0: { cellWidth: 12, halign: 'center' },
-        1: { cellWidth: 36 },
-        2: { cellWidth: 34 },
-        3: { cellWidth: 70 },
-        4: { cellWidth: 28 },
-        5: { cellWidth: 28, minCellHeight: 24, halign: 'center' },
-        6: { cellWidth: 70 },
+        1: { cellWidth: 15, halign: 'center' },
+        2: { cellWidth: 28 },
+        3: { cellWidth: 26 },
+        4: { cellWidth: 48 },
+        5: { cellWidth: 24 },
+        6: { cellWidth: 40 },
+        7: { cellWidth: 24, minCellHeight: 24, halign: 'center' },
+        8: { cellWidth: 54 },
       },
       margin: { left: 14, right: 14 },
       didParseCell: data => {
-        if (data.section === 'body' && data.column.index === 5) {
+        if (data.section === 'body' && data.column.index === 7) {
           data.cell.styles.minCellHeight = 24;
         }
       },
       didDrawCell: data => {
-        if (data.section !== 'body' || data.column.index !== 5) return;
+        if (data.section !== 'body' || data.column.index !== 7) return;
         const photo = photoByRow.get(data.row.index);
         if (!photo) return;
         try {
@@ -1458,6 +1457,16 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     });
 
     doc.save(`appointment-agenda-list-${generatedAt.toISOString().slice(0, 10)}.pdf`);
+  }
+
+  private exportTokenLastFour(appointment: Appointment) {
+    const token = (appointment.walkInTokenNumber || '').trim();
+    if (!token) return '-';
+    const digits = token.replace(/\D/g, '');
+    if (digits.length >= 4) {
+      return digits.slice(-4);
+    }
+    return token.length > 4 ? token.slice(-4) : token;
   }
 
   private exportRemarks(appointment: Appointment, remarks: AppointmentRemark[]) {

@@ -53,13 +53,16 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long>,
 
     @Query("SELECT a FROM Appointment a JOIN FETCH a.applicant " +
         "WHERE a.scheduledDateTime IS NOT NULL " +
+        "AND a.status IN :statuses " +
         "ORDER BY a.scheduledDateTime ASC")
-    List<Appointment> findScheduledWithApplicant();
+    List<Appointment> findScheduledWithApplicant(@Param("statuses") Collection<Appointment.AppointmentStatus> statuses);
 
     @Query("SELECT a FROM Appointment a JOIN FETCH a.applicant " +
         "WHERE a.scheduledDateTime >= :start AND a.scheduledDateTime < :end " +
+        "AND a.status IN :statuses " +
         "ORDER BY a.scheduledDateTime ASC")
     List<Appointment> findScheduledWithApplicantInRange(
         @Param("start") java.time.LocalDateTime start,
-        @Param("end") java.time.LocalDateTime end);
+        @Param("end") java.time.LocalDateTime end,
+        @Param("statuses") Collection<Appointment.AppointmentStatus> statuses);
 }

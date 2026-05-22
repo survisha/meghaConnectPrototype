@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 
 class ApiException implements Exception {
@@ -37,10 +39,13 @@ class ApiException implements Exception {
   }
 
   static ApiException fromResponse(Object? data, int? statusCode) {
-    final map = data is Map ? Map<String, dynamic>.from(data) : null;
+    final parsedData = _decodeResponseBody(data);
+    final map = parsedData is Map ? Map<String, dynamic>.from(parsedData) : null;
     final message = map?['message'] ??
         map?['error'] ??
         map?['errorMessage'] ??
+        map?['detail'] ??
+        _messageFromPlainText(parsedData) ??
         _messageForStatus(statusCode);
     final code = map?['code'] ?? map?['errorCode'];
 
@@ -61,6 +66,38 @@ class ApiException implements Exception {
       500 => 'MeghaConnect server error. Please try again later.',
       _ => 'Unexpected MeghaConnect API error.',
     };
+  }
+
+  static Object? _decodeResponseBody(Object? data) {
+    if (data is String) {
+      final trimmed = data.trim();
+      if (trimmed.isEmpty) {
+        return null;
+      }
+      try {
+        return jsonDecode(trimmed);
+      } catch (_) {
+        return trimmed;
+      }
+    }
+    return data;
+  }
+
+  static String? _messageFromPlainText(Object? data) {
+    if (data is! String) {
+      return null;
+    }
+    final text = data
+        .replaceAll(RegExp(r'<[^>]*>'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    if (text.isEmpty) {
+      return null;
+    }
+    if (text.length > 180) {
+      return '${text.substring(0, 180)}...';
+    }
+    return text;
   }
 
   @override

@@ -79,6 +79,8 @@ public class AppointmentService {
         Appointment.AppointmentStatus.COMPLETED,
         Appointment.AppointmentStatus.HCM_REJECTED
     );
+    private static final List<Appointment.AppointmentStatus> KNOWN_APPOINTMENT_STATUSES =
+        Arrays.asList(Appointment.AppointmentStatus.values());
 
     private static final Set<String> DUPLICATE_ALLOWED_FINAL_SCHEME_STATUSES = Set.of(
         "REJECTED",
@@ -111,11 +113,11 @@ public class AppointmentService {
     private final ObjectMapper objectMapper;
 
     public Page<Appointment> findAll(Pageable pageable) {
-        return appointmentRepository.findAll(pageable);
+        return appointmentRepository.findByStatusIn(KNOWN_APPOINTMENT_STATUSES, pageable);
     }
 
     public Page<AppointmentDto> findAllDtos(Pageable pageable) {
-        return appointmentRepository.findAll(pageable).map(this::toDto);
+        return appointmentRepository.findByStatusIn(KNOWN_APPOINTMENT_STATUSES, pageable).map(this::toDto);
     }
 
     public Page<AppointmentDto> findAllDtos(String status, Pageable pageable) {
@@ -130,7 +132,7 @@ public class AppointmentService {
             return findAllDtos(pageable);
         }
         Specification<Appointment> spec = (root, query, cb) -> {
-            javax.persistence.criteria.Predicate predicate = cb.conjunction();
+            javax.persistence.criteria.Predicate predicate = root.get("status").in(KNOWN_APPOINTMENT_STATUSES);
             if (!statuses.isEmpty()) {
                 javax.persistence.criteria.Predicate statusPredicate = root.get("status").in(statuses);
                 javax.persistence.criteria.Predicate walkInSourcePredicate =

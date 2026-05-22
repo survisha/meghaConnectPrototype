@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -32,6 +33,8 @@ public class ScheduleEventService {
         Appointment.AppointmentStatus.FOLLOWUP,
         Appointment.AppointmentStatus.SELECTED_FOR_PUBLIC_DARBAR
     );
+    private static final List<Appointment.AppointmentStatus> KNOWN_APPOINTMENT_STATUSES =
+        Arrays.asList(Appointment.AppointmentStatus.values());
 
     private final ScheduleEventRepository scheduleEventRepository;
     private final AppointmentRepository appointmentRepository;
@@ -49,8 +52,8 @@ public class ScheduleEventService {
 
     public List<ScheduleEventDto> findAllDtos(LocalDateTime start, LocalDateTime end) {
         List<ScheduleEvent> scheduleEvents = start != null && end != null
-            ? scheduleEventRepository.findByRangeWithAppointments(start, end)
-            : scheduleEventRepository.findAllWithAppointments();
+            ? scheduleEventRepository.findByRangeWithAppointments(start, end, KNOWN_APPOINTMENT_STATUSES)
+            : scheduleEventRepository.findAllWithAppointments(KNOWN_APPOINTMENT_STATUSES);
 
         List<ScheduleEventDto> results = new ArrayList<>();
         Set<Long> appointmentIdsFromScheduleEvents = new HashSet<>();
@@ -67,8 +70,8 @@ public class ScheduleEventService {
         }
 
         List<Appointment> scheduledAppointments = start != null && end != null
-            ? appointmentRepository.findScheduledWithApplicantInRange(start, end)
-            : appointmentRepository.findScheduledWithApplicant();
+            ? appointmentRepository.findScheduledWithApplicantInRange(start, end, KNOWN_APPOINTMENT_STATUSES)
+            : appointmentRepository.findScheduledWithApplicant(KNOWN_APPOINTMENT_STATUSES);
 
         scheduledAppointments.stream()
             .filter(appointment -> appointment.getId() != null)
@@ -81,7 +84,7 @@ public class ScheduleEventService {
     }
 
     public Optional<ScheduleEventDto> findDtoById(Long id) {
-        return scheduleEventRepository.findById(id).map(this::toDto);
+        return scheduleEventRepository.findByIdWithAppointments(id, KNOWN_APPOINTMENT_STATUSES).map(this::toDto);
     }
 
     @Transactional
@@ -176,7 +179,7 @@ public class ScheduleEventService {
             );
         }
 
-        return scheduleEventRepository.findByIdWithAppointments(eventId)
+        return scheduleEventRepository.findByIdWithAppointments(eventId, KNOWN_APPOINTMENT_STATUSES)
             .map(this::toDto)
             .orElseGet(() -> toDto(event));
     }

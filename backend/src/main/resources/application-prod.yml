@@ -10,10 +10,10 @@ logging:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS,Asia/Kolkata} %-5level [requestId=%X{requestId:-}] [%thread] %logger{36} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss.SSS,Asia/Kolkata} %-5level [requestId=%X{requestId:-}] [%thread] %logger{36} - %msg%n"
   file:
-    name: ${LOG_FILE:${LOGGING_PATH:/var/log/meghaconnect/prod}/meghaconnect-prod.log}
+    name: ${LOG_FILE:${LOGGING_PATH:/opt/meghaconnect/prod/logs}/meghaconnect-prod.log}
   logback:
     rollingpolicy:
-      file-name-pattern: ${LOG_FILE_PATTERN:${LOGGING_PATH:/var/log/meghaconnect/prod}/meghaconnect-prod.%d{yyyy-MM-dd}.%i.log.gz}
+      file-name-pattern: ${LOG_FILE_PATTERN:${LOGGING_PATH:/opt/meghaconnect/prod/logs}/meghaconnect-prod.%d{yyyy-MM-dd}.%i.log.gz}
       max-file-size: ${LOG_FILE_MAX_SIZE:25MB}
       max-history: ${LOG_FILE_MAX_HISTORY:30}
       total-size-cap: ${LOG_FILE_TOTAL_SIZE_CAP:2GB}

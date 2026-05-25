@@ -318,19 +318,10 @@ java -Xms512m -Xmx2048m -jar meghaconnect-1.0.0-SNAPSHOT.jar --spring.config.loc
 
 ## Default Login Credentials
 
-After first startup, Flyway migrations will seed demo users:
-
-| Username | Password | Role |
-|----------|----------|------|
-| `hcm` | `hcm123` | HCM (Chief Minister) |
-| `admin` | `admin123` | ADMIN |
-| `saidul` | `osd123` | SAIDUL_OSD (Officer on Special Duty) |
-| `jtsecy` | `jts123` | APPROVER_JT_SECY (Joint Secretary) |
-| `cmo` | `cmo123` | CMO_OFFICER |
-| `deo1` | `deo123` | DATA_ENTRY_OPERATOR |
-| `public1` | `public123` | PUBLIC (Citizen) |
-
-**⚠️ IMPORTANT**: Change these passwords in production!
+Do not use seeded/demo credentials in production. Create production users
+through the approved admin process and share temporary reviewer/UAT
+credentials out of band only. Migration `V54__disable_known_seed_credentials`
+disables old seeded accounts if they still have known default hashes.
 
 ---
 

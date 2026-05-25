@@ -374,6 +374,7 @@ public class VisitorService {
         }
 
         validateKycCompletion(dto);
+        validateConsent(dto);
 
         String normalizedPhone = dto.getPhoneNumber().trim();
         boolean mobileExists = visitorRepository.existsByPhoneNumber(normalizedPhone);
@@ -502,6 +503,11 @@ public class VisitorService {
                 .idFound(dto.getIdFound())
                 .aadhaarClientTxnId(aadhaarClientTxnId)
                 .aadhaarAppId(aadhaarAppId)
+                .consentAccepted(dto.getConsentAccepted())
+                .consentVersion(trimToNull(dto.getConsentVersion()))
+                .consentTimestamp(parseDateTime(dto.getConsentTimestamp()))
+                .privacyPolicyUrl(trimToNull(dto.getPrivacyPolicyUrl()))
+                .termsUrl(trimToNull(dto.getTermsUrl()))
                 .maskedIdentityNumber(trimToNull(dto.getMaskedIdentityNumber()))
                 .build();
 
@@ -534,6 +540,21 @@ public class VisitorService {
             throw new VisitorRegistrationValidationException(
                     ErrorCodeConstants.KYC_STATUS_INVALID,
                     "KYC verification must be completed before registration"
+            );
+        }
+    }
+
+    private void validateConsent(PublicRegistrationDto dto) {
+        if (!Boolean.TRUE.equals(dto.getConsentAccepted())) {
+            throw new VisitorRegistrationValidationException(
+                    ErrorCodeConstants.MISSING_REQUIRED_FIELD,
+                    "Consent is required before collecting identity, photo, document, and appointment data."
+            );
+        }
+        if (trimToNull(dto.getConsentVersion()) == null || trimToNull(dto.getConsentTimestamp()) == null) {
+            throw new VisitorRegistrationValidationException(
+                    ErrorCodeConstants.MISSING_REQUIRED_FIELD,
+                    "Consent version and timestamp are required."
             );
         }
     }
@@ -650,6 +671,25 @@ public class VisitorService {
                     ErrorCodeConstants.INVALID_FIELD_FORMAT,
                     "Date of birth must be in yyyy-MM-dd format"
             );
+        }
+    }
+
+    private java.time.LocalDateTime parseDateTime(String value) {
+        String normalized = trimToNull(value);
+        if (normalized == null) {
+            return null;
+        }
+        try {
+            return java.time.OffsetDateTime.parse(normalized).toLocalDateTime();
+        } catch (DateTimeParseException ignored) {
+            try {
+                return java.time.LocalDateTime.parse(normalized);
+            } catch (DateTimeParseException e) {
+                throw new VisitorRegistrationValidationException(
+                        ErrorCodeConstants.INVALID_FIELD_FORMAT,
+                        "Consent timestamp must be an ISO-8601 date-time"
+                );
+            }
         }
     }
 

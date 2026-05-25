@@ -13,12 +13,12 @@ import java.util.stream.Collectors;
 
 /**
  * Global CORS configuration for MeghaConnect.
- * Allows Angular dev server (localhost:4200) to access backend APIs.
+ * Central CORS configuration for approved MeghaConnect web/mobile origins.
  */
 @Configuration
 public class CorsConfig {
 
-    @Value("${meghaconnect.cors.allowed-origins:*}")
+    @Value("${meghaconnect.cors.allowed-origins:https://meghaconnect.cloud,https://www.meghaconnect.com}")
     private String allowedOrigins;
 
     @Bean

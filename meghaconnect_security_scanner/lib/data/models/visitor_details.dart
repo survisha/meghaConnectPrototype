@@ -176,7 +176,8 @@ class VisitorDetails {
   }) {
     final qr = qrStatus.toUpperCase();
     final entry = entryExitStatus.toUpperCase();
-    return (qr == 'VALID' || qr == 'ACTIVE' || qr == 'CHECKED_IN') && entry == 'CHECKED_IN';
+    return (qr == 'VALID' || qr == 'ACTIVE' || qr == 'CHECKED_IN') &&
+        entry == 'CHECKED_IN';
   }
 
   static DateTime? _dateTime(Object? value) {

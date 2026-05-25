@@ -24,4 +24,9 @@ public class GuestAppointmentRequest {
     private String remarks;
     private String livePhotoBase64;
     private MultipartFile supportingDocument;
+    private Boolean consentAccepted;
+    private String consentVersion;
+    private String consentTimestamp;
+    private String privacyPolicyUrl;
+    private String termsUrl;
 }

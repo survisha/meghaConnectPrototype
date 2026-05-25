@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -29,6 +30,7 @@ public class AiSummaryController {
     private final RequestValidationService validationService;
 
     @PostMapping("/generate-summary")
+    @PreAuthorize("hasAnyRole('ADMIN','OSD','APPROVER','CMO','CMO_OFFICER','HCM','DATA_ENTRY_OPERATOR')")
     public ResponseEntity<Map<String, Object>> generateSummary(@RequestBody Map<String, Object> request) {
         Long appointmentId = validationService.optionalLong(
                 request != null ? request.get("appointmentId") : null,

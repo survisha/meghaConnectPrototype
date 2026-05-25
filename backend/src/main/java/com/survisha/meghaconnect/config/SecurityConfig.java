@@ -3,6 +3,7 @@ package com.survisha.meghaconnect.config;
 import com.survisha.meghaconnect.entity.User;
 import com.survisha.meghaconnect.repository.UserRepository;
 import com.survisha.meghaconnect.repository.VisitorRepository;
+import com.survisha.meghaconnect.security.ApiRateLimitFilter;
 import com.survisha.meghaconnect.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,7 +46,10 @@ public class SecurityConfig {
     private boolean requireHttps;
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthFilter, CorsConfigurationSource corsConfigurationSource) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http,
+                                           JwtAuthenticationFilter jwtAuthFilter,
+                                           ApiRateLimitFilter apiRateLimitFilter,
+                                           CorsConfigurationSource corsConfigurationSource) throws Exception {
         if (requireHttps) {
             http.requiresChannel(channel -> channel.anyRequest().requiresSecure());
         }
@@ -62,7 +66,7 @@ public class SecurityConfig {
                 // Allow all OPTIONS requests (CORS preflight)
                 .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 
-                // Public API endpoints (authentication, registration, visitor auth)
+                // Public API endpoints. Sensitive visitor, KYC, AI, QR, and file APIs are handled by JWT/RBAC.
                 .antMatchers(
                     "/api/v1/auth/**",
                     "/error",
@@ -83,14 +87,23 @@ public class SecurityConfig {
                     "/api/v3/api-docs/**",
                     "/api/webjars/**"
                 ).permitAll()
-                .antMatchers("/api/v1/appointments").permitAll()   // Public can submit
                 .antMatchers("/api/v1/guest-appointments").permitAll() // Public guest appointment requests
-                .antMatchers("/api/v1/public/**").permitAll()       // Public registration
-                .antMatchers("/api/v1/visitor/auth/**").permitAll() // Visitor OTP auth
-                .antMatchers("/api/v1/visitor/**").permitAll()      // Visitor KYC endpoints
-                .antMatchers("/api/v1/kyc/**").permitAll()          // KYC verification endpoints (OVSE QR, face validation)
+                .antMatchers(
+                    "/api/v1/visitor/auth/check-mobile",
+                    "/api/v1/visitor/auth/check-registration",
+                    "/api/v1/visitor/auth/generate-otp",
+                    "/api/v1/visitor/auth/validate-otp",
+                    "/api/v1/visitor/auth/register",
+                    "/api/v1/visitor/verify-otp"
+                ).permitAll()
+                .antMatchers(
+                    "/api/v1/kyc/verify/epic",
+                    "/api/v1/kyc/aadhaar/generate-qr",
+                    "/api/v1/kyc/aadhaar/result/**",
+                    "/api/v1/kyc/aadhaar/kycResults"
+                ).permitAll()
                 .antMatchers("/api/v1/reference/**").permitAll() // Public reference data dropdowns
-                .antMatchers("/api/ai/**").permitAll()              // AI endpoints (R004–R010, R015)
+                .antMatchers("/api/ai/chatbot").permitAll()
                 
                 // Static resources (Angular frontend - embedded in JAR)
                 .antMatchers("/", "/index.html").permitAll()        // Root and index
@@ -107,6 +120,7 @@ public class SecurityConfig {
             )
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authenticationProvider(authenticationProvider())
+            .addFilterBefore(apiRateLimitFilter, JwtAuthenticationFilter.class)
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
             .build();
     }

@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -23,9 +24,8 @@ import java.util.Map;
 /**
  * AI Endpoints for the MeghaConnect system.
  *
- * All endpoints are under /api/ai and are permitted without JWT
- * (they receive only AI-processable content – no sensitive PII writes).
- * They are added to SecurityConfig.permitAll() for the /api/ai/** pattern.
+ * AI endpoints are under /api/ai. Citizen chatbot remains public; document,
+ * dashboard, prioritization, and duplicate checks require authenticated staff.
  *
  * Endpoints:
  *   POST  /api/ai/analyze-document  – R004/R005: Document extraction + summary
@@ -38,7 +38,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/ai")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*") // NOTE: restrict to known origins in production via SecurityConfig CORS configuration
 @Tag(name = "AI Integration", description = "AI-powered intelligent endpoints for document analysis, duplicate detection, and chatbot")
 public class AiController {
 
@@ -67,6 +66,7 @@ public class AiController {
      * }
      */
     @PostMapping(value = "/analyze-document", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyRole('ADMIN','OSD','APPROVER','CMO','CMO_OFFICER','HCM','DATA_ENTRY_OPERATOR')")
     public ResponseEntity<Map<String, Object>> analyzeDocument(
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "appointmentId", required = false) Long appointmentId) {
@@ -118,6 +118,7 @@ public class AiController {
      * }
      */
     @PostMapping("/check-duplicate")
+    @PreAuthorize("hasAnyRole('ADMIN','OSD','APPROVER','CMO','CMO_OFFICER','HCM','DATA_ENTRY_OPERATOR')")
     public ResponseEntity<Map<String, Object>> checkDuplicate(@RequestBody Map<String, Object> body) {
         String epicNumber   = getString(body, "epicNumber");
         String phoneNumber  = getString(body, "phoneNumber");
@@ -145,6 +146,7 @@ public class AiController {
      * { "level": "MEDIUM", "reason": "Infrastructure or public grievance – moderate priority" }
      */
     @PostMapping("/suggest-priority")
+    @PreAuthorize("hasAnyRole('ADMIN','OSD','APPROVER','CMO','CMO_OFFICER','HCM','DATA_ENTRY_OPERATOR')")
     public ResponseEntity<Map<String, String>> suggestPriority(@RequestBody Map<String, Object> body) {
         String agendaType  = getString(body, "agendaType");
         String agendaBrief = getString(body, "agendaBrief");
@@ -183,6 +185,7 @@ public class AiController {
      * Response: [ "Mon, 10 Mar – 10:00 AM (Shillong)", "Tue, 11 Mar – 02:30 PM (Shillong)", ... ]
      */
     @PostMapping("/suggest-slots")
+    @PreAuthorize("hasAnyRole('ADMIN','OSD','APPROVER','CMO','CMO_OFFICER','HCM')")
     public ResponseEntity<List<String>> suggestSlots(@RequestBody Map<String, Object> body) {
         String location   = getString(body, "requestedLocation");
         String agendaType = getString(body, "agendaType");
@@ -205,6 +208,7 @@ public class AiController {
      * }
      */
     @GetMapping("/dashboard-insights")
+    @PreAuthorize("hasAnyRole('ADMIN','OSD','APPROVER','CMO','CMO_OFFICER','HCM')")
     public ResponseEntity<Map<String, Object>> getDashboardInsights() {
         Map<String, Object> insights = aiService.getDashboardInsights();
         return ResponseEntity.ok(insights);

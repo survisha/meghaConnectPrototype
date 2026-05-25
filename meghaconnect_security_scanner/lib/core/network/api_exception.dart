@@ -40,7 +40,8 @@ class ApiException implements Exception {
 
   static ApiException fromResponse(Object? data, int? statusCode) {
     final parsedData = _decodeResponseBody(data);
-    final map = parsedData is Map ? Map<String, dynamic>.from(parsedData) : null;
+    final map =
+        parsedData is Map ? Map<String, dynamic>.from(parsedData) : null;
     final message = map?['message'] ??
         map?['error'] ??
         map?['errorMessage'] ??

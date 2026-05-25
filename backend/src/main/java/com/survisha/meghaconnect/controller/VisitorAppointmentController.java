@@ -24,6 +24,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -32,7 +36,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.Part;
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,7 +47,7 @@ import java.util.ArrayList;
 /**
  * Public-facing appointment booking endpoint for logged-in visitors (citizens).
  *
- * All paths under /api/v1/visitor/** are permitted in SecurityConfig.
+ * Visitor appointment submissions require a visitor JWT or authorized staff JWT.
  *
  * Flow:
  *   POST /api/v1/visitor/appointments  – submit a new appointment request
@@ -53,7 +59,6 @@ import java.util.ArrayList;
 @RestController
 @RequestMapping("/api/v1/visitor")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 @Tag(name = "Visitor Appointments", description = "Public visitor appointment booking and workflow operations")
 @Slf4j
 public class VisitorAppointmentController {
@@ -80,6 +85,7 @@ public class VisitorAppointmentController {
      * - aiSummary, aiPriorityLevel: AI-generated fields
      */
     @PostMapping("/appointments")
+    @PreAuthorize("hasAnyRole('PUBLIC','CITIZEN','ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO','CMO_OFFICER','APPROVER','HCM')")
     public ResponseEntity<Map<String, Object>> submitAppointment(
             @RequestParam(required = false) Long applicantId,
             @RequestParam(required = false) String applicantName,
@@ -103,9 +109,31 @@ public class VisitorAppointmentController {
             @RequestParam(required = false) String associates,
             @RequestParam(required = false) String aiSummary,
             @RequestParam(required = false) String aiPriorityLevel,
-            HttpServletRequest request) {
+            @RequestParam(required = false) Boolean consentAccepted,
+            @RequestParam(required = false) String consentVersion,
+            @RequestParam(required = false) String consentTimestamp,
+            @RequestParam(required = false) String privacyPolicyUrl,
+            @RequestParam(required = false) String termsUrl,
+            HttpServletRequest request,
+            @AuthenticationPrincipal UserDetails user) {
 
         try {
+            if (!hasStaffAuthority(user)) {
+                Long visitorId = visitorIdFromPrincipal(user);
+                if (visitorId == null) {
+                    return ResponseEntity.status(403).body(Map.of(
+                            "success", false,
+                            "message", "Authenticated visitor context is required."));
+                }
+                if (applicantId != null && !visitorId.equals(applicantId)) {
+                    return ResponseEntity.status(403).body(Map.of(
+                            "success", false,
+                            "message", "Applicant does not match authenticated visitor."));
+                }
+                validateConsent(consentAccepted, consentVersion, consentTimestamp);
+                applicantId = visitorId;
+            }
+
             // ── Resolve applicant ───────────────────────────────────────────────
             Visitor applicant = null;
 
@@ -181,6 +209,11 @@ public class VisitorAppointmentController {
                     .status(Appointment.AppointmentStatus.SUBMITTED)
                     .requestedLocation(location)
                     .mlaMdcApproved(mlaMdcApproved != null && mlaMdcApproved)
+                    .consentAccepted(consentAccepted)
+                    .consentVersion(trimToNull(consentVersion))
+                    .consentTimestamp(parseConsentTimestamp(consentTimestamp))
+                    .privacyPolicyUrl(trimToNull(privacyPolicyUrl))
+                    .termsUrl(trimToNull(termsUrl))
                     .isWalkIn(false)
                     .meetingCountLast6Months(meetingCount)
                     .build();
@@ -369,5 +402,60 @@ public class VisitorAppointmentController {
         error.put("success", false);
         error.put("message", message);
         return ResponseEntity.badRequest().body(error);
+    }
+
+    private Long visitorIdFromPrincipal(UserDetails user) {
+        if (user == null || user.getUsername() == null || !user.getUsername().startsWith("visitor_")) {
+            return null;
+        }
+        try {
+            return Long.parseLong(user.getUsername().substring("visitor_".length()));
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private boolean hasStaffAuthority(UserDetails user) {
+        return user != null && user.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(authority -> authority.equals("ROLE_ADMIN")
+                        || authority.equals("ROLE_OSD")
+                        || authority.equals("ROLE_APPROVER")
+                        || authority.equals("ROLE_CMO")
+                        || authority.equals("ROLE_CMO_OFFICER")
+                        || authority.equals("ROLE_HCM")
+                        || authority.equals("ROLE_DATA_ENTRY_OPERATOR"));
+    }
+
+    private void validateConsent(Boolean consentAccepted, String consentVersion, String consentTimestamp) {
+        if (!Boolean.TRUE.equals(consentAccepted)
+                || trimToNull(consentVersion) == null
+                || trimToNull(consentTimestamp) == null) {
+            throw new MeghaConnectException(
+                    "MISSING_CONSENT",
+                    "Privacy consent is required before submitting appointment data.",
+                    400
+            );
+        }
+    }
+
+    private LocalDateTime parseConsentTimestamp(String value) {
+        String timestamp = trimToNull(value);
+        if (timestamp == null) {
+            return null;
+        }
+        try {
+            return OffsetDateTime.parse(timestamp).toLocalDateTime();
+        } catch (DateTimeParseException ignored) {
+            try {
+                return LocalDateTime.parse(timestamp);
+            } catch (DateTimeParseException e) {
+                throw new MeghaConnectException("INVALID_CONSENT_TIMESTAMP", "Consent timestamp is invalid.", 400);
+            }
+        }
+    }
+
+    private String trimToNull(String value) {
+        return value == null || value.trim().isEmpty() ? null : value.trim();
     }
 }

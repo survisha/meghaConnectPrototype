@@ -24,7 +24,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/scheme-applications")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 @Tag(name = "Scheme Applications", description = "Direct CM scheme application APIs")
 @SecurityRequirement(name = "bearerAuth")
 @Slf4j

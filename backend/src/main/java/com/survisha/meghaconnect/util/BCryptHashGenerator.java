@@ -3,34 +3,21 @@ package com.survisha.meghaconnect.util;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 /**
- * Standalone BCrypt hash generator (not a Spring Boot application)
- * Run: mvn exec:java "-Dexec.mainClass=com.survisha.meghaconnect.util.BCryptHashGenerator"
+ * Standalone BCrypt hash generator for one controlled username/password pair.
+ * Run with: mvn exec:java "-Dexec.mainClass=com.survisha.meghaconnect.util.BCryptHashGenerator" "-Dexec.args=username password"
  */
 public class BCryptHashGenerator {
     
     public static void main(String[] args) {
-        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(10);
-        
-        System.out.println("\n===============================================");
-        System.out.println("BCRYPT PASSWORD HASHES FOR V11 MIGRATION");
-        System.out.println("===============================================\n");
-        
-        String[][] credentials = {
-            {"hcm", "hcm123"},
-            {"admin", "admin123"},
-            {"saidul", "osd123"},
-            {"jtsecy", "jts123"},
-            {"cmo", "cmo123"},
-            {"deo1", "deo123"}
-        };
-        
-        for (String[] cred : credentials) {
-            String hash = encoder.encode(cred[1]);
-            System.out.println(String.format("UPDATE users SET password_hash = '%s' WHERE username = '%s';",
-                hash, cred[0]));
+        if (args.length != 2 || args[0].isBlank() || args[1].isBlank()) {
+            System.err.println("Usage: BCryptHashGenerator <username> <password>");
+            System.exit(2);
         }
-        
-        System.out.println("\n===============================================\n");
+
+        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(10);
+        String hash = encoder.encode(args[1]);
+        System.out.println(String.format("UPDATE users SET password_hash = '%s' WHERE username = '%s';",
+                hash, args[0]));
         System.exit(0);
     }
 }

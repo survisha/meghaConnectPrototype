@@ -3,11 +3,13 @@ import 'package:provider/provider.dart';
 import 'services/auth_service.dart';
 import 'services/navigation_service.dart';
 import 'core/i18n/app_i18n.dart';
+import 'core/config/app_config.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_shell.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  AppConfig.validateForCurrentMode();
   final authService = AuthService();
   await authService.init();
   final i18n = AppI18n();

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../core/config/app_config.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
 import '../core/i18n/app_i18n.dart';
@@ -198,6 +200,16 @@ class _LoginScreenState extends State<LoginScreen>
     setState(() => _staffError = null);
   }
 
+  Future<void> _openUrl(String url) async {
+    final uri = Uri.parse(url);
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(url)),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -347,6 +359,8 @@ class _LoginScreenState extends State<LoginScreen>
           ),
           const SizedBox(height: 18),
           _buildDemoButtons(),
+          const SizedBox(height: 12),
+          _buildLegalLinks(),
         ],
       ),
     );
@@ -621,6 +635,8 @@ class _LoginScreenState extends State<LoginScreen>
             ),
             const SizedBox(height: 24),
             _buildDemoButtons(),
+            const SizedBox(height: 12),
+            _buildLegalLinks(),
           ],
         ),
       ),
@@ -628,14 +644,8 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Widget _buildDemoButtons() {
-    final demos = [
-      ('hcm', 'hcm123', 'HCM', const Color(0xFF1A237E)),
-      ('admin', 'admin123', 'ADMIN', const Color(0xFF1565C0)),
-      ('saidul', 'osd123', 'OSD', const Color(0xFF0288D1)),
-      ('jtsecy', 'jts123', 'JT. SECY', const Color(0xFF00838F)),
-      ('cmo', 'cmo123', 'CMO', const Color(0xFF2E7D32)),
-      ('deo1', 'deo123', 'DEO', const Color(0xFF558B2F)),
-    ];
+    final demos = _demoLogins();
+    if (demos.isEmpty) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -659,14 +669,61 @@ class _LoginScreenState extends State<LoginScreen>
           runSpacing: 8,
           children: demos.map((d) {
             return ActionChip(
-              label: Text(d.$3),
-              backgroundColor: d.$4.withAlpha(26),
+              label: Text(d.label),
+              backgroundColor: d.color.withAlpha(26),
               labelStyle: TextStyle(
-                  color: d.$4, fontWeight: FontWeight.w600, fontSize: 12),
-              side: BorderSide(color: d.$4.withAlpha(77)),
-              onPressed: () => _fillDemo(d.$1, d.$2),
+                  color: d.color, fontWeight: FontWeight.w600, fontSize: 12),
+              side: BorderSide(color: d.color.withAlpha(77)),
+              onPressed: () => _fillDemo(d.username, d.password),
             );
           }).toList(),
+        ),
+      ],
+    );
+  }
+
+  List<_DemoLogin> _demoLogins() {
+    if (!AppConfig.enableDemoCredentials) return const [];
+    const colors = [
+      Color(0xFF1A237E),
+      Color(0xFF1565C0),
+      Color(0xFF0288D1),
+      Color(0xFF00838F),
+      Color(0xFF2E7D32),
+      Color(0xFF558B2F),
+    ];
+    final entries = AppConfig.demoLoginEntries
+        .split(',')
+        .map((entry) => entry.trim())
+        .where((entry) => entry.isNotEmpty)
+        .toList();
+    final demos = <_DemoLogin>[];
+    for (var i = 0; i < entries.length; i++) {
+      final parts = entries[i].split('|').map((p) => p.trim()).toList();
+      if (parts.length < 3 || parts.any((part) => part.isEmpty)) continue;
+      demos.add(_DemoLogin(
+        username: parts[0],
+        password: parts[1],
+        label: parts[2],
+        color: colors[i % colors.length],
+      ));
+    }
+    return demos;
+  }
+
+  Widget _buildLegalLinks() {
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 16,
+      runSpacing: 4,
+      children: [
+        TextButton(
+          onPressed: () => _openUrl(AppConfig.privacyPolicyUrl),
+          child: const Text('Privacy Policy'),
+        ),
+        TextButton(
+          onPressed: () => _openUrl(AppConfig.termsUrl),
+          child: const Text('Terms & Conditions'),
         ),
       ],
     );
@@ -906,4 +963,18 @@ class _LoginScreenState extends State<LoginScreen>
       ),
     );
   }
+}
+
+class _DemoLogin {
+  const _DemoLogin({
+    required this.username,
+    required this.password,
+    required this.label,
+    required this.color,
+  });
+
+  final String username;
+  final String password;
+  final String label;
+  final Color color;
 }

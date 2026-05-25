@@ -51,7 +51,7 @@ class QrScannerServiceTest {
     @Test
     void validateAcceptsValidTokenHashAndReturnsVisitorDetails() {
         AppointmentQrToken token = activeToken();
-        when(appointmentQrTokenRepository.findByTokenHashForUpdate("hashed-token"))
+        when(appointmentQrTokenRepository.findByTokenHashForUpdate(eq("hashed-token"), anyCollection(), anyCollection()))
                 .thenReturn(Optional.of(token));
 
         QrValidationResponse response = qrScannerService.validate(
@@ -87,7 +87,7 @@ class QrScannerServiceTest {
     void validateRejectsExpiredQrAndMarksTokenExpired() {
         AppointmentQrToken token = activeToken();
         token.setValidTo(DateTimeUtil.nowIST().minusMinutes(1));
-        when(appointmentQrTokenRepository.findByTokenHashForUpdate("hashed-token"))
+        when(appointmentQrTokenRepository.findByTokenHashForUpdate(eq("hashed-token"), anyCollection(), anyCollection()))
                 .thenReturn(Optional.of(token));
 
         MeghaConnectException exception = assertThrows(
@@ -106,7 +106,7 @@ class QrScannerServiceTest {
         AppointmentQrToken token = activeToken();
         token.setStatus(AppointmentQrToken.QrStatus.CHECKED_IN);
         token.setCheckedInAt(DateTimeUtil.nowIST().minusMinutes(5));
-        when(appointmentQrTokenRepository.findByTokenHashForUpdate("hashed-token"))
+        when(appointmentQrTokenRepository.findByTokenHashForUpdate(eq("hashed-token"), anyCollection(), anyCollection()))
                 .thenReturn(Optional.of(token));
 
         MeghaConnectException exception = assertThrows(
@@ -125,7 +125,7 @@ class QrScannerServiceTest {
         token.setStatus(AppointmentQrToken.QrStatus.CHECKED_OUT);
         token.setCheckedInAt(DateTimeUtil.nowIST().minusMinutes(20));
         token.setCheckedOutAt(DateTimeUtil.nowIST().minusMinutes(5));
-        when(appointmentQrTokenRepository.findByTokenHashForUpdate("hashed-token"))
+        when(appointmentQrTokenRepository.findByTokenHashForUpdate(eq("hashed-token"), anyCollection(), anyCollection()))
                 .thenReturn(Optional.of(token));
 
         MeghaConnectException exception = assertThrows(
@@ -152,7 +152,7 @@ class QrScannerServiceTest {
 
     @Test
     void validateRejectsInvalidToken() {
-        when(appointmentQrTokenRepository.findByTokenHashForUpdate("hashed-token"))
+        when(appointmentQrTokenRepository.findByTokenHashForUpdate(eq("hashed-token"), anyCollection(), anyCollection()))
                 .thenReturn(Optional.empty());
 
         MeghaConnectException exception = assertThrows(

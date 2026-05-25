@@ -4,7 +4,7 @@ import com.survisha.meghaconnect.service.VisitorKycService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,7 +22,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/visitor")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 @Tag(name = "Visitor Registration Validation", description = "Backward-compatible OTP and face validation endpoints")
 @Deprecated
 public class VisitorKycController {
@@ -34,6 +33,7 @@ public class VisitorKycController {
      * verification should use KycController.
      */
     @PostMapping("/validate-idType")
+    @PreAuthorize("hasAnyRole('ADMIN','OSD','APPROVER','CMO','CMO_OFFICER','HCM','DATA_ENTRY_OPERATOR')")
     public ResponseEntity<Map<String, Object>> validateIdType(@RequestBody Map<String, String> request) {
         return ResponseEntity.ok(visitorKycService.validateIdType(request));
     }
@@ -44,6 +44,7 @@ public class VisitorKycController {
     }
 
     @PostMapping("/validate-face")
+    @PreAuthorize("hasAnyRole('ADMIN','OSD','APPROVER','CMO','CMO_OFFICER','HCM','DATA_ENTRY_OPERATOR')")
     public ResponseEntity<Map<String, Object>> validateFace(@RequestBody Map<String, String> request) {
         return ResponseEntity.ok(visitorKycService.validateFace(request));
     }

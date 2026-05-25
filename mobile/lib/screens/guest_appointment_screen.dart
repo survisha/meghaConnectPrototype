@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../core/config/app_config.dart';
 import '../services/api_service.dart';
 
 class GuestAppointmentScreen extends StatefulWidget {
@@ -38,6 +39,7 @@ class _GuestAppointmentScreenState extends State<GuestAppointmentScreen> {
   bool _useFrontCamera = true;
   bool _loadingRefs = true;
   bool _submitting = false;
+  bool _consentAccepted = false;
   String? _error;
   String? _successReference;
 
@@ -79,8 +81,14 @@ class _GuestAppointmentScreenState extends State<GuestAppointmentScreen> {
 
   Future<void> _capturePhoto() async {
     setState(() => _error = null);
-    final preferred =
-        _useFrontCamera ? CameraDevice.front : CameraDevice.rear;
+    if (!await _confirmSensitiveAction(
+      title: 'Camera access',
+      message:
+          'Camera access is required to capture the visitor photo for appointment verification, security, audit, and entry management.',
+    )) {
+      return;
+    }
+    final preferred = _useFrontCamera ? CameraDevice.front : CameraDevice.rear;
     XFile? photo;
     try {
       photo = await _imagePicker.pickImage(
@@ -90,8 +98,7 @@ class _GuestAppointmentScreenState extends State<GuestAppointmentScreen> {
         maxWidth: 1200,
       );
     } catch (_) {
-      final fallback =
-          _useFrontCamera ? CameraDevice.rear : CameraDevice.front;
+      final fallback = _useFrontCamera ? CameraDevice.rear : CameraDevice.front;
       try {
         photo = await _imagePicker.pickImage(
           source: ImageSource.camera,
@@ -116,6 +123,13 @@ class _GuestAppointmentScreenState extends State<GuestAppointmentScreen> {
 
   Future<void> _pickDocument() async {
     setState(() => _error = null);
+    if (!await _confirmSensitiveAction(
+      title: 'Document upload',
+      message:
+          'Selected documents will be uploaded as appointment support records and may be reviewed by authorized staff and document intelligence services.',
+    )) {
+      return;
+    }
     try {
       final result = await FilePicker.platform.pickFiles(
         allowMultiple: false,
@@ -149,6 +163,11 @@ class _GuestAppointmentScreenState extends State<GuestAppointmentScreen> {
       setState(() => _error = 'Please capture guest photo before submitting.');
       return;
     }
+    if (!_consentAccepted) {
+      setState(() => _error =
+          'Please provide consent for visitor, photo, document, and appointment data processing.');
+      return;
+    }
 
     setState(() => _submitting = true);
     final photoBytes = await _guestPhoto!.readAsBytes();
@@ -168,6 +187,11 @@ class _GuestAppointmentScreenState extends State<GuestAppointmentScreen> {
         'preferredDate':
             _preferredDate == null ? '' : _dateParam(_preferredDate!),
         'remarks': _remarksCtrl.text,
+        'consentAccepted': _consentAccepted.toString(),
+        'consentVersion': AppConfig.consentVersion,
+        'consentTimestamp': DateTime.now().toUtc().toIso8601String(),
+        'privacyPolicyUrl': AppConfig.privacyPolicyUrl,
+        'termsUrl': AppConfig.termsUrl,
       },
       livePhotoBase64: photoDataUri,
       supportingDocumentPath: _supportingDocument?.path,
@@ -197,9 +221,8 @@ class _GuestAppointmentScreenState extends State<GuestAppointmentScreen> {
     _reasonCtrl.clear();
     _remarksCtrl.clear();
     setState(() {
-      _referredOffice = _referredOffices.length == 1
-          ? _referredOffices.first['code']
-          : null;
+      _referredOffice =
+          _referredOffices.length == 1 ? _referredOffices.first['code'] : null;
       _visitorCategory = null;
       _preferredDate = null;
       _guestPhoto = null;
@@ -212,6 +235,30 @@ class _GuestAppointmentScreenState extends State<GuestAppointmentScreen> {
   String _dateParam(DateTime date) {
     String pad(int value) => value.toString().padLeft(2, '0');
     return '${date.year}-${pad(date.month)}-${pad(date.day)}';
+  }
+
+  Future<bool> _confirmSensitiveAction({
+    required String title,
+    required String message,
+  }) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Continue'),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
   }
 
   String _displayFor(List<Map<String, String>> rows, String? code) {
@@ -244,6 +291,8 @@ class _GuestAppointmentScreenState extends State<GuestAppointmentScreen> {
             const SizedBox(height: 14),
             _buildSection('Photo & Document', _buildMediaFields()),
             const SizedBox(height: 18),
+            _buildConsentNotice(),
+            const SizedBox(height: 18),
             SizedBox(
               height: 50,
               child: ElevatedButton.icon(
@@ -265,6 +314,49 @@ class _GuestAppointmentScreenState extends State<GuestAppointmentScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildConsentNotice() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFCBD5E1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Privacy consent',
+            style: TextStyle(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'MeghaConnect will collect and process visitor name, mobile number, address, photo, appointment details, and uploaded documents for appointment review, verification, security, audit, and governance workflow purposes.',
+            style: TextStyle(fontSize: 12, height: 1.35),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            '${AppConfig.privacyPolicyUrl}\n${AppConfig.termsUrl}',
+            style: TextStyle(fontSize: 11, color: Color(0xFF1D4ED8)),
+          ),
+          CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            value: _consentAccepted,
+            onChanged: (value) {
+              setState(() => _consentAccepted = value ?? false);
+            },
+            controlAffinity: ListTileControlAffinity.leading,
+            title: const Text(
+              'I agree to the Privacy Policy and Terms & Conditions.',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -430,7 +522,8 @@ class _GuestAppointmentScreenState extends State<GuestAppointmentScreen> {
         DropdownButtonFormField<String>(
           value: _referredOffice,
           decoration: InputDecoration(
-            labelText: _loadingRefs ? 'Loading offices...' : 'Referred Office *',
+            labelText:
+                _loadingRefs ? 'Loading offices...' : 'Referred Office *',
             prefixIcon: const Icon(Icons.account_balance_outlined),
           ),
           items: _referredOffices.map(_dropdownItem).toList(),

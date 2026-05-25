@@ -35,4 +35,9 @@ public class AppointmentMultipartRequest {
     private String aiPriorityLevel;
     private String registrationAgendaType;
     private String registrationBriefDescription;
+    private Boolean consentAccepted;
+    private String consentVersion;
+    private String consentTimestamp;
+    private String privacyPolicyUrl;
+    private String termsUrl;
 }

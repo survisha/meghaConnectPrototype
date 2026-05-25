@@ -190,10 +190,7 @@ public class VisitorOtpService {
     // ── KYC-specific OTP methods (MOCK) ──────────────────────────────────────
 
     /**
-     * Generates a mock OTP for KYC validation flow.
-     * 
-     * MOCK BEHAVIOR: Always returns "123456" for demo purposes.
-     * In production, this should generate a real OTP and send via SMS gateway.
+     * Generates an OTP for KYC validation flow.
      * 
      * Unlike generateOtp(), this does NOT require the phone number to be registered yet,
      * as the visitor is still in the registration KYC flow.
@@ -210,8 +207,7 @@ public class VisitorOtpService {
             throw new OtpRateLimitExceededException(waitTimeMinutes);
         }
 
-        // MOCK: Always return "123456" for demo
-        String otpCode = "123456";
+        String otpCode = generateSixDigitOtp();
         
         OtpTemp record = OtpTemp.builder()
                 .phoneNumber(phone)
@@ -223,14 +219,13 @@ public class VisitorOtpService {
                 .build();
         otpTempRepository.save(record);
 
-        log.info("KYC OTP generated for phone={} (mock)", RequestContextUtil.maskPhone(phone));
+        // TODO: integrate SMS gateway (MSG91 / CDAC) to send `otpCode` to `phone`
+        log.info("KYC OTP generated for phone={}", RequestContextUtil.maskPhone(phone));
         return otpCode;
     }
 
     /**
      * Validates the OTP for KYC flow (does not issue JWT).
-     * 
-     * MOCK BEHAVIOR: Accepts "123456" as valid OTP.
      * 
      * @return true if OTP is valid, false otherwise
      * @throws OtpExpiredException if OTP expired or not found

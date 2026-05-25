@@ -31,6 +31,11 @@ public class AppointmentDto {
     private String referredByName;
     private String reasonForAppointment;
     private LocalDate preferredDate;
+    private Boolean consentAccepted;
+    private String consentVersion;
+    private String consentTimestamp;
+    private String privacyPolicyUrl;
+    private String termsUrl;
     private String agendaType;
     private String agendaBrief;
     private Appointment.AppointmentStatus status;

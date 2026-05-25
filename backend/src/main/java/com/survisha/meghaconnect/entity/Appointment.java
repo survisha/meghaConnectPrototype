@@ -80,6 +80,19 @@ public class Appointment extends BaseEntity {
 
     private LocalDate preferredDate;
 
+    private Boolean consentAccepted;
+
+    @Column(length = 50)
+    private String consentVersion;
+
+    private LocalDateTime consentTimestamp;
+
+    @Column(length = 500)
+    private String privacyPolicyUrl;
+
+    @Column(length = 500)
+    private String termsUrl;
+
     @Column(columnDefinition = "TEXT")
     private String agendaBrief;
 

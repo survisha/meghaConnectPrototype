@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/guest-appointments")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 @Tag(name = "Guest Appointments", description = "Public guest appointment submission")
 public class GuestAppointmentController {
 

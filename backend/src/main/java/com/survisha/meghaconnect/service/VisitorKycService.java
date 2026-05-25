@@ -29,13 +29,12 @@ public class VisitorKycService {
         boolean manualVerification = providedPhone != null;
         String otpTargetPhone = manualVerification ? providedPhone : ValidationConstants.MOCK_KYC_PHONE_NUMBER;
 
-        String otp = visitorOtpService.generateKycOtp(otpTargetPhone);
+        visitorOtpService.generateKycOtp(otpTargetPhone);
         String maskedPhone = maskPhone(otpTargetPhone);
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
         response.put("otpSent", true);
-        response.put("otp", otp);
         response.put("phoneNumber", maskedPhone);
         response.put("actualPhoneNumber", otpTargetPhone);
         response.put("manualVerification", manualVerification);

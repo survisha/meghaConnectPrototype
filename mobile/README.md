@@ -27,17 +27,11 @@ flutter build apk
 flutter build ios
 ```
 
-## Demo Credentials
+## Review / UAT Credentials
 
-| Username     | Password  | Role                   |
-|--------------|-----------|------------------------|
-| hcm          | hcm123    | HCM (Full Control)     |
-| admin        | admin123  | Admin (Full Control)   |
-| saidul       | osd123    | Saidul OSD (Full Control) |
-| jtsecy       | jts123    | Approver – Jt. Secretary |
-| cmo          | cmo123    | CMO Officer            |
-| deo1         | deo123    | Data Entry Operator    |
-| 9876543210   | 123456    | Public / Citizen (OTP) |
+Do not commit production or demo passwords. For UAT/reviewer access, provide
+temporary credentials out of band and enable quick-login helpers only in
+non-production builds with `--dart-define=ENABLE_DEMO_CREDENTIALS=true`.
 
 ## App Structure
 

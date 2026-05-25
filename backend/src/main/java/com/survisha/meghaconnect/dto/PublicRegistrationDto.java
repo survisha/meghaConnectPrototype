@@ -94,6 +94,13 @@ public class PublicRegistrationDto {
     private String aadhaarClientTxnId;
     private String aadhaarAppId;
 
+    // ── Privacy consent ─────────────────────────────────────────
+    private Boolean consentAccepted;
+    private String consentVersion;
+    private String consentTimestamp;
+    private String privacyPolicyUrl;
+    private String termsUrl;
+
     /**
      * Base64-encoded live photo captured during KYC.
      * Accepted only as transport input; backend stores it as a file and never

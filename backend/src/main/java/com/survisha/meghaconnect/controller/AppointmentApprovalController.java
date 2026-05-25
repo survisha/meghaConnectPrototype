@@ -41,7 +41,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Tag(name = "Appointment Approval", description = "Appointment review, approval, and scheduling workflow")
 @SecurityRequirement(name = "bearerAuth")
-@CrossOrigin(origins = "*")
 public class AppointmentApprovalController {
 
     private final AppointmentService appointmentService;

@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -36,9 +37,9 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/public")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 @Tag(name = "Public Registration", description = "Public citizen registration and onboarding workflows")
 @Deprecated
+@PreAuthorize("hasRole('ADMIN')")
 public class PublicRegistrationController {
 
     private final RequestValidationService validationService;

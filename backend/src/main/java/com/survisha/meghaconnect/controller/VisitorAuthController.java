@@ -4,7 +4,12 @@ import com.survisha.meghaconnect.dto.PublicRegistrationDto;
 import com.survisha.meghaconnect.service.VisitorAuthService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -26,7 +31,6 @@ import java.util.Map;
 @RequestMapping("/api/v1/visitor/auth")
 @RequiredArgsConstructor
 @Tag(name = "Visitor Authentication", description = "Public visitor/citizen authentication endpoints - no JWT required")
-@CrossOrigin(origins = "*")
 public class VisitorAuthController {
 
     private final VisitorAuthService visitorAuthService;
@@ -101,12 +105,55 @@ public class VisitorAuthController {
      * Caller must provide a valid JWT bearer token issued by /validate-otp.
      */
     @GetMapping("/profile/{visitorId}")
-    public ResponseEntity<Map<String, Object>> getProfile(@PathVariable Long visitorId) {
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Map<String, Object>> getProfile(@PathVariable Long visitorId,
+                                                          Authentication authentication) {
+        assertVisitorOwnerOrStaff(visitorId, authentication);
         return ResponseEntity.ok(visitorAuthService.getProfile(visitorId));
     }
 
     @PostMapping("/profile/{visitorId}/kyc/retry")
-    public ResponseEntity<Map<String, Object>> retryKyc(@PathVariable Long visitorId) {
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Map<String, Object>> retryKyc(@PathVariable Long visitorId,
+                                                        Authentication authentication) {
+        assertVisitorOwnerOrStaff(visitorId, authentication);
         return ResponseEntity.ok(visitorAuthService.retryKyc(visitorId));
+    }
+
+    private void assertVisitorOwnerOrStaff(Long visitorId, Authentication authentication) {
+        if (visitorId == null || authentication == null || !authentication.isAuthenticated()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required.");
+        }
+        if (hasStaffAuthority(authentication)) {
+            return;
+        }
+        Long authenticatedVisitorId = parseVisitorId(authentication.getName());
+        if (authenticatedVisitorId != null && authenticatedVisitorId.equals(visitorId)) {
+            return;
+        }
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Visitor profile access is not permitted.");
+    }
+
+    private boolean hasStaffAuthority(Authentication authentication) {
+        return authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(authority -> authority.equals("ROLE_ADMIN")
+                        || authority.equals("ROLE_OSD")
+                        || authority.equals("ROLE_APPROVER")
+                        || authority.equals("ROLE_CMO")
+                        || authority.equals("ROLE_CMO_OFFICER")
+                        || authority.equals("ROLE_HCM")
+                        || authority.equals("ROLE_DATA_ENTRY_OPERATOR"));
+    }
+
+    private Long parseVisitorId(String username) {
+        if (username == null || !username.startsWith("visitor_")) {
+            return null;
+        }
+        try {
+            return Long.parseLong(username.substring("visitor_".length()));
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 }

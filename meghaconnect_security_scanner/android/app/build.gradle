@@ -1,13 +1,31 @@
+import java.util.Base64
+import java.util.Properties
+
 plugins {
     id "com.android.application"
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id "dev.flutter.flutter-gradle-plugin"
 }
 
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
+}
+
+def signingValue = { String propertyName, String envName ->
+    def fromFile = keystoreProperties[propertyName]?.toString()?.trim()
+    if (fromFile) {
+        return fromFile
+    }
+    def fromEnv = System.getenv(envName)?.trim()
+    return fromEnv ?: null
+}
+
 android {
-    namespace = "com.survisha.meghaconnect.securityscanner"
-    compileSdk = 34
-    buildToolsVersion = "34.0.0"
+    namespace = "in.gov.meghalaya.meghaconnect.securityscanner"
+    compileSdk = 35
+    buildToolsVersion = "35.0.0"
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -16,24 +34,79 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.survisha.meghaconnect.securityscanner"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        applicationId = "in.gov.meghalaya.meghaconnect.securityscanner"
         minSdk = 23
-        targetSdk = 34
+        targetSdk = 35
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        release {
+            def releaseStoreFile = signingValue("storeFile", "ANDROID_KEYSTORE_PATH")
+            keyAlias = signingValue("keyAlias", "ANDROID_KEY_ALIAS") ?: ""
+            keyPassword = signingValue("keyPassword", "ANDROID_KEY_PASSWORD") ?: ""
+            storePassword = signingValue("storePassword", "ANDROID_STORE_PASSWORD") ?: ""
+            if (releaseStoreFile) {
+                storeFile = file(releaseStoreFile)
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.debug
+            signingConfig = signingConfigs.release
         }
     }
 }
 
 flutter {
     source = "../.."
+}
+
+def decodedDartDefines = {
+    def raw = project.findProperty("dart-defines")?.toString()
+    if (!raw) {
+        return []
+    }
+    return raw.split(",").collect { encoded ->
+        new String(Base64.getDecoder().decode(encoded))
+    }
+}
+
+tasks.register("validateProductionRelease") {
+    doLast {
+        def missingSigningValues = [
+            ["storeFile", "ANDROID_KEYSTORE_PATH"],
+            ["keyAlias", "ANDROID_KEY_ALIAS"],
+            ["keyPassword", "ANDROID_KEY_PASSWORD"],
+            ["storePassword", "ANDROID_STORE_PASSWORD"],
+        ].findAll { pair -> !signingValue(pair[0], pair[1]) }
+
+        if (!missingSigningValues.isEmpty()) {
+            throw new GradleException(
+                "Release signing is not configured. Provide key.properties or CI env vars: " +
+                    missingSigningValues.collect { it[1] }.join(", ")
+            )
+        }
+
+        def defines = decodedDartDefines()
+        if (!defines.any { it.equalsIgnoreCase("APP_ENV=prod") || it.equalsIgnoreCase("APP_ENV=production") }) {
+            throw new GradleException("APP_ENV=prod is required for scanner release builds.")
+        }
+        def apiBaseUrl = defines.find { it.startsWith("API_BASE_URL=") }?.substring("API_BASE_URL=".length())?.trim()
+        if (!apiBaseUrl) {
+            throw new GradleException("API_BASE_URL is required for scanner release builds.")
+        }
+        if (!apiBaseUrl.startsWith("https://")) {
+            throw new GradleException("API_BASE_URL must use HTTPS for scanner release builds.")
+        }
+        if (defines.any { it.equalsIgnoreCase("USE_MOCK_AUTH=true") || it.equalsIgnoreCase("USE_MOCK_QR=true") }) {
+            throw new GradleException("Mock auth/QR flags must not be enabled in scanner release builds.")
+        }
+    }
+}
+
+tasks.matching { it.name.contains("Release") && it.name != "validateProductionRelease" }.configureEach {
+    dependsOn("validateProductionRelease")
 }

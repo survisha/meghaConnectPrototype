@@ -20,7 +20,6 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/audit-logs")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 @Tag(name = "Audit Logs", description = "System audit trail and activity logs (admin only)")
 @SecurityRequirement(name = "bearerAuth")
 public class AuditLogController {

@@ -38,6 +38,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDate;
 import java.util.List;
@@ -46,7 +47,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/appointments")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 @Tag(name = "Appointments", description = "Appointment management and scheduling")
 @SecurityRequirement(name = "bearerAuth")
 @Slf4j
@@ -67,6 +67,7 @@ public class AppointmentController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO','CMO_OFFICER','APPROVER','HCM')")
     public ResponseEntity<Page<AppointmentDto>> getAll(@RequestParam(required = false) String status,
                                                        @RequestParam(required = false) String source,
                                                        @RequestParam(required = false) String referredOffice,
@@ -83,6 +84,7 @@ public class AppointmentController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO','CMO_OFFICER','APPROVER','HCM')")
     public ResponseEntity<AppointmentDto> getById(@PathVariable Long id) {
         logEndpoint("/api/v1/appointments/{id}");
         return appointmentService.findById(id)
@@ -123,6 +125,7 @@ public class AppointmentController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/by-app-id/{appId}")
+    @PreAuthorize("hasAnyRole('ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO','CMO_OFFICER','APPROVER','HCM')")
     public ResponseEntity<AppointmentDto> getByApplicationId(@PathVariable String appId) {
         logEndpoint("/api/v1/appointments/by-app-id/{appId}");
         return appointmentService.findByApplicationId(appId)
@@ -296,21 +299,25 @@ public class AppointmentController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyRole('PUBLIC','CITIZEN','ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO','CMO_OFFICER','APPROVER','HCM')")
     public ResponseEntity<Map<String, Object>> createMultipart(
             @ModelAttribute AppointmentMultipartRequest form,
             HttpServletRequest request,
             @AuthenticationPrincipal UserDetails user) {
         logEndpoint("/api/v1/appointments");
         String actor = user != null ? user.getUsername() : "anonymous";
+        assertCanSubmitForVisitor(form != null ? form.getApplicantId() : null, user);
         Map<String, Object> response = appointmentService.createMultipart(form, request, actor);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasAnyRole('PUBLIC','CITIZEN','ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO','CMO_OFFICER','APPROVER','HCM')")
     public ResponseEntity<AppointmentDto> create(@Valid @RequestBody AppointmentDto dto,
                                                  @AuthenticationPrincipal UserDetails user) {
         logEndpoint("/api/v1/appointments");
         String actor = user != null ? user.getUsername() : "anonymous";
+        assertCanSubmitForVisitor(dto != null ? dto.getApplicantId() : null, user);
         Appointment appointment = appointmentService.create(dto, actor);
         return ResponseEntity.status(HttpStatus.CREATED).body(appointmentService.toDto(appointment));
     }
@@ -384,6 +391,32 @@ public class AppointmentController {
         } catch (NumberFormatException e) {
             return null;
         }
+    }
+
+    private void assertCanSubmitForVisitor(Long applicantId, UserDetails user) {
+        if (user == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required.");
+        }
+        if (hasStaffAuthority(user)) {
+            return;
+        }
+        Long visitorId = visitorIdFromPrincipal(user);
+        if (visitorId != null && visitorId.equals(applicantId)) {
+            return;
+        }
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Applicant does not match authenticated visitor.");
+    }
+
+    private boolean hasStaffAuthority(UserDetails user) {
+        return user.getAuthorities().stream()
+            .map(GrantedAuthority::getAuthority)
+            .anyMatch(authority -> authority.equals("ROLE_ADMIN")
+                || authority.equals("ROLE_OSD")
+                || authority.equals("ROLE_APPROVER")
+                || authority.equals("ROLE_CMO")
+                || authority.equals("ROLE_CMO_OFFICER")
+                || authority.equals("ROLE_HCM")
+                || authority.equals("ROLE_DATA_ENTRY_OPERATOR"));
     }
 
     private void logEndpoint(String endpoint) {

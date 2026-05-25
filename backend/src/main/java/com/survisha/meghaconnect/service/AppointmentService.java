@@ -39,6 +39,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeParseException;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -226,6 +228,7 @@ public class AppointmentService {
         String address = validationService.requireText(safeRequest.getAddress(), "address");
         String referredOffice = validationService.requireText(safeRequest.getReferredOffice(), "referredOffice");
         String reason = validationService.requireText(safeRequest.getReasonForAppointment(), "reasonForAppointment");
+        validateGuestConsent(safeRequest);
         if (reason.length() < 10) {
             throw new MeghaConnectException(ErrorCodeConstants.INVALID_FIELD_VALUE,
                 "Reason for appointment must be at least 10 characters.", HttpStatus.BAD_REQUEST.value());
@@ -245,6 +248,11 @@ public class AppointmentService {
             .kycStatus("NOT_VERIFIED")
             .photoStoragePath(guestPhotoPath)
             .livePhotoPath(guestPhotoPath)
+            .consentAccepted(safeRequest.getConsentAccepted())
+            .consentVersion(trimToNull(safeRequest.getConsentVersion()))
+            .consentTimestamp(parseConsentTimestamp(safeRequest.getConsentTimestamp()))
+            .privacyPolicyUrl(trimToNull(safeRequest.getPrivacyPolicyUrl()))
+            .termsUrl(trimToNull(safeRequest.getTermsUrl()))
             .build();
         Visitor savedVisitor = visitorRepository.save(visitor);
 
@@ -361,6 +369,9 @@ public class AppointmentService {
 
     @Transactional
     public Appointment create(AppointmentDto dto, String createdBy) {
+        if (createdBy != null && createdBy.startsWith("visitor_")) {
+            validateAppointmentConsent(dto);
+        }
         Visitor applicant = visitorRepository.findById(dto.getApplicantId())
             .orElseThrow(() -> new VisitorNotFoundException(dto.getApplicantId()));
 
@@ -383,6 +394,11 @@ public class AppointmentService {
             .status(Appointment.AppointmentStatus.SUBMITTED)
             .requestedLocation(dto.getRequestedLocation())
             .mlaMdcApproved(dto.getMlaMdcApproved())
+            .consentAccepted(dto.getConsentAccepted())
+            .consentVersion(trimToNull(dto.getConsentVersion()))
+            .consentTimestamp(parseConsentTimestamp(dto.getConsentTimestamp()))
+            .privacyPolicyUrl(trimToNull(dto.getPrivacyPolicyUrl()))
+            .termsUrl(trimToNull(dto.getTermsUrl()))
             .isWalkIn(Boolean.TRUE.equals(dto.getIsWalkIn()))
             .aiDuplicateFlag(false)
             .meetingCountLast6Months(meetingCount)
@@ -430,6 +446,9 @@ public class AppointmentService {
                 safeForm.getEpicNumber());
         String actor = resolveAppointmentActor(createdBy, applicant);
         String agendaTypeValue = validationService.requireText(safeForm.getAgendaType(), "agendaType");
+        if (actor != null && actor.startsWith("visitor_")) {
+            validateAppointmentConsent(safeForm);
+        }
         Appointment.MeetingLocation location = parseMeetingLocation(safeForm.getRequestedLocation());
         boolean walkIn = Boolean.TRUE.equals(safeForm.getIsWalkIn());
         Appointment.EventType parsedEventType = walkIn ? Appointment.EventType.B2 : parseEventType(safeForm.getEventType());
@@ -451,6 +470,11 @@ public class AppointmentService {
             .status(walkIn ? Appointment.AppointmentStatus.SCHEDULED : Appointment.AppointmentStatus.SUBMITTED)
             .requestedLocation(location)
             .mlaMdcApproved(safeForm.getMlaMdcApproved() != null && safeForm.getMlaMdcApproved())
+            .consentAccepted(safeForm.getConsentAccepted())
+            .consentVersion(trimToNull(safeForm.getConsentVersion()))
+            .consentTimestamp(parseConsentTimestamp(safeForm.getConsentTimestamp()))
+            .privacyPolicyUrl(trimToNull(safeForm.getPrivacyPolicyUrl()))
+            .termsUrl(trimToNull(safeForm.getTermsUrl()))
             .isWalkIn(walkIn)
             .scheduledDateTime(walkIn ? DateTimeUtil.nowIST() : null)
             .scheduledDurationMinutes(walkIn ? 15 : null)
@@ -554,6 +578,11 @@ public class AppointmentService {
             .referredByName(appointment.getReferredByName())
             .reasonForAppointment(appointment.getReasonForAppointment())
             .preferredDate(appointment.getPreferredDate())
+            .consentAccepted(appointment.getConsentAccepted())
+            .consentVersion(appointment.getConsentVersion())
+            .consentTimestamp(appointment.getConsentTimestamp() != null ? appointment.getConsentTimestamp().toString() : null)
+            .privacyPolicyUrl(appointment.getPrivacyPolicyUrl())
+            .termsUrl(appointment.getTermsUrl())
             .agendaType(appointment.getAgendaType())
             .agendaBrief(appointment.getAgendaBrief())
             .status(appointment.getStatus())
@@ -1173,6 +1202,77 @@ public class AppointmentService {
 
     private String trimToNull(String value) {
         return value == null || value.trim().isEmpty() ? null : value.trim();
+    }
+
+    private void validateGuestConsent(GuestAppointmentRequest request) {
+        if (!Boolean.TRUE.equals(request.getConsentAccepted())) {
+            throw new MeghaConnectException(
+                    ErrorCodeConstants.MISSING_REQUIRED_FIELD,
+                    "Privacy consent is required before submitting guest appointment data.",
+                    HttpStatus.BAD_REQUEST.value()
+            );
+        }
+        if (trimToNull(request.getConsentVersion()) == null || trimToNull(request.getConsentTimestamp()) == null) {
+            throw new MeghaConnectException(
+                    ErrorCodeConstants.MISSING_REQUIRED_FIELD,
+                    "Consent version and timestamp are required.",
+                    HttpStatus.BAD_REQUEST.value()
+            );
+        }
+    }
+
+    private void validateAppointmentConsent(AppointmentDto request) {
+        if (request == null || !Boolean.TRUE.equals(request.getConsentAccepted())) {
+            throw new MeghaConnectException(
+                    ErrorCodeConstants.MISSING_REQUIRED_FIELD,
+                    "Privacy consent is required before submitting appointment data.",
+                    HttpStatus.BAD_REQUEST.value()
+            );
+        }
+        if (trimToNull(request.getConsentVersion()) == null || trimToNull(request.getConsentTimestamp()) == null) {
+            throw new MeghaConnectException(
+                    ErrorCodeConstants.MISSING_REQUIRED_FIELD,
+                    "Consent version and timestamp are required.",
+                    HttpStatus.BAD_REQUEST.value()
+            );
+        }
+    }
+
+    private void validateAppointmentConsent(AppointmentMultipartRequest request) {
+        if (request == null || !Boolean.TRUE.equals(request.getConsentAccepted())) {
+            throw new MeghaConnectException(
+                    ErrorCodeConstants.MISSING_REQUIRED_FIELD,
+                    "Privacy consent is required before submitting appointment data.",
+                    HttpStatus.BAD_REQUEST.value()
+            );
+        }
+        if (trimToNull(request.getConsentVersion()) == null || trimToNull(request.getConsentTimestamp()) == null) {
+            throw new MeghaConnectException(
+                    ErrorCodeConstants.MISSING_REQUIRED_FIELD,
+                    "Consent version and timestamp are required.",
+                    HttpStatus.BAD_REQUEST.value()
+            );
+        }
+    }
+
+    private LocalDateTime parseConsentTimestamp(String value) {
+        String timestamp = trimToNull(value);
+        if (timestamp == null) {
+            return null;
+        }
+        try {
+            return OffsetDateTime.parse(timestamp).toLocalDateTime();
+        } catch (DateTimeParseException ignored) {
+            try {
+                return LocalDateTime.parse(timestamp);
+            } catch (DateTimeParseException e) {
+                throw new MeghaConnectException(
+                        ErrorCodeConstants.INVALID_FIELD_VALUE,
+                        "Consent timestamp is invalid.",
+                        HttpStatus.BAD_REQUEST.value()
+                );
+            }
+        }
     }
 
     private String storeGuestPhotoIfPresent(String livePhotoBase64) {

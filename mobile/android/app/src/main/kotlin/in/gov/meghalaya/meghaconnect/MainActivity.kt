@@ -1,4 +1,4 @@
-package com.example.megha_connect
+package `in`.gov.meghalaya.meghaconnect
 
 import io.flutter.embedding.android.FlutterActivity
 

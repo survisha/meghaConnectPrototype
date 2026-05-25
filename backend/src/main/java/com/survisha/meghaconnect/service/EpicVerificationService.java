@@ -58,6 +58,9 @@ public class EpicVerificationService {
 
     @Value("${epic.api.enabled:false}")
     private boolean epicApiEnabled;
+
+    @Value("${spring.profiles.active:}")
+    private String activeProfiles;
     
     // Local name comparison threshold. The EPIC API currently returns a fixed
     // low namematchscore, so validation must compare input and returned names.
@@ -75,6 +78,17 @@ public class EpicVerificationService {
 
         // If API is disabled, return mock response for development
         if (!epicApiEnabled || epicApiKey.isBlank()) {
+            if (isProductionProfile()) {
+                log.error("EPIC API disabled or API key missing in production profile.");
+                return EpicVerificationResponse.builder()
+                        .code("503")
+                        .success(false)
+                        .canProceed(true)
+                        .kycStatus("KYC_PENDING")
+                        .kycProvider("EPIC")
+                        .message("EPIC verification service is not configured.")
+                        .build();
+            }
             log.warn("EPIC API disabled or API key missing. Returning mock response.");
             return mockVerifyEpic(request);
         }
@@ -139,6 +153,12 @@ public class EpicVerificationService {
                     .message(ErrorCodeConstants.GENERAL_ERROR_MSG)
                     .build();
         }
+    }
+
+    private boolean isProductionProfile() {
+        return activeProfiles != null && Arrays.stream(activeProfiles.split(","))
+                .map(String::trim)
+                .anyMatch(profile -> profile.equalsIgnoreCase("prod") || profile.equalsIgnoreCase("production"));
     }
 
     /**

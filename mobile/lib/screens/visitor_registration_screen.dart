@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import '../core/config/app_config.dart';
 import '../core/i18n/app_i18n.dart';
 import '../services/api_service.dart';
 import '../widgets/megha_ui.dart';
@@ -53,6 +54,7 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
   bool _submitted = false;
   bool _photoCaptured = false;
   bool _outsideMeghalaya = false;
+  bool _consentAccepted = false;
   String? _error;
   String? _warning;
   String? _success;
@@ -190,6 +192,7 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
     final otpResult = await ApiService.generateVisitorOtp(
       phoneNumber: phone,
       epicNumber: epic,
+      registrationFlow: true,
     );
 
     if (!mounted) return;
@@ -273,6 +276,13 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
 
   Future<void> _capturePhoto() async {
     final i18n = context.read<AppI18n>();
+    if (!await _confirmSensitiveAction(
+      title: 'Camera access',
+      message:
+          'Camera access is required to capture the citizen live photo for KYC, appointment verification, security, and audit purposes.',
+    )) {
+      return;
+    }
     try {
       final file = await _imagePicker.pickImage(
         source: ImageSource.camera,
@@ -299,11 +309,40 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
     }
   }
 
+  Future<bool> _confirmSensitiveAction({
+    required String title,
+    required String message,
+  }) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Continue'),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
   Future<void> _submitRegistration() async {
     final i18n = context.read<AppI18n>();
     if (!_detailsFormKey.currentState!.validate()) return;
     if (!_photoCaptured) {
       setState(() => _error = i18n.t('PLEASE_CAPTURE_LIVE_PHOTO'));
+      return;
+    }
+    if (!_consentAccepted) {
+      setState(() => _error =
+          'Please provide consent for identity, photo, document, and appointment data processing.');
       return;
     }
 
@@ -336,9 +375,15 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
           ? 'KYC_PENDING'
           : (_idType == 'AADHAAR' ? 'PHOTO_MATCHED' : 'DEMOGRAPHIC_MATCHED'),
       'livePhoto': _livePhotoDataUri,
+      'livePhotoBase64': _livePhotoDataUri,
       'aadhaarClientTxnId': _aadhaarTxnId,
       'agendaType': _agendaTypeCtrl.text.trim(),
       'briefDescription': _briefDescriptionCtrl.text.trim(),
+      'consentAccepted': _consentAccepted,
+      'consentVersion': AppConfig.consentVersion,
+      'consentTimestamp': DateTime.now().toUtc().toIso8601String(),
+      'privacyPolicyUrl': AppConfig.privacyPolicyUrl,
+      'termsUrl': AppConfig.termsUrl,
     };
     if (_idType == 'EPIC') {
       payload['epicNumber'] = _epicCtrl.text.trim().toUpperCase();
@@ -1161,6 +1206,8 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
               textInputAction: TextInputAction.newline,
             ),
             const SizedBox(height: 18),
+            _buildConsentNotice(),
+            const SizedBox(height: 18),
             Row(
               children: [
                 Expanded(
@@ -1184,6 +1231,54 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildConsentNotice() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFCBD5E1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Privacy consent',
+            style: TextStyle(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'MeghaConnect will collect and process your name, mobile number, EPIC/Aadhaar reference, photo, address, appointment details, and uploaded documents only for citizen service, appointment, KYC, security, audit, and governance workflow purposes. Data may be shared with authorized government staff and approved service providers such as SMS, KYC, OCR, and notification services.',
+            style: TextStyle(fontSize: 12, height: 1.35),
+          ),
+          const SizedBox(height: 8),
+          const Wrap(
+            spacing: 12,
+            children: [
+              Text(AppConfig.privacyPolicyUrl,
+                  style: TextStyle(fontSize: 11, color: Color(0xFF1D4ED8))),
+              Text(AppConfig.termsUrl,
+                  style: TextStyle(fontSize: 11, color: Color(0xFF1D4ED8))),
+            ],
+          ),
+          CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            value: _consentAccepted,
+            onChanged: (value) {
+              setState(() => _consentAccepted = value ?? false);
+            },
+            controlAffinity: ListTileControlAffinity.leading,
+            title: const Text(
+              'I agree to the Privacy Policy and Terms & Conditions.',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
       ),
     );
   }

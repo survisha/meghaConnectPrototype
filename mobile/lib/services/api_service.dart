@@ -1,27 +1,22 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
 import '../core/config/app_config.dart';
+import '../core/security/secure_app_storage.dart';
 
 class ApiService {
-  static const String _tokenKey = 'megha_token';
-
   static Uri _u(String path) => Uri.parse('${AppConfig.apiV1BaseUrl}$path');
 
   static Future<String?> getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_tokenKey);
+    return SecureAppStorage.readToken();
   }
 
-  static Future<void> setToken(String token) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_tokenKey, token);
+  static Future<void> setToken(String token, {Duration? ttl}) async {
+    await SecureAppStorage.writeToken(token, ttl: ttl);
   }
 
   static Future<void> clearToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_tokenKey);
+    await SecureAppStorage.clearToken();
   }
 
   static Future<Map<String, String>> _headers() async {
@@ -101,9 +96,14 @@ class ApiService {
   static Future<Map<String, dynamic>> generateVisitorOtp({
     required String phoneNumber,
     String? epicNumber,
+    bool registrationFlow = false,
   }) async {
     try {
       final body = <String, dynamic>{'phoneNumber': phoneNumber};
+      if (registrationFlow) {
+        body['purpose'] = 'REGISTRATION';
+        body['registrationFlow'] = true;
+      }
       final epic = (epicNumber ?? '').trim();
       if (epic.isNotEmpty) body['epicNumber'] = epic.toUpperCase();
       final resp = await http

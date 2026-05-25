@@ -37,7 +37,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/kyc")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 @Tag(name = "KYC Verification", description = "KYC verification endpoints for EPIC and Aadhaar")
 public class KycController {
 

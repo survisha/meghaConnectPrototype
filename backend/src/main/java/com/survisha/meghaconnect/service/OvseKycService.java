@@ -45,7 +45,7 @@ public class OvseKycService {
     @Value("${ovse.appId:100001}")
     private String appId;
 
-    @Value("${ovse.apiKey:xwwvygA3MmtwbJmqBiBHsBWQ4xHzwu78}")
+    @Value("${ovse.apiKey:}")
     private String apiKey;
 
     @Value("${ovse.endpoint:https://ovse.aadhaarkyc.com/OvseMWService/OvseRequest}")
@@ -73,6 +73,7 @@ public class OvseKycService {
         log.info("OVSE QR generation requested");
 
         try {
+            ensureOvseSecretsConfigured();
             // Generate transaction ID with appId prefix
             String txnId = TxnIdGenerator.generate(appId);
             log.info("Generated OVSE txnId={}", txnId);
@@ -125,7 +126,7 @@ public class OvseKycService {
             }
         } catch (IllegalArgumentException e) {
             String errorMsg = "Invalid OVSE application configuration";
-            log.warn("Invalid OVSE appId configuration: {}", e.getMessage());
+            log.warn("Invalid OVSE configuration: {}", e.getMessage());
             return AadhaarQrResponseDto.builder()
                     .success(false)
                     .errorMessage(errorMsg)
@@ -166,6 +167,12 @@ public class OvseKycService {
         KycData result = kycResultStore.get(txnId);
         log.debug("Polling for KYC result {}", result);
         return result;
+    }
+
+    private void ensureOvseSecretsConfigured() {
+        if (apiKey == null || apiKey.trim().isEmpty()) {
+            throw new IllegalArgumentException("OVSE API key is not configured.");
+        }
     }
 
     /**

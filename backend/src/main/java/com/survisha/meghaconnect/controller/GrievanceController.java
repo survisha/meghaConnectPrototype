@@ -22,7 +22,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/grievances")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 @Tag(name = "Grievances", description = "Grievance management and resolution tracking")
 @SecurityRequirement(name = "bearerAuth")
 public class GrievanceController {

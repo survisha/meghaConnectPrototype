@@ -15,7 +15,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/directions")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 @Tag(name = "Directions", description = "Direction and location management")
 @SecurityRequirement(name = "bearerAuth")
 public class DirectionController {

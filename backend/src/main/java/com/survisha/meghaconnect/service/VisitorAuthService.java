@@ -93,15 +93,14 @@ public class VisitorAuthService {
     public Map<String, Object> generateOtp(Map<String, String> body) {
         String phone = validationService.requirePhone(body != null ? body.get(ValidationConstants.FIELD_PHONE_NUMBER) : null);
         boolean registrationFlow = isRegistrationOtpRequest(body);
-        String otp;
         if (registrationFlow) {
-            otp = visitorOtpService.generateKycOtp(phone);
+            visitorOtpService.generateKycOtp(phone);
         } else {
             LoginResolution resolution = resolveLoginVisitor(phone, optionalEpic(body));
             if (!resolution.success) {
                 return loginResolutionResponse(resolution);
             }
-            otp = visitorOtpService.generateOtp(phone, resolution.visitor.getId());
+            visitorOtpService.generateOtp(phone, resolution.visitor.getId());
         }
         log.info("Visitor OTP generated purpose={} phone={}",
                 registrationFlow ? "REGISTRATION" : "LOGIN",
@@ -111,7 +110,6 @@ public class VisitorAuthService {
         response.put("success", true);
         response.put("code", CODE_OTP_SENT);
         response.put("requiresEpic", false);
-        response.put("otp", otp);
         response.put("message", MSG_OTP_SENT);
         return response;
     }

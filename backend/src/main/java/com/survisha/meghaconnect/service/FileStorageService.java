@@ -36,6 +36,7 @@ public class FileStorageService {
     private static final String ENCRYPTED_PATH_PREFIX = "enc:";
 
     private final FilePathCryptoService filePathCryptoService;
+    private final MalwareScanService malwareScanService;
 
     @Value("${file.upload.root-path:${meghaconnect.storage.base-path:/uploads}}")
     private String basePath;
@@ -62,6 +63,7 @@ public class FileStorageService {
      */
     public StoredFileMetadata storeFileSecure(MultipartFile file, Long visitorId, String applicationId) throws IOException {
         validateFile(file);
+        malwareScanService.assertSafe(file);
         validatePathSegment(visitorId != null ? visitorId.toString() : null, "visitorId");
         validatePathSegment(applicationId, "applicationId");
 
@@ -102,6 +104,7 @@ public class FileStorageService {
         String datePath = DateTimeUtil.currentDateIST().toString();
         String safeRequestId = requestId.replaceAll("[^A-Za-z0-9._-]", "-");
         String filename = safeRequestId + "-" + UUID.randomUUID() + "." + decoded.extension;
+        malwareScanService.assertSafe(decoded.bytes, filename, mediaTypeFromExtension(filename).toString());
         String relativePath = visitorPhotoPath + "/" + datePath + "/" + filename;
 
         Path targetDir = Paths.get(basePath, visitorPhotoPath, datePath);

@@ -13,7 +13,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/roles")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 @Tag(name = "Roles", description = "Role lookup endpoints")
 @SecurityRequirement(name = "bearerAuth")
 public class RoleController {

@@ -22,7 +22,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/schedule")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 @Tag(name = "Schedule Events", description = "Schedule event management and calendar operations")
 @SecurityRequirement(name = "bearerAuth")
 public class ScheduleEventController {

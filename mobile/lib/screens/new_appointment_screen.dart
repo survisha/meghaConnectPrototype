@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import '../core/config/app_config.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/navigation_service.dart';
@@ -39,6 +40,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
   bool _loading = false;
   bool _searching = false;
   bool _visitorLoading = false;
+  bool _consentAccepted = false;
   String? _contextError;
   String? _submittedAppId;
   String? _submittedToken;
@@ -128,9 +130,16 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
       });
       return;
     }
+    if (widget.isPublic && !_consentAccepted) {
+      setState(() {
+        _contextError =
+            'Please provide consent for appointment data processing.';
+      });
+      return;
+    }
 
     setState(() => _loading = true);
-    final result = await ApiService.createAppointment({
+    final payload = <String, dynamic>{
       'applicantId': visitorId,
       'eventType': _agendaType,
       'subject': _agendaDescriptions[_agendaType] ?? _agendaType,
@@ -139,7 +148,17 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
       'agendaBrief': _agendaBriefCtrl.text.trim(),
       'requestedLocation': _location,
       'isWalkIn': widget.isWalkIn,
-    });
+    };
+    if (widget.isPublic) {
+      payload.addAll({
+        'consentAccepted': _consentAccepted,
+        'consentVersion': AppConfig.consentVersion,
+        'consentTimestamp': DateTime.now().toUtc().toIso8601String(),
+        'privacyPolicyUrl': AppConfig.privacyPolicyUrl,
+        'termsUrl': AppConfig.termsUrl,
+      });
+    }
+    final result = await ApiService.createAppointment(payload);
     if (!mounted) return;
     setState(() {
       _loading = false;
@@ -171,6 +190,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
       _submittedAppId = null;
       _submittedToken = null;
       _contextError = null;
+      _consentAccepted = false;
       if (!widget.isPublic) _selectedVisitor = null;
     });
   }
@@ -236,6 +256,10 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
             ],
             if (_selectedVisitor != null)
               _buildSection('Appointment Details', _buildAppointmentFields()),
+            if (widget.isPublic && _selectedVisitor != null) ...[
+              const SizedBox(height: 16),
+              _buildSection('Privacy Consent', _buildConsentNotice()),
+            ],
             const SizedBox(height: 24),
             if (_selectedVisitor != null)
               SizedBox(
@@ -324,6 +348,34 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildConsentNotice() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'MeghaConnect will process your registered profile and appointment details for citizen service, appointment review, security, audit, and governance workflow purposes.',
+          style: TextStyle(fontSize: 13, height: 1.4),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Privacy: ${AppConfig.privacyPolicyUrl}\nTerms: ${AppConfig.termsUrl}',
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+        ),
+        CheckboxListTile(
+          contentPadding: EdgeInsets.zero,
+          value: _consentAccepted,
+          onChanged: (value) =>
+              setState(() => _consentAccepted = value ?? false),
+          title: const Text(
+            'I consent to appointment data processing for MeghaConnect services.',
+            style: TextStyle(fontSize: 13),
+          ),
+          controlAffinity: ListTileControlAffinity.leading,
+        ),
+      ],
     );
   }
 

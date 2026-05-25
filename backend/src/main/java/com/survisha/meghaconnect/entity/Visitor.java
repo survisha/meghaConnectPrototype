@@ -165,6 +165,19 @@ public class Visitor extends BaseEntity {
     @Column(length = 50)
     private String aadhaarAppId;
 
+    private Boolean consentAccepted;
+
+    @Column(length = 50)
+    private String consentVersion;
+
+    private java.time.LocalDateTime consentTimestamp;
+
+    @Column(length = 500)
+    private String privacyPolicyUrl;
+
+    @Column(length = 500)
+    private String termsUrl;
+
     @Column(length = 50)
     private String maskedIdentityNumber;
 

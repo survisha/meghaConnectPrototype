@@ -27,12 +27,13 @@ import org.springframework.web.multipart.MultipartFile;
 public class AppointmentImportController {
 
     private final PilotAppointmentImportService pilotAppointmentImportService;
+    private static final String FILE = "file";
 
     @Operation(summary = "Import pilot appointments from Excel")
     @PostMapping(value = "/pilot-import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAnyRole('ADMIN','OSD','DATA_ENTRY_OPERATOR')")
     public ResponseEntity<PilotImportResultDto> importPilotAppointments(
-            @RequestParam("file") MultipartFile file,
+            @RequestParam(FILE) MultipartFile file,
             @AuthenticationPrincipal UserDetails user) {
         String actor = user != null ? user.getUsername() : "pilot-import";
         log.info("Pilot appointment import requested by={}", actor);

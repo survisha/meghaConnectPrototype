@@ -23,6 +23,7 @@ public class TestHooks {
      */
     @Before
     public void beforeScenario(Scenario scenario) {
+        ScreenshotUtil.setScenario(scenario);
         logger.info("╔═══════════════════════════════════════╗");
         logger.info("║     SCENARIO START: " + scenario.getName().substring(0, Math.min(20, scenario.getName().length())) + "          ║");
         logger.info("╚═══════════════════════════════════════╝");
@@ -33,8 +34,16 @@ public class TestHooks {
             ApiClient.reset();
             logger.info("✓ API client reset");
 
-            // Don't initialize WebDriver here - let step definitions handle it
-            // This allows for parallel execution and better resource management
+            if (scenario.getSourceTagNames().contains("@UITest") && !DriverManager.isDriverInitialized()) {
+                logger.info("🔧 Initializing WebDriver for UI scenario: " + scenario.getName());
+                DriverManager.initializeDriver();
+                logger.info("✓ WebDriver ready for scenario: " + scenario.getName());
+            }
+
+            if (DriverManager.isDriverInitialized() && com.meghaconnect.automation.config.ConfigManager.isScreenshotEachStep()) {
+                ScreenshotUtil.captureScreenshot("SCENARIO_START");
+            }
+
             logger.info("✓ Pre-scenario setup completed");
 
         } catch (Exception e) {
@@ -54,16 +63,20 @@ public class TestHooks {
         logger.info("╚═══════════════════════════════════════╝");
 
         try {
+            if (DriverManager.isDriverInitialized() && com.meghaconnect.automation.config.ConfigManager.isScreenshotEachStep()) {
+                ScreenshotUtil.captureScreenshot("SCENARIO_END_" + scenario.getStatus());
+            }
+
             // Take screenshot on failure
             if (scenario.isFailed()) {
                 logger.error("❌ Scenario failed: " + scenario.getName());
-                if (DriverManager.isDriverInitialized()) {
+                if (DriverManager.isDriverInitialized() && com.meghaconnect.automation.config.ConfigManager.isScreenshotOnFail()) {
                     String screenshotPath = ScreenshotUtil.captureScreenshot("SCENARIO_FAILED_" + scenario.getName().replaceAll("\\s+", "_"));
                     logger.error("📸 Screenshot captured: " + screenshotPath);
                 }
             } else {
                 logger.info("✓ Scenario passed: " + scenario.getName());
-                if (DriverManager.isDriverInitialized()) {
+                if (DriverManager.isDriverInitialized() && com.meghaconnect.automation.config.ConfigManager.isScreenshotOnPass()) {
                     ScreenshotUtil.captureScreenshot("SCENARIO_PASSED_" + scenario.getName().replaceAll("\\s+", "_"));
                 }
             }
@@ -84,6 +97,7 @@ public class TestHooks {
             // unless explicitly reset by the user or new instance created
             
             logger.info("✓ Post-scenario cleanup completed\n");
+            ScreenshotUtil.clearScenario();
 
         } catch (Exception e) {
             logger.error("✗ Post-scenario cleanup failed", e);
@@ -93,6 +107,7 @@ public class TestHooks {
             } catch (Exception ex) {
                 logger.error("✗ Failed to force close WebDriver", ex);
             }
+            ScreenshotUtil.clearScenario();
         }
     }
 

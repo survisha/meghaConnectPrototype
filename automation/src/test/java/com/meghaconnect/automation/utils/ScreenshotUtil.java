@@ -2,74 +2,64 @@ package com.meghaconnect.automation.utils;
 
 import com.meghaconnect.automation.config.ConfigManager;
 import com.meghaconnect.automation.config.DriverManager;
-import org.openqa.selenium.OutputType;
-import org.openqa.selenium.TakesScreenshot;
+import io.cucumber.java.Scenario;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.openqa.selenium.OutputType;
+import org.openqa.selenium.TakesScreenshot;
+
 import java.io.File;
-import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 /**
- * Screenshot Utility - Handles screenshot capture and storage
+ * Screenshot Utility - Handles screenshot capture, storage, and Cucumber attachment.
  */
 public class ScreenshotUtil {
     private static final Logger logger = LogManager.getLogger(ScreenshotUtil.class);
-    private static final String SCREENSHOT_DIR = ConfigManager.getReportPath() + "screenshots/";
+    private static final String SCREENSHOT_DIR = "target/cucumber-reports/screenshots/";
+    private static final ThreadLocal<Scenario> CURRENT_SCENARIO = new ThreadLocal<>();
 
-    static {
-        // Create screenshot directory if it doesn't exist
-        try {
-            Files.createDirectories(Paths.get(SCREENSHOT_DIR));
-            logger.info("✓ Screenshot directory ready: " + SCREENSHOT_DIR);
-        } catch (IOException e) {
-            logger.error("✗ Failed to create screenshot directory", e);
-        }
+    private ScreenshotUtil() {
     }
 
-    /**
-     * Capture screenshot with timestamp
-     * @param screenshotName Name for the screenshot
-     * @return File path of the screenshot
-     */
-    public static String captureScreenshot(String screenshotName) {
+    public static void setScenario(Scenario scenario) {
+        CURRENT_SCENARIO.set(scenario);
+    }
+
+    public static void clearScenario() {
+        CURRENT_SCENARIO.remove();
+    }
+
+    public static String captureScreenshot(String fileName) {
         try {
             if (!DriverManager.isDriverInitialized()) {
-                logger.warn("⚠ WebDriver not initialized, skipping screenshot");
+                logger.warn("WebDriver not initialized, skipping screenshot");
                 return null;
             }
 
-            String timestamp = LocalDateTime.now()
-                    .format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss-SSS"));
-            String fileName = screenshotName + "_" + timestamp + ".png";
-            String filePath = SCREENSHOT_DIR + fileName;
+            Files.createDirectories(Paths.get(SCREENSHOT_DIR));
+
+            String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss-SSS"));
+            String scenarioName = getScenarioName();
+            String safeFileName = sanitize(scenarioName + "_" + fileName + "_" + timestamp) + ".png";
+            String filePath = SCREENSHOT_DIR + safeFileName;
 
             TakesScreenshot screenshot = (TakesScreenshot) DriverManager.getDriver();
             File source = screenshot.getScreenshotAs(OutputType.FILE);
+            Files.copy(source.toPath(), Paths.get(filePath), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
 
-            // Copy to target location
-            File destination = new File(filePath);
-            Files.copy(source.toPath(), destination.toPath(),
-                    java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-
-            logger.info("📸 Screenshot captured: " + fileName);
+            attachScreenshotBytes(screenshot.getScreenshotAs(OutputType.BYTES), safeFileName);
+            logger.info("Screenshot captured: " + filePath);
             return filePath;
-
         } catch (Exception e) {
-            logger.error("✗ Failed to capture screenshot", e);
+            logger.error("Failed to capture screenshot: " + fileName, e);
             return null;
         }
     }
 
-    /**
-     * Capture screenshot on test failure
-     * @param testName Test name for screenshot naming
-     * @return Screenshot file path
-     */
     public static String captureScreenshotOnFailure(String testName) {
         if (ConfigManager.isScreenshotOnFail()) {
             return captureScreenshot(testName + "_FAILED");
@@ -77,11 +67,6 @@ public class ScreenshotUtil {
         return null;
     }
 
-    /**
-     * Capture screenshot on test pass
-     * @param testName Test name for screenshot naming
-     * @return Screenshot file path
-     */
     public static String captureScreenshotOnPass(String testName) {
         if (ConfigManager.isScreenshotOnPass()) {
             return captureScreenshot(testName + "_PASSED");
@@ -89,23 +74,30 @@ public class ScreenshotUtil {
         return null;
     }
 
-    /**
-     * Capture screenshot on step execution
-     * @param stepName Step name for screenshot naming
-     * @return Screenshot file path
-     */
     public static String captureScreenshotOnStep(String stepName) {
-        if (ConfigManager.isScreenshotOnStep()) {
+        if (ConfigManager.isScreenshotEachStep()) {
             return captureScreenshot("STEP_" + stepName);
         }
         return null;
     }
 
-    /**
-     * Get screenshot directory
-     * @return Screenshot directory path
-     */
     public static String getScreenshotDirectory() {
         return SCREENSHOT_DIR;
+    }
+
+    private static void attachScreenshotBytes(byte[] bytes, String name) {
+        Scenario scenario = CURRENT_SCENARIO.get();
+        if (scenario != null) {
+            scenario.attach(bytes, "image/png", name);
+        }
+    }
+
+    private static String getScenarioName() {
+        Scenario scenario = CURRENT_SCENARIO.get();
+        return scenario == null ? "NO_SCENARIO" : scenario.getName();
+    }
+
+    private static String sanitize(String value) {
+        return value == null ? "screenshot" : value.replaceAll("[^a-zA-Z0-9._-]+", "_");
     }
 }

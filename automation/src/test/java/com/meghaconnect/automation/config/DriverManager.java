@@ -10,7 +10,7 @@ import org.openqa.selenium.edge.EdgeOptions;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import io.github.bonigarcia.wdm.WebDriverManager;
-import java.util.concurrent.TimeUnit;
+import java.time.Duration;
 
 /**
  * WebDriver Manager - Handles WebDriver initialization and management
@@ -53,9 +53,9 @@ public class DriverManager {
 
             // Set implicit and explicit waits
             driverInstance.manage().timeouts()
-                    .implicitlyWait(ConfigManager.getImplicitWait(), TimeUnit.SECONDS);
+                    .implicitlyWait(Duration.ofSeconds(ConfigManager.getImplicitWait()));
             driverInstance.manage().timeouts()
-                    .pageLoadTimeout(ConfigManager.getPageLoadTimeout(), TimeUnit.SECONDS);
+                    .pageLoadTimeout(Duration.ofSeconds(ConfigManager.getPageLoadTimeout()));
 
             // Maximize window if configured
             if (ConfigManager.isBrowserMaximize()) {
@@ -85,9 +85,14 @@ public class DriverManager {
 
         ChromeOptions options = new ChromeOptions();
 
-        if (ConfigManager.isHeadless()) {
+        String headless = System.getProperty("headless", ConfigManager.get("headless", "false"));
+        boolean isHeadless = Boolean.parseBoolean(headless);
+
+        if (isHeadless) {
             options.addArguments("--headless=new");
             logger.info("  ✓ Headless mode enabled");
+        } else {
+            logger.info("  ✓ Visible Chrome mode enabled");
         }
 
         if (ConfigManager.isIncognito()) {
@@ -96,12 +101,13 @@ public class DriverManager {
         }
 
         options.addArguments("--start-maximized");
+        options.addArguments("--remote-allow-origins=*");
         options.addArguments("--disable-blink-features=AutomationControlled");
         options.addArguments("--disable-notifications");
         options.addArguments("--disable-popup-blocking");
         options.setAcceptInsecureCerts(true);
 
-        if (ConfigManager.isHeadless()) {
+        if (isHeadless) {
             options.addArguments("--no-sandbox");
             options.addArguments("--disable-dev-shm-usage");
         }

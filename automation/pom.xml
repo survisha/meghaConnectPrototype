@@ -26,6 +26,8 @@
         <log4j.version>2.22.1</log4j.version>
         <jackson.version>2.16.1</jackson.version>
         <okhttp.version>4.11.0</okhttp.version>
+        <poi.version>5.2.5</poi.version>
+        <extent.cucumber.adapter.version>1.14.0</extent.cucumber.adapter.version>
     </properties>
 
     <dependencies>
@@ -74,6 +76,25 @@
             <groupId>com.aventstack</groupId>
             <artifactId>extentreports</artifactId>
             <version>${extentreports.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>tech.grasshopper</groupId>
+            <artifactId>extentreports-cucumber7-adapter</artifactId>
+            <version>${extent.cucumber.adapter.version}</version>
+        </dependency>
+
+        <!-- Excel Test Data -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi</artifactId>
+            <version>${poi.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>${poi.version}</version>
         </dependency>
 
         <!-- Logging -->
@@ -161,6 +182,13 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.1.2</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.apache.maven.surefire</groupId>
+                        <artifactId>surefire-junit47</artifactId>
+                        <version>3.1.2</version>
+                    </dependency>
+                </dependencies>
                 <configuration>
                     <includes>
                         <include>**/runners/*.java</include>

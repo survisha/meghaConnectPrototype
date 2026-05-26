@@ -34,7 +34,10 @@ public class ConfigManager {
      * @return Property value or default empty string
      */
     public static String getProperty(String key) {
-        String value = properties.getProperty(key);
+        String value = System.getProperty(key);
+        if (value == null || value.trim().isEmpty()) {
+            value = properties.getProperty(key);
+        }
         if (value == null) {
             logger.warn("⚠ Property not found: " + key);
             return "";
@@ -49,7 +52,19 @@ public class ConfigManager {
      * @return Property value or default
      */
     public static String getProperty(String key, String defaultValue) {
-        return properties.getProperty(key, defaultValue).trim();
+        String value = System.getProperty(key);
+        if (value == null || value.trim().isEmpty()) {
+            value = properties.getProperty(key, defaultValue);
+        }
+        return value.trim();
+    }
+
+    public static String get(String key) {
+        return getProperty(key);
+    }
+
+    public static String get(String key, String defaultValue) {
+        return getProperty(key, defaultValue);
     }
 
     /**
@@ -145,6 +160,19 @@ public class ConfigManager {
         return getBoolean("screenshot.on.step");
     }
 
+    public static Boolean isHighlightEnabled() {
+        return getBoolean("highlight.enabled");
+    }
+
+    public static Boolean isScreenshotEachStep() {
+        return getBoolean("screenshot.each.step");
+    }
+
+    public static Integer getHighlightDurationMs() {
+        int duration = getInteger("highlight.duration.ms");
+        return duration > 0 ? duration : 700;
+    }
+
     public static Integer getRetryCount() {
         return getInteger("retry.count");
     }
@@ -155,6 +183,18 @@ public class ConfigManager {
 
     public static String getTestDataPath() {
         return getProperty("test.data.path", "src/test/resources/testdata/");
+    }
+
+    public static String getTestDataExcelPath() {
+        return getProperty("testdata.excel.path", "src/test/resources/testdata/citizen-login-testdata.xlsx");
+    }
+
+    public static String getTestOtp() {
+        return getProperty("test.otp", "123456");
+    }
+
+    public static String getOtpMode() {
+        return getProperty("otp.mode", "UI_DEMO").toUpperCase();
     }
 
     public static String getLogLevel() {

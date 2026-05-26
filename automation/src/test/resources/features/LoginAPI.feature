@@ -31,7 +31,7 @@ Feature: User Login - API Automation Tests
     And User has valid password
     When User sends login request with invalid username and valid password
     Then API should return HTTP 401 status (Unauthorized)
-    Or API should return HTTP 400 status (Bad Request)
+    And API should return HTTP 400 status (Bad Request)
     And Response should contain error message
     And Response should not contain authentication token
     And Error message should be "Invalid credentials" or "User not found"
@@ -105,7 +105,7 @@ Feature: User Login - API Automation Tests
     Given User has SQL injection payload "admin' OR '1'='1"
     When User sends login request with SQL injection in username
     Then API should return HTTP 401 status (Unauthorized)
-    Or API should return HTTP 400 status (Bad Request)
+    And API should return HTTP 400 status (Bad Request)
     And Response should not contain authentication token
     And API should handle injection safely
 
@@ -114,7 +114,7 @@ Feature: User Login - API Automation Tests
     Given User has SQL injection payload "' OR 1=1 --"
     When User sends login request with SQL injection in password
     Then API should return HTTP 401 status (Unauthorized)
-    Or API should return HTTP 400 status (Bad Request)
+    And API should return HTTP 400 status (Bad Request)
     And Response should not contain authentication token
 
   @APITest @Security
@@ -130,7 +130,7 @@ Feature: User Login - API Automation Tests
     Given User has username with 10000 characters
     When User sends login request with extremely long username
     Then API should return HTTP 400 status (Bad Request)
-    Or API should return HTTP 413 status (Payload Too Large)
+    And API should return HTTP 413 status (Payload Too Large)
     And Response should contain error message
 
   @APITest @Negative
@@ -138,7 +138,7 @@ Feature: User Login - API Automation Tests
     Given User has password with 10000 characters
     When User sends login request with extremely long password
     Then API should return HTTP 400 status (Bad Request)
-    Or API should return HTTP 413 status (Payload Too Large)
+    And API should return HTTP 413 status (Payload Too Large)
 
   @APITest @Negative
   Scenario: Invalid request content-type
@@ -178,7 +178,7 @@ Feature: User Login - API Automation Tests
     Given User has valid credentials
     When User sends login request
     Then API should return response within 500 milliseconds
-    Or API should return response within 1000 milliseconds
+    And API should return response within 1000 milliseconds
 
   @APITest
   Scenario: Login response structure validation
@@ -216,7 +216,7 @@ Feature: User Login - API Automation Tests
     When User attempts to reuse old expired token
     Then API should reject the old token
     And API should return HTTP 401 status (Unauthorized)
-    Or API should return HTTP 403 status (Forbidden)
+    And API should return HTTP 403 status (Forbidden)
 
   @APITest
   Scenario: Case sensitivity validation

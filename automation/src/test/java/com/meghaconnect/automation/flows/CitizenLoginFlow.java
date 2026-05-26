@@ -53,6 +53,14 @@ public class CitizenLoginFlow {
         dashboardVisible = citizenLoginPage.isVisitorProfileHeaderVisible();
         assertTrue("Visitor Profile header should be visible after login", dashboardVisible);
     }
+    
+    public void executeCitizenUnknownLogin(String scenarioName) {
+    	logger.info("Executing Citizen OTP login for scenario: " + scenarioName);
+        Map<String, String> testData = ExcelUtil.getRowData(SHEET_NAME, scenarioName);
+
+        String mobileNumber = testData.getOrDefault("mobileNumber", "");
+        String expectedResult = testData.getOrDefault("expectedResult", "");
+    }
 
     public boolean isDashboardVisible() {
         dashboardVisible = citizenLoginPage.isVisitorProfileHeaderVisible();

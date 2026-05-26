@@ -32,6 +32,7 @@ public class CitizenLoginPage {
     public static final By VERIFY_LOGIN_BUTTON = By.xpath("/html/body/app-root/app-public-login/div/div[2]/div[2]/button/span[2]/span");
     public static final By VISITOR_PROFILE_HEADER = By.xpath("//*[@id='shell_mainContent']/app-visitor-dashboard/div/div[3]/div[1]/div[1]/div");
     public static final By LOGOUT_BUTTON = By.xpath("//*[@id='shell_logoutBtn']/mat-icon");
+    public static final By UNKNOWN_MOBILE_ERROR_MSG = By.xpath("//*[@id=\"publicLogin_errorMsg\"]/div/span");
 
     private WebDriverWait webDriverWait() {
         return new WebDriverWait(DriverManager.getDriver(), Duration.ofSeconds(ConfigManager.getExplicitWait()));

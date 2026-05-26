@@ -24,6 +24,7 @@ public class CitizenLoginStepDefinition {
 
     @Given("Citizen opens MeghaConnect UAT home page")
     public void citizenOpensMeghaConnectUatHomePage() {
+    	int a=10;
         logger.info("GIVEN: Citizen opens MeghaConnect UAT home page");
         citizenLoginFlow.openHomePage();
     }
@@ -45,5 +46,12 @@ public class CitizenLoginStepDefinition {
     public void citizenLogsOutSuccessfully() {
         logger.info("AND: Citizen logs out successfully");
         citizenLoginFlow.logout();
+    }
+    
+    
+    @When("Citizen completes login using unknown number scenario {string}")
+    public void citizenCompletesLoginUsingUnknownNumberScenario(String scenarioName) {
+        logger.info("WHEN: Citizen completes login using unknown number scenario: " + scenarioName);
+        citizenLoginFlow.executeCitizenOtpLogin(scenarioName);
     }
 }

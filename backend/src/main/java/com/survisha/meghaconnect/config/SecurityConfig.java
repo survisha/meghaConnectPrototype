@@ -104,14 +104,6 @@ public class SecurityConfig {
                 ).permitAll()
                 .antMatchers("/api/v1/reference/**").permitAll() // Public reference data dropdowns
                 .antMatchers("/api/ai/chatbot").permitAll()
-                
-                // Static resources (Angular frontend - embedded in JAR)
-                .antMatchers("/", "/index.html").permitAll()        // Root and index
-                .antMatchers("/**/*.js", "/**/*.css", "/**/*.ico").permitAll()  // JS, CSS, favicon
-                .antMatchers("/**/*.png", "/**/*.jpg", "/**/*.jpeg", "/**/*.svg").permitAll()  // Images
-                .antMatchers("/**/*.woff", "/**/*.woff2", "/**/*.ttf", "/**/*.eot").permitAll()  // Fonts
-                .antMatchers("/browser/**", "/asserts/**", "/assets/**").permitAll()  // Static asset folders
-                
                 // All other API requests require authentication
                 .antMatchers("/api/**").authenticated()
                 

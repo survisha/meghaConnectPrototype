@@ -93,8 +93,7 @@ public class SecurityConfig {
                     "/api/v1/visitor/auth/check-registration",
                     "/api/v1/visitor/auth/generate-otp",
                     "/api/v1/visitor/auth/validate-otp",
-                    "/api/v1/visitor/auth/register",
-                    "/api/v1/visitor/verify-otp"
+                    "/api/v1/visitor/auth/register"
                 ).permitAll()
                 .antMatchers(
                     "/api/v1/kyc/verify/epic",

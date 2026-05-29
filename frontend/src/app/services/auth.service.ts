@@ -21,6 +21,27 @@ interface LoginResponse {
   expiresIn: number;
 }
 
+export interface ValidateOtpRequest {
+  phoneNumber: string;
+  otp: string;
+  epicNumber?: string;
+  purpose?: 'LOGIN' | 'REGISTRATION';
+  registrationFlow?: boolean;
+}
+
+export interface ValidateOtpResponse {
+  success: boolean;
+  code?: string;
+  token?: string;
+  fullName?: string;
+  visitorId?: number;
+  role?: string;
+  message: string;
+  requiresEpic?: boolean;
+  kycStatus?: string;
+  kycPending?: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private _user = signal<AuthUser | null>(null);
@@ -60,6 +81,10 @@ export class AuthService {
       map(() => true),
       catchError(err => throwError(() => err))
     );
+  }
+
+  validateOtp(request: ValidateOtpRequest): Observable<ValidateOtpResponse> {
+    return this.http.post<ValidateOtpResponse>(`${environment.apiUrl}/auth/validate-otp`, request);
   }
 
   logout() {

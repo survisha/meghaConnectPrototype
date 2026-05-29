@@ -129,6 +129,17 @@ public class VisitorAuthService {
     public Map<String, Object> validateOtp(Map<String, String> body) {
         String phone = validationService.requirePhone(body != null ? body.get(ValidationConstants.FIELD_PHONE_NUMBER) : null);
         String otp = validationService.requireOtp(body != null ? body.get(ValidationConstants.FIELD_OTP) : null);
+
+        if (isRegistrationOtpRequest(body)) {
+            boolean valid = visitorOtpService.validateKycOtp(phone, otp);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", valid);
+            response.put("code", valid ? "OTP_VALIDATED" : "OTP_INVALID");
+            response.put("requiresEpic", false);
+            response.put("message", valid ? "OTP validated successfully" : "Invalid OTP. Please try again.");
+            return response;
+        }
+
         LoginResolution resolution = resolveLoginVisitor(phone, optionalEpic(body));
         if (!resolution.success) {
             return loginResolutionResponse(resolution);
@@ -147,7 +158,7 @@ public class VisitorAuthService {
         response.put("role", "PUBLIC");
         response.put("kycStatus", visitor.getKycStatus() != null ? visitor.getKycStatus() : "PENDING");
         response.put("kycPending", "KYC_PENDING".equalsIgnoreCase(visitor.getKycStatus()));
-        response.put("message", "Login successful");
+        response.put("message", "OTP validated successfully");
         return response;
     }
 

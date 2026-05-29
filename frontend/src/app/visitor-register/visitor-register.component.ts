@@ -437,13 +437,14 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
   resendOtp() {
     this.otpCode = '';
-    this.otpSent = false;
-    if (this.form.idType === 'EPIC' && this.isManualPhoneValid) {
-      this.loading = true;
-      this.generateRegistrationOtp();
-    } else {
-      this.validateId();
+    this.errorMsg = '';
+    this.successMsg = '';
+    if (this.form.idType !== 'EPIC' || !this.isManualPhoneValid) {
+      this.errorMsg = this.t('ERROR_MOBILE_BEFORE_OTP');
+      return;
     }
+    this.loading = true;
+    this.generateRegistrationOtp();
   }
 
   private generateRegistrationOtp() {
@@ -991,7 +992,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       && (this.form.outsideState || !!this.form.district.trim());
   }
 
-  verifyOtp() {
+  validateOtp() {
     if (!this.canVerifyOtp) {
       this.errorMsg = this.t('ERROR_VALID_6_DIGIT_OTP');
       return;
@@ -1000,29 +1001,28 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.errorMsg = '';
     this.loading = true;
 
-    this.kycService.verifyOtp({
-      idNumber: this.idNumber,
+    this.auth.validateOtp({
       otp: this.otpCode,
-      phoneNumber: this.actualPhoneNumber,
-      idType: this.form.idType,
+      phoneNumber: this.actualPhoneNumber || this.manualPhone,
+      purpose: 'REGISTRATION',
+      registrationFlow: true,
     }).subscribe({
       next: res => {
         this.loading = false;
         
-        if (res.success && res.demographics) {
+        if (res.success) {
           this.otpVerified = true;
 
           if (!this.verifiedKycData) {
-            const demo = res.demographics;
-            Object.assign(this.form, {
-              fullName: demo.fullName || '',
-              address: demo.address || '',
-              district: demo.district || '',
-              constituency: demo.constituency || '',
-              photoFromId: demo.photoFromId || '',
-            });
+            this.verifiedKycData = {
+              kycVerified: true,
+              kycType: this.form.idType === 'EPIC' ? 'EPIC' : 'NONE',
+              kycReferenceId: this.idNumber,
+              visitorName: this.form.fullName,
+              mobile: this.actualPhoneNumber || this.manualPhone,
+            };
           }
-          this.form.phoneNumber = this.actualPhoneNumber;
+          this.form.phoneNumber = this.actualPhoneNumber || this.manualPhone;
 
           this.successMsg = this.t('CONTINUE_WITH_PHOTO_CAPTURE');
           
@@ -1220,56 +1220,6 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.errorMsg = '';
     this.successMsg = this.t('PHOTO_CAPTURED_CONTINUE_DETAILS');
     this.currentStep = 'additional-details';
-  }
-
-  validateFace() {
-    if (!this.verifiedKycData) {
-      this.errorMsg = this.t('PLEASE_COMPLETE_ID_KYC');
-      return;
-    }
-
-    if (!this.form.livePhoto) {
-      this.errorMsg = this.t('PLEASE_CAPTURE_LIVE_PHOTO');
-      return;
-    }
-
-    this.errorMsg = '';
-    this.loading = true;
-
-    this.kycService.validateFace({
-      idNumber: this.idNumber,
-      livePhoto: this.form.livePhoto,
-    }).subscribe({
-      next: res => {
-        this.loading = false;
-        if (res.success) {
-          this.kycStatus = res.kycStatus;
-          this.form.kycStatus = res.kycStatus;
-          // If manual verification was used, override kycStatus
-          if (this.manualVerification) {
-            this.kycStatus = 'MANUAL_VERIFICATION_REQUIRED';
-            this.form.kycStatus = 'MANUAL_VERIFICATION_REQUIRED';
-          }
-          // R009: set KYC confidence score and label
-          this.kycConfidenceScore = (res as any).confidenceScore ?? (this.kycStatus === 'PHOTO_MATCHED' ? 92 : this.kycStatus === 'DEMOGRAPHIC_MATCHED' ? 75 : 45);
-          this.kycConfidenceLabel = this.kycStatus === 'PHOTO_MATCHED'
-            ? this.t('CONFIDENCE_VERIFIED')
-            : this.kycStatus === 'DEMOGRAPHIC_MATCHED'
-              ? this.t('CONFIDENCE_DEMOGRAPHIC')
-              : this.t('CONFIDENCE_MANUAL');
-          this.currentStep = 'additional-details';
-          this.successMsg = res.kycStatus === 'PHOTO_MATCHED'
-            ? this.t('KYC_VERIFIED_PHOTO_SHORT')
-            : this.t('KYC_VERIFIED_DEMOGRAPHIC_SHORT');
-        } else {
-          this.errorMsg = res.message || this.t('FACE_VALIDATION_FAILED');
-        }
-      },
-      error: err => {
-        this.loading = false;
-        this.errorMsg = apiErrorMessage(err, this.t('FACE_VALIDATION_FAILED'));
-      },
-    });
   }
 
   // ── FINAL SUBMISSION ────────────────────────────────────────────────────

@@ -17,18 +17,18 @@ import java.util.Map;
 /**
  * Visitor (citizen) authentication endpoints.
  *
- * All paths under /api/v1/visitor/auth/** are publicly accessible (no JWT required).
+ * All paths under /api/v1/visitor/auth/** and /api/v1/auth/** are publicly accessible (no JWT required).
  *
  * Flow:
  *   1. POST /api/v1/visitor/auth/check-mobile   – check if mobile exists in persons table
  *   1a.POST /api/v1/visitor/auth/check-registration – check mobile and EPIC+mobile duplicate status
  *   2. POST /api/v1/visitor/auth/generate-otp   – generate & deliver OTP (mock; SMS TBD)
- *   3. POST /api/v1/visitor/auth/validate-otp   – validate OTP, return JWT
+ *   3. POST /api/v1/auth/validate-otp           – validate login or registration OTP
  *   4. POST /api/v1/visitor/auth/register        – register new visitor
  *   5. GET  /api/v1/visitor/auth/profile         – get visitor profile (JWT required)
  */
 @RestController
-@RequestMapping("/api/v1/visitor/auth")
+@RequestMapping({"/api/v1/visitor/auth", "/api/v1/auth"})
 @RequiredArgsConstructor
 @Tag(name = "Visitor Authentication", description = "Public visitor/citizen authentication endpoints - no JWT required")
 public class VisitorAuthController {
@@ -72,8 +72,9 @@ public class VisitorAuthController {
     // ── 3. Validate OTP ───────────────────────────────────────────────────────
 
     /**
-     * Validates the submitted OTP. On success returns a JWT token that the
-     * frontend stores and uses as Bearer token for subsequent calls.
+     * Validates the submitted OTP for citizen login or citizen registration.
+     * Login requests return visitor session details and a JWT. Registration
+     * requests return a success acknowledgement and do not issue a JWT.
      */
     @PostMapping("/validate-otp")
     public ResponseEntity<Map<String, Object>> validateOtp(@RequestBody Map<String, String> body) {

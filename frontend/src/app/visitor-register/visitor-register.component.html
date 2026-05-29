@@ -302,7 +302,7 @@
               color="primary" 
               class="flex-1" 
               [disabled]="loading || otpCode.length !== 6" 
-              (click)="verifyOtp()">
+              (click)="validateOtp()">
               <span *ngIf="!loading"><mat-icon>check</mat-icon> {{ 'VERIFY_OTP' | translate }}</span>
               <span *ngIf="loading"><mat-icon class="spin-icon">sync</mat-icon> {{ 'VERIFYING' | translate }}</span>
             </button>
@@ -360,7 +360,7 @@
           </div>
 
           <div style="text-align:center;margin-top:1rem">
-            <button mat-button color="primary" (click)="validateId()" [disabled]="loading">
+            <button mat-button color="primary" (click)="resendOtp()" [disabled]="loading">
               <mat-icon>refresh</mat-icon> {{ 'RESEND_OTP' | translate }}
             </button>
           </div>
@@ -369,7 +369,7 @@
             <button mat-stroked-button color="primary" (click)="goBackToIdEntry()">
               <mat-icon>arrow_back</mat-icon> {{ 'PREVIOUS' | translate }}
             </button>
-            <button id="register_nextBtnStep2" mat-raised-button color="primary" class="flex-1" [disabled]="loading || otpCode.length !== 6" (click)="verifyOtp()">
+            <button id="register_nextBtnStep2" mat-raised-button color="primary" class="flex-1" [disabled]="loading || otpCode.length !== 6" (click)="validateOtp()">
               <span *ngIf="!loading"><mat-icon>check</mat-icon> {{ 'NEXT' | translate }}</span>
               <span *ngIf="loading"><mat-icon>autorenew</mat-icon> {{ 'VERIFYING' | translate }}</span>
             </button>

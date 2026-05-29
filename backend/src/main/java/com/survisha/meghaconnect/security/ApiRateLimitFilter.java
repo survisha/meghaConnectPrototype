@@ -71,11 +71,11 @@ public class ApiRateLimitFilter extends OncePerRequestFilter {
             return null;
         }
         if (uri.startsWith("/api/v1/visitor/auth")
-                || uri.startsWith("/api/v1/visitor/verify-otp")
+                || uri.startsWith("/api/v1/auth/validate-otp")
                 || uri.startsWith("/api/v1/public/otp")) {
             return new Limit("otp", otpMaxRequests);
         }
-        if (uri.startsWith("/api/v1/kyc") || uri.startsWith("/api/v1/visitor/validate")) {
+        if (uri.startsWith("/api/v1/kyc")) {
             return new Limit("kyc", kycMaxRequests);
         }
         if (uri.startsWith("/api/ai")) {

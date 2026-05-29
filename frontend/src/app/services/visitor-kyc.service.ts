@@ -3,55 +3,6 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
-export interface IdValidationRequest {
-  idType: 'EPIC' | 'AADHAAR';
-  idNumber: string;
-  phoneNumber?: string; // Optional - for manual verification fallback
-}
-
-export interface IdValidationResponse {
-  success: boolean;
-  message: string;
-  otpSent: boolean;
-  phoneNumber?: string; // Masked phone number for display
-  actualPhoneNumber?: string; // Actual 10-digit phone number for storage
-  manualVerification?: boolean; // Flag if manual phone number was provided
-  otp?: string; // DEMO ONLY - OTP for testing
-}
-
-export interface OtpVerificationRequest {
-  idNumber: string;
-  otp: string;
-  phoneNumber: string;
-  idType: string;
-}
-
-export interface VisitorDemographics {
-  fullName: string;
-  address: string;
-  district: string;
-  constituency: string;
-  photoFromId?: string; // Base64 encoded photo from ID
-}
-
-export interface OtpVerificationResponse {
-  success: boolean;
-  message: string;
-  demographics?: VisitorDemographics;
-}
-
-export interface FaceValidationRequest {
-  idNumber: string;
-  livePhoto: string; // Base64 encoded image
-}
-
-export interface FaceValidationResponse {
-  success: boolean;
-  kycStatus: 'PHOTO_MATCHED' | 'DEMOGRAPHIC_MATCHED' | 'FAILED';
-  message: string;
-  matchScore?: number;
-}
-
 export interface ReferenceDataDto {
   code: string;
   value: string;
@@ -195,32 +146,6 @@ export interface KycDataResponse {
 export class VisitorKycService {
   
   constructor(private http: HttpClient) {}
-
-  /**
-   * Step 1: Validate EPIC or Aadhaar ID Type
-   * - Sends OTP to the mobile number registered with the ID
-   * - If phoneNumber is provided manually, OTP is sent to that number (manual verification)
-   * - Backend calls external EPIC/Aadhaar service to get registered mobile number
-   */
-  validateVisitorId(request: IdValidationRequest): Observable<IdValidationResponse> {
-    return this.http.post<IdValidationResponse>(`${environment.apiUrl}/visitor/validate-idType`, request);
-  }
-
-  /**
-   * Step 2: Verify OTP entered by user
-   * Returns demographic details if OTP is valid
-   */
-  verifyOtp(request: OtpVerificationRequest): Observable<OtpVerificationResponse> {
-    return this.http.post<OtpVerificationResponse>(`${environment.apiUrl}/visitor/verify-otp`, request);
-  }
-
-  /**
-   * Backward-compatible face validation endpoint. The EPIC registration flow
-   * does not call this because EPIC does not provide a reference photo.
-   */
-  validateFace(request: FaceValidationRequest): Observable<FaceValidationResponse> {
-    return this.http.post<FaceValidationResponse>(`${environment.apiUrl}/visitor/validate-face`, request);
-  }
 
   getCitizenDesignations(): Observable<ReferenceDataDto[]> {
     return this.http.get<ReferenceDataDto[]>(`${environment.apiUrl}/reference/CITIZEN_DESIGNATION`);

@@ -135,16 +135,7 @@ export class PublicLoginComponent {
       return;
     }
     this.loading = true;
-    this.http.post<{
-      success: boolean;
-      code?: string;
-      token: string;
-      fullName: string;
-      visitorId: number;
-      role: string;
-      message: string;
-      requiresEpic?: boolean;
-    }>(`${environment.apiUrl}/visitor/auth/validate-otp`, {
+    this.auth.validateOtp({
       phoneNumber: this.phoneNumber,
       epicNumber: this.epicNumber.trim().toUpperCase() || undefined,
       otp: this.otp,
@@ -153,7 +144,7 @@ export class PublicLoginComponent {
         this.loading = false;
         if (res.success) {
           // Store visitor session using AuthService helper
-          this.auth.setVisitorSession(this.phoneNumber, res.fullName, res.token, res.visitorId);
+          this.auth.setVisitorSession(this.phoneNumber, res.fullName || 'Visitor', res.token || '', res.visitorId);
           this.router.navigate(['/visitor']);
         } else {
           if (res.requiresEpic) {

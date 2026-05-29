@@ -149,7 +149,7 @@
               type="text"
               [(ngModel)]="form.visitorName"
               placeholder="e.g. MAREIAM MOSSANG"
-              (input)="form.visitorName = form.visitorName.toUpperCase(); clearVisibleErrors()"
+              (input)="form.visitorName = form.visitorName.toUpperCase(); resetOtpVerification(); otpSent = false; otpCode = ''; clearVisibleErrors()"
             />
             <mat-hint><mat-icon>info</mat-icon> {{ 'VISITOR_NAME_VOTER_CARD_HINT' | translate }}</mat-hint>
           </mat-form-field>
@@ -277,6 +277,15 @@
               <span *ngIf="!loading"><mat-icon>send</mat-icon> {{ 'GENERATE_OTP' | translate }}</span>
               <span *ngIf="loading"><mat-icon class="spin-icon">sync</mat-icon> {{ 'LOADING' | translate }}</span>
             </button>
+            <button
+              *ngIf="isCurrentMobileOtpVerified && !showQrCode && form.idType === 'EPIC'"
+              mat-raised-button
+              color="primary"
+              class="flex-1"
+              [disabled]="loading"
+              (click)="currentStep = 'photo-capture'">
+              <mat-icon>arrow_forward</mat-icon> Continue to Capture
+            </button>
             <button 
               id="register_generateQrBtn"
               *ngIf="!showQrCode && form.idType === 'AADHAAR'" 
@@ -340,12 +349,15 @@
 
           <div class="otp-info-box">
             <mat-icon style="font-size:2rem;width:2rem;height:2rem;color:#1565C0">phone_iphone</mat-icon>
-            <p>{{ 'OTP_SENT_TO' | translate: { phone: maskedPhone } }}</p>
-            <small>{{ 'PLEASE_ENTER_6_DIGIT_CODE' | translate }}</small>
+            <p *ngIf="!isCurrentMobileOtpVerified">{{ 'OTP_SENT_TO' | translate: { phone: maskedPhone } }}</p>
+            <p *ngIf="isCurrentMobileOtpVerified">Mobile number already verified</p>
+            <small *ngIf="!isCurrentMobileOtpVerified">{{ 'PLEASE_ENTER_6_DIGIT_CODE' | translate }}</small>
+            <small *ngIf="isCurrentMobileOtpVerified">Continue to capture photo.</small>
           </div>
 
           <div
-               class="form-group">
+               class="form-group"
+               *ngIf="!isCurrentMobileOtpVerified">
             <label>{{ 'ENTER_OTP' | translate }} *</label>
             <input
               id="register_otpInputStep2"
@@ -359,7 +371,12 @@
             />
           </div>
 
-          <div style="text-align:center;margin-top:1rem">
+          <div *ngIf="isCurrentMobileOtpVerified" class="status-msg success-msg">
+            <mat-icon>verified</mat-icon>
+            <span>Mobile number already verified</span>
+          </div>
+
+          <div *ngIf="!isCurrentMobileOtpVerified" style="text-align:center;margin-top:1rem">
             <button mat-button color="primary" (click)="resendOtp()" [disabled]="loading">
               <mat-icon>refresh</mat-icon> {{ 'RESEND_OTP' | translate }}
             </button>
@@ -369,9 +386,25 @@
             <button mat-stroked-button color="primary" (click)="goBackToIdEntry()">
               <mat-icon>arrow_back</mat-icon> {{ 'PREVIOUS' | translate }}
             </button>
-            <button id="register_nextBtnStep2" mat-raised-button color="primary" class="flex-1" [disabled]="loading || otpCode.length !== 6" (click)="validateOtp()">
+            <button
+              *ngIf="!isCurrentMobileOtpVerified"
+              id="register_nextBtnStep2"
+              mat-raised-button
+              color="primary"
+              class="flex-1"
+              [disabled]="loading || otpCode.length !== 6"
+              (click)="validateOtp()">
               <span *ngIf="!loading"><mat-icon>check</mat-icon> {{ 'NEXT' | translate }}</span>
               <span *ngIf="loading"><mat-icon>autorenew</mat-icon> {{ 'VERIFYING' | translate }}</span>
+            </button>
+            <button
+              *ngIf="isCurrentMobileOtpVerified"
+              mat-raised-button
+              color="primary"
+              class="flex-1"
+              [disabled]="loading"
+              (click)="currentStep = 'photo-capture'">
+              <mat-icon>arrow_forward</mat-icon> Continue to Capture
             </button>
           </div>
         </ng-container>

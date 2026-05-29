@@ -22,14 +22,20 @@ public class SmsClient {
 
     public SmsResponse sendSms(SmsRequest request) {
         if (request == null) {
-            throw new IllegalArgumentException("SMS request is required.");
+            return failure("SMS request is required.", "");
         }
         return sendSms(request.getMobileNumber(), request.getMessage(), request.getTemplateId());
     }
 
     public SmsResponse sendSms(String mobileNumber, String message, String templateId) {
         String normalizedMobile = normalizeMobileNumber(mobileNumber);
-        validateRequest(normalizedMobile, message, templateId);
+        try {
+            validateRequest(normalizedMobile, message, templateId);
+        } catch (IllegalArgumentException e) {
+            log.error("SMS request validation failed mobile={} templateId={} requestId={} error={}",
+                    RequestContextUtil.maskPhone(normalizedMobile), templateId, RequestContextUtil.getRequestId(), e.getMessage());
+            return failure(e.getMessage(), properties.getProvider());
+        }
 
         if (!properties.isEnabled()) {
             log.info("SMS sending disabled by configuration. mobile={} templateId={}",
@@ -59,12 +65,7 @@ public class SmsClient {
         } catch (RestClientException e) {
             log.error("Failed to send SMS for mobile {} templateId={} requestId={} error={}",
                     RequestContextUtil.maskPhone(normalizedMobile), templateId, RequestContextUtil.getRequestId(), e.getMessage());
-            return SmsResponse.builder()
-                    .success(false)
-                    .statusCode(0)
-                    .provider(properties.getProvider())
-                    .message(e.getMessage())
-                    .build();
+            return failure(e.getMessage(), properties.getProvider());
         }
     }
 
@@ -101,5 +102,14 @@ public class SmsClient {
 
     private String normalizeMobileNumber(String mobileNumber) {
         return mobileNumber == null ? "" : mobileNumber.replaceAll("\\D", "");
+    }
+
+    private SmsResponse failure(String message, String provider) {
+        return SmsResponse.builder()
+                .success(false)
+                .statusCode(0)
+                .provider(provider)
+                .message(message)
+                .build();
     }
 }

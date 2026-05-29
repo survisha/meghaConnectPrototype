@@ -198,6 +198,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   idValidated = false;
   otpSent = false;  // Flag to show OTP field
   otpVerified = false;
+  verifiedMobileNumber: string | null = null;
+  otpValidatedAt: Date | null = null;
   photoCaptured = false;
   kycStatus: 'PHOTO_MATCHED' | 'DEMOGRAPHIC_MATCHED' | 'FAILED' | 'MANUAL_VERIFICATION_REQUIRED' | 'KYC_PENDING' | '' = '';
   kycStatusMessage = '';
@@ -327,6 +329,14 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     return /^\d{10}$/.test(this.manualPhone);
   }
 
+  get currentOtpMobileNumber(): string {
+    return this.actualPhoneNumber || this.manualPhone || this.form.phoneNumber || '';
+  }
+
+  get isCurrentMobileOtpVerified(): boolean {
+    return this.otpVerified && this.verifiedMobileNumber === this.currentOtpMobileNumber;
+  }
+
   get hasVisibleErrorMessage(): boolean {
     return !!this.errorMsg || (this.mobileValidationType === 'error' && !!this.mobileValidationMsg);
   }
@@ -335,7 +345,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     return this.canValidateId
       && this.isManualPhoneValid
       && !this.duplicateRegistrationBlocked
-      && !this.hasVisibleErrorMessage;
+      && !this.hasVisibleErrorMessage
+      && !this.isCurrentMobileOtpVerified;
   }
 
   get mobileValidationIcon(): string {
@@ -436,6 +447,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   }
 
   resendOtp() {
+    this.resetOtpVerification();
     this.otpCode = '';
     this.errorMsg = '';
     this.successMsg = '';
@@ -459,6 +471,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       next: res => {
         this.loading = false;
         if (res.success) {
+          this.resetOtpVerification();
           this.otpCode = '';
           this.otpSent = true;
           this.currentStep = 'otp-verification';
@@ -993,6 +1006,12 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   }
 
   validateOtp() {
+    if (this.isCurrentMobileOtpVerified) {
+      this.currentStep = 'photo-capture';
+      this.successMsg = 'Mobile number already verified';
+      return;
+    }
+
     if (!this.canVerifyOtp) {
       this.errorMsg = this.t('ERROR_VALID_6_DIGIT_OTP');
       return;
@@ -1012,6 +1031,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
         
         if (res.success) {
           this.otpVerified = true;
+          this.verifiedMobileNumber = this.currentOtpMobileNumber;
+          this.otpValidatedAt = new Date();
 
           if (!this.verifiedKycData) {
             this.verifiedKycData = {
@@ -1019,10 +1040,10 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
               kycType: this.form.idType === 'EPIC' ? 'EPIC' : 'NONE',
               kycReferenceId: this.idNumber,
               visitorName: this.form.fullName,
-              mobile: this.actualPhoneNumber || this.manualPhone,
+              mobile: this.currentOtpMobileNumber,
             };
           }
-          this.form.phoneNumber = this.actualPhoneNumber || this.manualPhone;
+          this.form.phoneNumber = this.currentOtpMobileNumber;
 
           this.successMsg = this.t('CONTINUE_WITH_PHOTO_CAPTURE');
           
@@ -1363,6 +1384,9 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   goBackFromPhotoCapture() {
     this.currentStep = this.form.idType === 'AADHAAR' ? 'id-entry' : 'otp-verification';
     this.errorMsg = '';
+    if (this.isCurrentMobileOtpVerified) {
+      this.successMsg = 'Mobile number already verified';
+    }
   }
 
   goBackFromAdditionalDetails() {
@@ -1396,7 +1420,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     // Reset OTP-related state
     this.otpSent = false;
     this.otpCode = '';
-    this.otpVerified = false;
+    this.resetOtpVerification();
     this.maskedPhone = '';
     this.manualPhone = '';
     this.manualVerification = false;
@@ -1507,6 +1531,9 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   sanitizeManualPhone() {
     this.manualPhone = this.manualPhone.replace(/\D/g, '');
     this.form.phoneNumber = this.manualPhone;
+    this.resetOtpVerification();
+    this.otpSent = false;
+    this.otpCode = '';
     this.errorMsg = '';
     this.mobileValidationMsg = '';
     this.mobileValidationType = '';
@@ -1598,6 +1625,10 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
   sanitizeNumericInput(field: 'phoneNumber' | 'aadhaarNumber') {
     this.form[field] = this.form[field].replace(/\D/g, '');
+    if (field === 'phoneNumber') {
+      this.resetOtpVerification();
+      this.otpCode = '';
+    }
     this.clearVisibleErrors();
   }
 
@@ -1613,6 +1644,9 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
   sanitizeEpicInput() {
     this.form.epicNumber = this.form.epicNumber.toUpperCase();
+    this.resetOtpVerification();
+    this.otpSent = false;
+    this.otpCode = '';
     this.errorMsg = '';
     this.duplicateRegistrationBlocked = false;
     this.mobileValidationMsg = '';
@@ -1633,6 +1667,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.idValidated = false;
     this.otpSent = false;
     this.otpVerified = false;
+    this.verifiedMobileNumber = null;
+    this.otpValidatedAt = null;
     this.photoCaptured = false;
     this.kycStatus = '';
     this.isAadhaarFlow = false;
@@ -1678,5 +1714,11 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     };
     this.errorMsg = '';
     this.successMsg = '';
+  }
+
+  resetOtpVerification() {
+    this.otpVerified = false;
+    this.verifiedMobileNumber = null;
+    this.otpValidatedAt = null;
   }
 }

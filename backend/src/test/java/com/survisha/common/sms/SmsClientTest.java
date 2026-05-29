@@ -59,6 +59,18 @@ class SmsClientTest {
     }
 
     @Test
+    void sendSmsReturnsFailureWhenEnabledWithoutApiKey() {
+        SmsProperties properties = enabledProperties();
+        properties.setApiKey("");
+        SmsClient client = new SmsClient(new RestTemplate(), properties);
+
+        SmsResponse response = client.sendSms("9700423723", "Registration completed.", "1707177995193042911");
+
+        assertFalse(response.isSuccess());
+        assertThat(response.getMessage(), containsString("API key"));
+    }
+
+    @Test
     void sendSmsReturnsFailureForProviderError() {
         RestTemplate restTemplate = new RestTemplate();
         MockRestServiceServer server = MockRestServiceServer.bindTo(restTemplate).build();

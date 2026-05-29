@@ -102,6 +102,14 @@ spring.servlet.multipart.max-request-size=10MB
 # ============================================
 # Uncomment and modify for specific domain in production
 # cors.allowed-origins=https://meghaconnect.meghalaya.gov.in
+
+# SMS / Ping4SMS
+sms.enabled=${SMS_ENABLED:false}
+sms.provider=ping4sms
+sms.base-url=${SMS_BASE_URL:https://site.ping4sms.com/api/smsapi}
+sms.api-key=${SMS_API_KEY:}
+sms.route=${SMS_ROUTE:2}
+sms.sender-id=${SMS_SENDER_ID:DEUPL}
 # cors.allowed-methods=GET,POST,PUT,PATCH,DELETE,OPTIONS
 # cors.allowed-headers=*
 # cors.allow-credentials=true

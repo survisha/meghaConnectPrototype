@@ -1,5 +1,6 @@
 package com.survisha.meghaconnect.service;
 
+import com.survisha.common.sms.SmsService;
 import com.survisha.meghaconnect.entity.OtpTemp;
 import com.survisha.meghaconnect.entity.Visitor;
 import com.survisha.meghaconnect.repository.OtpTempRepository;
@@ -47,6 +48,7 @@ public class VisitorOtpService {
     private final VisitorRepository  visitorRepository;
     private final OtpTempRepository   otpTempRepository;
     private final JwtService          jwtService;
+    private final SmsService          smsService;
 
     // ── Check mobile ─────────────────────────────────────────────────────────
 
@@ -109,8 +111,8 @@ public class VisitorOtpService {
                 .build();
         otpTempRepository.save(record);
 
-        // TODO: integrate SMS gateway (MSG91 / CDAC) to send `otpCode` to `phone`
-        log.info("OTP generated purpose={} phone={} visitorId={} (mock SMS gateway pending)",
+        sendOtpSms(phone, otpCode, purpose);
+        log.info("OTP generated purpose={} phone={} visitorId={}",
                 purpose, RequestContextUtil.maskPhone(phone), visitorId);
         return otpCode;
     }
@@ -219,9 +221,17 @@ public class VisitorOtpService {
                 .build();
         otpTempRepository.save(record);
 
-        // TODO: integrate SMS gateway (MSG91 / CDAC) to send `otpCode` to `phone`
+        smsService.sendOtpSms(phone, otpCode);
         log.info("KYC OTP generated for phone={}", RequestContextUtil.maskPhone(phone));
         return otpCode;
+    }
+
+    private void sendOtpSms(String phone, String otpCode, String purpose) {
+        if ("REGISTRATION".equalsIgnoreCase(purpose)) {
+            smsService.sendOtpSms(phone, otpCode);
+            return;
+        }
+        smsService.sendLoginOtpSms(phone, otpCode);
     }
 
     /**

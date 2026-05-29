@@ -136,6 +136,14 @@ cache:
   redis:
     enabled: ${REDIS_CACHE_ENABLED:false}
 
+sms:
+  enabled: ${SMS_ENABLED:false}
+  provider: ping4sms
+  base-url: ${SMS_BASE_URL:https://site.ping4sms.com/api/smsapi}
+  api-key: ${SMS_API_KEY:}
+  route: ${SMS_ROUTE:2}
+  sender-id: ${SMS_SENDER_ID:DEUPL}
+
 logging:
   level:
     root: INFO

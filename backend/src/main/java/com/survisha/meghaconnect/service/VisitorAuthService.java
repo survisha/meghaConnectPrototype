@@ -1,5 +1,6 @@
 package com.survisha.meghaconnect.service;
 
+import com.survisha.common.sms.SmsService;
 import com.survisha.meghaconnect.dto.EpicVerificationRequest;
 import com.survisha.meghaconnect.dto.EpicVerificationResponse;
 import com.survisha.meghaconnect.dto.PublicRegistrationDto;
@@ -43,6 +44,7 @@ public class VisitorAuthService {
     private final FileStorageService fileStorageService;
     private final EpicVerificationService epicVerificationService;
     private final AuditLogService auditLogService;
+    private final SmsService smsService;
 
     public Map<String, Object> checkMobile(Map<String, String> body) {
         String phone = validationService.requirePhone(body != null ? body.get(ValidationConstants.FIELD_PHONE_NUMBER) : null);
@@ -232,6 +234,7 @@ public class VisitorAuthService {
 
     public Map<String, Object> register(PublicRegistrationDto dto) {
         Visitor saved = visitorService.registerVisitor(dto);
+        smsService.sendRegistrationSuccessSms(saved.getPhoneNumber(), registrationReference(saved));
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
@@ -245,6 +248,10 @@ public class VisitorAuthService {
                 ? "Registration completed with KYC pending. Please retry verification later."
                 : "Visitor registration completed successfully.");
         return response;
+    }
+
+    private String registrationReference(Visitor visitor) {
+        return visitor != null && visitor.getId() != null ? "VIS" + visitor.getId() : "N/A";
     }
 
     public Map<String, Object> getProfile(Long visitorId) {

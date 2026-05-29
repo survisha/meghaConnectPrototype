@@ -6,3 +6,11 @@ ai:
     generate-endpoint: /api/generate
     timeout-seconds: 120
     max-input-chars: 12000
+
+sms:
+  enabled: ${SMS_ENABLED:true}
+  provider: ping4sms
+  base-url: ${SMS_BASE_URL:https://site.ping4sms.com/api/smsapi}
+  api-key: ${SMS_API_KEY:}
+  route: ${SMS_ROUTE:2}
+  sender-id: ${SMS_SENDER_ID:DEUPL}

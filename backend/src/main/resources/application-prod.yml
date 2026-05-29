@@ -89,6 +89,14 @@ app:
     secret: ${JWT_SECRET}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}
 
+sms:
+  enabled: ${SMS_ENABLED:false}
+  provider: ping4sms
+  base-url: ${SMS_BASE_URL:https://site.ping4sms.com/api/smsapi}
+  api-key: ${SMS_API_KEY:}
+  route: ${SMS_ROUTE:2}
+  sender-id: ${SMS_SENDER_ID:DEUPL}
+
 management:
   health:
     redis:

@@ -29,7 +29,7 @@ public class VisitorAuthService {
     private static final String CODE_DUPLICATE_REGISTRATION_FOUND = "DUPLICATE_REGISTRATION_FOUND";
 
     private static final String MSG_MULTIPLE_REGISTRATIONS_FOUND =
-            "Multiple registrations are linked with this mobile number. Please enter your EPIC number to continue.";
+            "Multiple registrations are linked with this mobile number. Please select your registration to continue.";
     private static final String MSG_VISITOR_NOT_FOUND =
             "No registration found for this mobile number.";
     private static final String MSG_MOBILE_EPIC_NOT_FOUND =
@@ -91,6 +91,22 @@ public class VisitorAuthService {
         } else {
             response.put("message", "Mobile number is available for registration.");
         }
+        return response;
+    }
+
+    public Map<String, Object> searchRegistrations(Map<String, String> body) {
+        String phone = validationService.requirePhone(body != null ? body.get(ValidationConstants.FIELD_PHONE_NUMBER) : null);
+        List<Visitor> visitors = visitorService.findAllByPhone(phone);
+        log.info("Visitor login registrations searched registrationCount={} phone={}",
+                visitors.size(), RequestContextUtil.maskPhone(phone));
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("registered", !visitors.isEmpty());
+        response.put("registrationCount", visitors.size());
+        response.put("requiresEpic", visitors.size() > 1);
+        response.put("registrations", visitors.stream().map(this::loginRegistrationOption).toList());
+        response.put("message", visitors.isEmpty() ? MSG_VISITOR_NOT_FOUND : "Registrations found.");
         return response;
     }
 
@@ -206,6 +222,26 @@ public class VisitorAuthService {
         response.put("message", resolution.message);
         response.put("requiresEpic", resolution.requiresEpic);
         return response;
+    }
+
+    private Map<String, Object> loginRegistrationOption(Visitor visitor) {
+        Map<String, Object> option = new HashMap<>();
+        option.put("visitorId", visitor.getId());
+        option.put("fullName", firstNonBlank(visitor.getFullName(), "Visitor"));
+        option.put("epicNumber", firstNonBlank(visitor.getEpicNumber()));
+        option.put("maskedEpicNumber", maskReference(visitor.getEpicNumber()));
+        option.put("kycStatus", firstNonBlank(visitor.getKycStatus(), "PENDING"));
+        option.put("district", firstNonBlank(visitor.getDistrict()));
+        option.put("constituency", firstNonBlank(visitor.getAssemblyConstituencyName(), visitor.getConstituency()));
+        return option;
+    }
+
+    private String maskReference(String value) {
+        String clean = firstNonBlank(value);
+        if (clean.length() <= 4) {
+            return clean;
+        }
+        return "****" + clean.substring(clean.length() - 4);
     }
 
     private static class LoginResolution {

@@ -58,6 +58,11 @@ public class VisitorAuthController {
         return ResponseEntity.ok(visitorAuthService.checkRegistration(body));
     }
 
+    @PostMapping("/search-registrations")
+    public ResponseEntity<Map<String, Object>> searchRegistrations(@RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(visitorAuthService.searchRegistrations(body));
+    }
+
     // ── 2. Generate OTP ───────────────────────────────────────────────────────
 
     /**

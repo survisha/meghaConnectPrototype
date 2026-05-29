@@ -56,22 +56,28 @@
           </div>
         </div>
 
-        <mat-form-field appearance="outline" class="full-width" *ngIf="requiresEpic">
-          <mat-label>
+        <div *ngIf="requiresEpic && registrationOptions.length" class="registration-choice-panel">
+          <div class="registration-choice-title">
             <mat-icon>badge</mat-icon>
-            <span> {{ 'EPIC_NUMBER' | translate }}</span>
-          </mat-label>
-          <input
-            id="publicLogin_epicInput"
-            matInput
-            type="text"
-            [(ngModel)]="epicNumber"
-            [placeholder]="'ENTER_EPIC_NUMBER' | translate"
-            maxlength="10"
-            (input)="onEpicInput()"
-            (keyup.enter)="checkMobile()"
-          />
-        </mat-form-field>
+            <span>Select your registration</span>
+          </div>
+          <mat-radio-group
+            [ngModel]="selectedVisitorId"
+            (ngModelChange)="onRegistrationSelect($event)"
+            class="registration-choice-group">
+            <mat-radio-button
+              *ngFor="let option of registrationOptions"
+              [value]="option.visitorId"
+              class="registration-choice-option">
+              <span class="registration-name">{{ option.fullName || 'Visitor' }}</span>
+              <span class="registration-meta">
+                EPIC {{ option.maskedEpicNumber || 'N/A' }}
+                <ng-container *ngIf="option.district"> · {{ option.district }}</ng-container>
+                <ng-container *ngIf="option.constituency"> · {{ option.constituency }}</ng-container>
+              </span>
+            </mat-radio-button>
+          </mat-radio-group>
+        </div>
 
         <div id="publicLogin_errorMsg" *ngIf="errorMsg" class="error-msg">
           <div class="status-line">
@@ -80,7 +86,7 @@
           </div>
         </div>
 
-        <button id="publicLogin_generateOtpBtn" mat-raised-button color="primary" class="full-width" [disabled]="loading" (click)="checkMobile()">
+        <button id="publicLogin_generateOtpBtn" mat-raised-button color="primary" class="full-width" [disabled]="loading || (requiresEpic && !selectedRegistration)" (click)="checkMobile()">
           <mat-icon>send</mat-icon>
           <span *ngIf="!loading">{{ 'GENERATE_OTP' | translate }}</span>
           <span *ngIf="loading"><mat-icon class="spin-icon">sync</mat-icon> {{ 'CHECKING' | translate }}</span>

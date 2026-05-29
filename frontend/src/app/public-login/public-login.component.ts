@@ -10,6 +10,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
+import { MatRadioModule } from '@angular/material/radio';
 import { AiChatbotComponent } from '../ai-chatbot/ai-chatbot.component';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LanguageSelectorComponent } from '../shared/language-selector/language-selector.component';
@@ -25,6 +26,25 @@ interface GenerateOtpResponse {
   requiresEpic?: boolean;
 }
 
+interface LoginRegistrationOption {
+  visitorId: number;
+  fullName: string;
+  epicNumber: string;
+  maskedEpicNumber: string;
+  kycStatus?: string;
+  district?: string;
+  constituency?: string;
+}
+
+interface RegistrationSearchResponse {
+  success: boolean;
+  registered: boolean;
+  registrationCount: number;
+  requiresEpic: boolean;
+  registrations: LoginRegistrationOption[];
+  message: string;
+}
+
 @Component({
   selector: 'app-public-login',
   standalone: true,
@@ -37,6 +57,7 @@ interface GenerateOtpResponse {
     MatButtonModule,
     MatProgressSpinnerModule,
     MatIconModule,
+    MatRadioModule,
     TranslateModule,
     LanguageSelectorComponent,
     AiChatbotComponent
@@ -55,6 +76,8 @@ export class PublicLoginComponent {
   successMsg = '';
   loading = false;
   requiresEpic = false;
+  registrationOptions: LoginRegistrationOption[] = [];
+  selectedVisitorId: number | null = null;
 
   /** OTP returned in mock response (for demo only – remove when SMS gateway is live) */
   mockOtp = '';
@@ -77,8 +100,8 @@ export class PublicLoginComponent {
       return;
     }
 
-    if (this.requiresEpic && !this.epicNumber.trim()) {
-      this.warningMsg = this.translate.instant('MULTIPLE_REGISTRATIONS_EPIC_REQUIRED');
+    if (this.requiresEpic && !this.selectedRegistration) {
+      this.warningMsg = 'Please select your registration to continue.';
       return;
     }
 
@@ -97,9 +120,10 @@ export class PublicLoginComponent {
     };
 
     const normalizedEpic = this.epicNumber.trim().toUpperCase();
-    if (normalizedEpic) {
-      payload.epicNumber = normalizedEpic;
-      this.epicNumber = normalizedEpic;
+    const selectedEpic = this.selectedRegistration?.epicNumber?.trim().toUpperCase() || normalizedEpic;
+    if (selectedEpic) {
+      payload.epicNumber = selectedEpic;
+      this.epicNumber = selectedEpic;
     }
 
     this.http.post<GenerateOtpResponse>(`${environment.apiUrl}/visitor/auth/generate-otp`, payload).subscribe({
@@ -115,6 +139,7 @@ export class PublicLoginComponent {
         } else if (res.requiresEpic || res.code === 'MULTIPLE_REGISTRATIONS_FOUND') {
           this.requiresEpic = true;
           this.warningMsg = res.message || this.translate.instant('MULTIPLE_REGISTRATIONS_EPIC_REQUIRED');
+          this.loadRegistrationOptions();
         } else {
           this.errorMsg = res.message || this.translate.instant('ERROR_FAILED_SEND_OTP');
         }
@@ -135,9 +160,10 @@ export class PublicLoginComponent {
       return;
     }
     this.loading = true;
+    const selectedEpic = this.selectedRegistration?.epicNumber?.trim().toUpperCase() || this.epicNumber.trim().toUpperCase();
     this.auth.validateOtp({
       phoneNumber: this.phoneNumber,
-      epicNumber: this.epicNumber.trim().toUpperCase() || undefined,
+      epicNumber: selectedEpic || undefined,
       otp: this.otp,
     }).subscribe({
       next: res => {
@@ -178,6 +204,8 @@ export class PublicLoginComponent {
     this.successMsg = '';
     this.requiresEpic = false;
     this.epicNumber = '';
+    this.registrationOptions = [];
+    this.selectedVisitorId = null;
     this.otp = '';
   }
 
@@ -186,6 +214,45 @@ export class PublicLoginComponent {
     this.errorMsg = '';
     this.warningMsg = '';
     this.successMsg = '';
+  }
+
+  onRegistrationSelect(visitorId: number) {
+    this.selectedVisitorId = visitorId;
+    const selected = this.selectedRegistration;
+    this.epicNumber = selected?.epicNumber?.trim().toUpperCase() || '';
+    this.errorMsg = '';
+    this.warningMsg = '';
+    this.successMsg = '';
+  }
+
+  get selectedRegistration(): LoginRegistrationOption | undefined {
+    return this.registrationOptions.find(option => option.visitorId === this.selectedVisitorId);
+  }
+
+  private loadRegistrationOptions() {
+    if (!this.phoneNumber || this.phoneNumber.length !== 10) {
+      return;
+    }
+
+    this.loading = true;
+    this.http.post<RegistrationSearchResponse>(`${environment.apiUrl}/visitor/auth/search-registrations`, {
+      phoneNumber: this.phoneNumber,
+    }).subscribe({
+      next: res => {
+        this.loading = false;
+        this.registrationOptions = res.registrations || [];
+        if (this.registrationOptions.length === 1) {
+          this.onRegistrationSelect(this.registrationOptions[0].visitorId);
+        }
+        if (!this.registrationOptions.length) {
+          this.errorMsg = res.message || this.translate.instant('ACCOUNT_NOT_FOUND_REGISTER');
+        }
+      },
+      error: err => {
+        this.loading = false;
+        this.errorMsg = apiErrorMessage(err, 'Unable to load registrations for this mobile number.');
+      },
+    });
   }
 
   goToRegister() {

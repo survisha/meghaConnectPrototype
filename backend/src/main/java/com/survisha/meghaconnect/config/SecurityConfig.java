@@ -91,6 +91,7 @@ public class SecurityConfig {
                 .antMatchers(
                     "/api/v1/visitor/auth/check-mobile",
                     "/api/v1/visitor/auth/check-registration",
+                    "/api/v1/visitor/auth/search-registrations",
                     "/api/v1/visitor/auth/generate-otp",
                     "/api/v1/visitor/auth/validate-otp",
                     "/api/v1/visitor/auth/register"

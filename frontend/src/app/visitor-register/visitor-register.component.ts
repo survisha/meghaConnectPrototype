@@ -454,7 +454,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.otpCode = '';
     this.errorMsg = '';
     this.successMsg = '';
-    if (this.form.idType !== 'EPIC' || !this.isManualPhoneValid) {
+    if ((this.form.idType !== 'EPIC' && this.form.idType !== 'NONE') || !this.isManualPhoneValid) {
       this.errorMsg = this.t('ERROR_MOBILE_BEFORE_OTP');
       return;
     }
@@ -874,15 +874,18 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
   continueWithNoId() {
     if (!this.form.fullName.trim()) {
+      this.loading = false;
       this.errorMsg = 'Full name is required.';
       return;
     }
     if (!this.isManualPhoneValid) {
+      this.loading = false;
       this.errorMsg = this.t('ERROR_VALID_10_DIGIT_MOBILE');
       return;
     }
     this.actualPhoneNumber = this.manualPhone;
     this.form.phoneNumber = this.manualPhone;
+    this.maskedPhone = this.maskPhone(this.manualPhone);
     this.form.kycStatus = 'KYC_PENDING';
     this.form.kycProvider = 'NONE';
     this.kycStatus = 'KYC_PENDING';
@@ -896,8 +899,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     };
     this.idValidated = true;
     this.errorMsg = '';
-    this.successMsg = 'Continue with photo capture. KYC status will be Pending.';
-    this.currentStep = 'photo-capture';
+    this.successMsg = 'Generating OTP for mobile verification.';
+    this.generateRegistrationOtp();
   }
 
   private getAadhaarImage(response: any): string {

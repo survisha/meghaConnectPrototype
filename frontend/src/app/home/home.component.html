@@ -160,6 +160,8 @@
         <article *ngFor="let department of filteredDepartments">
           <h3>{{ department.nameKey | translate }}</h3>
           <p>{{ department.descriptionKey | translate }}</p>
+          <p>{{ department.addressKey | translate }}</p>
+          <p>{{ department.contactKey | translate }}</p>
         </article>
       </div>
 

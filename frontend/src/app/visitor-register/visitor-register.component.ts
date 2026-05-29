@@ -190,6 +190,9 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   mobileCheckLoading = false;
   duplicateRegistrationBlocked = false;
   verifiedKycData: VerifiedKycData | null = null;
+  districtAutoPopulated = false;
+  constituencyAutoPopulated = false;
+  boothVillageAutoPopulated = false;
   isAadhaarFlow = false;
   hasAadhaarResidentImage = false;
   aadhaarResidentImage = '';
@@ -738,6 +741,12 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   }
 
   private patchVisitorDetailsFromKyc(verified: VerifiedKycData) {
+    const district = verified.district || this.form.district;
+    const constituency = verified.kycType === 'AADHAAR'
+      ? this.form.constituency
+      : verified.constituency || this.form.constituency;
+    const boothVillage = verified.boothVillage || this.form.boothVillage;
+
     Object.assign(this.form, {
       fullName: verified.visitorName || this.form.fullName,
       gender: verified.gender || this.form.gender,
@@ -745,10 +754,10 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       state: verified.state || this.form.state,
       city: verified.city || this.form.city,
       pincode: verified.pincode || this.form.pincode,
-      district: verified.district || this.form.district,
-      constituency: verified.kycType === 'AADHAAR' ? this.form.constituency : verified.constituency || this.form.constituency,
-      booth: verified.boothVillage || this.form.booth,
-      boothVillage: verified.boothVillage || this.form.boothVillage,
+      district,
+      constituency,
+      booth: boothVillage,
+      boothVillage,
       address: verified.address || this.form.address,
       fullAddress: verified.fullAddress || verified.address || this.form.fullAddress,
       address1: verified.address1 || verified.houseNumber || this.form.address1,
@@ -774,10 +783,13 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       maskedIdentityNumber: verified.maskedIdentityNumber || '',
     });
 
-    if (verified.state && verified.state.toLowerCase() !== 'meghalaya') {
-      this.form.outsideState = true;
-      this.form.location = 'NA';
+    this.form.outsideState = false;
+    if (this.form.location === 'NA') {
+      this.form.location = '';
     }
+    this.districtAutoPopulated = !!verified.district;
+    this.constituencyAutoPopulated = verified.kycType !== 'AADHAAR' && !!verified.constituency;
+    this.boothVillageAutoPopulated = !!verified.boothVillage;
   }
 
   private extractUsableMobileFromAadhaar(verified: VerifiedKycData): string {
@@ -1003,6 +1015,18 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       && !!this.form.designation
       && !!this.form.livePhoto
       && (this.form.outsideState || !!this.form.district.trim());
+  }
+
+  get isDistrictReadOnly(): boolean {
+    return this.districtAutoPopulated && !!this.form.district.trim();
+  }
+
+  get isConstituencyReadOnly(): boolean {
+    return this.constituencyAutoPopulated && !!this.form.constituency.trim();
+  }
+
+  get isBoothVillageReadOnly(): boolean {
+    return this.boothVillageAutoPopulated && !!this.form.boothVillage.trim();
   }
 
   validateOtp() {
@@ -1282,7 +1306,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       state: this.form.state.trim(),
       city: this.form.city.trim(),
       pincode: this.form.pincode.trim(),
-      district: this.form.district.trim() || (this.form.outsideState ? 'NA' : ''),
+      district: this.form.outsideState ? 'NA' : this.form.district.trim(),
       constituency: this.form.outsideState ? 'NA' : this.form.constituency.trim(),
       booth: this.form.outsideState ? 'NA' : boothVillage,
       boothVillage: this.form.outsideState ? 'NA' : boothVillage,
@@ -1479,6 +1503,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     }
     this.form.livePhoto = '';
     this.form.photoFromId = '';
+    this.resetLocationAutoPopulationLocks();
 
     // Clear auto-populated fields so user can enter fresh data
     // But preserve other form data like email, designation, etc.
@@ -1539,6 +1564,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.mobileValidationType = '';
     this.mobileCheckLoading = false;
     this.duplicateRegistrationBlocked = false;
+    this.resetLocationAutoPopulationLocks();
   }
 
   onMobileBlur() {
@@ -1714,11 +1740,18 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     };
     this.errorMsg = '';
     this.successMsg = '';
+    this.resetLocationAutoPopulationLocks();
   }
 
   resetOtpVerification() {
     this.otpVerified = false;
     this.verifiedMobileNumber = null;
     this.otpValidatedAt = null;
+  }
+
+  private resetLocationAutoPopulationLocks() {
+    this.districtAutoPopulated = false;
+    this.constituencyAutoPopulated = false;
+    this.boothVillageAutoPopulated = false;
   }
 }

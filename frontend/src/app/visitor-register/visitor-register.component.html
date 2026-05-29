@@ -723,14 +723,15 @@
             </mat-checkbox>
           </div>
 
-          <div class="form-row two-col">
+          <div class="form-row two-col" *ngIf="!form.outsideState">
             <mat-form-field appearance="outline">
-              <mat-label>{{ 'DISTRICT' | translate }} <span *ngIf="!form.outsideState">*</span></mat-label>
+              <mat-label>{{ 'DISTRICT' | translate }} *</mat-label>
               <input
                 matInput
                 id="register_districtInput"
                 type="text"
                 [(ngModel)]="form.district"
+                [disabled]="isDistrictReadOnly"
                 [placeholder]="'DISTRICT_PLACEHOLDER' | translate"
                 (input)="clearVisibleErrors()" />
             </mat-form-field>
@@ -741,13 +742,14 @@
                 id="register_constituencyInput"
                 type="text"
                 [(ngModel)]="form.constituency"
+                [disabled]="isConstituencyReadOnly"
                 [placeholder]="'CONSTITUENCY_PLACEHOLDER' | translate"
                 (input)="clearVisibleErrors()" />
               <mat-hint *ngIf="form.idType === 'AADHAAR'">Constituency is not available from Aadhaar. Please enter it manually.</mat-hint>
             </mat-form-field>
           </div>
 
-          <div class="form-row two-col">
+          <div class="form-row two-col" *ngIf="!form.outsideState">
             <mat-form-field appearance="outline">
               <mat-label>{{ 'BOOTH_VILLAGE' | translate }}</mat-label>
               <input
@@ -755,6 +757,7 @@
                 id="register_boothVillageInput"
                 type="text"
                 [(ngModel)]="form.boothVillage"
+                [disabled]="isBoothVillageReadOnly"
                 [placeholder]="'BOOTH_VILLAGE_PLACEHOLDER' | translate"
                 (input)="clearVisibleErrors()" />
             </mat-form-field>

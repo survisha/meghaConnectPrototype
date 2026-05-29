@@ -80,7 +80,9 @@ public class VisitorAuthService {
         response.put("epicMobileExists", epicMobileExists);
         response.put("epicExists", epicExists);
 
-        if (epicMobileExists || epicExists) {
+        if (epicExists) {
+            response.put("message", ErrorCodeConstants.DUPLICATE_EPIC_REGISTRATION_MSG);
+        } else if (epicMobileExists) {
             response.put("message", ErrorCodeConstants.DUPLICATE_EPIC_MOBILE_REGISTRATION_MSG);
         } else if (mobileExists) {
             response.put("message", ErrorCodeConstants.MOBILE_ALREADY_REGISTERED_WARNING_MSG);

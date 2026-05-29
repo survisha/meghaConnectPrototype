@@ -119,7 +119,7 @@ file:
 
 meghaconnect:
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://meghaconnect.cloud}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200,http://127.0.0.1:4200,https://meghaconnect.cloud}
   storage:
     base-path: ${file.upload.root-path}
     crypto-key-path: ${file.upload.crypto-key-path}

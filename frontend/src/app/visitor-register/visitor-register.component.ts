@@ -327,8 +327,15 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     return /^\d{10}$/.test(this.manualPhone);
   }
 
+  get hasVisibleErrorMessage(): boolean {
+    return !!this.errorMsg || (this.mobileValidationType === 'error' && !!this.mobileValidationMsg);
+  }
+
   get canSendEpicOtp(): boolean {
-    return this.canValidateId && this.isManualPhoneValid && !this.duplicateRegistrationBlocked;
+    return this.canValidateId
+      && this.isManualPhoneValid
+      && !this.duplicateRegistrationBlocked
+      && !this.hasVisibleErrorMessage;
   }
 
   get mobileValidationIcon(): string {
@@ -1539,9 +1546,18 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
   // ── INPUT SANITIZATION ──────────────────────────────────────────────────
 
+  clearVisibleErrors() {
+    this.errorMsg = '';
+    if (this.mobileValidationType === 'error') {
+      this.mobileValidationMsg = '';
+      this.mobileValidationType = '';
+    }
+  }
+
   sanitizeManualPhone() {
     this.manualPhone = this.manualPhone.replace(/\D/g, '');
     this.form.phoneNumber = this.manualPhone;
+    this.errorMsg = '';
     this.mobileValidationMsg = '';
     this.mobileValidationType = '';
     this.mobileCheckLoading = false;
@@ -1587,8 +1603,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       next: res => {
         this.mobileCheckLoading = false;
         this.applyRegistrationCheck(res);
-
-        if (res.epicMobileExists) {
+        
+        if (res.epicMobileExists || res.epicExists ) {
           this.loading = false;
           this.errorMsg = res.message || this.t('USER_ALREADY_REGISTERED');
           return;
@@ -1632,23 +1648,25 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
   sanitizeNumericInput(field: 'phoneNumber' | 'aadhaarNumber') {
     this.form[field] = this.form[field].replace(/\D/g, '');
+    this.clearVisibleErrors();
   }
 
   sanitizePincode() {
     this.form.pincode = this.form.pincode.replace(/\D/g, '');
+    this.clearVisibleErrors();
   }
 
   sanitizeOtpInput() {
     this.otpCode = this.otpCode.replace(/\D/g, '');
+    this.clearVisibleErrors();
   }
 
   sanitizeEpicInput() {
     this.form.epicNumber = this.form.epicNumber.toUpperCase();
+    this.errorMsg = '';
     this.duplicateRegistrationBlocked = false;
-    if (this.mobileValidationType === 'error') {
-      this.mobileValidationMsg = '';
-      this.mobileValidationType = '';
-    }
+    this.mobileValidationMsg = '';
+    this.mobileValidationType = '';
   }
 
   /**

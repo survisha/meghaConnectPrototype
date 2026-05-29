@@ -260,6 +260,9 @@ public class ErrorCodeConstants {
 
     public static final String INVALID_CONTENT_TYPE = "ERR_091";
     public static final String INVALID_CONTENT_TYPE_MSG = "Invalid content type: %s";
+    
+    public static final String DUPLICATE_EPIC_REGISTRATION = "ERR_092";
+    public static final String DUPLICATE_EPIC_REGISTRATION_MSG = "User already registered with this EPIC number. Please login.";
 
     // Utility method to format message with arguments
     public static String format(String message, Object... args) {

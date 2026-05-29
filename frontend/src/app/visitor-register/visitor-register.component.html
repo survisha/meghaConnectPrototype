@@ -123,7 +123,7 @@
 
           <mat-form-field appearance="outline" class="full-width" *ngIf="form.idType === 'NONE'">
             <mat-label>Full Name *</mat-label>
-            <input matInput type="text" [(ngModel)]="form.fullName" placeholder="Enter visitor full name" />
+            <input matInput type="text" [(ngModel)]="form.fullName" placeholder="Enter visitor full name" (input)="clearVisibleErrors()" />
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="full-width" *ngIf="form.idType === 'EPIC'">
@@ -149,7 +149,7 @@
               type="text"
               [(ngModel)]="form.visitorName"
               placeholder="e.g. MAREIAM MOSSANG"
-              (input)="form.visitorName = form.visitorName.toUpperCase()"
+              (input)="form.visitorName = form.visitorName.toUpperCase(); clearVisibleErrors()"
             />
             <mat-hint><mat-icon>info</mat-icon> {{ 'VISITOR_NAME_VOTER_CARD_HINT' | translate }}</mat-hint>
           </mat-form-field>
@@ -586,7 +586,7 @@
 
           <mat-form-field appearance="outline" class="full-width" *ngIf="form.kycStatus === 'KYC_PENDING'">
             <mat-label>Full Name *</mat-label>
-            <input matInput type="text" [(ngModel)]="form.fullName" placeholder="Enter citizen full name" />
+            <input matInput type="text" [(ngModel)]="form.fullName" placeholder="Enter citizen full name" (input)="clearVisibleErrors()" />
           </mat-form-field>
 
           <!-- R009: AI KYC Confidence Indicator -->
@@ -636,6 +636,7 @@
               id="register_addressLineInput"
               [(ngModel)]="form.addressLine"
               (ngModelChange)="form.address1 = $event"
+              (input)="clearVisibleErrors()"
               [placeholder]="'ADDRESS_HOUSE_COLONY_PLACEHOLDER' | translate"></textarea>
           </mat-form-field>
 
@@ -652,7 +653,8 @@
                 id="register_stateInput"
                 type="text"
                 [(ngModel)]="form.state"
-                placeholder="State" />
+                placeholder="State"
+                (input)="clearVisibleErrors()" />
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>City</mat-label>
@@ -661,7 +663,8 @@
                 id="register_cityInput"
                 type="text"
                 [(ngModel)]="form.city"
-                placeholder="City" />
+                placeholder="City"
+                (input)="clearVisibleErrors()" />
             </mat-form-field>
           </div>
 
@@ -695,7 +698,8 @@
                 id="register_districtInput"
                 type="text"
                 [(ngModel)]="form.district"
-                [placeholder]="'DISTRICT_PLACEHOLDER' | translate" />
+                [placeholder]="'DISTRICT_PLACEHOLDER' | translate"
+                (input)="clearVisibleErrors()" />
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>{{ 'CONSTITUENCY' | translate }}</mat-label>
@@ -704,7 +708,8 @@
                 id="register_constituencyInput"
                 type="text"
                 [(ngModel)]="form.constituency"
-                [placeholder]="'CONSTITUENCY_PLACEHOLDER' | translate" />
+                [placeholder]="'CONSTITUENCY_PLACEHOLDER' | translate"
+                (input)="clearVisibleErrors()" />
               <mat-hint *ngIf="form.idType === 'AADHAAR'">Constituency is not available from Aadhaar. Please enter it manually.</mat-hint>
             </mat-form-field>
           </div>
@@ -717,11 +722,12 @@
                 id="register_boothVillageInput"
                 type="text"
                 [(ngModel)]="form.boothVillage"
-                [placeholder]="'BOOTH_VILLAGE_PLACEHOLDER' | translate" />
+                [placeholder]="'BOOTH_VILLAGE_PLACEHOLDER' | translate"
+                (input)="clearVisibleErrors()" />
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>{{ 'VILLAGE_DIFFERENT' | translate }}</mat-label>
-              <input matInput type="text" [(ngModel)]="form.village" [placeholder]="'VILLAGE_NAME' | translate" />
+              <input matInput type="text" [(ngModel)]="form.village" [placeholder]="'VILLAGE_NAME' | translate" (input)="clearVisibleErrors()" />
             </mat-form-field>
           </div>
 
@@ -734,7 +740,7 @@
 
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>{{ 'EMAIL_OPTIONAL' | translate }}</mat-label>
-            <input matInput type="email" [(ngModel)]="form.email" [placeholder]="'ENTER_EMAIL' | translate" />
+            <input matInput type="email" [(ngModel)]="form.email" [placeholder]="'ENTER_EMAIL' | translate" (input)="clearVisibleErrors()" />
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="full-width">
@@ -746,7 +752,7 @@
 
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Brief Description</mat-label>
-            <textarea matInput rows="3" [(ngModel)]="form.briefDescription" placeholder="Short note for this walk-in registration"></textarea>
+            <textarea matInput rows="3" [(ngModel)]="form.briefDescription" placeholder="Short note for this walk-in registration" (input)="clearVisibleErrors()"></textarea>
           </mat-form-field>
 
           <div style="display:flex;gap:1rem;margin-top:1.5rem">

@@ -471,6 +471,19 @@
             </div>
 
             <video *ngIf="isCameraActive" id="camera-preview" autoplay playsinline></video>
+            <div
+              *ngIf="isCameraActive && faceLivenessResult.box"
+              class="face-boundary"
+              [class.valid]="faceLivenessResult.valid"
+              [style.left.%]="faceLivenessResult.box.left * 100"
+              [style.top.%]="faceLivenessResult.box.top * 100"
+              [style.width.%]="faceLivenessResult.box.width * 100"
+              [style.height.%]="faceLivenessResult.box.height * 100">
+            </div>
+            <div *ngIf="isCameraActive" class="face-liveness-status" [class.valid]="faceLivenessResult.valid">
+              <mat-icon>{{ faceLivenessResult.valid ? 'verified' : 'warning' }}</mat-icon>
+              <span>{{ faceLivenessResult.message }}</span>
+            </div>
 
             <div *ngIf="capturedPhotoUrl && !isCameraActive" class="photo-preview">
               <img [src]="capturedPhotoUrl" alt="Captured photo" />
@@ -486,7 +499,13 @@
               <mat-icon>photo_camera</mat-icon> {{ 'OPEN_CAMERA' | translate }}
             </button>
 
-            <button *ngIf="!hasAadhaarResidentImage && isCameraActive" mat-raised-button color="primary" class="flex-1" (click)="capturePhoto()">
+            <button
+              *ngIf="!hasAadhaarResidentImage && isCameraActive"
+              mat-raised-button
+              color="primary"
+              class="flex-1"
+              [disabled]="loading || !faceLivenessResult.valid"
+              (click)="capturePhoto()">
               <mat-icon>photo_camera</mat-icon> {{ 'CAPTURE_PHOTO' | translate }}
             </button>
 

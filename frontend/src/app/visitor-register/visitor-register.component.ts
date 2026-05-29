@@ -19,6 +19,12 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LanguageSelectorComponent } from '../shared/language-selector/language-selector.component';
 import { apiErrorMessage } from '../shared/api-error.util';
 import { CameraCaptureService, CameraDeviceOption, CameraFacingMode } from '../shared/camera-capture.service';
+import { CameraLivenessService } from '../shared/camera-liveness.service';
+import {
+  FACE_LIVENESS_INITIAL_RESULT,
+  FaceLivenessCaptureMetadata,
+  FaceLivenessResult,
+} from '../shared/face-liveness-result.model';
 import { ReferenceDataService } from '../services/reference-data.service';
 
 type KycStep = 'id-entry' | 'otp-verification' | 'photo-capture' | 'additional-details' | 'kyc-complete';
@@ -221,9 +227,14 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   showCamera = false;
   isCameraActive = false;
   capturedPhotoUrl = '';
+  faceLivenessResult: FaceLivenessResult = { ...FACE_LIVENESS_INITIAL_RESULT };
+  faceLivenessMetadata: FaceLivenessCaptureMetadata | null = null;
   cameraFacingMode: CameraFacingMode = 'user';
   cameraOptions: CameraDeviceOption[] = [];
   selectedCameraDeviceId = '';
+  private livenessFrameId: number | null = null;
+  private livenessAnalysisInProgress = false;
+  private lastLivenessAnalysisAt = 0;
   private readonly handleCameraDeviceChange = () => {
     void this.loadCameraDevices(true);
   };
@@ -256,6 +267,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     private cdr: ChangeDetectorRef,
     private translate: TranslateService,
     private cameraCapture: CameraCaptureService,
+    private cameraLiveness: CameraLivenessService,
     private referenceDataService: ReferenceDataService
   ) {
     // Detect DEO mode from route snapshot URL segments
@@ -1096,6 +1108,12 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   async openCamera() {
     try {
       this.errorMsg = '';
+      this.faceLivenessMetadata = null;
+      this.faceLivenessResult = {
+        ...FACE_LIVENESS_INITIAL_RESULT,
+        loading: true,
+        message: 'Preparing face validation...',
+      };
       this.stopCamera();
       this.videoStream = await this.cameraCapture.open(this.cameraFacingMode, this.selectedCameraDeviceId || undefined);
       this.isCameraActive = true;  // Changed from showCamera to isCameraActive
@@ -1107,6 +1125,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
         const videoElement = document.getElementById('camera-preview') as HTMLVideoElement;
         if (videoElement && this.videoStream) {
           this.cameraCapture.attach(videoElement, this.videoStream);
+          this.startLivenessMonitoring(videoElement);
         }
       }, 100);
     } catch (err) {
@@ -1115,10 +1134,16 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     }
   }
 
-  capturePhoto() {
+  async capturePhoto() {
     const videoElement = document.getElementById('camera-preview') as HTMLVideoElement;
     if (!videoElement) {
       this.errorMsg = this.t('CAMERA_NOT_INITIALIZED');
+      return;
+    }
+
+    this.faceLivenessResult = await this.cameraLiveness.analyze(videoElement);
+    if (!this.faceLivenessResult.valid) {
+      this.errorMsg = this.faceLivenessResult.message;
       return;
     }
 
@@ -1132,6 +1157,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
     this.form.livePhoto = photoData;
     this.capturedPhotoUrl = photoData;  // Set for display
+    this.faceLivenessMetadata = this.cameraLiveness.toCaptureMetadata(this.faceLivenessResult);
     this.photoCaptured = true;
     this.stopCamera();
     this.isCameraActive = false;  // Changed from showCamera to isCameraActive
@@ -1141,11 +1167,14 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   retakePhoto() {
     this.form.livePhoto = '';
     this.capturedPhotoUrl = '';
+    this.faceLivenessMetadata = null;
+    this.faceLivenessResult = { ...FACE_LIVENESS_INITIAL_RESULT };
     this.photoCaptured = false;
     this.openCamera();
   }
 
   stopCamera() {
+    this.stopLivenessMonitoring();
     this.cameraCapture.stop(this.videoStream);
     this.videoStream = null;
     this.isCameraActive = false;
@@ -1354,6 +1383,13 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
     if (this.form.livePhoto) {
       payload['livePhotoBase64'] = this.form.livePhoto;
+      if (this.faceLivenessMetadata) {
+        payload['faceCentered'] = this.faceLivenessMetadata.faceCentered;
+        payload['frontFacing'] = this.faceLivenessMetadata.frontFacing;
+        payload['multipleFacesDetected'] = this.faceLivenessMetadata.multipleFacesDetected;
+        payload['livenessScore'] = this.faceLivenessMetadata.livenessScore;
+        payload['capturedAt'] = this.faceLivenessMetadata.capturedAt;
+      }
     }
 
     if (this.manualVerification) {
@@ -1465,6 +1501,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.stopCamera();
     this.isCameraActive = false;
     this.capturedPhotoUrl = '';
+    this.faceLivenessMetadata = null;
+    this.faceLivenessResult = { ...FACE_LIVENESS_INITIAL_RESULT };
     this.photoCaptured = false;
     this.hasAadhaarResidentImage = false;
     this.aadhaarResidentImage = '';
@@ -1699,6 +1737,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.verifiedMobileNumber = null;
     this.otpValidatedAt = null;
     this.photoCaptured = false;
+    this.faceLivenessMetadata = null;
+    this.faceLivenessResult = { ...FACE_LIVENESS_INITIAL_RESULT };
     this.kycStatus = '';
     this.isAadhaarFlow = false;
     this.hasAadhaarResidentImage = false;
@@ -1756,5 +1796,39 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.districtAutoPopulated = false;
     this.constituencyAutoPopulated = false;
     this.boothVillageAutoPopulated = false;
+  }
+
+  private startLivenessMonitoring(videoElement: HTMLVideoElement) {
+    this.stopLivenessMonitoring();
+
+    const analyzeFrame = async () => {
+      if (!this.isCameraActive || !this.videoStream) {
+        return;
+      }
+
+      const now = performance.now();
+      if (!this.livenessAnalysisInProgress && now - this.lastLivenessAnalysisAt > 250) {
+        this.livenessAnalysisInProgress = true;
+        this.lastLivenessAnalysisAt = now;
+        try {
+          this.faceLivenessResult = await this.cameraLiveness.analyze(videoElement);
+          this.cdr.detectChanges();
+        } finally {
+          this.livenessAnalysisInProgress = false;
+        }
+      }
+
+      this.livenessFrameId = requestAnimationFrame(analyzeFrame);
+    };
+
+    this.livenessFrameId = requestAnimationFrame(analyzeFrame);
+  }
+
+  private stopLivenessMonitoring() {
+    if (this.livenessFrameId !== null) {
+      cancelAnimationFrame(this.livenessFrameId);
+      this.livenessFrameId = null;
+    }
+    this.livenessAnalysisInProgress = false;
   }
 }

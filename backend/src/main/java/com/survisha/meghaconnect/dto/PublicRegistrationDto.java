@@ -111,6 +111,13 @@ public class PublicRegistrationDto {
     /** File path/key created by the backend after storing livePhotoBase64. */
     private String livePhotoPath;
 
+    // ── Frontend face liveness metadata ─────────────────────────
+    private Boolean faceCentered;
+    private Boolean frontFacing;
+    private Boolean multipleFacesDetected;
+    private Double livenessScore;
+    private String capturedAt;
+
     /**
      * Flag indicating the user provided a manual phone number (not retrieved from ID API).
      * When true, kycStatus is set to MANUAL_VERIFICATION_REQUIRED.

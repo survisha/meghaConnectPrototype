@@ -70,7 +70,10 @@ class _LoginScreenState extends State<LoginScreen>
     final ok = await auth.login(_usernameCtrl.text, _passwordCtrl.text);
     if (!mounted) return;
     setState(() => _staffLoading = false);
-    if (!ok) setState(() => _staffError = 'Invalid username or password.');
+    if (!ok) {
+      setState(() =>
+          _staffError = auth.lastError ?? 'Invalid username or password.');
+    }
   }
 
   Future<void> _sendOtp() async {
@@ -244,124 +247,142 @@ class _LoginScreenState extends State<LoginScreen>
 
   Widget _buildCleanLoginCard() {
     final i18n = context.watch<AppI18n>();
-    return Form(
-      key: _staffFormKey,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Center(
-            child: Container(
-              width: 76,
-              height: 76,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withAlpha(18),
-                    blurRadius: 18,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Center(
+          child: Container(
+            width: 76,
+            height: 76,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha(18),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Image.asset('assets/logo.png', fit: BoxFit.contain),
+          ),
+        ),
+        const SizedBox(height: 18),
+        const Text(
+          'MeghaConnect',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: _primaryBlue,
+            fontSize: 30,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          i18n.t('CM_OFFICE_SCHEDULING'),
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.grey[600], fontSize: 14),
+        ),
+        const SizedBox(height: 22),
+        Card(
+          elevation: 3,
+          surfaceTintColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
+                child: _buildTabBar(),
               ),
-              child: Image.asset('assets/logo.png', fit: BoxFit.contain),
-            ),
-          ),
-          const SizedBox(height: 18),
-          const Text(
-            'MeghaConnect',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: _primaryBlue,
-              fontSize: 30,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Staff Login',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey[600], fontSize: 14),
-          ),
-          const SizedBox(height: 26),
-          Card(
-            elevation: 3,
-            surfaceTintColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  TextFormField(
-                    controller: _usernameCtrl,
-                    decoration: InputDecoration(
-                      labelText: i18n.t('USERNAME'),
-                      prefixIcon: const Icon(Icons.person_outline),
-                    ),
-                    validator: (v) => (v == null || v.trim().isEmpty)
-                        ? i18n.t('ENTER_USERNAME')
-                        : null,
-                    textInputAction: TextInputAction.next,
-                  ),
-                  const SizedBox(height: 14),
-                  TextFormField(
-                    controller: _passwordCtrl,
-                    obscureText: _staffObscure,
-                    decoration: InputDecoration(
-                      labelText: i18n.t('PASSWORD'),
-                      prefixIcon: const Icon(Icons.lock_outline),
-                      suffixIcon: IconButton(
-                        icon: Icon(_staffObscure
-                            ? Icons.visibility_off
-                            : Icons.visibility),
-                        onPressed: () =>
-                            setState(() => _staffObscure = !_staffObscure),
-                      ),
-                    ),
-                    validator: (v) => (v == null || v.isEmpty)
-                        ? i18n.t('ENTER_PASSWORD')
-                        : null,
-                    textInputAction: TextInputAction.done,
-                    onFieldSubmitted: (_) => _staffLogin(),
-                  ),
-                  if (_staffError != null) ...[
-                    const SizedBox(height: 12),
-                    _buildError(_staffError!),
+              SizedBox(
+                height: 570,
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildStaffTab(),
+                    _buildPublicTab(),
                   ],
-                  const SizedBox(height: 18),
-                  SizedBox(
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: _staffLoading ? null : _staffLogin,
-                      child: _staffLoading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Text(
-                              i18n.t('SIGN_IN'),
-                              style: const TextStyle(fontSize: 16),
-                            ),
-                    ),
-                  ),
-                ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStaffTab() {
+    final i18n = context.watch<AppI18n>();
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(18),
+      child: Form(
+        key: _staffFormKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextFormField(
+              controller: _usernameCtrl,
+              decoration: InputDecoration(
+                labelText: i18n.t('USERNAME'),
+                prefixIcon: const Icon(Icons.person_outline),
+              ),
+              validator: (v) => (v == null || v.trim().isEmpty)
+                  ? i18n.t('ENTER_USERNAME')
+                  : null,
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: 14),
+            TextFormField(
+              controller: _passwordCtrl,
+              obscureText: _staffObscure,
+              decoration: InputDecoration(
+                labelText: i18n.t('PASSWORD'),
+                prefixIcon: const Icon(Icons.lock_outline),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                      _staffObscure ? Icons.visibility_off : Icons.visibility),
+                  onPressed: () =>
+                      setState(() => _staffObscure = !_staffObscure),
+                ),
+              ),
+              validator: (v) =>
+                  (v == null || v.isEmpty) ? i18n.t('ENTER_PASSWORD') : null,
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) => _staffLogin(),
+            ),
+            if (_staffError != null) ...[
+              const SizedBox(height: 12),
+              _buildError(_staffError!),
+            ],
+            const SizedBox(height: 18),
+            SizedBox(
+              height: 50,
+              child: ElevatedButton(
+                onPressed: _staffLoading ? null : _staffLogin,
+                child: _staffLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text(i18n.t('SIGN_IN'),
+                        style: const TextStyle(fontSize: 16)),
               ),
             ),
-          ),
-          const SizedBox(height: 18),
-          _buildDemoButtons(),
-          const SizedBox(height: 12),
-          _buildLegalLinks(),
-        ],
+            const SizedBox(height: 24),
+            _buildDemoButtons(),
+            const SizedBox(height: 12),
+            _buildLegalLinks(),
+          ],
+        ),
       ),
     );
   }
@@ -572,7 +593,7 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   // ignore: unused_element
-  Widget _buildStaffTab() {
+  Widget _buildLegacyStaffTab() {
     final i18n = context.watch<AppI18n>();
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),

@@ -11,12 +11,14 @@ class NewAppointmentScreen extends StatefulWidget {
   final bool isWalkIn;
   final bool isPublic;
   final Map<String, dynamic>? initialVisitor;
+  final VoidCallback? onViewAppointments;
 
   const NewAppointmentScreen({
     super.key,
     this.isWalkIn = false,
     this.isPublic = false,
     this.initialVisitor,
+    this.onViewAppointments,
   });
 
   @override
@@ -677,9 +679,10 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                     child: ElevatedButton.icon(
                       icon: const Icon(Icons.list_alt),
                       label: const Text('View All'),
-                      onPressed: () => context
-                          .read<NavigationService>()
-                          .navigateTo('appointments'),
+                      onPressed: widget.onViewAppointments ??
+                          () => context
+                              .read<NavigationService>()
+                              .navigateTo('appointments'),
                     ),
                   ),
                 ],

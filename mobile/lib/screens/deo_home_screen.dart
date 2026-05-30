@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../services/auth_service.dart';
 import 'appointments_screen.dart';
+import 'new_appointment_screen.dart';
 import 'visitor_registration_screen.dart';
 
 class DeoHomeScreen extends StatelessWidget {
@@ -60,13 +61,47 @@ class DeoHomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             _ActionCard(
+              icon: Icons.add_circle_outline,
+              title: 'Create Appointment',
+              subtitle: 'Search an existing visitor and submit appointment.',
+              color: const Color(0xFF065F46),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (routeContext) => _DeoPageScaffold(
+                      title: 'Create Appointment',
+                      child: NewAppointmentScreen(
+                        isWalkIn: true,
+                        onViewAppointments: () {
+                          Navigator.of(routeContext).pushReplacement(
+                            MaterialPageRoute(
+                              builder: (_) => const _DeoPageScaffold(
+                                title: 'Appointment List',
+                                child: AppointmentsScreen(),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+            _ActionCard(
               icon: Icons.list_alt_outlined,
               title: 'Appointment List',
               subtitle: 'View DEO-created and assigned appointments.',
               color: const Color(0xFF1565C0),
               onTap: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const AppointmentsScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const _DeoPageScaffold(
+                      title: 'Appointment List',
+                      child: AppointmentsScreen(),
+                    ),
+                  ),
                 );
               },
             ),
@@ -81,6 +116,25 @@ class DeoHomeScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _DeoPageScaffold extends StatelessWidget {
+  final String title;
+  final Widget child;
+
+  const _DeoPageScaffold({
+    required this.title,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF4F6FB),
+      appBar: AppBar(title: Text(title)),
+      body: SafeArea(child: child),
     );
   }
 }

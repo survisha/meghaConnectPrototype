@@ -6,7 +6,9 @@ import '../core/security/secure_app_storage.dart';
 
 class AuthService extends ChangeNotifier {
   AuthUser? _user;
+  String? _lastError;
   AuthUser? get user => _user;
+  String? get lastError => _lastError;
   bool get isLoggedIn => _user != null;
 
   Future<void> init() async {
@@ -28,8 +30,13 @@ class AuthService extends ChangeNotifier {
   }
 
   Future<bool> login(String username, String password) async {
+    _lastError = null;
     final data = await ApiService.login(username.trim(), password.trim());
-    if (data == null) return false;
+    if (data == null) {
+      _lastError =
+          ApiService.lastLoginError ?? 'Login failed. Please try again.';
+      return false;
+    }
 
     final token = data['token'] as String?;
     final uname = data['username'] as String? ?? username.trim();
@@ -86,6 +93,7 @@ class AuthService extends ChangeNotifier {
 
   Future<void> logout() async {
     _user = null;
+    _lastError = null;
     await SecureAppStorage.clearSession();
     notifyListeners();
   }

@@ -6,6 +6,7 @@ import '../models/user.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
 import '../services/navigation_service.dart';
+import 'new_appointment_screen.dart';
 
 class _Appointment {
   final String id;
@@ -55,6 +56,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   DateTime? _toDate;
   List<_Appointment> _appointments = [];
   bool _loading = true;
+  String? _loadError;
 
   static const _statusFilters = [
     'All',
@@ -83,6 +85,9 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     if (!mounted) return;
     final content = (data['content'] as List<dynamic>?) ?? [];
     setState(() {
+      _loadError = data['error'] == true
+          ? data['message']?.toString() ?? 'Unable to load appointments.'
+          : null;
       _appointments = content.map((e) {
         final m = e as Map<String, dynamic>;
         final applicant = m['applicant'] as Map<String, dynamic>? ?? {};
@@ -182,20 +187,23 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         Expanded(
           child: _loading
               ? const Center(child: CircularProgressIndicator())
-              : _filtered.isEmpty
-                  ? _buildEmpty()
-                  : RefreshIndicator(
-                      onRefresh: _loadAppointments,
-                      child: ListView.separated(
-                        padding: const EdgeInsets.all(12),
-                        itemCount: _filtered.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 8),
-                        itemBuilder: (_, i) => _AppointmentCard(
-                          appointment: _filtered[i],
-                          onTap: () => _openDetails(_filtered[i]),
+              : _loadError != null
+                  ? _buildLoadError()
+                  : _filtered.isEmpty
+                      ? _buildEmpty()
+                      : RefreshIndicator(
+                          onRefresh: _loadAppointments,
+                          child: ListView.separated(
+                            padding: const EdgeInsets.all(12),
+                            itemCount: _filtered.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 8),
+                            itemBuilder: (_, i) => _AppointmentCard(
+                              appointment: _filtered[i],
+                              onTap: () => _openDetails(_filtered[i]),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
         ),
         if (canAddNew) _buildBottomActions(context),
       ],
@@ -349,6 +357,33 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     );
   }
 
+  Widget _buildLoadError() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.wifi_off_outlined,
+                size: 56, color: Color(0xFF991B1B)),
+            const SizedBox(height: 12),
+            Text(
+              _loadError!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Color(0xFF991B1B), fontSize: 15),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _loadAppointments,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Try Again'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildBottomActions(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -368,9 +403,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
             child: ElevatedButton.icon(
               icon: const Icon(Icons.add),
               label: const Text('New Appointment'),
-              onPressed: () => context
-                  .read<NavigationService>()
-                  .navigateTo('new_appointment'),
+              onPressed: () => _openCreateAppointment(context, false),
             ),
           ),
           const SizedBox(width: 10),
@@ -378,8 +411,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
             child: OutlinedButton.icon(
               icon: const Icon(Icons.login),
               label: const Text('Walk-in'),
-              onPressed: () =>
-                  context.read<NavigationService>().navigateTo('walkin'),
+              onPressed: () => _openCreateAppointment(context, true),
               style: OutlinedButton.styleFrom(
                 foregroundColor: const Color(0xFF2E7D32),
                 side: const BorderSide(color: Color(0xFF2E7D32)),
@@ -392,6 +424,43 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         ],
       ),
     );
+  }
+
+  void _openCreateAppointment(BuildContext context, bool walkIn) {
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => Scaffold(
+            backgroundColor: const Color(0xFFF4F6FB),
+            appBar: AppBar(
+              title: Text(walkIn ? 'Walk-in Appointment' : 'New Appointment'),
+            ),
+            body: SafeArea(
+              child: Builder(
+                builder: (routeContext) => NewAppointmentScreen(
+                  isWalkIn: walkIn,
+                  onViewAppointments: () {
+                    Navigator.of(routeContext).pushReplacement(
+                      MaterialPageRoute(
+                        builder: (_) => Scaffold(
+                          backgroundColor: const Color(0xFFF4F6FB),
+                          appBar: AppBar(title: const Text('Appointment List')),
+                          body: const SafeArea(child: AppointmentsScreen()),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      return;
+    }
+    context
+        .read<NavigationService>()
+        .navigateTo(walkIn ? 'walkin' : 'new_appointment');
   }
 }
 

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/user.dart';
 import '../core/config/app_config.dart';
@@ -6,6 +7,7 @@ import '../core/security/secure_app_storage.dart';
 
 class ApiService {
   static Uri _u(String path) => Uri.parse('${AppConfig.apiV1BaseUrl}$path');
+  static String? lastLoginError;
 
   static Future<String?> getToken() async {
     return SecureAppStorage.readToken();
@@ -43,13 +45,29 @@ class ApiService {
     try {
       final decoded = jsonDecode(response.body);
       if (decoded is Map<String, dynamic>) {
-        return decoded['message']?.toString() ??
-            decoded['errorMessage']?.toString() ??
-            fallback;
+        final code = decoded['code']?.toString().toUpperCase() ?? '';
+        if (code.contains('UNAUTHORIZED') || response.statusCode == 401) {
+          return 'Your session has expired. Please login again.';
+        }
+        if (response.statusCode == 403) {
+          return 'You do not have permission to perform this action.';
+        }
       }
     } catch (_) {}
     return fallback;
   }
+
+  static void _logError(String action, Object error, [StackTrace? stackTrace]) {
+    debugPrint('ApiService.$action failed: $error');
+    if (stackTrace != null) debugPrint(stackTrace.toString());
+  }
+
+  static Map<String, dynamic> _listError({String? message}) => {
+        'content': [],
+        'totalElements': 0,
+        'error': true,
+        'message': message ?? 'Unable to load data. Please try again.',
+      };
 
   // Maps a role string from the backend (e.g. "ROLE_HCM" or "HCM") to a UserRole.
   static UserRole _parseRole(String raw) {
@@ -63,6 +81,7 @@ class ApiService {
   // Auth
   static Future<Map<String, dynamic>?> login(
       String username, String password) async {
+    lastLoginError = null;
     try {
       final resp = await http
           .post(
@@ -79,8 +98,14 @@ class ApiService {
         }
         return data;
       }
+      lastLoginError = resp.statusCode == 401 || resp.statusCode == 403
+          ? 'Invalid username or password.'
+          : 'Login failed. Please try again.';
       return null;
-    } catch (_) {
+    } catch (error, stackTrace) {
+      _logError('login', error, stackTrace);
+      lastLoginError =
+          'Unable to connect. Please check your network and try again.';
       return null;
     }
   }
@@ -125,7 +150,8 @@ class ApiService {
         'message': 'Failed to generate OTP. Please try again.',
         'requiresEpic': false,
       };
-    } catch (_) {
+    } catch (error, stackTrace) {
+      _logError('generateVisitorOtp', error, stackTrace);
       return {
         'success': false,
         'code': 'NETWORK_ERROR',
@@ -163,7 +189,8 @@ class ApiService {
         'message': 'Failed to verify OTP. Please try again.',
         'requiresEpic': false,
       };
-    } catch (_) {
+    } catch (error, stackTrace) {
+      _logError('validateVisitorOtp', error, stackTrace);
       return {
         'success': false,
         'code': 'NETWORK_ERROR',
@@ -202,7 +229,8 @@ class ApiService {
         'code': 'HTTP_${resp.statusCode}',
         'message': 'EPIC verification failed. Please try again.',
       };
-    } catch (_) {
+    } catch (error, stackTrace) {
+      _logError('verifyEpic', error, stackTrace);
       return {
         'success': false,
         'code': 'NETWORK_ERROR',
@@ -240,7 +268,8 @@ class ApiService {
         'code': 'HTTP_${resp.statusCode}',
         'message': 'OTP verification failed. Please try again.',
       };
-    } catch (_) {
+    } catch (error, stackTrace) {
+      _logError('verifyVisitorRegistrationOtp', error, stackTrace);
       return {
         'success': false,
         'code': 'NETWORK_ERROR',
@@ -273,7 +302,8 @@ class ApiService {
         'success': false,
         'message': 'Unable to validate mobile number.',
       };
-    } catch (_) {
+    } catch (error, stackTrace) {
+      _logError('checkVisitorRegistration', error, stackTrace);
       return {
         'success': false,
         'message': 'Network error. Please try again.',
@@ -299,7 +329,8 @@ class ApiService {
         'success': false,
         'errorMessage': 'Failed to generate Aadhaar QR.',
       };
-    } catch (_) {
+    } catch (error, stackTrace) {
+      _logError('generateAadhaarQr', error, stackTrace);
       return {
         'success': false,
         'errorMessage': 'Network error. Please try again.',
@@ -324,9 +355,13 @@ class ApiService {
 
       return {
         'success': false,
-        'message': 'Registration failed. Please try again.',
+        'message': _messageFromResponse(
+          resp,
+          'Registration failed. Please try again.',
+        ),
       };
-    } catch (_) {
+    } catch (error, stackTrace) {
+      _logError('registerVisitor', error, stackTrace);
       return {
         'success': false,
         'message': 'Network error. Please try again.',
@@ -348,8 +383,10 @@ class ApiService {
       if (resp.statusCode == 200) {
         return jsonDecode(resp.body) as Map<String, dynamic>;
       }
-    } catch (_) {}
-    return {'content': [], 'totalElements': 0};
+    } catch (error, stackTrace) {
+      _logError('getAppointments', error, stackTrace);
+    }
+    return _listError();
   }
 
   static Future<Map<String, dynamic>> getMyAppointments() async {
@@ -374,8 +411,10 @@ class ApiService {
           return decoded;
         }
       }
-    } catch (_) {}
-    return {'content': [], 'totalElements': 0};
+    } catch (error, stackTrace) {
+      _logError('getMyAppointments', error, stackTrace);
+    }
+    return _listError();
   }
 
   static Future<Map<String, dynamic>> getDeoAppointments(
@@ -391,8 +430,10 @@ class ApiService {
       if (resp.statusCode == 200) {
         return jsonDecode(resp.body) as Map<String, dynamic>;
       }
-    } catch (_) {}
-    return {'content': [], 'totalElements': 0};
+    } catch (error, stackTrace) {
+      _logError('getDeoAppointments', error, stackTrace);
+    }
+    return _listError();
   }
 
   static Future<Map<String, dynamic>> getApproverAppointments(
@@ -408,8 +449,10 @@ class ApiService {
       if (resp.statusCode == 200) {
         return jsonDecode(resp.body) as Map<String, dynamic>;
       }
-    } catch (_) {}
-    return {'content': [], 'totalElements': 0};
+    } catch (error, stackTrace) {
+      _logError('getApproverAppointments', error, stackTrace);
+    }
+    return _listError();
   }
 
   static Future<Map<String, dynamic>?> getAppointmentById(int id) async {
@@ -428,7 +471,9 @@ class ApiService {
       if (resp.statusCode == 401 || resp.statusCode == 403) {
         await clearToken();
       }
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      _logError('getAppointmentById', error, stackTrace);
+    }
     return null;
   }
 
@@ -457,7 +502,8 @@ class ApiService {
           'Unable to submit appointment. Please try again.',
         ),
       };
-    } catch (_) {
+    } catch (error, stackTrace) {
+      _logError('createAppointment', error, stackTrace);
       return {
         'success': false,
         'message': 'Network error. Please try again.',

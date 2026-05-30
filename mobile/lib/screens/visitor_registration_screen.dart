@@ -10,6 +10,7 @@ import '../core/config/app_config.dart';
 import '../core/i18n/app_i18n.dart';
 import '../services/api_service.dart';
 import '../widgets/megha_ui.dart';
+import 'appointments_screen.dart';
 import 'new_appointment_screen.dart';
 
 class VisitorRegistrationScreen extends StatefulWidget {
@@ -400,9 +401,26 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
         setState(() => _loading = false);
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (_) => NewAppointmentScreen(
-              isWalkIn: true,
-              initialVisitor: visitor,
+            builder: (routeContext) => Scaffold(
+              backgroundColor: MeghaColors.pageBg,
+              appBar: AppBar(title: const Text('Create Appointment')),
+              body: SafeArea(
+                child: NewAppointmentScreen(
+                  isWalkIn: true,
+                  initialVisitor: visitor,
+                  onViewAppointments: () {
+                    Navigator.of(routeContext).pushReplacement(
+                      MaterialPageRoute(
+                        builder: (_) => Scaffold(
+                          backgroundColor: MeghaColors.pageBg,
+                          appBar: AppBar(title: const Text('Appointment List')),
+                          body: const SafeArea(child: AppointmentsScreen()),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
             ),
           ),
         );

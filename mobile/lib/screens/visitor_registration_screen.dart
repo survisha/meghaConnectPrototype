@@ -9,6 +9,9 @@ import 'package:provider/provider.dart';
 import '../core/config/app_config.dart';
 import '../core/i18n/app_i18n.dart';
 import '../services/api_service.dart';
+import '../services/connectivity_service.dart';
+import '../services/offline_repository.dart';
+import '../services/sync_service.dart';
 import '../widgets/megha_ui.dart';
 import 'appointments_screen.dart';
 import 'new_appointment_screen.dart';
@@ -140,6 +143,16 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
   Future<void> _startEpicFlow() async {
     final i18n = context.read<AppI18n>();
     if (!_idFormKey.currentState!.validate()) return;
+    if (context.read<ConnectivityService>().isOffline) {
+      setState(() {
+        _fullNameCtrl.text = _visitorNameCtrl.text.trim();
+        _step = 2;
+        _kycConfidence = 0;
+        _warning =
+            'No internet connection. Visitor will be saved as offline draft and validated during sync.';
+      });
+      return;
+    }
 
     setState(() {
       _loading = true;
@@ -392,7 +405,10 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
       payload['aadhaarNumber'] = _aadhaarCtrl.text.trim();
     }
 
-    final result = await ApiService.registerVisitor(payload);
+    final offline = context.read<ConnectivityService>().isOffline;
+    final result = offline
+        ? {'success': false, 'message': 'Network error. Please try again.'}
+        : await ApiService.registerVisitor(payload);
     if (!mounted) return;
 
     if (result['success'] == true) {
@@ -433,6 +449,61 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
         _success = i18n.t('REGISTRATION_SUCCESS');
       });
     } else {
+      final canSaveOffline = offline ||
+          (result['message']?.toString().toLowerCase().contains('network') ??
+              false);
+      if (canSaveOffline) {
+        final saved = await OfflineRepository().saveVisitorOffline(
+          payload,
+          photoDataUri: _livePhotoDataUri,
+        );
+        if (!mounted) return;
+        context.read<SyncService>().syncNow();
+        if (widget.openAppointmentAfterSubmit) {
+          final visitor = {
+            ...payload,
+            'id': saved.localId,
+            'localId': saved.localId,
+            'localReferenceNumber': saved.referenceNumber,
+          };
+          setState(() => _loading = false);
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (routeContext) => Scaffold(
+                backgroundColor: MeghaColors.pageBg,
+                appBar: AppBar(title: const Text('Create Appointment')),
+                body: SafeArea(
+                  child: NewAppointmentScreen(
+                    isWalkIn: true,
+                    initialVisitor: visitor,
+                    onViewAppointments: () {
+                      Navigator.of(routeContext).pushReplacement(
+                        MaterialPageRoute(
+                          builder: (_) => Scaffold(
+                            backgroundColor: MeghaColors.pageBg,
+                            appBar:
+                                AppBar(title: const Text('Appointment List')),
+                            body: const SafeArea(child: AppointmentsScreen()),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+          );
+          return;
+        }
+        setState(() {
+          _loading = false;
+          _submitted = true;
+          _step = 4;
+          _success =
+              'Visitor saved offline. It will sync automatically when internet is available.';
+        });
+        return;
+      }
       setState(() {
         _loading = false;
         _error = (result['message'] as String?) ??

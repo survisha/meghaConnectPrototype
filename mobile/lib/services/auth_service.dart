@@ -3,12 +3,23 @@ import 'package:flutter/foundation.dart';
 import '../models/user.dart';
 import 'api_service.dart';
 import '../core/security/secure_app_storage.dart';
+import 'connectivity_service.dart';
+import 'offline_repository.dart';
 
 class AuthService extends ChangeNotifier {
+  AuthService(
+      {ConnectivityService? connectivity, OfflineRepository? repository})
+      : _connectivity = connectivity,
+        _repository = repository ?? OfflineRepository();
+
+  final ConnectivityService? _connectivity;
+  final OfflineRepository _repository;
   AuthUser? _user;
   String? _lastError;
+  bool _offlineMode = false;
   AuthUser? get user => _user;
   String? get lastError => _lastError;
+  bool get offlineMode => _offlineMode;
   bool get isLoggedIn => _user != null;
 
   Future<void> init() async {
@@ -22,6 +33,8 @@ class AuthService extends ChangeNotifier {
     if (stored != null) {
       try {
         _user = AuthUser.fromJson(jsonDecode(stored) as Map<String, dynamic>);
+        _offlineMode = _connectivity?.isOffline ?? false;
+        await _repository.saveSession(_user!.toJson());
         notifyListeners();
       } catch (_) {
         await SecureAppStorage.clearSession();
@@ -63,6 +76,8 @@ class AuthService extends ChangeNotifier {
         username: uname, fullName: fullName, role: role, visitorId: visitorId);
 
     await SecureAppStorage.writeUserJson(jsonEncode(_user!.toJson()));
+    await _repository.saveSession(_user!.toJson());
+    _offlineMode = false;
 
     notifyListeners();
     return true;
@@ -86,6 +101,8 @@ class AuthService extends ChangeNotifier {
     );
 
     await SecureAppStorage.writeUserJson(jsonEncode(_user!.toJson()));
+    await _repository.saveSession(_user!.toJson());
+    _offlineMode = false;
 
     notifyListeners();
     return true;
@@ -94,6 +111,7 @@ class AuthService extends ChangeNotifier {
   Future<void> logout() async {
     _user = null;
     _lastError = null;
+    _offlineMode = false;
     await SecureAppStorage.clearSession();
     notifyListeners();
   }

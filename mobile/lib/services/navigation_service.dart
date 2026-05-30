@@ -16,6 +16,7 @@ class AppRoutes {
   static const followups = 'followups';
   static const audit = 'audit';
   static const users = 'users';
+  static const pendingSync = 'pending_sync';
 
   static const all = <String>{
     dashboard,
@@ -33,6 +34,7 @@ class AppRoutes {
     followups,
     audit,
     users,
+    pendingSync,
   };
 }
 

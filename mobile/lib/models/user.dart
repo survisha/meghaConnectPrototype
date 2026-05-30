@@ -5,6 +5,7 @@ enum UserRole {
   APPROVER,
   CMO_OFFICER,
   DATA_ENTRY_OPERATOR,
+  SECURITY_POLICE,
   PUBLIC,
 }
 
@@ -23,6 +24,8 @@ extension UserRoleExtension on UserRole {
         return 'CMO Officer';
       case UserRole.DATA_ENTRY_OPERATOR:
         return 'Data Entry Operator';
+      case UserRole.SECURITY_POLICE:
+        return 'Security / Police';
       case UserRole.PUBLIC:
         return 'Public / Citizen';
     }
@@ -42,6 +45,8 @@ extension UserRoleExtension on UserRole {
         return 'CMO';
       case UserRole.DATA_ENTRY_OPERATOR:
         return 'DEO';
+      case UserRole.SECURITY_POLICE:
+        return 'SECURITY';
       case UserRole.PUBLIC:
         return 'PUBLIC';
     }

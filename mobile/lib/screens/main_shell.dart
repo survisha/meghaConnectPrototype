@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
+import '../services/connectivity_service.dart';
 import '../services/navigation_service.dart';
 import '../core/i18n/app_i18n.dart';
 import '../widgets/megha_ui.dart';
@@ -20,6 +21,7 @@ import 'visitor_dashboard_screen.dart';
 import 'approver_screen.dart';
 import 'guest_appointment_screen.dart';
 import 'deo_home_screen.dart';
+import 'pending_sync_screen.dart';
 
 class _NavItem {
   final String label;
@@ -44,6 +46,7 @@ const _allRoles = [
   UserRole.APPROVER,
   UserRole.CMO_OFFICER,
   UserRole.DATA_ENTRY_OPERATOR,
+  UserRole.SECURITY_POLICE,
 ];
 
 const _fullControl = [UserRole.HCM, UserRole.ADMIN, UserRole.OSD];
@@ -54,6 +57,12 @@ final _navTree = <_NavItem>[
     icon: Icons.dashboard_outlined,
     route: 'dashboard',
     roles: _allRoles,
+  ),
+  const _NavItem(
+    label: 'Pending Sync',
+    icon: Icons.sync_problem_outlined,
+    route: 'pending_sync',
+    roles: [..._allRoles, UserRole.PUBLIC],
   ),
   const _NavItem(
     label: 'My Portal',
@@ -154,6 +163,7 @@ final _navTree = <_NavItem>[
       UserRole.ADMIN,
       UserRole.OSD,
       UserRole.DATA_ENTRY_OPERATOR,
+      UserRole.SECURITY_POLICE,
     ],
   ),
   const _NavItem(
@@ -234,6 +244,8 @@ class _MainShellState extends State<MainShell> {
         return NewAppointmentScreen(isWalkIn: route == 'walkin');
       case 'guest_registration':
         return const GuestAppointmentScreen();
+      case 'pending_sync':
+        return const PendingSyncScreen();
       case 'calendar':
         return const CalendarScreen();
       case 'approver':
@@ -277,6 +289,7 @@ class _MainShellState extends State<MainShell> {
         appBar: AppBar(
           title: const Text('Appointment List'),
           actions: [
+            const _ConnectivityBadge(),
             IconButton(
               tooltip: i18n.t('LOGOUT'),
               icon: const Icon(Icons.logout),
@@ -291,7 +304,13 @@ class _MainShellState extends State<MainShell> {
     return Scaffold(
       appBar: _buildAppBar(context, auth, user, i18n),
       drawer: _buildDrawer(context, auth, user),
-      body: _buildBody(_currentRoute),
+      body: Column(
+        children: [
+          if (context.watch<ConnectivityService>().isOffline)
+            const _OfflineWorkBanner(),
+          Expanded(child: _buildBody(_currentRoute)),
+        ],
+      ),
     );
   }
 
@@ -353,6 +372,7 @@ class _MainShellState extends State<MainShell> {
         ],
       ),
       actions: [
+        const _ConnectivityBadge(),
         const MeghaLanguageSelector(dark: true, compact: true),
         if (showRole) ...[
           const SizedBox(width: 8),
@@ -578,6 +598,24 @@ class _MainShellState extends State<MainShell> {
   }
 }
 
+class _OfflineWorkBanner extends StatelessWidget {
+  const _OfflineWorkBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      color: const Color(0xFFFEF3C7),
+      child: const Text(
+        'You are working in offline mode. Data will sync when internet is available.',
+        textAlign: TextAlign.center,
+        style: TextStyle(color: Color(0xFF92400E), fontSize: 12),
+      ),
+    );
+  }
+}
+
 class _HeaderRoleBadge extends StatelessWidget {
   final UserRole role;
   const _HeaderRoleBadge({required this.role});
@@ -597,6 +635,54 @@ class _HeaderRoleBadge extends StatelessWidget {
           color: Colors.white,
           fontSize: 11,
           fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+}
+
+class _ConnectivityBadge extends StatelessWidget {
+  const _ConnectivityBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    final online = context.watch<ConnectivityService>().isOnline;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Tooltip(
+        message: online
+            ? 'Online'
+            : 'You are working in offline mode. Data will sync when internet is available.',
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: online
+                ? const Color(0xFF16A34A).withAlpha(46)
+                : const Color(0xFFF59E0B).withAlpha(56),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: online ? const Color(0xFF86EFAC) : const Color(0xFFFCD34D),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                online ? Icons.cloud_done_outlined : Icons.cloud_off_outlined,
+                color: Colors.white,
+                size: 14,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                online ? 'Online' : 'Offline',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

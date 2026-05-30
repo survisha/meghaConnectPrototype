@@ -283,6 +283,8 @@ class _UserCard extends StatelessWidget {
         return const Color(0xFF2E7D32);
       case UserRole.DATA_ENTRY_OPERATOR:
         return const Color(0xFF558B2F);
+      case UserRole.SECURITY_POLICE:
+        return const Color(0xFF7C3AED);
       case UserRole.PUBLIC:
         return const Color(0xFFB45309);
     }

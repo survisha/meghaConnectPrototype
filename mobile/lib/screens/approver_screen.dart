@@ -3,6 +3,9 @@ import 'package:provider/provider.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
+import '../services/connectivity_service.dart';
+import '../services/offline_repository.dart';
+import '../services/sync_service.dart';
 
 class _ApproverAppointment {
   final int backendId;
@@ -124,22 +127,44 @@ class _ApproverWorkflowScreenState extends State<ApproverWorkflowScreen> {
   Future<void> _handleAction(
       _ApproverAppointment appt, String action, String remarks) async {
     final newStatus = action == 'APPROVE' ? 'HCM_PENDING' : 'HCM_REJECTED';
-    final result = await ApiService.updateAppointmentStatus(
-        appt.backendId, newStatus,
-        remarks: remarks.isNotEmpty ? remarks : null);
+    final offline = context.read<ConnectivityService>().isOffline;
+    final result = offline
+        ? null
+        : await ApiService.updateAppointmentStatus(appt.backendId, newStatus,
+            remarks: remarks.isNotEmpty ? remarks : null);
     if (!mounted) return;
     if (result != null) {
       setState(() {
         appt.approverRemarks = remarks;
         appt.status = newStatus;
       });
+    } else {
+      await OfflineRepository().enqueue(
+        entityType: SyncEntityType.action,
+        localEntityId: appt.id,
+        action: action,
+        payload: {
+          'appointmentId': appt.backendId,
+          'applicationId': appt.id,
+          'status': newStatus,
+          'remarks': remarks,
+        },
+      );
+      if (!mounted) return;
+      context.read<SyncService>().syncNow();
+      setState(() {
+        appt.approverRemarks = remarks;
+        appt.status = '$newStatus (Pending Sync)';
+      });
     }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          action == 'APPROVE'
-              ? '${appt.id} approved and forwarded to HCM.'
-              : '${appt.id} rejected.',
+          result == null
+              ? 'No internet connection. Saved offline.'
+              : action == 'APPROVE'
+                  ? '${appt.id} approved and forwarded to HCM.'
+                  : '${appt.id} rejected.',
         ),
         backgroundColor: action == 'APPROVE'
             ? const Color(0xFF2E7D32)

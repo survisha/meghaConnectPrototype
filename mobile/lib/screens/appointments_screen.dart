@@ -5,7 +5,11 @@ import 'package:provider/provider.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
+import '../services/connectivity_service.dart';
 import '../services/navigation_service.dart';
+import '../services/offline_ai_notes_service.dart';
+import '../services/offline_repository.dart';
+import '../services/sync_service.dart';
 import 'new_appointment_screen.dart';
 
 class _Appointment {
@@ -83,9 +87,20 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                 ? await ApiService.getDeoAppointments()
                 : await ApiService.getAppointments();
     if (!mounted) return;
-    final content = (data['content'] as List<dynamic>?) ?? [];
+    var content = (data['content'] as List<dynamic>?) ?? [];
+    if (data['error'] == true ||
+        context.read<ConnectivityService>().isOffline) {
+      final cached = await OfflineRepository().cachedAppointments();
+      if (!mounted) return;
+      if (cached.isNotEmpty) content = cached;
+    } else {
+      for (final row in content.whereType<Map>()) {
+        await OfflineRepository()
+            .cacheAppointment(Map<String, dynamic>.from(row));
+      }
+    }
     setState(() {
-      _loadError = data['error'] == true
+      _loadError = data['error'] == true && content.isEmpty
           ? data['message']?.toString() ?? 'Unable to load appointments.'
           : null;
       _appointments = content.map((e) {
@@ -694,26 +709,67 @@ class _AppointmentDetailSheetState extends State<_AppointmentDetailSheet> {
       _error = null;
     });
     final id = widget.appointment.backendId!;
-    final result = _editingRemarkId == null
-        ? await ApiService.addAppointmentRemark(
-            id,
-            remarks: remarks,
-            decision: _decisionCtrl.text.trim(),
-            departmentCode: _departmentCode,
-          )
-        : await ApiService.updateAppointmentRemark(
-            id,
-            _editingRemarkId!,
-            remarks: remarks,
-            decision: _decisionCtrl.text.trim(),
-            departmentCode: _departmentCode,
-          );
+    final offline = context.read<ConnectivityService>().isOffline;
+    final result = offline
+        ? null
+        : _editingRemarkId == null
+            ? await ApiService.addAppointmentRemark(
+                id,
+                remarks: remarks,
+                decision: _decisionCtrl.text.trim(),
+                departmentCode: _departmentCode,
+              )
+            : await ApiService.updateAppointmentRemark(
+                id,
+                _editingRemarkId!,
+                remarks: remarks,
+                decision: _decisionCtrl.text.trim(),
+                departmentCode: _departmentCode,
+              );
     if (!mounted) return;
     if (result == null) {
+      final note = const OfflineAiNotesService().generateAppointmentNote(
+        citizenName: widget.appointment.applicantName,
+        purpose: widget.appointment.agendaBrief,
+        department: _departmentCode,
+        appointmentType: widget.appointment.agendaType,
+        remarks: remarks,
+      );
+      await OfflineRepository().saveAiNoteOffline(
+        appointmentLocalId: widget.appointment.id,
+        noteText: note,
+        payload: {
+          'appointmentId': widget.appointment.backendId,
+          'appointmentLocalId': widget.appointment.id,
+          'remarks': remarks,
+          'decision': _decisionCtrl.text.trim(),
+          'departmentCode': _departmentCode,
+          'noteText': note,
+        },
+      );
+      await OfflineRepository().enqueue(
+        entityType: SyncEntityType.action,
+        localEntityId: widget.appointment.id,
+        action: _editingRemarkId == null ? 'CREATE_REMARK' : 'UPDATE_REMARK',
+        payload: {
+          'appointmentId': widget.appointment.backendId,
+          'remarks': remarks,
+          'decision': _decisionCtrl.text.trim(),
+          'departmentCode': _departmentCode,
+        },
+      );
+      if (!mounted) return;
+      context.read<SyncService>().syncNow();
       setState(() {
         _saving = false;
-        _error = 'Unable to save remarks. Please try again.';
+        _error = null;
       });
+      _remarksCtrl.clear();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No internet connection. Saved offline.'),
+        ),
+      );
       return;
     }
     _remarksCtrl.clear();

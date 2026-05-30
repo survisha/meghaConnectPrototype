@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
+import '../services/connectivity_service.dart';
+import '../services/offline_repository.dart';
+import '../services/sync_service.dart';
 import '../models/user.dart';
 
 class _Grievance {
@@ -262,11 +265,34 @@ class _GrievanceScreenState extends State<GrievanceScreen> {
           grievance: g,
           scrollController: controller,
           onStatusUpdate: (newStatus) async {
-            final result =
-                await ApiService.updateGrievanceStatus(g.backendId, newStatus);
+            final offline = context.read<ConnectivityService>().isOffline;
+            final result = offline
+                ? null
+                : await ApiService.updateGrievanceStatus(
+                    g.backendId,
+                    newStatus,
+                  );
             if (!context.mounted) return;
             if (result != null) {
               setState(() => g.status = newStatus);
+            } else {
+              await OfflineRepository().enqueue(
+                entityType: SyncEntityType.action,
+                localEntityId: g.ticketId,
+                action: 'GRIEVANCE_STATUS',
+                payload: {
+                  'grievanceId': g.backendId,
+                  'ticketId': g.ticketId,
+                  'status': newStatus,
+                },
+              );
+              if (!context.mounted) return;
+              context.read<SyncService>().syncNow();
+              setState(() => g.status = '$newStatus (Pending Sync)');
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                    content: Text('No internet connection. Saved offline.')),
+              );
             }
             Navigator.pop(context);
           },
@@ -288,8 +314,24 @@ class _GrievanceScreenState extends State<GrievanceScreen> {
         ),
         child: _NewGrievanceForm(
           onSubmit: (body, localGrievance) async {
-            final result = await ApiService.createGrievance(body);
+            final offline = context.read<ConnectivityService>().isOffline;
+            final result =
+                offline ? null : await ApiService.createGrievance(body);
             if (!context.mounted) return;
+            if (result == null) {
+              await OfflineRepository().enqueue(
+                entityType: SyncEntityType.action,
+                localEntityId: localGrievance.ticketId,
+                action: 'GRIEVANCE_CREATE',
+                payload: body,
+              );
+              if (!context.mounted) return;
+              context.read<SyncService>().syncNow();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                    content: Text('No internet connection. Saved offline.')),
+              );
+            }
             final created = result != null
                 ? _Grievance(
                     backendId: (result['id'] as num?)?.toInt() ?? 0,

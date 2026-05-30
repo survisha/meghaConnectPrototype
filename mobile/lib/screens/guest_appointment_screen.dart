@@ -5,9 +5,13 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 
 import '../core/config/app_config.dart';
 import '../services/api_service.dart';
+import '../services/connectivity_service.dart';
+import '../services/offline_repository.dart';
+import '../services/sync_service.dart';
 
 class GuestAppointmentScreen extends StatefulWidget {
   const GuestAppointmentScreen({super.key});
@@ -169,35 +173,62 @@ class _GuestAppointmentScreenState extends State<GuestAppointmentScreen> {
       return;
     }
 
+    final offline = context.read<ConnectivityService>().isOffline;
     setState(() => _submitting = true);
     final photoBytes = await _guestPhoto!.readAsBytes();
     final photoDataUri = 'data:image/jpeg;base64,${base64Encode(photoBytes)}';
-    final result = await ApiService.createGuestAppointment(
-      fields: {
-        'fullName': _fullNameCtrl.text,
-        'mobileNumber': _mobileCtrl.text,
-        'address': _addressCtrl.text,
-        'email': _emailCtrl.text,
-        'organizationName': _organizationCtrl.text,
-        'designation': _designationCtrl.text,
-        'visitorCategory': _visitorCategory ?? '',
-        'referredOffice': _referredOffice ?? '',
-        'referredByName': _referredByCtrl.text,
-        'reasonForAppointment': _reasonCtrl.text,
-        'preferredDate':
-            _preferredDate == null ? '' : _dateParam(_preferredDate!),
-        'remarks': _remarksCtrl.text,
-        'consentAccepted': _consentAccepted.toString(),
-        'consentVersion': AppConfig.consentVersion,
-        'consentTimestamp': DateTime.now().toUtc().toIso8601String(),
-        'privacyPolicyUrl': AppConfig.privacyPolicyUrl,
-        'termsUrl': AppConfig.termsUrl,
-      },
-      livePhotoBase64: photoDataUri,
-      supportingDocumentPath: _supportingDocument?.path,
-      supportingDocumentName: _supportingDocument?.name,
-    );
+    final fields = {
+      'fullName': _fullNameCtrl.text,
+      'mobileNumber': _mobileCtrl.text,
+      'address': _addressCtrl.text,
+      'email': _emailCtrl.text,
+      'organizationName': _organizationCtrl.text,
+      'designation': _designationCtrl.text,
+      'visitorCategory': _visitorCategory ?? '',
+      'referredOffice': _referredOffice ?? '',
+      'referredByName': _referredByCtrl.text,
+      'reasonForAppointment': _reasonCtrl.text,
+      'preferredDate':
+          _preferredDate == null ? '' : _dateParam(_preferredDate!),
+      'remarks': _remarksCtrl.text,
+      'consentAccepted': _consentAccepted.toString(),
+      'consentVersion': AppConfig.consentVersion,
+      'consentTimestamp': DateTime.now().toUtc().toIso8601String(),
+      'privacyPolicyUrl': AppConfig.privacyPolicyUrl,
+      'termsUrl': AppConfig.termsUrl,
+    };
+    final result = offline
+        ? {'success': false, 'message': 'Network error. Please try again.'}
+        : await ApiService.createGuestAppointment(
+            fields: {
+              ...fields,
+            },
+            livePhotoBase64: photoDataUri,
+            supportingDocumentPath: _supportingDocument?.path,
+            supportingDocumentName: _supportingDocument?.name,
+          );
     if (!mounted) return;
+    if (result['referenceId'] == null &&
+        (offline ||
+            (result['message']?.toString().toLowerCase().contains('network') ??
+                false))) {
+      final saved = await OfflineRepository().saveAppointmentOffline({
+        ...fields,
+        'livePhotoBase64': photoDataUri,
+        'supportingDocumentName': _supportingDocument?.name,
+        'appointmentSource': 'GUEST',
+      });
+      if (!mounted) return;
+      context.read<SyncService>().syncNow();
+      setState(() {
+        _submitting = false;
+        _successReference = saved.referenceNumber;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Appointment saved offline.')),
+      );
+      return;
+    }
     setState(() {
       _submitting = false;
       if (result['referenceId'] != null) {

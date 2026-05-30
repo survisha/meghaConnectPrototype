@@ -4,7 +4,11 @@ import 'package:provider/provider.dart';
 import '../core/config/app_config.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
+import '../services/connectivity_service.dart';
 import '../services/navigation_service.dart';
+import '../services/offline_ai_notes_service.dart';
+import '../services/offline_repository.dart';
+import '../services/sync_service.dart';
 import 'visitor_registration_screen.dart';
 
 class NewAppointmentScreen extends StatefulWidget {
@@ -160,21 +164,70 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
         'termsUrl': AppConfig.termsUrl,
       });
     }
-    final result = await ApiService.createAppointment(payload);
+    final offline = context.read<ConnectivityService>().isOffline;
+    final result = offline
+        ? {'success': false, 'message': 'Network error. Please try again.'}
+        : await ApiService.createAppointment(payload);
     if (!mounted) return;
-    setState(() {
-      _loading = false;
-      if (result == null || result['success'] == false) {
-        _contextError = result?['message']?.toString() ??
-            'Unable to submit appointment. Please try again.';
-      } else {
+    if (result != null && result['success'] != false) {
+      setState(() {
+        _loading = false;
         _submittedAppId =
             result['applicationId'] as String? ?? result['id']?.toString();
         _submittedToken = result['walkInTokenNumber']?.toString() ??
             result['tokenNumber']?.toString() ??
             result['token']?.toString();
         _submitted = true;
-      }
+      });
+      return;
+    }
+
+    final canSaveOffline = offline ||
+        (result?['message']?.toString().toLowerCase().contains('network') ??
+            false);
+    if (canSaveOffline) {
+      final visitorLocalId = _selectedVisitor?['localId']?.toString();
+      final saved = await OfflineRepository().saveAppointmentOffline(
+        payload,
+        visitorLocalId: visitorLocalId,
+      );
+      final note = const OfflineAiNotesService().generateAppointmentNote(
+        citizenName: _selectedVisitor?['fullName']?.toString() ?? 'Citizen',
+        purpose: _agendaBriefCtrl.text,
+        department: _profileCtrl.text,
+        appointmentType: _agendaDescriptions[_agendaType],
+        remarks: _profileCtrl.text,
+      );
+      await OfflineRepository().saveAiNoteOffline(
+        appointmentLocalId: saved.localId,
+        noteText: note,
+        payload: {
+          'appointmentLocalId': saved.localId,
+          'appointmentNumber': saved.referenceNumber,
+          'noteText': note,
+        },
+      );
+      if (!mounted) return;
+      context.read<SyncService>().syncNow();
+      setState(() {
+        _loading = false;
+        _submittedAppId = saved.referenceNumber;
+        _submittedToken = null;
+        _submitted = true;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content:
+              Text('Appointment saved offline. AI note generated offline.'),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _loading = false;
+      _contextError = result?['message']?.toString() ??
+          'Unable to submit appointment. Please try again.';
     });
   }
 

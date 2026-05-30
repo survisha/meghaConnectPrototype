@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
+import '../services/connectivity_service.dart';
 import '../services/navigation_service.dart';
+import 'pending_sync_screen.dart';
 import '../core/i18n/app_i18n.dart';
 import '../widgets/megha_ui.dart';
 import 'new_appointment_screen.dart';
@@ -255,6 +257,18 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
         actions: [
           const MeghaLanguageSelector(dark: true, compact: true),
           IconButton(
+            icon: const Icon(Icons.sync_problem_outlined),
+            tooltip: 'Pending Sync',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => Scaffold(
+                  appBar: AppBar(title: const Text('Pending Sync')),
+                  body: const PendingSyncScreen(),
+                ),
+              ),
+            ),
+          ),
+          IconButton(
             icon: const Icon(Icons.logout),
             tooltip: i18n.t('LOGOUT'),
             onPressed: () async {
@@ -320,6 +334,22 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
+                  if (context.watch<ConnectivityService>().isOffline) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF3C7),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'You are working in offline mode. Data will sync when internet is available.',
+                        style:
+                            TextStyle(color: Color(0xFF92400E), fontSize: 12),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
 
                   // Summary cards
                   GridView.count(
@@ -373,7 +403,20 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
                         color: const Color(0xFF0F766E),
                         onTap: () => _openGuestRegistration(context),
                       ),
-                      const Spacer(flex: 2),
+                      const SizedBox(width: 8),
+                      _QuickActionBtn(
+                        icon: Icons.sync_problem_outlined,
+                        label: 'Pending\nSync',
+                        color: const Color(0xFFB45309),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => Scaffold(
+                              appBar: AppBar(title: const Text('Pending Sync')),
+                              body: const PendingSyncScreen(),
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 20),

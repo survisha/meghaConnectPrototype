@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../services/auth_service.dart';
+import '../services/connectivity_service.dart';
 import 'appointments_screen.dart';
 import 'new_appointment_screen.dart';
+import 'pending_sync_screen.dart';
 import 'visitor_registration_screen.dart';
 
 class DeoHomeScreen extends StatelessWidget {
@@ -19,6 +21,7 @@ class DeoHomeScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('DEO Counter'),
         actions: [
+          const _ConnectivityIcon(),
           IconButton(
             tooltip: 'Logout',
             icon: const Icon(Icons.logout),
@@ -30,6 +33,20 @@ class DeoHomeScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.all(18),
           children: [
+            if (context.watch<ConnectivityService>().isOffline) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  'You are working in offline mode. Data will sync when internet is available.',
+                  style: TextStyle(color: Color(0xFF92400E), fontSize: 12),
+                ),
+              ),
+              const SizedBox(height: 14),
+            ],
             Text(
               'Welcome${user?.fullName.isNotEmpty == true ? ', ${user!.fullName}' : ''}',
               style: const TextStyle(
@@ -107,6 +124,24 @@ class DeoHomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             _ActionCard(
+              icon: Icons.sync_problem_outlined,
+              title: 'Pending Sync',
+              subtitle:
+                  'Review offline visitors, appointments, photos, and notes.',
+              color: const Color(0xFFB45309),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const _DeoPageScaffold(
+                      title: 'Pending Sync',
+                      child: PendingSyncScreen(),
+                    ),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+            _ActionCard(
               icon: Icons.logout,
               title: 'Logout',
               subtitle: 'Clear session and return to login.',
@@ -115,6 +150,25 @@ class DeoHomeScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ConnectivityIcon extends StatelessWidget {
+  const _ConnectivityIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    final online = context.watch<ConnectivityService>().isOnline;
+    return Tooltip(
+      message: online
+          ? 'Online'
+          : 'You are working in offline mode. Data will sync when internet is available.',
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child:
+            Icon(online ? Icons.cloud_done_outlined : Icons.cloud_off_outlined),
       ),
     );
   }

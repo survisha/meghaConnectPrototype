@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'services/auth_service.dart';
+import 'services/connectivity_service.dart';
 import 'services/navigation_service.dart';
+import 'services/sync_service.dart';
 import 'core/i18n/app_i18n.dart';
 import 'core/config/app_config.dart';
 import 'screens/login_screen.dart';
@@ -10,14 +12,21 @@ import 'screens/main_shell.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   AppConfig.validateForCurrentMode();
-  final authService = AuthService();
+  final connectivityService = ConnectivityService();
+  await connectivityService.init();
+  final authService = AuthService(connectivity: connectivityService);
   await authService.init();
+  final syncService = SyncService(connectivity: connectivityService);
+  await syncService.init();
   final i18n = AppI18n();
   await i18n.init();
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider<AuthService>.value(value: authService),
+        ChangeNotifierProvider<ConnectivityService>.value(
+            value: connectivityService),
+        ChangeNotifierProvider<SyncService>.value(value: syncService),
         ChangeNotifierProvider<AppI18n>.value(value: i18n),
         ChangeNotifierProvider<NavigationService>(
             create: (_) => NavigationService()),

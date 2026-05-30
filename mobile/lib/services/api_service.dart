@@ -511,6 +511,170 @@ class ApiService {
     }
   }
 
+  // Offline sync endpoints. Backend may not have these routes yet; callers keep
+  // local records queued if any endpoint returns a non-success response.
+  static Future<Map<String, dynamic>> syncVisitor(
+      Map<String, dynamic> payload) async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .post(_u('/sync/visitors'),
+              headers: headers, body: jsonEncode(payload))
+          .timeout(const Duration(seconds: 30));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+      return {
+        'success': false,
+        'code': 'HTTP_${resp.statusCode}',
+        'message': _messageFromResponse(
+            resp, 'Visitor sync failed. Please try again.'),
+      };
+    } catch (error, stackTrace) {
+      _logError('syncVisitor', error, stackTrace);
+      return {'success': false, 'message': 'Network error. Please try again.'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> syncVisitorPhoto(
+      Map<String, dynamic> payload) async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .post(_u('/sync/visitor-photo'),
+              headers: headers, body: jsonEncode(payload))
+          .timeout(const Duration(seconds: 45));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+      return {
+        'success': false,
+        'code': 'HTTP_${resp.statusCode}',
+        'message':
+            _messageFromResponse(resp, 'Photo sync failed. Please try again.'),
+      };
+    } catch (error, stackTrace) {
+      _logError('syncVisitorPhoto', error, stackTrace);
+      return {'success': false, 'message': 'Network error. Please try again.'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> syncAppointment(
+      Map<String, dynamic> payload) async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .post(_u('/sync/appointments'),
+              headers: headers, body: jsonEncode(payload))
+          .timeout(const Duration(seconds: 30));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+      return {
+        'success': false,
+        'code': 'HTTP_${resp.statusCode}',
+        'message': _messageFromResponse(
+            resp, 'Appointment sync failed. Please try again.'),
+      };
+    } catch (error, stackTrace) {
+      _logError('syncAppointment', error, stackTrace);
+      return {'success': false, 'message': 'Network error. Please try again.'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> syncAiNote(
+      Map<String, dynamic> payload) async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .post(_u('/sync/ai-notes'),
+              headers: headers, body: jsonEncode(payload))
+          .timeout(const Duration(seconds: 30));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+      return {
+        'success': false,
+        'code': 'HTTP_${resp.statusCode}',
+        'message': _messageFromResponse(
+            resp, 'AI note sync failed. Please try again.'),
+      };
+    } catch (error, stackTrace) {
+      _logError('syncAiNote', error, stackTrace);
+      return {'success': false, 'message': 'Network error. Please try again.'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> syncStatusUpdate(
+      Map<String, dynamic> payload) async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .post(_u('/sync/status-update'),
+              headers: headers, body: jsonEncode(payload))
+          .timeout(const Duration(seconds: 30));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+      return {
+        'success': false,
+        'code': 'HTTP_${resp.statusCode}',
+        'message':
+            _messageFromResponse(resp, 'Action sync failed. Please try again.'),
+      };
+    } catch (error, stackTrace) {
+      _logError('syncStatusUpdate', error, stackTrace);
+      return {'success': false, 'message': 'Network error. Please try again.'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> getSyncMasterData() async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .get(_u('/sync/master-data'), headers: headers)
+          .timeout(const Duration(seconds: 30));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        return {'success': true, 'data': jsonDecode(resp.body)};
+      }
+    } catch (error, stackTrace) {
+      _logError('getSyncMasterData', error, stackTrace);
+    }
+    return {'success': false, 'message': 'Unable to refresh master data.'};
+  }
+
+  static Future<Map<String, dynamic>> getSyncAppointmentPreload() async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .get(_u('/sync/appointments/preload'), headers: headers)
+          .timeout(const Duration(seconds: 30));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        final decoded = jsonDecode(resp.body);
+        if (decoded is List) return {'content': decoded};
+        if (decoded is Map<String, dynamic>) return decoded;
+      }
+    } catch (error, stackTrace) {
+      _logError('getSyncAppointmentPreload', error, stackTrace);
+    }
+    return {'content': []};
+  }
+
+  static Future<Map<String, dynamic>> getSyncQrCache() async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .get(_u('/sync/qr-cache'), headers: headers)
+          .timeout(const Duration(seconds: 30));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        return {'success': true, 'data': jsonDecode(resp.body)};
+      }
+    } catch (error, stackTrace) {
+      _logError('getSyncQrCache', error, stackTrace);
+    }
+    return {'success': false, 'message': 'Unable to refresh QR cache.'};
+  }
+
   static Future<List<Map<String, String>>> getReferenceData(String type) async {
     try {
       final headers = await _authHeaders();

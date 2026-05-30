@@ -5,6 +5,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../core/config/app_config.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
+import '../services/connectivity_service.dart';
+import '../services/sync_service.dart';
 import '../core/i18n/app_i18n.dart';
 import '../widgets/megha_ui.dart';
 import 'visitor_registration_screen.dart';
@@ -73,6 +75,8 @@ class _LoginScreenState extends State<LoginScreen>
     if (!ok) {
       setState(() =>
           _staffError = auth.lastError ?? 'Invalid username or password.');
+    } else {
+      context.read<SyncService>().syncNow();
     }
   }
 
@@ -194,6 +198,8 @@ class _LoginScreenState extends State<LoginScreen>
         _publicNotice = 'Login failed. Please try again.';
         _publicNoticeIsWarning = false;
       });
+    } else {
+      context.read<SyncService>().syncNow();
     }
   }
 
@@ -247,6 +253,7 @@ class _LoginScreenState extends State<LoginScreen>
 
   Widget _buildCleanLoginCard() {
     final i18n = context.watch<AppI18n>();
+    final offline = context.watch<ConnectivityService>().isOffline;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -287,6 +294,13 @@ class _LoginScreenState extends State<LoginScreen>
           style: TextStyle(color: Colors.grey[600], fontSize: 14),
         ),
         const SizedBox(height: 22),
+        if (offline) ...[
+          _buildNotice(
+            'No internet connection. First login must be online. Cached users can continue if their session is valid.',
+            warning: true,
+          ),
+          const SizedBox(height: 12),
+        ],
         Card(
           elevation: 3,
           surfaceTintColor: Colors.white,

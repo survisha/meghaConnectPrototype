@@ -82,8 +82,17 @@ tasks.register("validateProductionRelease") {
 
         if (missingSigningValues.isNotEmpty()) {
             throw GradleException(
-                "Release signing is not configured. Provide key.properties or CI env vars: " +
-                    missingSigningValues.joinToString { it.second }
+                "Release signing is not configured. Copy android/key.properties.example to " +
+                    "android/key.properties and fill storeFile, keyAlias, keyPassword, and storePassword; " +
+                    "or provide CI env vars: " + missingSigningValues.joinToString { it.second }
+            )
+        }
+
+        val releaseStoreFile = signingValue("storeFile", "ANDROID_KEYSTORE_PATH")
+        if (releaseStoreFile != null && !file(releaseStoreFile).exists()) {
+            throw GradleException(
+                "Release keystore file was not found at '$releaseStoreFile'. " +
+                    "Update android/key.properties storeFile or ANDROID_KEYSTORE_PATH."
             )
         }
 

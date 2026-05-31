@@ -604,6 +604,60 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, dynamic>?> createAppointmentMultipart({
+    required Map<String, String> fields,
+    List<Map<String, String>> documents = const [],
+  }) async {
+    try {
+      final request = http.MultipartRequest('POST', _u('/appointments'));
+      request.headers.addAll(await _authHeaders());
+      fields.forEach((key, value) {
+        final trimmed = value.trim();
+        if (trimmed.isNotEmpty) request.fields[key] = trimmed;
+      });
+
+      for (final document in documents) {
+        final path = document['path']?.trim();
+        final fieldName = document['fieldName']?.trim();
+        if (path == null ||
+            path.isEmpty ||
+            fieldName == null ||
+            fieldName.isEmpty) {
+          continue;
+        }
+        request.files.add(await http.MultipartFile.fromPath(
+          fieldName,
+          path,
+          filename: document['fileName'],
+        ));
+      }
+
+      final streamed =
+          await request.send().timeout(const Duration(seconds: 45));
+      final response = await http.Response.fromStream(streamed);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map<String, dynamic>) {
+          final data = decoded['data'];
+          return data is Map<String, dynamic> ? data : decoded;
+        }
+      }
+      return {
+        'success': false,
+        'message': _messageFromResponse(
+          response,
+          'Unable to submit appointment. Please try again.',
+        ),
+      };
+    } catch (error, stackTrace) {
+      _logError('createAppointmentMultipart', error, stackTrace);
+      return {
+        'success': false,
+        'message': 'Network error. Please try again.',
+      };
+    }
+  }
+
   // Offline sync endpoints. Backend may not have these routes yet; callers keep
   // local records queued if any endpoint returns a non-success response.
   static Future<Map<String, dynamic>> syncVisitor(
@@ -1166,6 +1220,31 @@ class ApiService {
     return null;
   }
 
+  static Future<Map<String, dynamic>?> getVisitorProfileById(int id) async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .get(
+            _u('/visitor/auth/profile/$id'),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 20));
+      if (resp.statusCode == 200) {
+        final decoded = jsonDecode(resp.body);
+        if (decoded is Map<String, dynamic>) {
+          final data = decoded['data'];
+          return data is Map<String, dynamic> ? data : decoded;
+        }
+      }
+      if (resp.statusCode == 401 || resp.statusCode == 403) {
+        await clearToken();
+      }
+    } catch (error, stackTrace) {
+      _logError('getVisitorProfileById', error, stackTrace);
+    }
+    return null;
+  }
+
   static Future<Map<String, dynamic>?> searchPersonByEpic(String epic) async {
     try {
       final headers = await _headers();
@@ -1265,5 +1344,54 @@ class ApiService {
       }
     } catch (_) {}
     return {'content': [], 'totalElements': 0};
+  }
+
+  static Future<Map<String, dynamic>> createSchemeApplicationMultipart({
+    required Map<String, String> fields,
+    List<Map<String, String>> documents = const [],
+  }) async {
+    try {
+      final request = http.MultipartRequest('POST', _u('/scheme-applications'));
+      request.headers.addAll(await _authHeaders());
+      fields.forEach((key, value) {
+        final trimmed = value.trim();
+        if (trimmed.isNotEmpty) request.fields[key] = trimmed;
+      });
+      for (final document in documents) {
+        final path = document['path']?.trim();
+        final fieldName = document['fieldName']?.trim();
+        if (path == null ||
+            path.isEmpty ||
+            fieldName == null ||
+            fieldName.isEmpty) {
+          continue;
+        }
+        request.files.add(await http.MultipartFile.fromPath(
+          fieldName,
+          path,
+          filename: document['fileName'],
+        ));
+      }
+      final streamed =
+          await request.send().timeout(const Duration(seconds: 45));
+      final response = await http.Response.fromStream(streamed);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map<String, dynamic>) return decoded;
+      }
+      return {
+        'success': false,
+        'message': _messageFromResponse(
+          response,
+          'Failed to submit scheme application.',
+        ),
+      };
+    } catch (error, stackTrace) {
+      _logError('createSchemeApplicationMultipart', error, stackTrace);
+      return {
+        'success': false,
+        'message': 'No internet connection. Please try again.',
+      };
+    }
   }
 }

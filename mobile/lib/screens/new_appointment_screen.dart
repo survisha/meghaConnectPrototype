@@ -1,6 +1,10 @@
+import 'dart:convert';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+
 import '../core/config/app_config.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
@@ -31,79 +35,127 @@ class NewAppointmentScreen extends StatefulWidget {
 
 class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _offlineRepository = OfflineRepository();
 
   final _searchMobileCtrl = TextEditingController();
   final _searchEpicCtrl = TextEditingController();
   final _searchReferenceCtrl = TextEditingController();
-
-  // Appointment Details
-  String _agendaType = 'A4';
-  String _location = 'SHILLONG';
-  bool _isOrganisation = false;
-  bool _includeSchemeDetails = false;
-  String _applicationType = 'NEW';
-  String _projectCategory = 'Community Infrastructure';
-  String _beneficiaryType = 'Community';
-  String _beneficiaryCount = '1-50';
   final _agendaBriefCtrl = TextEditingController();
   final _profileCtrl = TextEditingController();
-  final _schemeTypeCtrl = TextEditingController();
   final _projectNameCtrl = TextEditingController();
   final _estimatedCostCtrl = TextEditingController();
   final _communityContributionCtrl = TextEditingController();
   final _justificationCtrl = TextEditingController();
+  final _associateSearchCtrl = TextEditingController();
 
+  int _step = 0;
   bool _submitted = false;
   bool _loading = false;
+  bool _loadingReferences = true;
+  bool _referencesLoaded = false;
   bool _searching = false;
+  bool _searchingAssociates = false;
   bool _visitorLoading = false;
   bool _consentAccepted = false;
+  bool _isOrganisation = false;
+  bool _includeSchemeDetails = false;
+  bool _includeAssociates = false;
+  bool _mlaMdcApproved = false;
+
   String? _contextError;
+  String? _referenceError;
   String? _submittedAppId;
   String? _submittedToken;
+  String? _agendaType;
+  String? _location;
+  String? _organizationSubType;
+  String? _schemeType;
+  String? _applicationType;
+  String? _projectCategory;
+  String? _beneficiaryType;
+  String? _beneficiaryCount;
+  String? _schemeHistory;
+
   Map<String, dynamic>? _selectedVisitor;
   List<Map<String, dynamic>> _searchResults = [];
+  List<Map<String, dynamic>> _associateResults = [];
+  final List<Map<String, dynamic>> _associates = [];
+  final List<_AppointmentDocument> _documents = _defaultDocuments();
 
-  static const _agendaTypes = ['A1', 'A2', 'A3', 'A4', 'B1', 'B2'];
-  static const _locations = ['SHILLONG', 'TURA', 'DELHI', 'OTHERS'];
-  static const _applicationTypes = ['NEW', 'REMINDER'];
+  final Map<String, List<_ReferenceOption>> _references = {};
+
+  static const _steps = [
+    'Citizen',
+    'Agenda',
+    'Scheme',
+    'Associates',
+    'Documents',
+    'Review',
+  ];
+
+  static const _locations = ['Shillong', 'Tura', 'Delhi', 'Others'];
+  static const _schemeTypes = [
+    'CMSDF',
+    'CMSG',
+    'CM Care',
+    'CM Connect',
+    'CM Elevate',
+    'Others',
+  ];
+  static const _applicationTypes = ['NEW_APPLICATION', 'REMINDER'];
   static const _projectCategories = [
-    'Community Infrastructure',
-    'Education',
-    'Health',
-    'Livelihood',
-    'Sports',
-    'Other',
+    'Electricity',
+    'Road',
+    'House',
+    'School',
+    'Community Hall',
+    'Retaining Wall',
+    'Office',
+    'Travel',
+    'Medical',
+    'Musical Instrument',
+    'Sports Equipment',
+    'Buses',
+    'Pickup Van',
+    'Computer Lab Upgradation',
+    'Repair',
+    'Others',
   ];
   static const _beneficiaryTypes = [
     'Individual',
-    'Community',
-    'Institution',
-    'Village',
+    'Community/Society',
+    'School/Youth Organisation',
+    'All of the Above',
+    'Others',
   ];
-  static const _beneficiaryCounts = ['1-50', '51-100', '101-500', '500+'];
-
-  static const _agendaDescriptions = {
-    'A1': 'Cabinet/Flight/State Function',
-    'A2': 'Events & Public Programs',
-    'A3': 'File Clearing & Admin',
-    'A4': 'Individual Appointment',
-    'B1': 'Public Durbar',
-    'B2': 'Walk-in',
-  };
+  static const _beneficiaryCounts = [
+    '1 to 100',
+    '101 to 500',
+    '501 to 1000',
+    'Above 1000',
+  ];
+  static const _schemeHistoryOptions = [
+    'CMSDF',
+    'CMSG',
+    'CM Care',
+    'CM Connect',
+    'CM Elevate',
+    'Focus+',
+  ];
 
   @override
   void initState() {
     super.initState();
-    if (widget.isWalkIn) _agendaType = 'B2';
     if (widget.initialVisitor != null) {
       _selectedVisitor = Map<String, dynamic>.from(widget.initialVisitor!);
       _agendaBriefCtrl.text =
           widget.initialVisitor!['briefDescription']?.toString() ?? '';
-      final agenda = widget.initialVisitor!['agendaType']?.toString();
-      if (agenda != null && _agendaTypes.contains(agenda)) _agendaType = agenda;
+      _agendaType = widget.initialVisitor!['agendaType']?.toString();
     }
-    Future.microtask(_loadPublicVisitor);
+    Future.microtask(() async {
+      await _loadReferences();
+      await _loadPublicVisitor();
+    });
   }
 
   @override
@@ -113,18 +165,124 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
     _searchReferenceCtrl.dispose();
     _agendaBriefCtrl.dispose();
     _profileCtrl.dispose();
-    _schemeTypeCtrl.dispose();
     _projectNameCtrl.dispose();
     _estimatedCostCtrl.dispose();
     _communityContributionCtrl.dispose();
     _justificationCtrl.dispose();
+    _associateSearchCtrl.dispose();
     super.dispose();
   }
 
   int? get _selectedVisitorId {
-    final id = _selectedVisitor?['id'];
+    final id = _selectedVisitor?['id'] ?? _selectedVisitor?['serverId'];
     if (id is num) return id.toInt();
     return int.tryParse(id?.toString() ?? '');
+  }
+
+  List<_ReferenceOption> _options(String key) => _references[key] ?? const [];
+
+  String _label(String key, String? code) {
+    if (code == null || code.isEmpty) return '';
+    return _options(key)
+        .firstWhere(
+          (option) => option.code == code,
+          orElse: () => _ReferenceOption(code: code, label: code),
+        )
+        .label;
+  }
+
+  Future<void> _loadReferences({bool force = false}) async {
+    if (_referencesLoaded && !force) return;
+    setState(() {
+      _loadingReferences = true;
+      _referenceError = null;
+    });
+
+    final loaded = <String, List<_ReferenceOption>>{};
+    loaded['agenda'] =
+        await _loadFirstReference(const ['CM_AGENDA_MEETING'], 'agenda');
+    loaded['organization'] =
+        await _loadFirstReference(const ['ORGANIZATION_TYPE'], 'organization');
+
+    if (!mounted) return;
+    setState(() {
+      _references
+        ..clear()
+        ..addAll(loaded);
+      _agendaType = _pickExistingOrFirst('agenda', _agendaType);
+      if (widget.isWalkIn) {
+        _agendaType = _findCode('agenda', 'B2') ?? _agendaType;
+      }
+      _location = _pickStatic(_locations, _location) ?? _locations.first;
+      _applicationType = _pickStatic(_applicationTypes, _applicationType) ??
+          _applicationTypes.first;
+      _projectCategory = _pickStatic(_projectCategories, _projectCategory) ??
+          _projectCategories.first;
+      _beneficiaryType = _pickStatic(_beneficiaryTypes, _beneficiaryType) ??
+          _beneficiaryTypes.first;
+      _beneficiaryCount = _pickStatic(_beneficiaryCounts, _beneficiaryCount) ??
+          _beneficiaryCounts.first;
+      _schemeHistory = _pickStatic(_schemeHistoryOptions, _schemeHistory) ??
+          _schemeHistoryOptions.first;
+      _loadingReferences = false;
+      _referencesLoaded = true;
+      if ((_options('agenda').isEmpty || _options('organization').isEmpty) &&
+          !context.read<ConnectivityService>().isOffline) {
+        _referenceError =
+            'Some appointment dropdown data could not be loaded from the server. Tap retry after the backend reference data is available.';
+      }
+    });
+  }
+
+  String? _pickStatic(List<String> options, String? value) {
+    if (options.isEmpty) return null;
+    if (value != null && options.contains(value)) return value;
+    return options.first;
+  }
+
+  Future<List<_ReferenceOption>> _loadFirstReference(
+    List<String> types,
+    String cacheKey,
+  ) async {
+    for (final type in types) {
+      debugPrint('Appointment load API: GET /api/v1/reference/$type');
+      final rows = await ApiService.getReferenceData(type);
+      if (rows.isNotEmpty) {
+        await _offlineRepository.cacheMasterData(cacheKey, rows);
+        return rows.map(_ReferenceOption.fromMap).toList();
+      }
+    }
+
+    final cached = await _offlineRepository.cachedMasterData(cacheKey);
+    final cachedRows = cached is List
+        ? cached
+        : cached is Map<String, dynamic> && cached['data'] is List
+            ? cached['data'] as List<dynamic>
+            : <dynamic>[];
+    return cachedRows
+        .whereType<Map>()
+        .map((row) => _ReferenceOption.fromMap(Map<String, dynamic>.from(row)))
+        .toList();
+  }
+
+  String? _pickExistingOrFirst(String key, String? value) {
+    final options = _options(key);
+    if (options.isEmpty) return null;
+    if (value != null && options.any((option) => option.code == value)) {
+      return value;
+    }
+    return options.first.code;
+  }
+
+  String? _findCode(String key, String codeOrLabel) {
+    final wanted = codeOrLabel.toLowerCase();
+    for (final option in _options(key)) {
+      if (option.code.toLowerCase() == wanted ||
+          option.label.toLowerCase().contains(wanted)) {
+        return option.code;
+      }
+    }
+    return null;
   }
 
   Future<void> _loadPublicVisitor() async {
@@ -149,7 +307,9 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
       };
     });
 
-    final profile = await ApiService.getVisitorById(visitorId);
+    debugPrint(
+        'Appointment load API: GET /api/v1/visitor/auth/profile/$visitorId');
+    final profile = await ApiService.getVisitorProfileById(visitorId);
     if (!mounted) return;
     setState(() {
       _visitorLoading = false;
@@ -157,62 +317,156 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
     });
   }
 
-  Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
-    final visitorId = _selectedVisitorId;
-    if (visitorId == null || visitorId <= 0) {
-      setState(() {
-        _contextError = widget.isPublic
-            ? 'Visitor context is missing. Please login again before submitting.'
-            : 'Search and select a visitor before creating the appointment.';
-      });
-      return;
-    }
-    if (widget.isPublic && !_consentAccepted) {
-      setState(() {
+  Future<void> _searchVisitor() async {
+    setState(() {
+      _searching = true;
+      _contextError = null;
+      _selectedVisitor = null;
+      _searchResults = [];
+    });
+    final results = await ApiService.searchVisitors(
+      mobile: _searchMobileCtrl.text,
+      epic: _searchEpicCtrl.text,
+      referenceId: _searchReferenceCtrl.text,
+    );
+    if (!mounted) return;
+    setState(() {
+      _searching = false;
+      if (results.isEmpty) {
         _contextError =
-            'Please provide consent for appointment data processing.';
-      });
+            'No visitor found. Register the visitor first, then create the appointment.';
+      } else {
+        _searchResults = results
+            .whereType<Map>()
+            .map((row) => Map<String, dynamic>.from(row))
+            .toList();
+        if (_searchResults.length == 1) _selectedVisitor = _searchResults.first;
+      }
+    });
+  }
+
+  Future<void> _searchAssociates() async {
+    final query = _associateSearchCtrl.text.trim();
+    if (query.length < 3) {
+      setState(() => _contextError = 'Enter at least 3 characters to search.');
       return;
     }
+    setState(() {
+      _searchingAssociates = true;
+      _contextError = null;
+      _associateResults = [];
+    });
+    final isPhone = RegExp(r'^\d{3,}$').hasMatch(query);
+    final results = isPhone
+        ? await ApiService.searchVisitors(mobile: query)
+        : await ApiService.searchPersonsByName(query);
+    if (!mounted) return;
+    setState(() {
+      _searchingAssociates = false;
+      _associateResults = results
+          .whereType<Map>()
+          .map((row) => Map<String, dynamic>.from(row))
+          .where(
+              (row) => row['id']?.toString() != _selectedVisitorId?.toString())
+          .toList();
+      if (_associateResults.isEmpty) {
+        _contextError = 'No matching associate visitor found.';
+      }
+    });
+  }
+
+  Future<void> _openVisitorRegistration() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const VisitorRegistrationScreen()),
+    );
+  }
+
+  Future<void> _pickDocument(_AppointmentDocument document) async {
+    final result = await FilePicker.platform.pickFiles(withData: false);
+    if (result == null || result.files.isEmpty) return;
+    setState(() => document.file = result.files.first);
+  }
+
+  bool _validateCurrentStep() {
+    setState(() => _contextError = null);
+    switch (_step) {
+      case 0:
+        if (_selectedVisitorId == null || _selectedVisitorId! <= 0) {
+          setState(() {
+            _contextError = widget.isPublic
+                ? 'Visitor context is missing. Please login again before continuing.'
+                : 'Search and select a visitor before continuing.';
+          });
+          return false;
+        }
+        return true;
+      case 1:
+      case 2:
+        return _formKey.currentState?.validate() ?? false;
+      case 3:
+        if (_includeAssociates && _associates.length > 10) {
+          setState(() => _contextError = 'Maximum 10 associates are allowed.');
+          return false;
+        }
+        return true;
+      case 4:
+        final missing = _visibleDocuments()
+            .where((document) => document.required && document.file == null)
+            .map((document) => document.label)
+            .join(', ');
+        if (missing.isNotEmpty) {
+          setState(() => _contextError = 'Please upload: $missing.');
+          return false;
+        }
+        return true;
+      case 5:
+        if (widget.isPublic && !_consentAccepted) {
+          setState(() {
+            _contextError =
+                'Please provide consent for appointment data processing.';
+          });
+          return false;
+        }
+        return _formKey.currentState?.validate() ?? false;
+    }
+    return true;
+  }
+
+  void _next() {
+    if (!_validateCurrentStep()) return;
+    setState(() => _step = (_step + 1).clamp(0, _steps.length - 1));
+  }
+
+  void _previous() {
+    setState(() {
+      _contextError = null;
+      _step = (_step - 1).clamp(0, _steps.length - 1);
+    });
+  }
+
+  Future<void> _submit() async {
+    if (!_validateCurrentStep()) return;
+    final visitorId = _selectedVisitorId;
+    if (visitorId == null || visitorId <= 0) return;
 
     setState(() => _loading = true);
-    final payload = <String, dynamic>{
-      'applicantId': visitorId,
-      'eventType': _agendaType,
-      'subject': _agendaDescriptions[_agendaType] ?? _agendaType,
-      'appointmentType': _agendaDescriptions[_agendaType] ?? _agendaType,
-      'agendaType': _agendaDescriptions[_agendaType] ?? _agendaType,
-      'agendaBrief': _agendaBriefCtrl.text.trim(),
-      'requestedLocation': _location,
-      'isWalkIn': widget.isWalkIn,
-      'isOrganisation': _isOrganisation,
-      'schemeType': _includeSchemeDetails ? _schemeTypeCtrl.text.trim() : '',
-      'applicationType': _includeSchemeDetails ? _applicationType : '',
-      'projectCategory': _includeSchemeDetails ? _projectCategory : '',
-      'projectName': _includeSchemeDetails ? _projectNameCtrl.text.trim() : '',
-      'beneficiaryType': _includeSchemeDetails ? _beneficiaryType : '',
-      'beneficiaryCount': _includeSchemeDetails ? _beneficiaryCount : '',
-      'estimatedCost':
-          _includeSchemeDetails ? _estimatedCostCtrl.text.trim() : '',
-      'communityContribution':
-          _includeSchemeDetails ? _communityContributionCtrl.text.trim() : '',
-      'justification':
-          _includeSchemeDetails ? _justificationCtrl.text.trim() : '',
-    };
-    if (widget.isPublic) {
-      payload.addAll({
-        'consentAccepted': _consentAccepted,
-        'consentVersion': AppConfig.consentVersion,
-        'consentTimestamp': DateTime.now().toUtc().toIso8601String(),
-        'privacyPolicyUrl': AppConfig.privacyPolicyUrl,
-        'termsUrl': AppConfig.termsUrl,
-      });
-    }
+    final fields = _buildSubmitFields(visitorId);
+    final documents = _visibleDocuments()
+        .where((document) => document.file?.path?.isNotEmpty == true)
+        .map((document) => {
+              'fieldName': 'documents_${document.type}',
+              'path': document.file!.path!,
+              'fileName': document.file!.name,
+            })
+        .toList();
+
     final offline = context.read<ConnectivityService>().isOffline;
     final result = offline
         ? {'success': false, 'message': 'Network error. Please try again.'}
-        : await ApiService.createAppointment(payload);
+        : await ApiService.createAppointmentMultipart(
+            fields: fields,
+            documents: documents,
+          );
     if (!mounted) return;
     if (result != null && result['success'] != false) {
       setState(() {
@@ -231,19 +485,22 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
         (result?['message']?.toString().toLowerCase().contains('network') ??
             false);
     if (canSaveOffline) {
-      final visitorLocalId = _selectedVisitor?['localId']?.toString();
-      final saved = await OfflineRepository().saveAppointmentOffline(
+      final payload = {
+        ...fields,
+        'documents': documents,
+      };
+      final saved = await _offlineRepository.saveAppointmentOffline(
         payload,
-        visitorLocalId: visitorLocalId,
+        visitorLocalId: _selectedVisitor?['localId']?.toString(),
       );
       final note = const OfflineAiNotesService().generateAppointmentNote(
         citizenName: _selectedVisitor?['fullName']?.toString() ?? 'Citizen',
         purpose: _agendaBriefCtrl.text,
         department: _profileCtrl.text,
-        appointmentType: _agendaDescriptions[_agendaType],
+        appointmentType: fields['agendaType'],
         remarks: _profileCtrl.text,
       );
-      await OfflineRepository().saveAiNoteOffline(
+      await _offlineRepository.saveAiNoteOffline(
         appointmentLocalId: saved.localId,
         noteText: note,
         payload: {
@@ -276,6 +533,69 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
     });
   }
 
+  Map<String, String> _buildSubmitFields(int visitorId) {
+    final agendaLabel = _label('agenda', _agendaType);
+    final locationLabel = _location ?? '';
+    final fields = <String, String>{
+      'applicantId': visitorId.toString(),
+      'eventType': widget.isWalkIn ? 'B2' : 'A1',
+      'isWalkIn': widget.isWalkIn.toString(),
+      'agendaType': agendaLabel,
+      'agendaTypeCode': _agendaType ?? '',
+      'registrationAgendaType': agendaLabel,
+      'agendaBrief': _agendaBriefCtrl.text.trim(),
+      'registrationBriefDescription': _agendaBriefCtrl.text.trim(),
+      'requestedLocation': locationLabel.toUpperCase(),
+      'isOrganisation': _isOrganisation.toString(),
+      'organizationSubType':
+          _isOrganisation ? _label('organization', _organizationSubType) : '',
+      'organizationSubTypeCode':
+          _isOrganisation ? _organizationSubType ?? '' : '',
+      'mlaMdcApproved': _mlaMdcApproved.toString(),
+      'aiPriorityLevel': 'MEDIUM',
+      'aiSummary': _agendaBriefCtrl.text.trim(),
+      'associates': jsonEncode(_associates.map((associate) {
+        return {
+          'citizenId': associate['id'],
+          'remarks': associate['remarks']?.toString() ?? '',
+        };
+      }).toList()),
+    };
+    if (!widget.isPublic && _selectedVisitor != null) {
+      fields.addAll({
+        'applicantName': _selectedVisitor?['fullName']?.toString() ?? '',
+        'applicantPhone': _selectedVisitor?['phoneNumber']?.toString() ?? '',
+        'epicNumber': _selectedVisitor?['epicNumber']?.toString() ?? '',
+      });
+    }
+    if (_includeSchemeDetails) {
+      fields.addAll({
+        'schemeType': _schemeType ?? '',
+        'applicationType': _applicationType ?? '',
+        'projectCategory': _projectCategory ?? '',
+        'projectName': _projectNameCtrl.text.trim(),
+        'beneficiaryType': _beneficiaryType ?? '',
+        'beneficiaryCount': _beneficiaryCount ?? '',
+        'estimatedCost': _estimatedCostCtrl.text.trim(),
+        'communityContribution': _communityContributionCtrl.text.trim(),
+        'justification': _justificationCtrl.text.trim(),
+        'schemeHistoryList': jsonEncode([
+          if (_schemeHistory != null) _schemeHistory,
+        ]),
+      });
+    }
+    if (widget.isPublic) {
+      fields.addAll({
+        'consentAccepted': _consentAccepted.toString(),
+        'consentVersion': AppConfig.consentVersion,
+        'consentTimestamp': DateTime.now().toUtc().toIso8601String(),
+        'privacyPolicyUrl': AppConfig.privacyPolicyUrl,
+        'termsUrl': AppConfig.termsUrl,
+      });
+    }
+    return fields;
+  }
+
   void _reset() {
     _formKey.currentState?.reset();
     _searchMobileCtrl.clear();
@@ -283,120 +603,179 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
     _searchReferenceCtrl.clear();
     _agendaBriefCtrl.clear();
     _profileCtrl.clear();
-    _schemeTypeCtrl.clear();
     _projectNameCtrl.clear();
     _estimatedCostCtrl.clear();
     _communityContributionCtrl.clear();
     _justificationCtrl.clear();
+    _associateSearchCtrl.clear();
+    for (final document in _documents) {
+      document.file = null;
+    }
     setState(() {
-      _agendaType = 'A4';
-      _location = 'SHILLONG';
+      _step = 0;
+      _agendaType = _pickExistingOrFirst('agenda', null);
+      if (widget.isWalkIn) {
+        _agendaType = _findCode('agenda', 'B2') ?? _agendaType;
+      }
+      _location = _locations.first;
+      _organizationSubType = null;
+      _schemeType = null;
+      _applicationType = _applicationTypes.first;
+      _projectCategory = _projectCategories.first;
+      _beneficiaryType = _beneficiaryTypes.first;
+      _beneficiaryCount = _beneficiaryCounts.first;
+      _schemeHistory = _schemeHistoryOptions.first;
       _isOrganisation = false;
       _includeSchemeDetails = false;
-      _applicationType = 'NEW';
-      _projectCategory = 'Community Infrastructure';
-      _beneficiaryType = 'Community';
-      _beneficiaryCount = '1-50';
+      _includeAssociates = false;
+      _mlaMdcApproved = false;
       _submitted = false;
       _submittedAppId = null;
       _submittedToken = null;
       _contextError = null;
       _consentAccepted = false;
+      _associates.clear();
+      _associateResults = [];
       if (!widget.isPublic) _selectedVisitor = null;
     });
   }
 
-  Future<void> _searchVisitor() async {
-    setState(() {
-      _searching = true;
-      _contextError = null;
-      _selectedVisitor = null;
-      _searchResults = [];
-    });
-    final results = await ApiService.searchVisitors(
-      mobile: _searchMobileCtrl.text,
-      epic: _searchEpicCtrl.text,
-      referenceId: _searchReferenceCtrl.text,
-    );
-    if (!mounted) return;
-    setState(() {
-      _searching = false;
-      if (results.isEmpty) {
-        _contextError =
-            'No visitor found. Register the visitor first, then create the appointment.';
-      } else {
-        _searchResults = results
-            .whereType<Map>()
-            .map((row) => Map<String, dynamic>.from(row))
-            .toList();
-        if (_searchResults.length == 1) {
-          _selectedVisitor = _searchResults.first;
-        }
-      }
-    });
-  }
-
-  Future<void> _openVisitorRegistration() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const VisitorRegistrationScreen()),
-    );
+  List<_AppointmentDocument> _visibleDocuments() {
+    return _documents.where((document) {
+      if (document.schemeOnly && !_includeSchemeDetails) return false;
+      if (document.organizationOnly && !_isOrganisation) return false;
+      return true;
+    }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
     if (_submitted) return _buildSuccess(context);
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Form(
-        key: _formKey,
+    return Form(
+      key: _formKey,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (widget.isWalkIn || widget.isPublic) _buildInfoBanner(),
-            _buildSection(
-              widget.isPublic ? 'Citizen Details' : 'Visitor Search',
-              widget.isPublic
-                  ? _buildSelectedVisitorSummary()
-                  : _buildVisitorSearch(),
-            ),
-            const SizedBox(height: 16),
+            _buildStepHeader(),
+            const SizedBox(height: 12),
+            if (_referenceError != null) ...[
+              _buildWarningBanner(_referenceError!),
+              const SizedBox(height: 12),
+            ],
             if (_contextError != null) ...[
               _buildErrorBanner(_contextError!),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
             ],
-            if (_selectedVisitor != null)
-              _buildSection('Appointment Details', _buildAppointmentFields()),
-            if (widget.isPublic && _selectedVisitor != null) ...[
-              const SizedBox(height: 16),
-              _buildSection('Privacy Consent', _buildConsentNotice()),
-            ],
-            const SizedBox(height: 24),
-            if (_selectedVisitor != null)
-              SizedBox(
-                height: 50,
-                child: ElevatedButton.icon(
-                  icon: _loading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white),
-                        )
-                      : const Icon(Icons.send),
-                  label: Text(
-                    widget.isPublic
-                        ? 'Submit Appointment'
-                        : 'Create Appointment',
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                  onPressed: _loading ? null : _submit,
-                ),
-              ),
+            _buildSection(_steps[_step], _buildCurrentStep()),
+            const SizedBox(height: 16),
+            _buildNavigation(),
             const SizedBox(height: 16),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildCurrentStep() {
+    if (_loadingReferences && _step > 0) {
+      return const Padding(
+        padding: EdgeInsets.all(24),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    switch (_step) {
+      case 0:
+        return widget.isPublic
+            ? _buildSelectedVisitorSummary()
+            : _buildVisitorSearch();
+      case 1:
+        return _buildAgendaStep();
+      case 2:
+        return _buildSchemeStep();
+      case 3:
+        return _buildAssociateStep();
+      case 4:
+        return _buildDocumentStep();
+      case 5:
+        return _buildReviewStep();
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
+  Widget _buildStepHeader() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: List.generate(_steps.length, (index) {
+            final active = index == _step;
+            final complete = index < _step;
+            return Expanded(
+              child: Container(
+                height: 4,
+                margin:
+                    EdgeInsets.only(right: index == _steps.length - 1 ? 0 : 4),
+                decoration: BoxDecoration(
+                  color: active || complete
+                      ? const Color(0xFF1A237E)
+                      : const Color(0xFFE5E7EB),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            );
+          }),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Step ${_step + 1} of ${_steps.length}: ${_steps[_step]}',
+          style: const TextStyle(
+            color: Color(0xFF1A237E),
+            fontWeight: FontWeight.w800,
+            fontSize: 13,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNavigation() {
+    final isLast = _step == _steps.length - 1;
+    return Row(
+      children: [
+        if (_step > 0)
+          Expanded(
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.chevron_left),
+              label: const Text('Previous'),
+              onPressed: _loading ? null : _previous,
+            ),
+          ),
+        if (_step > 0) const SizedBox(width: 12),
+        Expanded(
+          child: ElevatedButton.icon(
+            icon: _loading
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : Icon(isLast ? Icons.send : Icons.chevron_right),
+            label: Text(isLast
+                ? (widget.isPublic
+                    ? 'Submit Appointment'
+                    : 'Create Appointment')
+                : 'Next'),
+            onPressed: _loading ? null : (isLast ? _submit : _next),
+          ),
+        ),
+      ],
     );
   }
 
@@ -423,8 +802,8 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
           Expanded(
             child: Text(
               isWalkIn
-                  ? 'Walk-in Counter: Register an in-person visitor for a direct appointment with the Chief Minister.'
-                  : 'Your registered MeghaConnect profile will be used. Add only appointment-specific details.',
+                  ? 'Walk-in Counter: register an in-person visitor for a direct appointment.'
+                  : 'Your registered MeghaConnect profile will be used for this appointment.',
               style: TextStyle(
                 color: isWalkIn
                     ? const Color(0xFF065F46)
@@ -432,6 +811,35 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                 fontSize: 12,
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWarningBanner(String text) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBEB),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFFDE68A)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.warning_amber_outlined,
+              color: Color(0xFF92400E), size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(color: Color(0xFF92400E), fontSize: 12),
+            ),
+          ),
+          TextButton(
+            onPressed: () => _loadReferences(force: true),
+            child: const Text('Retry'),
           ),
         ],
       ),
@@ -462,31 +870,26 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
     );
   }
 
-  Widget _buildConsentNotice() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'MeghaConnect will process your registered profile and appointment details for citizen service, appointment review, security, audit, and governance workflow purposes.',
-          style: TextStyle(fontSize: 13, height: 1.4),
+  Widget _buildSection(String title, Widget content) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1A237E),
+              ),
+            ),
+            const SizedBox(height: 14),
+            content,
+          ],
         ),
-        const SizedBox(height: 6),
-        Text(
-          'Privacy: ${AppConfig.privacyPolicyUrl}\nTerms: ${AppConfig.termsUrl}',
-          style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
-        ),
-        CheckboxListTile(
-          contentPadding: EdgeInsets.zero,
-          value: _consentAccepted,
-          onChanged: (value) =>
-              setState(() => _consentAccepted = value ?? false),
-          title: const Text(
-            'I consent to appointment data processing for MeghaConnect services.',
-            style: TextStyle(fontSize: 13),
-          ),
-          controlAffinity: ListTileControlAffinity.leading,
-        ),
-      ],
+      ),
     );
   }
 
@@ -499,14 +902,14 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
         ),
       );
     }
-    final v = _selectedVisitor;
-    if (v == null) {
+    final visitor = _selectedVisitor;
+    if (visitor == null) {
       return const Text(
         'Visitor profile could not be loaded.',
         style: TextStyle(color: Color(0xFF991B1B)),
       );
     }
-    return _VisitorSummary(visitor: v);
+    return _VisitorSummary(visitor: visitor);
   }
 
   Widget _buildVisitorSearch() {
@@ -561,42 +964,15 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
         ],
         if (_searchResults.length > 1 && _selectedVisitor == null) ...[
           const SizedBox(height: 14),
-          Text(
-            'Select Visitor',
-            style: TextStyle(
-              color: Colors.grey[700],
-              fontWeight: FontWeight.w700,
-              fontSize: 12,
-            ),
-          ),
-          const SizedBox(height: 8),
-          ..._searchResults.map((visitor) {
-            final name = visitor['fullName']?.toString() ?? 'Visitor';
-            final phone = visitor['phoneNumber']?.toString() ?? '';
-            final epic = visitor['epicNumber']?.toString() ?? '';
-            return Card(
-              margin: const EdgeInsets.only(bottom: 8),
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: const Color(0xFFE8EAF6),
-                  foregroundColor: const Color(0xFF1A237E),
-                  child: Text(name.isEmpty ? 'V' : name[0].toUpperCase()),
-                ),
-                title: Text(name),
-                subtitle: Text([
-                  if (phone.isNotEmpty) phone,
-                  if (epic.isNotEmpty) epic,
-                ].join(' · ')),
-                trailing: const Icon(Icons.chevron_right),
+          ..._searchResults.map((visitor) => _visitorPickTile(
+                visitor,
                 onTap: () {
                   setState(() {
                     _selectedVisitor = visitor;
                     _contextError = null;
                   });
                 },
-              ),
-            );
-          }),
+              )),
         ],
         if (_contextError != null && _selectedVisitor == null) ...[
           const SizedBox(height: 12),
@@ -610,59 +986,38 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
     );
   }
 
-  Widget _buildSection(String title, Widget content) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1A237E),
-              ),
-            ),
-            const SizedBox(height: 14),
-            content,
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAppointmentFields() {
+  Widget _buildAgendaStep() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _expandedDropdown(
+        _referenceDropdown(
+          keyName: 'agenda',
           value: _agendaType,
           label: 'Agenda Type *',
           icon: Icons.category_outlined,
-          values: _agendaTypes,
-          labelFor: (t) => '$t - ${_agendaDescriptions[t]}',
-          onChanged: (v) => setState(() => _agendaType = v ?? _agendaType),
+          required: true,
+          onChanged: (value) => setState(() => _agendaType = value),
         ),
         const SizedBox(height: 12),
-        _expandedDropdown(
+        _referenceDropdown(
           value: _location,
           label: 'Preferred Location *',
           icon: Icons.place_outlined,
           values: _locations,
-          onChanged: (v) => setState(() => _location = v ?? _location),
+          required: true,
+          onChanged: (value) => setState(() => _location = value),
         ),
         const SizedBox(height: 12),
         TextFormField(
           controller: _agendaBriefCtrl,
           maxLines: 4,
           decoration: const InputDecoration(
-            labelText: 'Agenda / Purpose of Meeting *',
+            labelText: 'Brief Description of Agenda *',
             prefixIcon: Icon(Icons.description_outlined),
             alignLabelWithHint: true,
+            hintText: 'Describe your purpose of visit in detail...',
           ),
-          validator: (v) => (v == null || v.trim().isEmpty)
+          validator: (value) => (value == null || value.trim().isEmpty)
               ? 'Please describe the purpose'
               : null,
           textInputAction: TextInputAction.newline,
@@ -675,9 +1030,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
             labelText: 'Brief Profile / Background',
             prefixIcon: Icon(Icons.notes_outlined),
             alignLabelWithHint: true,
-            hintText: 'Optional: Any relevant background information',
           ),
-          textInputAction: TextInputAction.done,
         ),
         const SizedBox(height: 12),
         SwitchListTile(
@@ -685,68 +1038,86 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
           value: _isOrganisation,
           onChanged: (value) => setState(() => _isOrganisation = value),
           title: const Text('Applicant represents an organisation'),
-          subtitle: const Text('Required when applying on behalf of a group.'),
         ),
+        if (_isOrganisation) ...[
+          const SizedBox(height: 8),
+          _referenceDropdown(
+            keyName: 'organization',
+            value: _organizationSubType,
+            label: 'Organisation Type *',
+            icon: Icons.business_outlined,
+            required: true,
+            onChanged: (value) => setState(() => _organizationSubType = value),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildSchemeStep() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
           value: _includeSchemeDetails,
           onChanged: (value) => setState(() => _includeSchemeDetails = value),
           title: const Text('Add CM scheme / project details'),
-          subtitle:
-              const Text('Skip when this appointment is not for a scheme.'),
         ),
         if (_includeSchemeDetails) ...[
           const SizedBox(height: 12),
-          TextFormField(
-            controller: _schemeTypeCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Scheme Type',
-              prefixIcon: Icon(Icons.workspace_premium_outlined),
-            ),
+          _referenceDropdown(
+            value: _schemeType,
+            label: 'Scheme Type *',
+            icon: Icons.workspace_premium_outlined,
+            values: _schemeTypes,
+            required: true,
+            onChanged: (value) => setState(() => _schemeType = value),
           ),
           const SizedBox(height: 12),
-          _expandedDropdown(
+          _referenceDropdown(
             value: _applicationType,
-            label: 'Application Type',
+            label: 'Application Type *',
             icon: Icons.assignment_outlined,
             values: _applicationTypes,
-            onChanged: (v) =>
-                setState(() => _applicationType = v ?? _applicationType),
+            required: true,
+            onChanged: (value) => setState(() => _applicationType = value),
           ),
           const SizedBox(height: 12),
-          _expandedDropdown(
+          _referenceDropdown(
             value: _projectCategory,
-            label: 'Project Category',
+            label: 'Project Category *',
             icon: Icons.category_outlined,
             values: _projectCategories,
-            onChanged: (v) =>
-                setState(() => _projectCategory = v ?? _projectCategory),
+            required: true,
+            onChanged: (value) => setState(() => _projectCategory = value),
           ),
           const SizedBox(height: 12),
           TextFormField(
             controller: _projectNameCtrl,
             decoration: const InputDecoration(
-              labelText: 'Project Name',
+              labelText: 'Project Name *',
               prefixIcon: Icon(Icons.drive_file_rename_outline),
             ),
+            validator: (value) => (value == null || value.trim().isEmpty)
+                ? 'Please enter project name'
+                : null,
           ),
           const SizedBox(height: 12),
-          _expandedDropdown(
+          _referenceDropdown(
             value: _beneficiaryType,
             label: 'Beneficiary Type',
             icon: Icons.groups_outlined,
             values: _beneficiaryTypes,
-            onChanged: (v) =>
-                setState(() => _beneficiaryType = v ?? _beneficiaryType),
+            onChanged: (value) => setState(() => _beneficiaryType = value),
           ),
           const SizedBox(height: 12),
-          _expandedDropdown(
+          _referenceDropdown(
             value: _beneficiaryCount,
             label: 'Beneficiary Count',
             icon: Icons.format_list_numbered_outlined,
             values: _beneficiaryCounts,
-            onChanged: (v) =>
-                setState(() => _beneficiaryCount = v ?? _beneficiaryCount),
+            onChanged: (value) => setState(() => _beneficiaryCount = value),
           ),
           const SizedBox(height: 12),
           TextFormField(
@@ -776,46 +1147,304 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
               alignLabelWithHint: true,
             ),
           ),
+          const SizedBox(height: 12),
+          _referenceDropdown(
+            value: _schemeHistory,
+            label: 'Scheme History',
+            icon: Icons.history_outlined,
+            values: _schemeHistoryOptions,
+            onChanged: (value) => setState(() => _schemeHistory = value),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _mlaMdcApproved,
+            onChanged: (value) => setState(() => _mlaMdcApproved = value),
+            title: const Text('MLA/MDC approval received'),
+          ),
         ],
       ],
     );
   }
 
-  DropdownButtonFormField<String> _expandedDropdown({
-    required String value,
-    required String label,
-    required IconData icon,
-    required List<String> values,
-    String Function(String value)? labelFor,
-    required ValueChanged<String?> onChanged,
-  }) {
-    return DropdownButtonFormField<String>(
-      value: values.contains(value) ? value : null,
-      isExpanded: true,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon),
-      ),
-      selectedItemBuilder: (context) => values
-          .map(
-            (item) => Text(
-              labelFor?.call(item) ?? item,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+  Widget _buildAssociateStep() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          value: _includeAssociates,
+          onChanged: (value) => setState(() => _includeAssociates = value),
+          title: const Text('Include associate visitors'),
+        ),
+        if (_includeAssociates) ...[
+          const SizedBox(height: 8),
+          TextField(
+            controller: _associateSearchCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Search associate by name or mobile',
+              prefixIcon: Icon(Icons.search),
             ),
-          )
-          .toList(),
-      items: values.map((item) {
-        return DropdownMenuItem(
-          value: item,
-          child: Text(
-            labelFor?.call(item) ?? item,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
+            onSubmitted: (_) => _searchAssociates(),
+          ),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            icon: _searchingAssociates
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.person_search_outlined),
+            label: Text(_searchingAssociates ? 'Searching...' : 'Search'),
+            onPressed: _searchingAssociates ? null : _searchAssociates,
+          ),
+          const SizedBox(height: 12),
+          ..._associateResults.map((visitor) {
+            final id = visitor['id']?.toString();
+            final added = id != null &&
+                _associates.any((row) => row['id']?.toString() == id);
+            return _visitorPickTile(
+              visitor,
+              trailing: added ? const Icon(Icons.check) : const Icon(Icons.add),
+              onTap: added
+                  ? null
+                  : () {
+                      setState(() {
+                        _associates.add(visitor);
+                        _associateResults = [];
+                        _associateSearchCtrl.clear();
+                      });
+                    },
+            );
+          }),
+          if (_associates.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            ..._associates.map((visitor) => _visitorPickTile(
+                  visitor,
+                  trailing: IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () =>
+                        setState(() => _associates.remove(visitor)),
+                  ),
+                )),
+          ],
+        ],
+      ],
+    );
+  }
+
+  Widget _buildDocumentStep() {
+    final docs = _visibleDocuments();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: docs.map((document) {
+        final fileName = document.file?.name;
+        return Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            border: Border.all(color: const Color(0xFFE5E7EB)),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.attach_file, color: Color(0xFF1A237E)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      document.required
+                          ? '${document.label} *'
+                          : document.label,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    Text(
+                      fileName ?? 'No file selected',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                    ),
+                  ],
+                ),
+              ),
+              TextButton(
+                onPressed: () => _pickDocument(document),
+                child: Text(fileName == null ? 'Upload' : 'Change'),
+              ),
+            ],
           ),
         );
       }).toList(),
-      onChanged: onChanged,
+    );
+  }
+
+  Widget _buildReviewStep() {
+    final fields = _selectedVisitorId == null
+        ? <String, String>{}
+        : _buildSubmitFields(_selectedVisitorId!);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (_selectedVisitor != null)
+          _VisitorSummary(visitor: _selectedVisitor!),
+        const SizedBox(height: 12),
+        _reviewRow('Agenda', fields['agendaType'] ?? ''),
+        _reviewRow('Location', fields['requestedLocation'] ?? ''),
+        _reviewRow('Purpose', fields['agendaBrief'] ?? ''),
+        if (_includeSchemeDetails) ...[
+          _reviewRow('Scheme', fields['schemeType'] ?? ''),
+          _reviewRow('Project', fields['projectName'] ?? ''),
+          _reviewRow('Category', fields['projectCategory'] ?? ''),
+        ],
+        _reviewRow('Associates', _associates.length.toString()),
+        _reviewRow(
+          'Documents',
+          _visibleDocuments()
+              .where((document) => document.file != null)
+              .length
+              .toString(),
+        ),
+        if (widget.isPublic) ...[
+          const SizedBox(height: 12),
+          _buildConsentNotice(),
+        ],
+      ],
+    );
+  }
+
+  Widget _reviewRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 110,
+            child: Text(
+              label,
+              style: TextStyle(
+                color: Colors.grey[700],
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value.isEmpty ? '-' : value,
+              style: const TextStyle(fontSize: 13),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildConsentNotice() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'MeghaConnect will process your registered profile and appointment details for citizen service, appointment review, security, audit, and governance workflow purposes.',
+          style: TextStyle(fontSize: 13, height: 1.4),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Privacy: ${AppConfig.privacyPolicyUrl}\nTerms: ${AppConfig.termsUrl}',
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+        ),
+        CheckboxListTile(
+          contentPadding: EdgeInsets.zero,
+          value: _consentAccepted,
+          onChanged: (value) =>
+              setState(() => _consentAccepted = value ?? false),
+          title: const Text(
+            'I consent to appointment data processing for MeghaConnect services.',
+            style: TextStyle(fontSize: 13),
+          ),
+          controlAffinity: ListTileControlAffinity.leading,
+        ),
+      ],
+    );
+  }
+
+  Widget _visitorPickTile(
+    Map<String, dynamic> visitor, {
+    Widget? trailing,
+    VoidCallback? onTap,
+  }) {
+    final name = visitor['fullName']?.toString() ?? 'Visitor';
+    final phone = visitor['phoneNumber']?.toString() ?? '';
+    final epic = visitor['epicNumber']?.toString() ?? '';
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: const Color(0xFFE8EAF6),
+          foregroundColor: const Color(0xFF1A237E),
+          child: Text(name.isEmpty ? 'V' : name[0].toUpperCase()),
+        ),
+        title: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis),
+        subtitle: Text([
+          if (phone.isNotEmpty) phone,
+          if (epic.isNotEmpty) epic,
+        ].join(' · ')),
+        trailing: trailing ?? const Icon(Icons.chevron_right),
+        onTap: onTap,
+      ),
+    );
+  }
+
+  DropdownButtonFormField<String> _referenceDropdown({
+    String? keyName,
+    List<String>? values,
+    required String? value,
+    required String label,
+    required IconData icon,
+    required ValueChanged<String?> onChanged,
+    bool required = false,
+  }) {
+    final options = keyName == null
+        ? (values ?? const [])
+            .map((item) => _ReferenceOption(code: item, label: item))
+            .toList()
+        : _options(keyName);
+    final current =
+        options.any((option) => option.code == value) ? value : null;
+    return DropdownButtonFormField<String>(
+      value: current,
+      isExpanded: true,
+      decoration: InputDecoration(
+        labelText: options.isEmpty ? '$label (not loaded)' : label,
+        prefixIcon: Icon(icon),
+      ),
+      validator: required
+          ? (selected) => selected == null || selected.isEmpty
+              ? 'Please select $label'
+              : null
+          : null,
+      selectedItemBuilder: (context) => options
+          .map((option) => Text(
+                option.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ))
+          .toList(),
+      items: options
+          .map(
+            (option) => DropdownMenuItem(
+              value: option.code,
+              child: Text(
+                option.label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          )
+          .toList(),
+      onChanged: options.isEmpty ? null : onChanged,
     );
   }
 
@@ -899,13 +1528,6 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                     icon: const Icon(Icons.add),
                     label: const Text('New Entry'),
                     onPressed: _reset,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF1A237E),
-                      side: const BorderSide(color: Color(0xFF1A237E)),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8)),
-                    ),
                   ),
                 ),
                 if (!widget.isPublic) ...[
@@ -930,6 +1552,87 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
   }
 }
 
+class _ReferenceOption {
+  final String code;
+  final String label;
+
+  const _ReferenceOption({required this.code, required this.label});
+
+  factory _ReferenceOption.fromMap(Map<dynamic, dynamic> row) {
+    final code = row['code']?.toString() ??
+        row['id']?.toString() ??
+        row['value']?.toString() ??
+        '';
+    final label = row['value']?.toString() ??
+        row['label']?.toString() ??
+        row['name']?.toString() ??
+        code;
+    return _ReferenceOption(code: code, label: label);
+  }
+}
+
+class _AppointmentDocument {
+  final String type;
+  final String label;
+  final bool required;
+  final bool schemeOnly;
+  final bool organizationOnly;
+  PlatformFile? file;
+
+  _AppointmentDocument({
+    required this.type,
+    required this.label,
+    this.required = false,
+    this.schemeOnly = false,
+    this.organizationOnly = false,
+  });
+}
+
+List<_AppointmentDocument> _defaultDocuments() {
+  return [
+    _AppointmentDocument(
+      type: 'APPLICATION_LETTER',
+      label: 'Application Letter',
+      required: true,
+    ),
+    _AppointmentDocument(
+      type: 'PLANS_ESTIMATES',
+      label: 'Plans / Estimates',
+      schemeOnly: true,
+    ),
+    _AppointmentDocument(
+      type: 'BANK_DETAILS',
+      label: 'Bank Details',
+      schemeOnly: true,
+    ),
+    _AppointmentDocument(
+      type: 'MLA_APPROVAL_LETTER',
+      label: 'MLA Approval Letter',
+      schemeOnly: true,
+    ),
+    _AppointmentDocument(
+      type: 'ORG_REGISTRATION_CERTIFICATE',
+      label: 'Organisation Registration Certificate',
+      organizationOnly: true,
+    ),
+    _AppointmentDocument(
+      type: 'CM_CARE_ELIGIBILITY',
+      label: 'CM Care Eligibility',
+      schemeOnly: true,
+    ),
+    _AppointmentDocument(
+      type: 'CM_CARE_HOSPITAL',
+      label: 'CM Care Hospital Document',
+      schemeOnly: true,
+    ),
+    _AppointmentDocument(
+      type: 'CM_CARE_SUPPORTING',
+      label: 'CM Care Supporting Document',
+      schemeOnly: true,
+    ),
+  ];
+}
+
 class _VisitorSummary extends StatelessWidget {
   final Map<String, dynamic> visitor;
 
@@ -938,16 +1641,16 @@ class _VisitorSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final name = visitor['fullName']?.toString() ?? 'Visitor';
-    final phone = visitor['phoneNumber']?.toString() ?? '—';
-    final epic = visitor['epicNumber']?.toString() ?? '—';
-    final district = visitor['district']?.toString() ?? '—';
-    final constituency = visitor['constituency']?.toString() ?? '—';
+    final phone = visitor['phoneNumber']?.toString() ?? '-';
+    final epic = visitor['epicNumber']?.toString() ?? '-';
+    final district = visitor['district']?.toString() ?? '-';
+    final constituency = visitor['constituency']?.toString() ?? '-';
     final booth = visitor['booth']?.toString() ??
         visitor['boothVillage']?.toString() ??
-        '—';
+        '-';
     final part = visitor['partNumber']?.toString() ??
         visitor['pollingPartNo']?.toString() ??
-        '—';
+        '-';
     final kyc = visitor['kycStatus']?.toString() ??
         (visitor['kycVerified'] == true ? 'VERIFIED' : 'PENDING');
 
@@ -1039,7 +1742,7 @@ class _SummaryPill extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            value.isEmpty ? '—' : value,
+            value.isEmpty ? '-' : value,
             style: const TextStyle(
               color: Color(0xFF111827),
               fontSize: 12,

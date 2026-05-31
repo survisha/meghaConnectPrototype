@@ -272,6 +272,20 @@ class OfflineRepository {
     );
   }
 
+  Future<dynamic> cachedMasterData(String type) async {
+    final db = await _db;
+    final rows = await db.query(
+      'master_data',
+      where: 'dataType = ? OR localId = ?',
+      whereArgs: [type, type],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    final payload = rows.first['payloadJson']?.toString();
+    if (payload == null || payload.isEmpty) return null;
+    return jsonDecode(payload);
+  }
+
   Future<void> cacheAppointment(Map<String, dynamic> appointment) async {
     final db = await _db;
     final serverId = appointment['id']?.toString() ??

@@ -9,6 +9,7 @@ import '../core/i18n/app_i18n.dart';
 import '../widgets/megha_ui.dart';
 import 'new_appointment_screen.dart';
 import 'guest_appointment_screen.dart';
+import 'scheme_form_screen.dart';
 
 class _SummaryCard {
   final String label;
@@ -383,7 +384,7 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
                         icon: Icons.workspace_premium_outlined,
                         label: 'Apply for\nScheme',
                         color: _green,
-                        onTap: () => nav.navigateTo('schemes'),
+                        onTap: () => _openSchemeForm(context),
                       ),
                       const SizedBox(width: 8),
                       _QuickActionBtn(
@@ -452,7 +453,7 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
                     title: 'Scheme Applications',
                     icon: Icons.workspace_premium_outlined,
                     action: TextButton(
-                      onPressed: () => nav.navigateTo('schemes'),
+                      onPressed: () => _openSchemeForm(context),
                       child:
                           const Text('+ Apply', style: TextStyle(fontSize: 12)),
                     ),
@@ -560,6 +561,21 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
             foregroundColor: Colors.white,
           ),
           body: const GuestAppointmentScreen(),
+        ),
+      ),
+    );
+  }
+
+  void _openSchemeForm(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          appBar: AppBar(
+            title: const Text('Scheme Application'),
+            backgroundColor: MeghaColors.primary,
+            foregroundColor: Colors.white,
+          ),
+          body: const SchemeFormScreen(),
         ),
       ),
     );

@@ -92,7 +92,7 @@ final _allQuickActions = <_QuickAction>[
       Color(0xFF0F766E),
       [UserRole.ADMIN, UserRole.OSD, UserRole.DATA_ENTRY_OPERATOR]),
   const _QuickAction('Apply for Scheme', Icons.workspace_premium_outlined,
-      'schemes', Color(0xFFB45309), [UserRole.ADMIN, UserRole.OSD]),
+      'scheme_form', Color(0xFFB45309), [UserRole.ADMIN, UserRole.OSD]),
   const _QuickAction(
       'Identify Person', Icons.badge_outlined, 'identify', Color(0xFF0288D1), [
     UserRole.HCM,

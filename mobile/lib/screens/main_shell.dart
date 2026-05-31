@@ -12,6 +12,7 @@ import 'new_appointment_screen.dart';
 import 'user_management_screen.dart';
 import 'calendar_screen.dart';
 import 'schemes_screen.dart';
+import 'scheme_form_screen.dart';
 import 'public_identification_screen.dart';
 import 'reports_screen.dart';
 import 'pending_followups_screen.dart';
@@ -252,6 +253,8 @@ class _MainShellState extends State<MainShell> {
         return const ApproverWorkflowScreen();
       case 'schemes':
         return const SchemesScreen();
+      case 'scheme_form':
+        return const SchemeFormScreen();
       case 'grievances':
         return const GrievanceScreen();
       case 'identify':

@@ -12,12 +12,13 @@ import { apiErrorBodyMessage } from '../shared/api-error.util';
  */
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
+  const isPublicAuthRequest = isPublicAuthUrl(req.url);
 
   // Retrieve token from sessionStorage (set by AuthService on login)
   const token = sessionStorage.getItem('megha_token');
 
   // Clone request with Authorization header if token exists
-  const authReq = token
+  const authReq = token && !isPublicAuthRequest
     ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
     : req;
 
@@ -28,6 +29,18 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
       }
 
       if (error.status === 401) {
+        const fallback = isPublicAuthRequest
+          ? 'Authentication failed. Please check the details and try again.'
+          : 'Session expired. Please log in again.';
+        if (isPublicAuthRequest) {
+          if (error.error instanceof Blob) {
+            return from(error.error.text()).pipe(
+              mergeMap(text => throwError(() => new Error(apiErrorBodyMessage(text, fallback))))
+            );
+          }
+          return throwError(() => new Error(apiErrorBodyMessage(error.error, fallback)));
+        }
+
         const handleUnauthorized = () => {
           sessionStorage.removeItem('megha_user');
           sessionStorage.removeItem('megha_token');
@@ -35,7 +48,6 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
             router.navigate(['/login']);
           }
         };
-        const fallback = 'Session expired. Please log in again.';
         if (error.error instanceof Blob) {
           return from(error.error.text()).pipe(
             mergeMap(text => {
@@ -70,3 +82,13 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     })
   );
 };
+
+function isPublicAuthUrl(url: string): boolean {
+  return url.includes('/auth/login') ||
+    url.includes('/auth/validate-otp') ||
+    url.includes('/visitor/auth/check-mobile') ||
+    url.includes('/visitor/auth/check-registration') ||
+    url.includes('/visitor/auth/search-registrations') ||
+    url.includes('/visitor/auth/generate-otp') ||
+    url.includes('/visitor/auth/register');
+}

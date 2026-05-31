@@ -41,6 +41,8 @@ class _LoginScreenState extends State<LoginScreen>
   bool _otpSent = false;
   bool _requiresEpic = false;
   String? _epicForOtpLogin;
+  int? _selectedVisitorId;
+  List<Map<String, dynamic>> _registrationOptions = [];
 
   static const _primaryBlue = Color(0xFF1A237E);
   static const _accentBlue = Color(0xFF1565C0);
@@ -108,7 +110,41 @@ class _LoginScreenState extends State<LoginScreen>
     final i18n = context.read<AppI18n>();
 
     final phone = _phoneCtrl.text.trim();
-    final epicRaw = _requiresEpic ? _publicEpicCtrl.text.trim() : '';
+    if (!_otpSent && _selectedVisitorId == null) {
+      final search =
+          await ApiService.searchVisitorRegistrations(phoneNumber: phone);
+      if (!mounted) return;
+      final registrations = (search['registrations'] as List<dynamic>? ?? [])
+          .whereType<Map>()
+          .map((row) => Map<String, dynamic>.from(row))
+          .toList();
+      if (registrations.length > 1) {
+        setState(() {
+          _publicLoading = false;
+          _requiresEpic = true;
+          _registrationOptions = registrations;
+          _publicNotice =
+              'Multiple registrations found. Select the correct profile.';
+          _publicNoticeIsWarning = true;
+        });
+        return;
+      }
+      if (registrations.length == 1) {
+        _selectRegistration(registrations.first, notify: false);
+      } else if (search['success'] == true &&
+          (search['registered'] == false ||
+              ((search['registrationCount'] as num?)?.toInt() ?? 1) == 0)) {
+        setState(() {
+          _publicLoading = false;
+          _publicNotice = search['message']?.toString() ??
+              i18n.t('ACCOUNT_NOT_FOUND_REGISTER');
+          _publicNoticeIsWarning = false;
+        });
+        return;
+      }
+    }
+
+    final epicRaw = (_epicForOtpLogin ?? _publicEpicCtrl.text).trim();
     final epic = epicRaw.isNotEmpty ? epicRaw : null;
     final result = await ApiService.generateVisitorOtp(
       phoneNumber: phone,
@@ -127,6 +163,8 @@ class _LoginScreenState extends State<LoginScreen>
         _otpSent = true;
         _requiresEpic = false;
         _epicForOtpLogin = epic?.trim();
+        _selectedVisitorId = null;
+        _registrationOptions = [];
         _publicNotice = null;
         _publicNoticeIsWarning = false;
       });
@@ -149,6 +187,26 @@ class _LoginScreenState extends State<LoginScreen>
                 : i18n.t('ERROR_FAILED_SEND_OTP_TRY'));
         _publicNoticeIsWarning = requiresEpic;
       });
+    }
+  }
+
+  void _selectRegistration(Map<String, dynamic> visitor, {bool notify = true}) {
+    final id = (visitor['visitorId'] as num?)?.toInt() ??
+        (visitor['id'] as num?)?.toInt() ??
+        int.tryParse(visitor['visitorId']?.toString() ?? '');
+    final epic = visitor['epicNumber']?.toString().trim().toUpperCase() ?? '';
+    void apply() {
+      _selectedVisitorId = id;
+      _epicForOtpLogin = epic.isEmpty ? null : epic;
+      if (_epicForOtpLogin != null) _publicEpicCtrl.text = _epicForOtpLogin!;
+      _publicNotice = notify ? null : _publicNotice;
+      _publicNoticeIsWarning = false;
+    }
+
+    if (notify) {
+      setState(apply);
+    } else {
+      apply();
     }
   }
 
@@ -612,13 +670,14 @@ class _LoginScreenState extends State<LoginScreen>
   Widget _buildTabBar() {
     final i18n = context.watch<AppI18n>();
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
         color: Colors.grey[100],
         borderRadius: BorderRadius.circular(12),
       ),
+      clipBehavior: Clip.antiAlias,
       child: TabBar(
         controller: _tabController,
+        indicatorSize: TabBarIndicatorSize.tab,
         indicator: BoxDecoration(
           borderRadius: BorderRadius.circular(10),
           color: _primaryBlue,
@@ -798,6 +857,93 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
+  Widget _buildRegistrationPicker() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'Select your registration',
+          style: TextStyle(
+            color: _primaryBlue,
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 8),
+        ..._registrationOptions.map((visitor) {
+          final id = (visitor['visitorId'] ?? visitor['id'])?.toString() ?? '';
+          final selected =
+              id.isNotEmpty && id == _selectedVisitorId?.toString();
+          final name = visitor['fullName']?.toString() ?? 'Visitor';
+          final epic = (visitor['maskedEpicNumber'] ??
+                  _maskId(visitor['epicNumber']?.toString()))
+              .toString();
+          final district = visitor['district']?.toString() ?? '';
+          final constituency = visitor['constituency']?.toString() ?? '';
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: () => _selectRegistration(visitor),
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: selected ? const Color(0xFFE8EAF6) : Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: selected ? _primaryBlue : const Color(0xFFE5E7EB),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Radio<String>(
+                      value: id,
+                      groupValue: _selectedVisitorId?.toString(),
+                      onChanged: (_) => _selectRegistration(visitor),
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            [
+                              if (epic.isNotEmpty) 'EPIC $epic',
+                              if (district.isNotEmpty) district,
+                              if (constituency.isNotEmpty) constituency,
+                            ].join(' · '),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Color(0xFF64748B),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  String _maskId(String? value) {
+    final text = (value ?? '').trim();
+    if (text.length <= 4) return text;
+    return '****${text.substring(text.length - 4)}';
+  }
+
   // ignore: unused_element
   Widget _buildPublicTab() {
     final i18n = context.watch<AppI18n>();
@@ -849,6 +995,8 @@ class _LoginScreenState extends State<LoginScreen>
                     _requiresEpic = false;
                     _otpSent = false;
                     _epicForOtpLogin = null;
+                    _selectedVisitorId = null;
+                    _registrationOptions = [];
                     _publicNotice = null;
                     _publicNoticeIsWarning = false;
                   });
@@ -866,22 +1014,25 @@ class _LoginScreenState extends State<LoginScreen>
             ),
             if (_requiresEpic) ...[
               const SizedBox(height: 12),
-              TextFormField(
-                controller: _publicEpicCtrl,
-                decoration: InputDecoration(
-                  labelText: i18n.t('EPIC_NUMBER'),
-                  prefixIcon: const Icon(Icons.credit_card_outlined),
-                  hintText: i18n.t('ENTER_EPIC_NUMBER'),
+              if (_registrationOptions.isNotEmpty)
+                _buildRegistrationPicker()
+              else
+                TextFormField(
+                  controller: _publicEpicCtrl,
+                  decoration: InputDecoration(
+                    labelText: i18n.t('EPIC_NUMBER'),
+                    prefixIcon: const Icon(Icons.credit_card_outlined),
+                    hintText: i18n.t('ENTER_EPIC_NUMBER'),
+                  ),
+                  textCapitalization: TextCapitalization.characters,
+                  validator: (v) {
+                    if (!_requiresEpic) return null;
+                    if (v == null || v.trim().isEmpty) {
+                      return i18n.t('ENTER_EPIC_NUMBER');
+                    }
+                    return null;
+                  },
                 ),
-                textCapitalization: TextCapitalization.characters,
-                validator: (v) {
-                  if (!_requiresEpic) return null;
-                  if (v == null || v.trim().isEmpty) {
-                    return i18n.t('ENTER_EPIC_NUMBER');
-                  }
-                  return null;
-                },
-              ),
             ],
             if (_publicNotice != null) ...[
               const SizedBox(height: 12),

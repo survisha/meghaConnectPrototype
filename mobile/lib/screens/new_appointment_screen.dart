@@ -39,8 +39,19 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
   // Appointment Details
   String _agendaType = 'A4';
   String _location = 'SHILLONG';
+  bool _isOrganisation = false;
+  bool _includeSchemeDetails = false;
+  String _applicationType = 'NEW';
+  String _projectCategory = 'Community Infrastructure';
+  String _beneficiaryType = 'Community';
+  String _beneficiaryCount = '1-50';
   final _agendaBriefCtrl = TextEditingController();
   final _profileCtrl = TextEditingController();
+  final _schemeTypeCtrl = TextEditingController();
+  final _projectNameCtrl = TextEditingController();
+  final _estimatedCostCtrl = TextEditingController();
+  final _communityContributionCtrl = TextEditingController();
+  final _justificationCtrl = TextEditingController();
 
   bool _submitted = false;
   bool _loading = false;
@@ -55,6 +66,22 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
 
   static const _agendaTypes = ['A1', 'A2', 'A3', 'A4', 'B1', 'B2'];
   static const _locations = ['SHILLONG', 'TURA', 'DELHI', 'OTHERS'];
+  static const _applicationTypes = ['NEW', 'REMINDER'];
+  static const _projectCategories = [
+    'Community Infrastructure',
+    'Education',
+    'Health',
+    'Livelihood',
+    'Sports',
+    'Other',
+  ];
+  static const _beneficiaryTypes = [
+    'Individual',
+    'Community',
+    'Institution',
+    'Village',
+  ];
+  static const _beneficiaryCounts = ['1-50', '51-100', '101-500', '500+'];
 
   static const _agendaDescriptions = {
     'A1': 'Cabinet/Flight/State Function',
@@ -86,6 +113,11 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
     _searchReferenceCtrl.dispose();
     _agendaBriefCtrl.dispose();
     _profileCtrl.dispose();
+    _schemeTypeCtrl.dispose();
+    _projectNameCtrl.dispose();
+    _estimatedCostCtrl.dispose();
+    _communityContributionCtrl.dispose();
+    _justificationCtrl.dispose();
     super.dispose();
   }
 
@@ -154,6 +186,19 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
       'agendaBrief': _agendaBriefCtrl.text.trim(),
       'requestedLocation': _location,
       'isWalkIn': widget.isWalkIn,
+      'isOrganisation': _isOrganisation,
+      'schemeType': _includeSchemeDetails ? _schemeTypeCtrl.text.trim() : '',
+      'applicationType': _includeSchemeDetails ? _applicationType : '',
+      'projectCategory': _includeSchemeDetails ? _projectCategory : '',
+      'projectName': _includeSchemeDetails ? _projectNameCtrl.text.trim() : '',
+      'beneficiaryType': _includeSchemeDetails ? _beneficiaryType : '',
+      'beneficiaryCount': _includeSchemeDetails ? _beneficiaryCount : '',
+      'estimatedCost':
+          _includeSchemeDetails ? _estimatedCostCtrl.text.trim() : '',
+      'communityContribution':
+          _includeSchemeDetails ? _communityContributionCtrl.text.trim() : '',
+      'justification':
+          _includeSchemeDetails ? _justificationCtrl.text.trim() : '',
     };
     if (widget.isPublic) {
       payload.addAll({
@@ -238,9 +283,20 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
     _searchReferenceCtrl.clear();
     _agendaBriefCtrl.clear();
     _profileCtrl.clear();
+    _schemeTypeCtrl.clear();
+    _projectNameCtrl.clear();
+    _estimatedCostCtrl.clear();
+    _communityContributionCtrl.clear();
+    _justificationCtrl.clear();
     setState(() {
       _agendaType = 'A4';
       _location = 'SHILLONG';
+      _isOrganisation = false;
+      _includeSchemeDetails = false;
+      _applicationType = 'NEW';
+      _projectCategory = 'Community Infrastructure';
+      _beneficiaryType = 'Community';
+      _beneficiaryCount = '1-50';
       _submitted = false;
       _submittedAppId = null;
       _submittedToken = null;
@@ -581,30 +637,20 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        DropdownButtonFormField<String>(
+        _expandedDropdown(
           value: _agendaType,
-          decoration: const InputDecoration(
-            labelText: 'Agenda Type *',
-            prefixIcon: Icon(Icons.category_outlined),
-          ),
-          items: _agendaTypes.map((t) {
-            return DropdownMenuItem(
-              value: t,
-              child: Text('$t – ${_agendaDescriptions[t]}'),
-            );
-          }).toList(),
+          label: 'Agenda Type *',
+          icon: Icons.category_outlined,
+          values: _agendaTypes,
+          labelFor: (t) => '$t - ${_agendaDescriptions[t]}',
           onChanged: (v) => setState(() => _agendaType = v ?? _agendaType),
         ),
         const SizedBox(height: 12),
-        DropdownButtonFormField<String>(
+        _expandedDropdown(
           value: _location,
-          decoration: const InputDecoration(
-            labelText: 'Preferred Location *',
-            prefixIcon: Icon(Icons.place_outlined),
-          ),
-          items: _locations
-              .map((l) => DropdownMenuItem(value: l, child: Text(l)))
-              .toList(),
+          label: 'Preferred Location *',
+          icon: Icons.place_outlined,
+          values: _locations,
           onChanged: (v) => setState(() => _location = v ?? _location),
         ),
         const SizedBox(height: 12),
@@ -633,7 +679,143 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
           ),
           textInputAction: TextInputAction.done,
         ),
+        const SizedBox(height: 12),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          value: _isOrganisation,
+          onChanged: (value) => setState(() => _isOrganisation = value),
+          title: const Text('Applicant represents an organisation'),
+          subtitle: const Text('Required when applying on behalf of a group.'),
+        ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          value: _includeSchemeDetails,
+          onChanged: (value) => setState(() => _includeSchemeDetails = value),
+          title: const Text('Add CM scheme / project details'),
+          subtitle:
+              const Text('Skip when this appointment is not for a scheme.'),
+        ),
+        if (_includeSchemeDetails) ...[
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _schemeTypeCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Scheme Type',
+              prefixIcon: Icon(Icons.workspace_premium_outlined),
+            ),
+          ),
+          const SizedBox(height: 12),
+          _expandedDropdown(
+            value: _applicationType,
+            label: 'Application Type',
+            icon: Icons.assignment_outlined,
+            values: _applicationTypes,
+            onChanged: (v) =>
+                setState(() => _applicationType = v ?? _applicationType),
+          ),
+          const SizedBox(height: 12),
+          _expandedDropdown(
+            value: _projectCategory,
+            label: 'Project Category',
+            icon: Icons.category_outlined,
+            values: _projectCategories,
+            onChanged: (v) =>
+                setState(() => _projectCategory = v ?? _projectCategory),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _projectNameCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Project Name',
+              prefixIcon: Icon(Icons.drive_file_rename_outline),
+            ),
+          ),
+          const SizedBox(height: 12),
+          _expandedDropdown(
+            value: _beneficiaryType,
+            label: 'Beneficiary Type',
+            icon: Icons.groups_outlined,
+            values: _beneficiaryTypes,
+            onChanged: (v) =>
+                setState(() => _beneficiaryType = v ?? _beneficiaryType),
+          ),
+          const SizedBox(height: 12),
+          _expandedDropdown(
+            value: _beneficiaryCount,
+            label: 'Beneficiary Count',
+            icon: Icons.format_list_numbered_outlined,
+            values: _beneficiaryCounts,
+            onChanged: (v) =>
+                setState(() => _beneficiaryCount = v ?? _beneficiaryCount),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _estimatedCostCtrl,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Estimated Cost',
+              prefixIcon: Icon(Icons.currency_rupee),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _communityContributionCtrl,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Community Contribution',
+              prefixIcon: Icon(Icons.savings_outlined),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _justificationCtrl,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              labelText: 'Project Justification',
+              prefixIcon: Icon(Icons.fact_check_outlined),
+              alignLabelWithHint: true,
+            ),
+          ),
+        ],
       ],
+    );
+  }
+
+  DropdownButtonFormField<String> _expandedDropdown({
+    required String value,
+    required String label,
+    required IconData icon,
+    required List<String> values,
+    String Function(String value)? labelFor,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return DropdownButtonFormField<String>(
+      value: values.contains(value) ? value : null,
+      isExpanded: true,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon),
+      ),
+      selectedItemBuilder: (context) => values
+          .map(
+            (item) => Text(
+              labelFor?.call(item) ?? item,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          )
+          .toList(),
+      items: values.map((item) {
+        return DropdownMenuItem(
+          value: item,
+          child: Text(
+            labelFor?.call(item) ?? item,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        );
+      }).toList(),
+      onChanged: onChanged,
     );
   }
 

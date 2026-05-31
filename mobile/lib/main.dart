@@ -102,11 +102,161 @@ class MeghaConnectApp extends StatelessWidget {
       ),
       home: Consumer<AuthService>(
         builder: (context, auth, _) {
-          if (auth.isLoggedIn) {
-            return const MainShell();
-          }
-          return const LoginScreen();
+          return _WelcomeGate(
+            child: auth.isLoggedIn ? const MainShell() : const LoginScreen(),
+          );
         },
+      ),
+    );
+  }
+}
+
+class _WelcomeGate extends StatefulWidget {
+  final Widget child;
+
+  const _WelcomeGate({required this.child});
+
+  @override
+  State<_WelcomeGate> createState() => _WelcomeGateState();
+}
+
+class _WelcomeGateState extends State<_WelcomeGate> {
+  bool _showWelcome = true;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(milliseconds: 5800), () {
+      if (mounted) setState(() => _showWelcome = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_showWelcome) return widget.child;
+    return const _WelcomeScreen();
+  }
+}
+
+class _WelcomeScreen extends StatefulWidget {
+  const _WelcomeScreen();
+
+  @override
+  State<_WelcomeScreen> createState() => _WelcomeScreenState();
+}
+
+class _WelcomeScreenState extends State<_WelcomeScreen> {
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted) setState(() => _loading = true);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF4F6FB),
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ClipOval(
+                  child: Image.asset(
+                    'assets/CM_Profile_Picture.jpg',
+                    width: 94,
+                    height: 94,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  "Hon'ble Chief Minister",
+                  style: TextStyle(
+                    color: Color(0xFF172554),
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const Text(
+                  'Government of Meghalaya',
+                  style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
+                ),
+                const SizedBox(height: 22),
+                Container(
+                  width: double.infinity,
+                  constraints: const BoxConstraints(maxWidth: 380),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: const Color(0xFFDBEAFE)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withAlpha(24),
+                        blurRadius: 32,
+                        offset: const Offset(0, 16),
+                      ),
+                    ],
+                  ),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Opacity(
+                        opacity: 0.1,
+                        child: Image.asset(
+                          'assets/state_map.png',
+                          height: 210,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Image.asset(
+                            'assets/logo.png',
+                            width: 78,
+                            height: 78,
+                            fit: BoxFit.contain,
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'MeghaConnect',
+                            style: TextStyle(
+                              color: Color(0xFF1A237E),
+                              fontSize: 34,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          const Text(
+                            "Chief Minister's Office citizen service platform",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Color(0xFF475569)),
+                          ),
+                          if (_loading) ...[
+                            const SizedBox(height: 20),
+                            const SizedBox(
+                              width: 34,
+                              height: 34,
+                              child: CircularProgressIndicator(strokeWidth: 3),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

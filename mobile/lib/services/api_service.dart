@@ -369,6 +369,41 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, dynamic>> searchVisitorRegistrations({
+    required String phoneNumber,
+  }) async {
+    try {
+      final resp = await http
+          .post(
+            _u('/visitor/auth/search-registrations'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'phoneNumber': phoneNumber}),
+          )
+          .timeout(const Duration(seconds: 20));
+
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        final decoded = jsonDecode(resp.body);
+        if (decoded is Map<String, dynamic>) return decoded;
+      }
+
+      return {
+        'success': false,
+        'registrations': [],
+        'message': _messageFromResponse(
+          resp,
+          'Unable to load registrations for this mobile number.',
+        ),
+      };
+    } catch (error, stackTrace) {
+      _logError('searchVisitorRegistrations', error, stackTrace);
+      return {
+        'success': false,
+        'registrations': [],
+        'message': 'Network issue. Please check your connection and try again.',
+      };
+    }
+  }
+
   static Future<Map<String, dynamic>> generateAadhaarQr() async {
     try {
       final resp = await http

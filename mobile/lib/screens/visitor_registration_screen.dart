@@ -57,6 +57,7 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
   bool _loading = false;
   bool _submitted = false;
   bool _photoCaptured = false;
+  bool _otpVerified = false;
   bool _outsideMeghalaya = false;
   bool _consentAccepted = false;
   String? _error;
@@ -64,6 +65,7 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
   String? _success;
   String? _qrDataUri;
   String? _aadhaarTxnId;
+  String? _verifiedMobileNumber;
   String? _livePhotoDataUri;
   String? _livePhotoPath;
   int _kycConfidence = 0;
@@ -77,15 +79,36 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
     MeghaStepData('Complete', Icons.verified_outlined),
   ];
 
-  static const _designations = [
-    'Citizen',
-    'Student',
-    'Farmer',
-    'Business Owner',
-    'Government Employee',
-    'Community Leader',
-    'Other',
-  ];
+  List<String> _designations = [];
+  List<String> _agendaTypes = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadReferenceData();
+  }
+
+  Future<void> _loadReferenceData() async {
+    final results = await Future.wait([
+      ApiService.getReferenceData('CITIZEN_DESIGNATION'),
+      ApiService.getReferenceData('CM_AGENDA_MEETING'),
+    ]);
+    if (!mounted) return;
+    setState(() {
+      _designations = results[0]
+          .map((row) => row['value'] ?? row['code'] ?? '')
+          .where((value) => value.isNotEmpty)
+          .toList();
+      _agendaTypes = results[1]
+          .map((row) => row['value'] ?? row['code'] ?? '')
+          .where((value) => value.isNotEmpty)
+          .toList();
+      if (_agendaTypes.isNotEmpty &&
+          !_agendaTypes.contains(_agendaTypeCtrl.text)) {
+        _agendaTypeCtrl.text = _agendaTypes.first;
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -132,23 +155,77 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
       _qrDataUri = null;
       _aadhaarTxnId = null;
       _otpCtrl.clear();
+      _otpVerified = false;
+      _verifiedMobileNumber = null;
+      _photoCaptured = false;
+      _livePhotoDataUri = null;
+      _livePhotoPath = null;
+      _epicCtrl.clear();
+      _aadhaarCtrl.clear();
       if (value == 'NONE') {
         _kycConfidence = 0;
+      } else {
+        _visitorNameCtrl.clear();
       }
       _clearMessages();
     });
   }
 
-  void _continueWithoutKyc() {
+  Future<void> _startNoIdFlow() async {
+    final i18n = context.read<AppI18n>();
     if (!_idFormKey.currentState!.validate()) return;
+    if (context.read<ConnectivityService>().isOffline) {
+      setState(() {
+        _fullNameCtrl.text = _visitorNameCtrl.text.trim();
+        _step = 2;
+        _kycConfidence = 0;
+        _warning =
+            'No internet connection. Visitor will be saved as offline draft and validated during sync.';
+      });
+      return;
+    }
+
     setState(() {
+      _loading = true;
+      _clearMessages();
       _fullNameCtrl.text = _visitorNameCtrl.text.trim();
-      _step = 2;
-      _kycConfidence = 0;
-      _success = null;
-      _error = null;
+    });
+
+    final check = await ApiService.checkVisitorRegistration(
+      phoneNumber: _phoneCtrl.text.trim(),
+    );
+    if (!mounted) return;
+    if (check['epicMobileExists'] == true ||
+        check['epicExists'] == true ||
+        check['alreadyRegistered'] == true) {
+      setState(() {
+        _loading = false;
+        _error =
+            check['message']?.toString() ?? i18n.t('USER_ALREADY_REGISTERED');
+      });
+      return;
+    }
+    if (check['mobileExists'] == true) {
       _warning =
-          'KYC pending. Complete manual details and capture visitor photo.';
+          check['message']?.toString() ?? i18n.t('WARNING_MOBILE_EXISTS');
+    }
+
+    final otpResult = await ApiService.generateVisitorOtp(
+      phoneNumber: _phoneCtrl.text.trim(),
+      registrationFlow: true,
+    );
+    if (!mounted) return;
+    setState(() {
+      _loading = false;
+      if (otpResult['success'] == true) {
+        _otpVerified = false;
+        _step = 1;
+        _kycConfidence = 0;
+        _success = i18n.t('OTP_SENT_SUCCESS');
+      } else {
+        _error = otpResult['message']?.toString() ??
+            i18n.t('ERROR_FAILED_GENERATE_OTP_TRY');
+      }
     });
   }
 
@@ -225,6 +302,7 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
     setState(() {
       _loading = false;
       if (otpResult['success'] == true) {
+        _otpVerified = false;
         _step = 1;
         _success = i18n.t('OTP_SENT_SUCCESS');
       } else {
@@ -266,11 +344,9 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
       _clearMessages();
     });
 
-    final result = await ApiService.verifyVisitorRegistrationOtp(
-      idNumber: _epicCtrl.text.trim().toUpperCase(),
+    final result = await ApiService.validateRegistrationOtp(
       otp: _otpCtrl.text.trim(),
       phoneNumber: _phoneCtrl.text.trim(),
-      idType: _idType,
     );
 
     if (!mounted) return;
@@ -280,11 +356,49 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
       if (success) {
         final demo = result['demographics'];
         if (demo is Map<String, dynamic>) _populateFromDemographics(demo);
+        _otpVerified = true;
+        _verifiedMobileNumber = _phoneCtrl.text.trim();
+        if (_idType == 'NONE') {
+          _fullNameCtrl.text = _visitorNameCtrl.text.trim();
+          _kycConfidence = 0;
+        }
         _step = 2;
         _success = i18n.t('CONTINUE_WITH_PHOTO_CAPTURE');
       } else {
         _error = (result['message'] as String?) ??
             i18n.t('ERROR_OTP_VERIFICATION_FAILED');
+      }
+    });
+  }
+
+  Future<void> _resendOtp() async {
+    final i18n = context.read<AppI18n>();
+    final phone = _phoneCtrl.text.trim();
+    if (phone.length != 10) {
+      setState(() => _error = i18n.t('ERROR_VALID_10_DIGIT_MOBILE'));
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _otpCtrl.clear();
+      _otpVerified = false;
+      _verifiedMobileNumber = null;
+      _clearMessages();
+    });
+    final result = await ApiService.generateVisitorOtp(
+      phoneNumber: phone,
+      epicNumber:
+          _idType == 'EPIC' ? _epicCtrl.text.trim().toUpperCase() : null,
+      registrationFlow: true,
+    );
+    if (!mounted) return;
+    setState(() {
+      _loading = false;
+      if (result['success'] == true) {
+        _success = i18n.t('OTP_SENT_SUCCESS');
+      } else {
+        _error = result['message']?.toString() ??
+            i18n.t('ERROR_FAILED_GENERATE_OTP_TRY');
       }
     });
   }
@@ -366,6 +480,12 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
       setState(() => _error = i18n.t('PLEASE_CAPTURE_LIVE_PHOTO'));
       return;
     }
+    if ((_idType == 'EPIC' || _idType == 'NONE') &&
+        (!_otpVerified || _verifiedMobileNumber != _phoneCtrl.text.trim())) {
+      setState(
+          () => _error = 'Please verify the mobile OTP before registration.');
+      return;
+    }
     if (!_consentAccepted) {
       setState(() => _error =
           'Please provide consent for identity, photo, document, and appointment data processing.');
@@ -397,9 +517,11 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
       'location': _outsideMeghalaya ? 'NA' : district,
       'email': _emailCtrl.text.trim(),
       'kycType': _idType,
+      'kycProvider': _idType,
       'kycStatus': _idType == 'NONE'
           ? 'KYC_PENDING'
           : (_idType == 'AADHAAR' ? 'PHOTO_MATCHED' : 'DEMOGRAPHIC_MATCHED'),
+      'allowKycPending': _idType == 'NONE',
       'livePhoto': _livePhotoDataUri,
       'livePhotoBase64': _livePhotoDataUri,
       'aadhaarClientTxnId': _aadhaarTxnId,
@@ -726,7 +848,7 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
                 const ButtonSegment(
                   value: 'NONE',
                   icon: Icon(Icons.edit_note_outlined),
-                  label: Text('None'),
+                  label: Text('No ID'),
                 ),
               ],
               selected: {_idType},
@@ -748,7 +870,8 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
                 ),
                 validator: (v) {
                   if (_idType != 'EPIC') return null;
-                  if (v == null || v.trim().length < 6) {
+                  final epic = (v ?? '').trim().toUpperCase();
+                  if (!RegExp(r'^[A-Z]{3}[0-9]{7}$').hasMatch(epic)) {
                     return i18n.t('ENTER_EPIC_NUMBER');
                   }
                   return null;
@@ -847,7 +970,7 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
                 controller: _visitorNameCtrl,
                 textCapitalization: TextCapitalization.words,
                 decoration: const InputDecoration(
-                  labelText: 'Visitor Name *',
+                  labelText: 'Full Name *',
                   prefixIcon: Icon(Icons.person_outline),
                 ),
                 validator: (v) {
@@ -881,14 +1004,14 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
               ),
               const SizedBox(height: 12),
               MeghaStatusBanner.warning(
-                'No ID selected. Visitor will be saved with KYC pending status.',
+                'No ID registration skips EPIC/Aadhaar verification and keeps KYC status as Pending.',
               ),
               const SizedBox(height: 18),
               _PrimaryProgressButton(
                 loading: _loading,
-                icon: Icons.arrow_forward,
-                label: 'Continue',
-                onPressed: _continueWithoutKyc,
+                icon: Icons.send_outlined,
+                label: i18n.t('GENERATE_OTP'),
+                onPressed: _startNoIdFlow,
               ),
             ],
           ],
@@ -997,6 +1120,12 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
               },
             ),
             const SizedBox(height: 16),
+            TextButton.icon(
+              onPressed: _loading ? null : _resendOtp,
+              icon: const Icon(Icons.refresh),
+              label: Text(i18n.t('RESEND_OTP')),
+            ),
+            const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
@@ -1181,8 +1310,9 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value:
-                  _designationCtrl.text.isEmpty ? null : _designationCtrl.text,
+              value: _designations.contains(_designationCtrl.text)
+                  ? _designationCtrl.text
+                  : null,
               decoration:
                   InputDecoration(labelText: '${i18n.t('DESIGNATION')} *'),
               items: [
@@ -1271,14 +1401,30 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
               decoration: InputDecoration(labelText: i18n.t('EMAIL_OPTIONAL')),
             ),
             const SizedBox(height: 12),
-            TextFormField(
-              controller: _agendaTypeCtrl,
-              textCapitalization: TextCapitalization.characters,
+            DropdownButtonFormField<String>(
+              value: _agendaTypes.contains(_agendaTypeCtrl.text)
+                  ? _agendaTypeCtrl.text
+                  : null,
+              isExpanded: true,
               decoration: const InputDecoration(
                 labelText: 'Agenda Type',
                 prefixIcon: Icon(Icons.category_outlined),
-                helperText: 'Default for DEO walk-in is B2.',
               ),
+              items: [
+                for (final item in _agendaTypes)
+                  DropdownMenuItem(
+                    value: item,
+                    child: Text(
+                      item,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+              ],
+              onChanged: (value) {
+                if (value == null) return;
+                _agendaTypeCtrl.text = value;
+              },
             ),
             const SizedBox(height: 12),
             TextFormField(

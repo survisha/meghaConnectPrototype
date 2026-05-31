@@ -154,7 +154,7 @@ class ApiService {
       final body = <String, dynamic>{'phoneNumber': phoneNumber};
       if (registrationFlow) {
         body['purpose'] = 'REGISTRATION';
-        body['registrationFlow'] = true;
+        body['registrationFlow'] = 'true';
       }
       final epic = (epicNumber ?? '').trim();
       if (epic.isNotEmpty) body['epicNumber'] = epic.toUpperCase();
@@ -328,6 +328,54 @@ class ApiService {
       };
     } catch (error, stackTrace) {
       _logError('verifyVisitorRegistrationOtp', error, stackTrace);
+      return {
+        'success': false,
+        'code': 'NETWORK_ERROR',
+        'message': 'Network issue. Please check your connection and try again.',
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> validateRegistrationOtp({
+    required String phoneNumber,
+    required String otp,
+  }) async {
+    try {
+      final resp = await http
+          .post(
+            _u('/auth/validate-otp'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'otp': otp,
+              'phoneNumber': phoneNumber,
+              'purpose': 'REGISTRATION',
+              'registrationFlow': true,
+            }),
+          )
+          .timeout(const Duration(seconds: 20));
+
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        final decoded = jsonDecode(resp.body);
+        if (decoded is Map<String, dynamic>) return decoded;
+        return {
+          'success': false,
+          'code': 'UNEXPECTED_RESPONSE',
+          'message': 'Unexpected response. Please try again.',
+        };
+      }
+
+      Map<String, dynamic>? decoded;
+      try {
+        final body = jsonDecode(resp.body);
+        if (body is Map<String, dynamic>) decoded = body;
+      } catch (_) {}
+      return {
+        'success': false,
+        'code': 'HTTP_${resp.statusCode}',
+        'message': _otpFailureMessage(response: resp, body: decoded),
+      };
+    } catch (error, stackTrace) {
+      _logError('validateRegistrationOtp', error, stackTrace);
       return {
         'success': false,
         'code': 'NETWORK_ERROR',

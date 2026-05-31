@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:local_auth/local_auth.dart';
 import '../models/user.dart';
 import 'api_service.dart';
 import '../core/security/secure_app_storage.dart';
@@ -14,6 +15,7 @@ class AuthService extends ChangeNotifier {
 
   final ConnectivityService? _connectivity;
   final OfflineRepository _repository;
+  final LocalAuthentication _localAuth = LocalAuthentication();
   AuthUser? _user;
   String? _lastError;
   bool _offlineMode = false;
@@ -76,6 +78,7 @@ class AuthService extends ChangeNotifier {
         username: uname, fullName: fullName, role: role, visitorId: visitorId);
 
     await SecureAppStorage.writeUserJson(jsonEncode(_user!.toJson()));
+    await _cacheOfflineSession(_user!, token: token);
     await _repository.saveSession(_user!.toJson());
     _offlineMode = false;
 
@@ -84,7 +87,7 @@ class AuthService extends ChangeNotifier {
   }
 
   /// Logs in a PUBLIC/Citizen user using the JWT returned from
-  /// `/api/v1/visitor/auth/validate-otp`.
+  /// `/api/v1/auth/validate-otp`.
   Future<bool> publicLoginWithVisitorJwt({
     required String phoneNumber,
     required String token,
@@ -101,11 +104,111 @@ class AuthService extends ChangeNotifier {
     );
 
     await SecureAppStorage.writeUserJson(jsonEncode(_user!.toJson()));
+    await _cacheOfflineSession(_user!, token: token);
     await _repository.saveSession(_user!.toJson());
     _offlineMode = false;
 
     notifyListeners();
     return true;
+  }
+
+  Future<bool> loginWithCachedDeviceSession({String? username}) async {
+    _lastError = null;
+    final raw = await SecureAppStorage.readOfflineSessionJson();
+    if (raw == null || raw.isEmpty) {
+      _lastError = 'First login requires internet connection.';
+      return false;
+    }
+
+    Map<String, dynamic> session;
+    try {
+      session = jsonDecode(raw) as Map<String, dynamic>;
+    } catch (_) {
+      _lastError = 'Unexpected response. Please login online once again.';
+      return false;
+    }
+
+    if (session['offlineLoginEnabled'] != true) {
+      _lastError = 'Offline login not available on this device.';
+      return false;
+    }
+    final requestedUsername = username?.trim();
+    final cachedUsername = session['username']?.toString();
+    if (requestedUsername != null &&
+        requestedUsername.isNotEmpty &&
+        cachedUsername != null &&
+        cachedUsername.isNotEmpty &&
+        requestedUsername.toLowerCase() != cachedUsername.toLowerCase()) {
+      _lastError = 'No cached session found for this username.';
+      return false;
+    }
+    final expiresAt =
+        DateTime.tryParse(session['offlineExpiresAt']?.toString() ?? '');
+    if (expiresAt == null || DateTime.now().toUtc().isAfter(expiresAt)) {
+      _lastError = 'Cached session expired. Please login online once.';
+      return false;
+    }
+
+    final ok = await _authenticateDevice();
+    if (!ok) {
+      _lastError = 'Biometric authentication failed.';
+      return false;
+    }
+
+    final userJson = session['user'];
+    if (userJson is! Map<String, dynamic>) {
+      _lastError = 'Unexpected response. Please login online once again.';
+      return false;
+    }
+
+    try {
+      _user = AuthUser.fromJson(userJson);
+      final cachedToken = session['token']?.toString();
+      if (cachedToken != null && cachedToken.isNotEmpty) {
+        await ApiService.setToken(cachedToken);
+      }
+      await SecureAppStorage.writeUserJson(jsonEncode(_user!.toJson()));
+      await _repository.saveSession(_user!.toJson());
+      _offlineMode = true;
+      notifyListeners();
+      return true;
+    } catch (_) {
+      _lastError = 'Unexpected response. Please login online once again.';
+      return false;
+    }
+  }
+
+  Future<void> _cacheOfflineSession(AuthUser user, {String? token}) async {
+    final now = DateTime.now().toUtc();
+    final session = {
+      'offlineLoginEnabled': true,
+      'userId': user.visitorId?.toString() ?? user.username,
+      'username': user.username,
+      'role': user.role.name,
+      'displayName': user.fullName,
+      'lastSuccessfulLoginAt': now.toIso8601String(),
+      'offlineExpiresAt': now.add(const Duration(days: 7)).toIso8601String(),
+      'token': token,
+      'user': user.toJson(),
+    };
+    await SecureAppStorage.writeOfflineSessionJson(jsonEncode(session));
+  }
+
+  Future<bool> _authenticateDevice() async {
+    try {
+      final supported = await _localAuth.isDeviceSupported();
+      final canCheck = await _localAuth.canCheckBiometrics;
+      if (!supported && !canCheck) return true;
+      return _localAuth.authenticate(
+        localizedReason: 'Unlock your saved MeghaConnect session.',
+        options: const AuthenticationOptions(
+          biometricOnly: false,
+          stickyAuth: true,
+        ),
+      );
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<void> logout() async {

@@ -69,7 +69,10 @@ class _LoginScreenState extends State<LoginScreen>
       _staffError = null;
     });
     final auth = context.read<AuthService>();
-    final ok = await auth.login(_usernameCtrl.text, _passwordCtrl.text);
+    final offline = context.read<ConnectivityService>().isOffline;
+    final ok = offline
+        ? await auth.loginWithCachedDeviceSession(username: _usernameCtrl.text)
+        : await auth.login(_usernameCtrl.text, _passwordCtrl.text);
     if (!mounted) return;
     setState(() => _staffLoading = false);
     if (!ok) {
@@ -77,6 +80,22 @@ class _LoginScreenState extends State<LoginScreen>
           _staffError = auth.lastError ?? 'Invalid username or password.');
     } else {
       context.read<SyncService>().syncNow();
+    }
+  }
+
+  Future<void> _offlineSessionLogin() async {
+    setState(() {
+      _staffLoading = true;
+      _staffError = null;
+    });
+    final auth = context.read<AuthService>();
+    final ok =
+        await auth.loginWithCachedDeviceSession(username: _usernameCtrl.text);
+    if (!mounted) return;
+    setState(() => _staffLoading = false);
+    if (!ok) {
+      setState(
+          () => _staffError = auth.lastError ?? 'Offline login not available.');
     }
   }
 
@@ -374,6 +393,13 @@ class _LoginScreenState extends State<LoginScreen>
               _buildError(_staffError!),
             ],
             const SizedBox(height: 18),
+            if (context.watch<ConnectivityService>().isOffline) ...[
+              _buildNotice(
+                'You are offline. Login using saved device session.',
+                warning: true,
+              ),
+              const SizedBox(height: 12),
+            ],
             SizedBox(
               height: 50,
               child: ElevatedButton(
@@ -391,6 +417,14 @@ class _LoginScreenState extends State<LoginScreen>
                         style: const TextStyle(fontSize: 16)),
               ),
             ),
+            if (context.watch<ConnectivityService>().isOffline) ...[
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: _staffLoading ? null : _offlineSessionLogin,
+                icon: const Icon(Icons.fingerprint),
+                label: const Text('Use Saved Device Session'),
+              ),
+            ],
             const SizedBox(height: 24),
             _buildDemoButtons(),
             const SizedBox(height: 12),

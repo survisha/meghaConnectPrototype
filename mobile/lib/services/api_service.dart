@@ -46,15 +46,42 @@ class ApiService {
       final decoded = jsonDecode(response.body);
       if (decoded is Map<String, dynamic>) {
         final code = decoded['code']?.toString().toUpperCase() ?? '';
+        final message = decoded['message']?.toString().trim();
         if (code.contains('UNAUTHORIZED') || response.statusCode == 401) {
           return 'Your session has expired. Please login again.';
         }
         if (response.statusCode == 403) {
           return 'You do not have permission to perform this action.';
         }
+        if (message != null && message.isNotEmpty) return message;
       }
     } catch (_) {}
     return fallback;
+  }
+
+  static String _otpFailureMessage({
+    required http.Response response,
+    Map<String, dynamic>? body,
+  }) {
+    final code = body?['code']?.toString().toUpperCase() ?? '';
+    final message = body?['message']?.toString().toLowerCase() ?? '';
+
+    if (code.contains('EXPIRED') || message.contains('expired')) {
+      return 'OTP expired. Please request a new OTP.';
+    }
+    if (code.contains('INVALID') ||
+        code.contains('VALIDATION') ||
+        message.contains('invalid otp') ||
+        message.contains('wrong otp')) {
+      return 'Invalid OTP. Please try again.';
+    }
+    if (response.statusCode >= 500) {
+      return 'Server error. Please try again later.';
+    }
+    if (response.statusCode == 408 || response.statusCode == 429) {
+      return 'OTP validation is temporarily unavailable. Please try again.';
+    }
+    return 'Unexpected response. Please try again.';
   }
 
   static void _logError(String action, Object error, [StackTrace? stackTrace]) {
@@ -168,33 +195,46 @@ class ApiService {
   }) async {
     try {
       final body = <String, dynamic>{'phoneNumber': phoneNumber, 'otp': otp};
+      body['purpose'] = 'LOGIN';
+      body['registrationFlow'] = false;
       final epic = (epicNumber ?? '').trim();
       if (epic.isNotEmpty) body['epicNumber'] = epic.toUpperCase();
       final resp = await http
           .post(
-            _u('/visitor/auth/validate-otp'),
+            _u('/auth/validate-otp'),
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode(body),
           )
           .timeout(const Duration(seconds: 20));
 
       if (resp.statusCode == 200) {
-        final data = jsonDecode(resp.body) as Map<String, dynamic>;
-        return data;
+        final decoded = jsonDecode(resp.body);
+        if (decoded is Map<String, dynamic>) return decoded;
+        return {
+          'success': false,
+          'code': 'UNEXPECTED_RESPONSE',
+          'message': 'Unexpected response. Please try again.',
+          'requiresEpic': false,
+        };
       }
 
+      Map<String, dynamic>? decoded;
+      try {
+        final body = jsonDecode(resp.body);
+        if (body is Map<String, dynamic>) decoded = body;
+      } catch (_) {}
       return {
         'success': false,
         'code': 'HTTP_${resp.statusCode}',
-        'message': 'Failed to verify OTP. Please try again.',
-        'requiresEpic': false,
+        'message': _otpFailureMessage(response: resp, body: decoded),
+        'requiresEpic': decoded?['requiresEpic'] == true,
       };
     } catch (error, stackTrace) {
       _logError('validateVisitorOtp', error, stackTrace);
       return {
         'success': false,
         'code': 'NETWORK_ERROR',
-        'message': 'Network error. Please try again.',
+        'message': 'Network issue. Please check your connection and try again.',
         'requiresEpic': false,
       };
     }
@@ -246,34 +286,52 @@ class ApiService {
     required String idType,
   }) async {
     try {
+      final body = <String, dynamic>{
+        'otp': otp,
+        'phoneNumber': phoneNumber,
+        'idType': idType,
+        'purpose': 'REGISTRATION',
+        'registrationFlow': true,
+      };
+      if (idType.toUpperCase() == 'EPIC') {
+        body['epicNumber'] = idNumber.trim().toUpperCase();
+      } else {
+        body['idNumber'] = idNumber;
+      }
       final resp = await http
           .post(
-            _u('/visitor/verify-otp'),
+            _u('/auth/validate-otp'),
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({
-              'idNumber': idNumber,
-              'otp': otp,
-              'phoneNumber': phoneNumber,
-              'idType': idType,
-            }),
+            body: jsonEncode(body),
           )
           .timeout(const Duration(seconds: 20));
 
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
-        return jsonDecode(resp.body) as Map<String, dynamic>;
+        final decoded = jsonDecode(resp.body);
+        if (decoded is Map<String, dynamic>) return decoded;
+        return {
+          'success': false,
+          'code': 'UNEXPECTED_RESPONSE',
+          'message': 'Unexpected response. Please try again.',
+        };
       }
 
+      Map<String, dynamic>? decoded;
+      try {
+        final body = jsonDecode(resp.body);
+        if (body is Map<String, dynamic>) decoded = body;
+      } catch (_) {}
       return {
         'success': false,
         'code': 'HTTP_${resp.statusCode}',
-        'message': 'OTP verification failed. Please try again.',
+        'message': _otpFailureMessage(response: resp, body: decoded),
       };
     } catch (error, stackTrace) {
       _logError('verifyVisitorRegistrationOtp', error, stackTrace);
       return {
         'success': false,
         'code': 'NETWORK_ERROR',
-        'message': 'Network error. Please try again.',
+        'message': 'Network issue. Please check your connection and try again.',
       };
     }
   }
@@ -646,8 +704,16 @@ class ApiService {
   static Future<Map<String, dynamic>> getSyncAppointmentPreload() async {
     try {
       final headers = await _headers();
+      final from = DateTime.now()
+          .toUtc()
+          .subtract(const Duration(days: 7))
+          .toIso8601String();
       final resp = await http
-          .get(_u('/sync/appointments/preload'), headers: headers)
+          .get(
+            _u('/sync/appointments/preload')
+                .replace(queryParameters: {'from': from, 'days': '7'}),
+            headers: headers,
+          )
           .timeout(const Duration(seconds: 30));
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
         final decoded = jsonDecode(resp.body);

@@ -10,6 +10,7 @@ class SecureAppStorage {
   static const _tokenKey = 'meghaconnect.auth.token';
   static const _tokenExpiresAtKey = 'meghaconnect.auth.token_expires_at';
   static const _userKey = 'meghaconnect.auth.user';
+  static const _offlineSessionKey = 'meghaconnect.auth.offline_session';
 
   static Future<void> writeToken(String token, {Duration? ttl}) async {
     await _storage.write(key: _tokenKey, value: token);
@@ -42,6 +43,14 @@ class SecureAppStorage {
 
   static Future<String?> readUserJson() {
     return _storage.read(key: _userKey);
+  }
+
+  static Future<void> writeOfflineSessionJson(String sessionJson) {
+    return _storage.write(key: _offlineSessionKey, value: sessionJson);
+  }
+
+  static Future<String?> readOfflineSessionJson() {
+    return _storage.read(key: _offlineSessionKey);
   }
 
   static Future<void> clearSession() async {

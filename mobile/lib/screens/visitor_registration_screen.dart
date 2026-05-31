@@ -114,6 +114,18 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
     _success = null;
   }
 
+  void _setOutsideMeghalaya(bool value) {
+    setState(() {
+      _outsideMeghalaya = value;
+      if (value) {
+        _districtCtrl.clear();
+        _constituencyCtrl.clear();
+        _boothCtrl.clear();
+        _partNumberCtrl.clear();
+      }
+    });
+  }
+
   void _switchIdType(String value) {
     setState(() {
       _idType = value;
@@ -952,17 +964,9 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
                       color: MeghaColors.accent, size: 36),
                   const SizedBox(height: 8),
                   Text(
-                    i18n.t('OTP_SENT_TO'),
+                    _otpSentToMessage(i18n),
                     textAlign: TextAlign.center,
                     style: const TextStyle(color: Color(0xFF0C4A6E)),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    _maskedPhone,
-                    style: const TextStyle(
-                      color: MeghaColors.primary,
-                      fontWeight: FontWeight.w800,
-                    ),
                   ),
                 ],
               ),
@@ -1215,58 +1219,52 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
               ),
               controlAffinity: ListTileControlAffinity.leading,
               onChanged: (value) {
-                setState(() => _outsideMeghalaya = value ?? false);
+                _setOutsideMeghalaya(value ?? false);
               },
             ),
             if (_outsideMeghalaya) ...[
               MeghaStatusBanner.info(i18n.t('LOCATION_FIELDS_NA')),
               const SizedBox(height: 10),
             ],
-            TextFormField(
-              controller: _districtCtrl,
-              enabled: !_outsideMeghalaya,
-              decoration: InputDecoration(
-                labelText:
-                    '${i18n.t('DISTRICT')}${_outsideMeghalaya ? '' : ' *'}',
+            if (!_outsideMeghalaya) ...[
+              TextFormField(
+                controller: _districtCtrl,
+                decoration:
+                    InputDecoration(labelText: '${i18n.t('DISTRICT')} *'),
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) {
+                    return i18n.t('ERROR_DISTRICT_REQUIRED');
+                  }
+                  return null;
+                },
               ),
-              validator: (v) {
-                if (_outsideMeghalaya) return null;
-                if (v == null || v.trim().isEmpty) {
-                  return i18n.t('ERROR_DISTRICT_REQUIRED');
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _constituencyCtrl,
-              enabled: !_outsideMeghalaya,
-              decoration: InputDecoration(labelText: i18n.t('CONSTITUENCY')),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _boothCtrl,
-              enabled: !_outsideMeghalaya,
-              decoration: InputDecoration(labelText: i18n.t('BOOTH_VILLAGE')),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _partNumberCtrl,
-              enabled: !_outsideMeghalaya,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Part Number',
-                prefixIcon: Icon(Icons.confirmation_number_outlined),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _constituencyCtrl,
+                decoration: InputDecoration(labelText: i18n.t('CONSTITUENCY')),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _villageCtrl,
-              enabled: !_outsideMeghalaya,
-              decoration:
-                  InputDecoration(labelText: i18n.t('VILLAGE_DIFFERENT')),
-            ),
-            const SizedBox(height: 12),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _boothCtrl,
+                decoration: InputDecoration(labelText: i18n.t('BOOTH_VILLAGE')),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _partNumberCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Part Number',
+                  prefixIcon: Icon(Icons.confirmation_number_outlined),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _villageCtrl,
+                decoration:
+                    InputDecoration(labelText: i18n.t('VILLAGE_DIFFERENT')),
+              ),
+              const SizedBox(height: 12),
+            ],
             TextFormField(
               controller: _emailCtrl,
               keyboardType: TextInputType.emailAddress,
@@ -1486,7 +1484,13 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
   String get _maskedPhone {
     final phone = _phoneCtrl.text.trim();
     if (phone.length < 4) return phone;
-    return '******${phone.substring(phone.length - 4)}';
+    return '****${phone.substring(phone.length - 4)}';
+  }
+
+  String _otpSentToMessage(AppI18n i18n) {
+    return i18n
+        .t('OTP_SENT_TO')
+        .replaceAll(RegExp(r'\{\{\s*phone\s*\}\}'), _maskedPhone);
   }
 }
 

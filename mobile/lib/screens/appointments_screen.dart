@@ -532,7 +532,10 @@ class _AppointmentCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   Container(
                     padding:
@@ -548,8 +551,7 @@ class _AppointmentCard extends StatelessWidget {
                           color: tc, fontWeight: FontWeight.bold, fontSize: 11),
                     ),
                   ),
-                  if (appointment.isWalkIn) ...[
-                    const SizedBox(width: 6),
+                  if (appointment.isWalkIn)
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 6, vertical: 3),
@@ -565,8 +567,6 @@ class _AppointmentCard extends StatelessWidget {
                             fontWeight: FontWeight.w600),
                       ),
                     ),
-                  ],
-                  const Spacer(),
                   Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -588,10 +588,14 @@ class _AppointmentCard extends StatelessWidget {
                   const Icon(Icons.person_outline,
                       size: 16, color: Color(0xFF1A237E)),
                   const SizedBox(width: 6),
-                  Text(
-                    appointment.applicantName,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 15),
+                  Expanded(
+                    child: Text(
+                      appointment.applicantName,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w600, fontSize: 15),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ],
               ),
@@ -603,42 +607,59 @@ class _AppointmentCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 8),
-              Row(
+              Wrap(
+                spacing: 12,
+                runSpacing: 6,
                 children: [
-                  Icon(Icons.tag, size: 13, color: Colors.grey[500]),
-                  const SizedBox(width: 4),
-                  Text(appointment.id,
-                      style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-                  if (appointment.tokenNumber.isNotEmpty) ...[
-                    const SizedBox(width: 12),
-                    Icon(Icons.confirmation_number_outlined,
-                        size: 13, color: Colors.grey[500]),
-                    const SizedBox(width: 4),
-                    Text(appointment.tokenNumber,
-                        style:
-                            TextStyle(fontSize: 12, color: Colors.grey[500])),
-                  ],
-                  const SizedBox(width: 12),
-                  Icon(Icons.location_on_outlined,
-                      size: 13, color: Colors.grey[500]),
-                  const SizedBox(width: 4),
-                  Text(appointment.location,
-                      style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-                  const SizedBox(width: 12),
-                  Icon(Icons.access_time, size: 13, color: Colors.grey[500]),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      appointment.scheduledAt,
-                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-                      overflow: TextOverflow.ellipsis,
+                  _MetaText(icon: Icons.tag, value: appointment.id),
+                  if (appointment.tokenNumber.isNotEmpty)
+                    _MetaText(
+                      icon: Icons.confirmation_number_outlined,
+                      value: appointment.tokenNumber,
                     ),
+                  _MetaText(
+                    icon: Icons.location_on_outlined,
+                    value: appointment.location,
+                  ),
+                  _MetaText(
+                    icon: Icons.access_time,
+                    value: appointment.scheduledAt,
                   ),
                 ],
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _MetaText extends StatelessWidget {
+  final IconData icon;
+  final String value;
+
+  const _MetaText({required this.icon, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    final display = value.trim().isEmpty ? '-' : value.trim();
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 260),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: Colors.grey[500]),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              display,
+              style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
       ),
     );
   }

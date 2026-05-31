@@ -27,6 +27,29 @@ flutter build apk
 flutter build ios
 ```
 
+## Android Release Build
+
+Release APK/AAB builds require a signing keystore and a production API URL.
+
+1. Create or obtain the release keystore.
+2. Copy `android/key.properties.example` to `android/key.properties`.
+3. Fill `storeFile`, `storePassword`, `keyAlias`, and `keyPassword`.
+4. Build with an HTTPS API URL:
+
+```bash
+flutter build apk --release --dart-define=MEGHA_API_BASE_URL=https://your-api-host/api
+```
+
+For CI, provide these environment variables instead of `key.properties`:
+`ANDROID_KEYSTORE_PATH`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`, and
+`ANDROID_STORE_PASSWORD`.
+
+For local testing without release signing, use:
+
+```bash
+flutter build apk --debug
+```
+
 ## Review / UAT Credentials
 
 Do not commit production or demo passwords. For UAT/reviewer access, provide

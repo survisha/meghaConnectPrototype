@@ -61,8 +61,25 @@ class AppConfig {
 
   static void _requireHttps(String url) {
     final uri = Uri.tryParse(url);
-    if (uri == null || uri.scheme != 'https') {
+    if (uri == null) {
       throw StateError('MeghaConnect requires an HTTPS MEGHA_API_BASE_URL.');
     }
+    if (uri.scheme == 'https') return;
+    if (!kReleaseMode && uri.scheme == 'http' && _isLocalDevHost(uri.host)) {
+      return;
+    }
+    throw StateError('MeghaConnect requires an HTTPS MEGHA_API_BASE_URL.');
+  }
+
+  static bool _isLocalDevHost(String host) {
+    final normalized = host.trim().toLowerCase();
+    if (normalized == 'localhost' ||
+        normalized == '127.0.0.1' ||
+        normalized == '10.0.2.2') {
+      return true;
+    }
+    return normalized.startsWith('192.168.') ||
+        normalized.startsWith('10.') ||
+        RegExp(r'^172\.(1[6-9]|2[0-9]|3[0-1])\.').hasMatch(normalized);
   }
 }

@@ -751,6 +751,104 @@ class ApiService {
     return null;
   }
 
+  static Future<List<Map<String, dynamic>>> getHcmActionAppointments(
+      String date) async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .get(
+            _u('/appointments/hcm-actions')
+                .replace(queryParameters: {'date': date}),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 20));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        return _normalizeList(jsonDecode(resp.body));
+      }
+    } catch (error, stackTrace) {
+      _logError('getHcmActionAppointments', error, stackTrace);
+    }
+    return [];
+  }
+
+  static Future<List<Map<String, dynamic>>> getHcmPendingWork() async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .get(_u('/hcm/actions/pending-work'), headers: headers)
+          .timeout(const Duration(seconds: 20));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        return _normalizeList(jsonDecode(resp.body));
+      }
+    } catch (error, stackTrace) {
+      _logError('getHcmPendingWork', error, stackTrace);
+    }
+    return [];
+  }
+
+  static Future<int> getHcmPendingWorkCount() async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .get(_u('/hcm/actions/pending-work/count'), headers: headers)
+          .timeout(const Duration(seconds: 20));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        final decoded = jsonDecode(resp.body);
+        final raw = decoded is Map<String, dynamic> &&
+                decoded.containsKey('data') &&
+                decoded.containsKey('success')
+            ? decoded['data']
+            : decoded;
+        if (raw is num) return raw.toInt();
+        final count = int.tryParse(raw?.toString() ?? '');
+        if (count != null) return count;
+      }
+    } catch (error, stackTrace) {
+      _logError('getHcmPendingWorkCount', error, stackTrace);
+    }
+    return 0;
+  }
+
+  static Future<bool> submitHcmAction(
+    int appointmentId,
+    String action, {
+    required Map<String, dynamic> payload,
+  }) async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .post(
+            _u('/hcm/actions/appointment/$appointmentId/$action'),
+            headers: headers,
+            body: jsonEncode(payload),
+          )
+          .timeout(const Duration(seconds: 20));
+      return resp.statusCode >= 200 && resp.statusCode < 300;
+    } catch (error, stackTrace) {
+      _logError('submitHcmAction', error, stackTrace);
+    }
+    return false;
+  }
+
+  static Future<Map<String, dynamic>?> getPublicIdentificationHistory(
+      int citizenId) async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .get(
+            _u('/public-identification/citizens/$citizenId/full-history'),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 20));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        return _unwrapObject(jsonDecode(resp.body));
+      }
+    } catch (error, stackTrace) {
+      _logError('getPublicIdentificationHistory', error, stackTrace);
+    }
+    return null;
+  }
+
   static Future<Map<String, dynamic>?> createAppointment(
       Map<String, dynamic> body) async {
     try {

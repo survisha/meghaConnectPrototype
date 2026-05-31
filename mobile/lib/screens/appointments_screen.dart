@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/user.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
+import '../services/ai_notes_cache_service.dart';
 import '../services/connectivity_service.dart';
 import '../services/navigation_service.dart';
 import '../services/offline_ai_notes_service.dart';
@@ -138,6 +139,62 @@ class _Appointment {
   }
 }
 
+class _AppointmentListSession {
+  _AppointmentListSession._();
+
+  static final _AppointmentListSession instance = _AppointmentListSession._();
+
+  List<_Appointment> appointments = [];
+  String searchQuery = '';
+  String filterStatus = '';
+  String filterSource = '';
+  String filterType = '';
+  DateTime? fromDate;
+  DateTime? toDate;
+  int serverPage = 0;
+  int serverTotal = 0;
+  double scrollOffset = 0;
+
+  bool get hasData => appointments.isNotEmpty;
+
+  void save({
+    required List<_Appointment> appointments,
+    required String searchQuery,
+    required String filterStatus,
+    required String filterSource,
+    required String filterType,
+    required DateTime? fromDate,
+    required DateTime? toDate,
+    required int serverPage,
+    required int serverTotal,
+    required double scrollOffset,
+  }) {
+    this.appointments = List<_Appointment>.from(appointments);
+    this.searchQuery = searchQuery;
+    this.filterStatus = filterStatus;
+    this.filterSource = filterSource;
+    this.filterType = filterType;
+    this.fromDate = fromDate;
+    this.toDate = toDate;
+    this.serverPage = serverPage;
+    this.serverTotal = serverTotal;
+    this.scrollOffset = scrollOffset;
+  }
+
+  void clear() {
+    appointments = [];
+    searchQuery = '';
+    filterStatus = '';
+    filterSource = '';
+    filterType = '';
+    fromDate = null;
+    toDate = null;
+    serverPage = 0;
+    serverTotal = 0;
+    scrollOffset = 0;
+  }
+}
+
 class AppointmentsScreen extends StatefulWidget {
   final bool forceApproverMode;
 
@@ -184,17 +241,59 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_maybeLoadMore);
-    _loadAppointments(refresh: true);
+    _restoreSessionOrLoad();
   }
 
   @override
   void dispose() {
+    _saveSession();
     _scrollController.dispose();
     super.dispose();
   }
 
+  void _restoreSessionOrLoad() {
+    final session = _AppointmentListSession.instance;
+    if (session.hasData) {
+      _appointments
+        ..clear()
+        ..addAll(session.appointments);
+      _searchQuery = session.searchQuery;
+      _filterStatus = session.filterStatus;
+      _filterSource = session.filterSource;
+      _filterType = session.filterType;
+      _fromDate = session.fromDate;
+      _toDate = session.toDate;
+      _serverPage = session.serverPage;
+      _serverTotal = session.serverTotal;
+      _loading = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController.hasClients) {
+          _scrollController.jumpTo(session.scrollOffset);
+        }
+      });
+      return;
+    }
+    _loadAppointments(refresh: true);
+  }
+
+  void _saveSession() {
+    _AppointmentListSession.instance.save(
+      appointments: _appointments,
+      searchQuery: _searchQuery,
+      filterStatus: _filterStatus,
+      filterSource: _filterSource,
+      filterType: _filterType,
+      fromDate: _fromDate,
+      toDate: _toDate,
+      serverPage: _serverPage,
+      serverTotal: _serverTotal,
+      scrollOffset: _scrollController.hasClients ? _scrollController.offset : 0,
+    );
+  }
+
   Future<void> _loadAppointments({required bool refresh}) async {
     if (refresh) {
+      AiNotesCacheService.instance.clear();
       setState(() {
         _loading = true;
         _loadError = null;
@@ -225,10 +324,15 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     final canViewAi = _canViewAiNotes(role);
     final notesById = <int, List<Map<String, dynamic>>>{};
     if (canViewAi) {
+      // TODO: Replace one-by-one loading with a backend batch AI-notes endpoint when available.
       await Future.wait(rows.take(30).map((row) async {
         final id = _asInt(row['id']);
         if (id == null) return;
-        notesById[id] = await ApiService.getAiNotesByAppointment(id);
+        final cached = await AiNotesCacheService.instance.getOrLoad(
+          id,
+          force: refresh,
+        );
+        notesById[id] = cached.notes;
       }));
     }
 
@@ -264,6 +368,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
       _loading = false;
       _loadingMore = false;
     });
+    _saveSession();
   }
 
   Future<Map<String, dynamic>> _pageForRole(UserRole? role, int page) {
@@ -405,7 +510,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         builder: (_) => _AppointmentDetailsPage(appointment: appointment),
       ),
     );
-    await _loadAppointments(refresh: true);
+    _saveSession();
   }
 
   Widget _buildEmpty() {
@@ -868,7 +973,7 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
     final results = await Future.wait([
       ApiService.getAppointmentDocuments(id),
       ApiService.getAppointmentRemarks(id),
-      ApiService.getAiNotesByAppointment(id),
+      AiNotesCacheService.instance.getOrLoad(id).then((cached) => cached.notes),
       ApiService.getReferenceData('DEPARTMENT'),
     ]);
     if (!mounted) return;
@@ -1201,17 +1306,42 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
           ),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
+            isExpanded: true,
             value: _departments.any((d) => d['code'] == _departmentCode)
                 ? _departmentCode
                 : null,
             decoration:
                 const InputDecoration(labelText: 'Forward to Department'),
+            selectedItemBuilder: (context) => [
+              const Text(
+                'No department',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              for (final d in _departments)
+                Text(
+                  d['value'] ?? d['code'] ?? '',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+            ],
             items: [
-              const DropdownMenuItem(value: '', child: Text('No department')),
+              const DropdownMenuItem(
+                value: '',
+                child: Text(
+                  'No department',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
               for (final d in _departments)
                 DropdownMenuItem(
                     value: d['code'],
-                    child: Text(d['value'] ?? d['code'] ?? '')),
+                    child: Text(
+                      d['value'] ?? d['code'] ?? '',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    )),
             ],
             onChanged: (value) => setState(() => _departmentCode = value),
           ),
@@ -1672,6 +1802,7 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
       _showMessage('Failed to refresh AI notes.');
       return;
     }
+    AiNotesCacheService.instance.invalidate(widget.appointment.backendId!);
     _showMessage('AI notes refresh started.');
     await _load();
   }

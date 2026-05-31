@@ -4,6 +4,7 @@ import '../models/user.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
 import '../services/navigation_service.dart';
+import 'hcm_dashboard_screen.dart';
 
 class _Kpi {
   final String label;
@@ -143,6 +144,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
     final role = auth.user!.role;
+    if (role == UserRole.HCM || role == UserRole.OSD) {
+      return const HcmDashboardScreen();
+    }
 
     final kpis = _allKpis.where((k) => k.roles.contains(role)).toList();
     final actions =

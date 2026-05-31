@@ -127,6 +127,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _loadData() async {
+    final role = context.read<AuthService>().user?.role;
+    if (role == UserRole.HCM || role == UserRole.OSD) {
+      return;
+    }
     final schedFuture = ApiService.getScheduleEvents();
     final auditFuture = ApiService.getAuditLogs(size: 5);
     final results = await Future.wait([schedFuture, auditFuture]);

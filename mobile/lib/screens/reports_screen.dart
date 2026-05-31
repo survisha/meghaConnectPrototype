@@ -1,19 +1,39 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
-const _topConstituencies = [
-  ('Ampati', 12, 8, 2),
-  ('Shillong East', 9, 6, 1),
-  ('Baghmara', 8, 5, 2),
-  ('Umsning', 7, 4, 1),
-  ('Tura', 11, 7, 2),
+const _meetingSeries = [
+  _MeetingDay('Mon', 4, 3),
+  _MeetingDay('Tue', 6, 5),
+  _MeetingDay('Wed', 3, 3),
+  _MeetingDay('Thu', 8, 7),
+  _MeetingDay('Fri', 5, 4),
+  _MeetingDay('Sat', 2, 2),
+];
+
+const _approvalRatio = [
+  _ChartSlice('HCM Accepted', 62, Color(0xFF16A34A)),
+  _ChartSlice('HCM Rejected', 18, Color(0xFFDC2626)),
+  _ChartSlice('Snoozed', 10, Color(0xFFF59E0B)),
+  _ChartSlice('Pending', 7, Color(0xFF6B7280)),
+  _ChartSlice('CMO Rejected', 3, Color(0xFFB45309)),
 ];
 
 const _schemeWise = [
-  ('CMSDF', 45, 28, 12, 5, '₹45.2L'),
-  ('CMSG', 32, 18, 10, 4, '₹12.8L'),
-  ('CM Care', 28, 22, 4, 2, '₹28.0L'),
-  ('CM Connect', 19, 10, 7, 2, '₹5.6L'),
-  ('CM Elevate', 15, 8, 5, 2, '₹9.2L'),
+  _SchemeStatus('CMSDF', 28, 12, 5),
+  _SchemeStatus('CMSG', 18, 10, 4),
+  _SchemeStatus('CM Care', 22, 4, 2),
+  _SchemeStatus('CM Connect', 10, 7, 2),
+  _SchemeStatus('CM Elevate', 8, 5, 2),
+  _SchemeStatus('Focus+', 14, 6, 2),
+];
+
+const _topConstituencies = [
+  _ConstituencyStat('Ampati', 12, 8, 2),
+  _ConstituencyStat('Shillong East', 9, 6, 1),
+  _ConstituencyStat('Baghmara', 8, 5, 2),
+  _ConstituencyStat('Umsning', 7, 4, 1),
+  _ConstituencyStat('Tura', 11, 7, 2),
 ];
 
 class ReportsScreen extends StatefulWidget {
@@ -26,6 +46,8 @@ class ReportsScreen extends StatefulWidget {
 class _ReportsScreenState extends State<ReportsScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabCtrl;
+  bool _loading = false;
+  String? _error;
 
   @override
   void initState() {
@@ -39,11 +61,22 @@ class _ReportsScreenState extends State<ReportsScreen>
     super.dispose();
   }
 
+  Future<void> _refresh() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    if (!mounted) return;
+    setState(() => _loading = false);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        _buildKpiBar(),
+        _buildHeader(context),
+        if (_error != null) _errorBanner(_error!),
         TabBar(
           controller: _tabCtrl,
           labelColor: const Color(0xFF1A237E),
@@ -56,37 +89,66 @@ class _ReportsScreenState extends State<ReportsScreen>
           ],
         ),
         Expanded(
-          child: TabBarView(
-            controller: _tabCtrl,
-            children: [
-              _buildOverview(),
-              _buildSchemeWise(),
-              _buildConstituency(),
-            ],
-          ),
+          child: _loading
+              ? const Center(child: CircularProgressIndicator())
+              : RefreshIndicator(
+                  onRefresh: _refresh,
+                  child: TabBarView(
+                    controller: _tabCtrl,
+                    children: [
+                      _buildOverview(),
+                      _buildSchemeWise(),
+                      _buildConstituency(),
+                    ],
+                  ),
+                ),
         ),
       ],
     );
   }
 
-  Widget _buildKpiBar() {
+  Widget _buildHeader(BuildContext context) {
     return Container(
       color: const Color(0xFF1A237E),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: const Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _MiniKpi(
-              label: 'This Month', value: '28', icon: Icons.calendar_today),
-          _MiniKpi(
-              label: 'Approved',
-              value: '62%',
-              icon: Icons.check_circle_outline),
-          _MiniKpi(
-              label: 'Schemes',
-              value: '139',
-              icon: Icons.workspace_premium_outlined),
-          _MiniKpi(label: 'Pending', value: '17', icon: Icons.pending_actions),
+          const Text(
+            'Analytics & Reports',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _MiniKpi(
+                label: 'This Week',
+                value:
+                    '${_meetingSeries.fold<int>(0, (s, d) => s + d.scheduled)}',
+                icon: Icons.calendar_today,
+              ),
+              _MiniKpi(
+                label: 'Completed',
+                value:
+                    '${_meetingSeries.fold<int>(0, (s, d) => s + d.completed)}',
+                icon: Icons.check_circle_outline,
+              ),
+              _MiniKpi(
+                label: 'Accepted',
+                value: '${_approvalRatio.first.value}%',
+                icon: Icons.done_all_outlined,
+              ),
+              _MiniKpi(
+                label: 'Schemes',
+                value: '${_schemeWise.length}',
+                icon: Icons.workspace_premium_outlined,
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -95,23 +157,24 @@ class _ReportsScreenState extends State<ReportsScreen>
   Widget _buildOverview() {
     return ListView(
       padding: const EdgeInsets.all(12),
-      children: [
-        _sectionLabel('Meetings Per Day (This Week)'),
-        const SizedBox(height: 8),
-        _buildBarChart(
-          labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
-          values: [4, 6, 3, 8, 5, 2],
-          maxVal: 10,
-          barColor: const Color(0xFF1A237E),
+      children: const [
+        _ReportCard(
+          title: 'Meetings Per Day (This Week)',
+          icon: Icons.bar_chart,
+          child: _GroupedMeetingChart(data: _meetingSeries),
         ),
-        const SizedBox(height: 20),
-        _sectionLabel('Approval vs Rejection Ratio'),
-        const SizedBox(height: 8),
-        _buildDonutPlaceholder(),
-        const SizedBox(height: 20),
-        _sectionLabel('Appointment Status Breakdown'),
-        const SizedBox(height: 8),
-        _buildStatusBreakdown(),
+        SizedBox(height: 12),
+        _ReportCard(
+          title: 'Approval vs Rejection Ratio',
+          icon: Icons.pie_chart_outline,
+          child: _PieChartCard(slices: _approvalRatio),
+        ),
+        SizedBox(height: 12),
+        _ReportCard(
+          title: 'Appointment Status Breakdown',
+          icon: Icons.fact_check_outlined,
+          child: _StatusList(slices: _approvalRatio),
+        ),
       ],
     );
   }
@@ -120,19 +183,13 @@ class _ReportsScreenState extends State<ReportsScreen>
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
-        _sectionLabel('Scheme-wise Summary'),
-        const SizedBox(height: 8),
-        ..._schemeWise.map((s) {
-          final (name, total, approved, pending, rejected, budget) = s;
-          return _SchemeStatRow(
-            name: name,
-            total: total,
-            approved: approved,
-            pending: pending,
-            rejected: rejected,
-            budget: budget,
-          );
-        }),
+        const _ReportCard(
+          title: 'Scheme-wise Application Status',
+          icon: Icons.stacked_bar_chart_outlined,
+          child: _SchemeBarChart(data: _schemeWise),
+        ),
+        const SizedBox(height: 12),
+        for (final row in _schemeWise) _SchemeStatRow(row: row),
       ],
     );
   }
@@ -141,316 +198,516 @@ class _ReportsScreenState extends State<ReportsScreen>
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
-        _sectionLabel('Top Constituencies by Application Volume'),
-        const SizedBox(height: 8),
-        Card(
+        _ReportCard(
+          title: 'Top Constituencies by Applications',
+          icon: Icons.location_on_outlined,
           child: Column(
             children: [
-              // Header
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: const BoxDecoration(
-                  color: Color(0xFFE8EAF6),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-                ),
-                child: const Row(
-                  children: [
-                    Expanded(
-                        flex: 3,
-                        child: Text('Constituency',
-                            style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF1A237E)))),
-                    Expanded(
-                        child: Text('Total',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                                fontSize: 12, fontWeight: FontWeight.bold))),
-                    Expanded(
-                        child: Text('Approved',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                                fontSize: 12, fontWeight: FontWeight.bold))),
-                    Expanded(
-                        child: Text('Rejected',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                                fontSize: 12, fontWeight: FontWeight.bold))),
-                  ],
-                ),
-              ),
-              ..._topConstituencies.asMap().entries.map((e) {
-                final (name, total, approved, rejected) = e.value;
-                return Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: e.key.isEven ? Colors.white : Colors.grey[50],
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                          flex: 3,
-                          child: Text(name,
-                              style: const TextStyle(
-                                  fontSize: 13, fontWeight: FontWeight.w500))),
-                      Expanded(
-                          child: Text('$total',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF1A237E)))),
-                      Expanded(
-                          child: Text('$approved',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF16A34A)))),
-                      Expanded(
-                          child: Text('$rejected',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF991B1B)))),
-                    ],
-                  ),
-                );
-              }),
+              for (final item in _topConstituencies) _ConstituencyRow(item),
             ],
           ),
         ),
-        const SizedBox(height: 20),
-        _sectionLabel('Heatmap (District-level)'),
-        const SizedBox(height: 8),
-        _buildHeatmapPlaceholder(),
       ],
     );
   }
 
-  Widget _sectionLabel(String text) {
-    return Text(
-      text,
-      style: const TextStyle(
-          fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF374151)),
+  Widget _errorBanner(String message) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEE2E2),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(message, style: const TextStyle(color: Color(0xFF991B1B))),
     );
   }
+}
 
-  Widget _buildBarChart({
-    required List<String> labels,
-    required List<int> values,
-    required int maxVal,
-    required Color barColor,
-  }) {
+class _MeetingDay {
+  final String label;
+  final int scheduled;
+  final int completed;
+  const _MeetingDay(this.label, this.scheduled, this.completed);
+}
+
+class _ChartSlice {
+  final String label;
+  final int value;
+  final Color color;
+  const _ChartSlice(this.label, this.value, this.color);
+}
+
+class _SchemeStatus {
+  final String label;
+  final int approved;
+  final int pending;
+  final int rejected;
+  const _SchemeStatus(this.label, this.approved, this.pending, this.rejected);
+
+  int get total => approved + pending + rejected;
+}
+
+class _ConstituencyStat {
+  final String name;
+  final int total;
+  final int approved;
+  final int rejected;
+  const _ConstituencyStat(this.name, this.total, this.approved, this.rejected);
+}
+
+class _ReportCard extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final Widget child;
+
+  const _ReportCard({
+    required this.title,
+    required this.icon,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(
-              height: 120,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: List.generate(labels.length, (i) {
-                  final h = values[i] / maxVal;
-                  return Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Text('${values[i]}',
-                          style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: barColor)),
-                      const SizedBox(height: 2),
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 500),
-                        width: 28,
-                        height: h * 80,
-                        decoration: BoxDecoration(
-                          color: barColor,
-                          borderRadius: BorderRadius.circular(4),
+            Row(
+              children: [
+                Icon(icon, color: const Color(0xFF1A237E), size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            child,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GroupedMeetingChart extends StatelessWidget {
+  final List<_MeetingDay> data;
+  const _GroupedMeetingChart({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final maxVal = data.fold<int>(
+      1,
+      (max, row) => math.max(max, math.max(row.scheduled, row.completed)),
+    );
+    return Column(
+      children: [
+        SizedBox(
+          height: 170,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              for (final row in data)
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 3),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        SizedBox(
+                          height: 120,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              _ChartBar(
+                                value: row.scheduled,
+                                max: maxVal,
+                                color: const Color(0xFF1A237E),
+                              ),
+                              const SizedBox(width: 4),
+                              _ChartBar(
+                                value: row.completed,
+                                max: maxVal,
+                                color: const Color(0xFF16A34A),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(labels[i],
-                          style:
-                              TextStyle(fontSize: 11, color: Colors.grey[600])),
-                    ],
-                  );
-                }),
+                        const SizedBox(height: 6),
+                        Text(row.label,
+                            style: const TextStyle(
+                                fontSize: 11, color: Color(0xFF64748B))),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Wrap(
+          spacing: 14,
+          runSpacing: 6,
+          children: [
+            _Legend(label: 'Scheduled', color: Color(0xFF1A237E)),
+            _Legend(label: 'Completed', color: Color(0xFF16A34A)),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _ChartBar extends StatelessWidget {
+  final int value;
+  final int max;
+  final Color color;
+  const _ChartBar(
+      {required this.value, required this.max, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    final height = 12 + (value / max) * 80;
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        Text('$value',
+            style: TextStyle(
+                fontSize: 10, color: color, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 2),
+        Container(
+          width: 12,
+          height: height,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PieChartCard extends StatelessWidget {
+  final List<_ChartSlice> slices;
+  const _PieChartCard({required this.slices});
+
+  @override
+  Widget build(BuildContext context) {
+    final total = slices.fold<int>(0, (sum, item) => sum + item.value);
+    if (total == 0) {
+      return const Center(child: Text('No report data found'));
+    }
+    return Column(
+      children: [
+        SizedBox(
+          width: 190,
+          height: 190,
+          child: CustomPaint(
+            painter: _PiePainter(slices: slices),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('$total',
+                      style: const TextStyle(
+                          fontSize: 24, fontWeight: FontWeight.w900)),
+                  const Text('Total',
+                      style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                ],
               ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 12,
+          runSpacing: 8,
+          children: [
+            for (final item in slices)
+              _Legend(
+                label: '${item.label} (${item.value}%)',
+                color: item.color,
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _PiePainter extends CustomPainter {
+  final List<_ChartSlice> slices;
+  const _PiePainter({required this.slices});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final total = slices.fold<int>(0, (sum, item) => sum + item.value);
+    if (total == 0) return;
+    final rect = Offset.zero & size;
+    final stroke = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 28
+      ..strokeCap = StrokeCap.butt;
+    var start = -math.pi / 2;
+    for (final item in slices) {
+      final sweep = (item.value / total) * math.pi * 2;
+      stroke.color = item.color;
+      canvas.drawArc(rect.deflate(20), start, sweep, false, stroke);
+      start += sweep;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _PiePainter oldDelegate) =>
+      oldDelegate.slices != slices;
+}
+
+class _SchemeBarChart extends StatelessWidget {
+  final List<_SchemeStatus> data;
+  const _SchemeBarChart({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final maxTotal = data.fold<int>(1, (max, row) => math.max(max, row.total));
+    return Column(
+      children: [
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: SizedBox(
+            width: math.max(MediaQuery.of(context).size.width - 56, 520),
+            height: 220,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                for (final row in data)
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 5),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          SizedBox(
+                            height: 155,
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                _SmallBar(
+                                    value: row.approved,
+                                    max: maxTotal,
+                                    color: const Color(0xFF16A34A)),
+                                _SmallBar(
+                                    value: row.pending,
+                                    max: maxTotal,
+                                    color: const Color(0xFFF59E0B)),
+                                _SmallBar(
+                                    value: row.rejected,
+                                    max: maxTotal,
+                                    color: const Color(0xFFDC2626)),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          SizedBox(
+                            height: 34,
+                            child: Text(
+                              row.label,
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontSize: 11, color: Color(0xFF64748B)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        const Wrap(
+          spacing: 12,
+          runSpacing: 6,
+          children: [
+            _Legend(label: 'Approved', color: Color(0xFF16A34A)),
+            _Legend(label: 'Pending', color: Color(0xFFF59E0B)),
+            _Legend(label: 'Rejected', color: Color(0xFFDC2626)),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _SmallBar extends StatelessWidget {
+  final int value;
+  final int max;
+  final Color color;
+  const _SmallBar(
+      {required this.value, required this.max, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 10,
+      height: 12 + (value / max) * 120,
+      margin: const EdgeInsets.symmetric(horizontal: 1.5),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(3),
+      ),
+    );
+  }
+}
+
+class _StatusList extends StatelessWidget {
+  final List<_ChartSlice> slices;
+  const _StatusList({required this.slices});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        for (final item in slices)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              children: [
+                _Legend(label: item.label, color: item.color),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: LinearProgressIndicator(
+                      value: item.value / 100,
+                      minHeight: 8,
+                      backgroundColor: const Color(0xFFE5E7EB),
+                      valueColor: AlwaysStoppedAnimation<Color>(item.color),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 34,
+                  child: Text(
+                    '${item.value}%',
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                        color: item.color,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _SchemeStatRow extends StatelessWidget {
+  final _SchemeStatus row;
+  const _SchemeStatRow({required this.row});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    row.label,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 14,
+                        color: Color(0xFF1A237E)),
+                  ),
+                ),
+                Text('${row.total}',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w900, fontSize: 14)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _CountPill('Approved', row.approved, const Color(0xFF16A34A)),
+                const SizedBox(width: 6),
+                _CountPill('Pending', row.pending, const Color(0xFFF59E0B)),
+                const SizedBox(width: 6),
+                _CountPill('Rejected', row.rejected, const Color(0xFFDC2626)),
+              ],
             ),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildDonutPlaceholder() {
-    const data = [
-      ('HCM Accepted', 62, Color(0xFF16A34A)),
-      ('HCM Rejected', 18, Color(0xFFDC2626)),
-      ('Snoozed', 10, Color(0xFFF59E0B)),
-      ('Pending', 7, Color(0xFF6B7280)),
-      ('CMO Rejected', 3, Color(0xFFB45309)),
-    ];
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          children: data.map((item) {
-            final (label, pct, color) = item;
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                children: [
-                  Container(
-                    width: 12,
-                    height: 12,
-                    decoration:
-                        BoxDecoration(color: color, shape: BoxShape.circle),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(label, style: const TextStyle(fontSize: 13)),
-                  ),
-                  SizedBox(
-                    width: 140,
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: LinearProgressIndicator(
-                              value: pct / 100,
-                              backgroundColor: Colors.grey[200],
-                              valueColor: AlwaysStoppedAnimation<Color>(color),
-                              minHeight: 8,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text('$pct%',
-                            style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: color)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }).toList(),
-        ),
-      ),
-    );
-  }
+class _ConstituencyRow extends StatelessWidget {
+  final _ConstituencyStat item;
+  const _ConstituencyRow(this.item);
 
-  Widget _buildStatusBreakdown() {
-    const rows = [
-      ('Scheduled', 28, Color(0xFF1A237E)),
-      ('Completed', 22, Color(0xFF16A34A)),
-      ('Pending CMO', 14, Color(0xFFB45309)),
-      ('Pending HCM', 7, Color(0xFFDC2626)),
-      ('Walk-ins', 9, Color(0xFF006064)),
-    ];
-    return Card(
-      child: Column(
-        children: rows.map((r) {
-          final (label, count, color) = r;
-          return ListTile(
-            dense: true,
-            leading: Container(
-              width: 12,
-              height: 12,
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            ),
-            title: Text(label, style: const TextStyle(fontSize: 13)),
-            trailing: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: color.withAlpha(26),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                '$count',
-                style: TextStyle(
-                    color: color, fontWeight: FontWeight.bold, fontSize: 13),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  Widget _buildHeatmapPlaceholder() {
-    const districts = [
-      ('West Garo Hills', 61, Color(0xFFDC2626)),
-      ('East Khasi Hills', 82, Color(0xFFDC2626)),
-      ('East Garo Hills', 47, Color(0xFFF59E0B)),
-      ('West Khasi Hills', 34, Color(0xFFF59E0B)),
-      ('Ri Bhoi', 28, Color(0xFFF59E0B)),
-      ('South Garo Hills', 23, Color(0xFF16A34A)),
-      ('East Jaintia Hills', 19, Color(0xFF16A34A)),
-      ('North Garo Hills', 17, Color(0xFF16A34A)),
-    ];
-    return Card(
+  @override
+  Widget build(BuildContext context) {
+    final rate = item.total == 0 ? 0.0 : item.approved / item.total;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(14, 12, 14, 4),
-            child: Row(
-              children: [
-                _HeatLegend(label: 'Hot', color: Color(0xFFDC2626)),
-                SizedBox(width: 16),
-                _HeatLegend(label: 'Warm', color: Color(0xFFF59E0B)),
-                SizedBox(width: 16),
-                _HeatLegend(label: 'Cool', color: Color(0xFF16A34A)),
-              ],
+          Row(
+            children: [
+              Expanded(
+                child: Text(item.name,
+                    style: const TextStyle(fontWeight: FontWeight.w800)),
+              ),
+              Text('${(rate * 100).round()}%',
+                  style: const TextStyle(
+                      color: Color(0xFF16A34A), fontWeight: FontWeight.w900)),
+            ],
+          ),
+          const SizedBox(height: 5),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: rate,
+              minHeight: 9,
+              backgroundColor: const Color(0xFFE5E7EB),
+              valueColor:
+                  const AlwaysStoppedAnimation<Color>(Color(0xFF16A34A)),
             ),
           ),
-          ...districts.map((d) {
-            final (name, apps, color) = d;
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 130,
-                    child: Text(name,
-                        style: const TextStyle(
-                            fontSize: 12, fontWeight: FontWeight.w500)),
-                  ),
-                  Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: apps / 100,
-                        backgroundColor: Colors.grey[200],
-                        valueColor: AlwaysStoppedAnimation<Color>(color),
-                        minHeight: 14,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text('$apps',
-                      style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: color)),
-                ],
-              ),
-            );
-          }),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
+          Text(
+            'Total ${item.total} / Approved ${item.approved} / Rejected ${item.rejected}',
+            style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+          ),
         ],
       ),
     );
@@ -461,122 +718,89 @@ class _MiniKpi extends StatelessWidget {
   final String label;
   final String value;
   final IconData icon;
-  const _MiniKpi(
-      {required this.label, required this.value, required this.icon});
 
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Icon(icon, color: Colors.white70, size: 18),
-        const SizedBox(height: 4),
-        Text(value,
-            style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 16)),
-        Text(label,
-            style: const TextStyle(color: Colors.white60, fontSize: 10)),
-      ],
-    );
-  }
-}
-
-class _SchemeStatRow extends StatelessWidget {
-  final String name;
-  final int total;
-  final int approved;
-  final int pending;
-  final int rejected;
-  final String budget;
-  const _SchemeStatRow({
-    required this.name,
-    required this.total,
-    required this.approved,
-    required this.pending,
-    required this.rejected,
-    required this.budget,
+  const _MiniKpi({
+    required this.label,
+    required this.value,
+    required this.icon,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(name,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: Color(0xFF1A237E))),
-                Text(budget,
-                    style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF16A34A))),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                Text('Total: $total',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-                const SizedBox(width: 12),
-                Text('✓ $approved',
-                    style: const TextStyle(
-                        fontSize: 12, color: Color(0xFF16A34A))),
-                const SizedBox(width: 8),
-                Text('⏳ $pending',
-                    style: const TextStyle(
-                        fontSize: 12, color: Color(0xFFB45309))),
-                const SizedBox(width: 8),
-                Text('✗ $rejected',
-                    style: const TextStyle(
-                        fontSize: 12, color: Color(0xFF991B1B))),
-              ],
-            ),
-            const SizedBox(height: 6),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: total > 0 ? approved / total : 0,
-                backgroundColor: Colors.grey[200],
-                valueColor:
-                    const AlwaysStoppedAnimation<Color>(Color(0xFF16A34A)),
-                minHeight: 6,
-              ),
-            ),
-          ],
-        ),
+    return Expanded(
+      child: Column(
+        children: [
+          Icon(icon, color: Colors.white70, size: 18),
+          const SizedBox(height: 4),
+          Text(value,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 16)),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white60, fontSize: 10),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _HeatLegend extends StatelessWidget {
+class _Legend extends StatelessWidget {
   final String label;
   final Color color;
-  const _HeatLegend({required this.label, required this.color});
+
+  const _Legend({required this.label, required this.color});
 
   @override
   Widget build(BuildContext context) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 12,
-          height: 12,
+          width: 11,
+          height: 11,
           decoration: BoxDecoration(
-              color: color, borderRadius: BorderRadius.circular(2)),
+              color: color, borderRadius: BorderRadius.circular(3)),
         ),
-        const SizedBox(width: 4),
+        const SizedBox(width: 5),
         Text(label, style: const TextStyle(fontSize: 12)),
       ],
+    );
+  }
+}
+
+class _CountPill extends StatelessWidget {
+  final String label;
+  final int value;
+  final Color color;
+
+  const _CountPill(this.label, this.value, this.color);
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+        decoration: BoxDecoration(
+          color: color.withAlpha(24),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          children: [
+            Text('$value',
+                style: TextStyle(color: color, fontWeight: FontWeight.w900)),
+            Text(label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 10)),
+          ],
+        ),
+      ),
     );
   }
 }

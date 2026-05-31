@@ -15,6 +15,7 @@ import 'schemes_screen.dart';
 import 'scheme_form_screen.dart';
 import 'public_identification_screen.dart';
 import 'reports_screen.dart';
+import 'heatmap_screen.dart';
 import 'pending_followups_screen.dart';
 import 'audit_trail_screen.dart';
 import 'grievance_screen.dart';
@@ -23,6 +24,7 @@ import 'approver_screen.dart';
 import 'guest_appointment_screen.dart';
 import 'deo_home_screen.dart';
 import 'pending_sync_screen.dart';
+import 'hcm_dashboard_screen.dart';
 
 class _NavItem {
   final String label;
@@ -192,6 +194,18 @@ final _navTree = <_NavItem>[
         ],
       ),
       _NavItem(
+        label: 'Heatmap',
+        icon: Icons.map_outlined,
+        route: 'heatmap',
+        roles: [
+          UserRole.HCM,
+          UserRole.ADMIN,
+          UserRole.OSD,
+          UserRole.APPROVER,
+          UserRole.CMO_OFFICER,
+        ],
+      ),
+      _NavItem(
         label: 'Pending Follow-ups',
         icon: Icons.access_time_outlined,
         route: 'followups',
@@ -235,6 +249,10 @@ class _MainShellState extends State<MainShell> {
   Widget _buildBody(String route) {
     switch (route) {
       case 'dashboard':
+        final role = context.read<AuthService>().user?.role;
+        if (role == UserRole.HCM || role == UserRole.OSD) {
+          return const HcmDashboardScreen();
+        }
         return const DashboardScreen();
       case 'visitor':
         return const VisitorDashboardScreen();
@@ -261,6 +279,8 @@ class _MainShellState extends State<MainShell> {
         return const PublicIdentificationScreen();
       case 'reports':
         return const ReportsScreen();
+      case 'heatmap':
+        return const HeatmapScreen();
       case 'followups':
         return const PendingFollowupsScreen();
       case 'audit':
@@ -397,6 +417,18 @@ class _MainShellState extends State<MainShell> {
       if (item.children != null) {
         final visibleChildren =
             item.children!.where((c) => c.roles.contains(user.role)).toList();
+        if (item.route == 'reports' &&
+            !visibleChildren.any((child) => child.route == 'heatmap')) {
+          visibleChildren.insert(
+            1,
+            _NavItem(
+              label: 'Heatmap',
+              icon: Icons.map_outlined,
+              route: 'heatmap',
+              roles: item.roles,
+            ),
+          );
+        }
         return _NavItem(
           label: item.label,
           icon: item.icon,

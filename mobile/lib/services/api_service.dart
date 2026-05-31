@@ -96,6 +96,63 @@ class ApiService {
         'message': message ?? 'Unable to load data. Please try again.',
       };
 
+  static Map<String, dynamic> _normalizePageResponse(dynamic decoded) {
+    final data = decoded is Map<String, dynamic> &&
+            decoded.containsKey('data') &&
+            decoded.containsKey('success')
+        ? decoded['data']
+        : decoded;
+    if (data is List) {
+      return {
+        'content': data,
+        'totalElements': data.length,
+        'totalPages': 1,
+        'number': 0,
+        'size': data.length,
+      };
+    }
+    if (data is Map<String, dynamic>) {
+      final content = data['content'];
+      return {
+        ...data,
+        'content': content is List ? content : <dynamic>[],
+        'totalElements':
+            data['totalElements'] ?? (content is List ? content.length : 0),
+        'totalPages': data['totalPages'] ?? 1,
+        'number': data['number'] ?? 0,
+        'size': data['size'] ?? (content is List ? content.length : 0),
+      };
+    }
+    return _listError(message: 'Unexpected response. Please try again.');
+  }
+
+  static List<Map<String, dynamic>> _normalizeList(dynamic decoded) {
+    final data = decoded is Map<String, dynamic> &&
+            decoded.containsKey('data') &&
+            decoded.containsKey('success')
+        ? decoded['data']
+        : decoded;
+    final rows = data is List
+        ? data
+        : data is Map<String, dynamic> && data['content'] is List
+            ? data['content'] as List<dynamic>
+            : <dynamic>[];
+    return rows
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList();
+  }
+
+  static Map<String, dynamic> _unwrapObject(dynamic decoded) {
+    final data = decoded is Map<String, dynamic> &&
+            decoded.containsKey('data') &&
+            decoded.containsKey('success')
+        ? decoded['data']
+        : decoded;
+    if (data is Map<String, dynamic>) return data;
+    return {};
+  }
+
   // Maps a role string from the backend (e.g. "ROLE_HCM" or "HCM") to a UserRole.
   static UserRole _parseRole(String raw) {
     final normalized = raw.startsWith('ROLE_') ? raw.substring(5) : raw;
@@ -511,23 +568,48 @@ class ApiService {
   }
 
   // Appointments
-  static Future<Map<String, dynamic>> getAppointments(
-      {int page = 0, int size = 50}) async {
+  static Future<Map<String, dynamic>> getAppointments({
+    int page = 0,
+    int size = 50,
+    String? status,
+    String? source,
+    String? referredOffice,
+    String? sort,
+  }) async {
     try {
       final headers = await _headers();
+      final params = <String, String>{
+        'page': page.toString(),
+        'size': size.toString(),
+      };
+      void addParam(String key, String? value) {
+        final trimmed = value?.trim() ?? '';
+        if (trimmed.isNotEmpty) params[key] = trimmed;
+      }
+
+      addParam('status', status);
+      addParam('source', source);
+      addParam('referredOffice', referredOffice);
+      addParam('sort', sort);
       final resp = await http
           .get(
-            _u('/appointments?page=$page&size=$size'),
+            _u('/appointments').replace(queryParameters: params),
             headers: headers,
           )
           .timeout(const Duration(seconds: 20));
       if (resp.statusCode == 200) {
-        return jsonDecode(resp.body) as Map<String, dynamic>;
+        return _normalizePageResponse(jsonDecode(resp.body));
       }
+      return _listError(
+        message: _messageFromResponse(
+          resp,
+          'Failed to load appointments. Please try again.',
+        ),
+      );
     } catch (error, stackTrace) {
       _logError('getAppointments', error, stackTrace);
     }
-    return _listError();
+    return _listError(message: 'No internet connection. Please try again.');
   }
 
   static Future<Map<String, dynamic>> getMyAppointments() async {
@@ -549,7 +631,7 @@ class ApiService {
           if (data is List) {
             return {'content': data, 'totalElements': data.length};
           }
-          return decoded;
+          return _normalizePageResponse(decoded);
         }
       }
     } catch (error, stackTrace) {
@@ -569,7 +651,7 @@ class ApiService {
           )
           .timeout(const Duration(seconds: 20));
       if (resp.statusCode == 200) {
-        return jsonDecode(resp.body) as Map<String, dynamic>;
+        return _normalizePageResponse(jsonDecode(resp.body));
       }
     } catch (error, stackTrace) {
       _logError('getDeoAppointments', error, stackTrace);
@@ -588,7 +670,7 @@ class ApiService {
           )
           .timeout(const Duration(seconds: 20));
       if (resp.statusCode == 200) {
-        return jsonDecode(resp.body) as Map<String, dynamic>;
+        return _normalizePageResponse(jsonDecode(resp.body));
       }
     } catch (error, stackTrace) {
       _logError('getApproverAppointments', error, stackTrace);
@@ -614,6 +696,57 @@ class ApiService {
       }
     } catch (error, stackTrace) {
       _logError('getAppointmentById', error, stackTrace);
+    }
+    return null;
+  }
+
+  static Future<List<Map<String, dynamic>>> getAppointmentDocuments(
+      int appointmentId) async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .get(_u('/appointments/$appointmentId/documents'), headers: headers)
+          .timeout(const Duration(seconds: 20));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        return _normalizeList(jsonDecode(resp.body));
+      }
+    } catch (error, stackTrace) {
+      _logError('getAppointmentDocuments', error, stackTrace);
+    }
+    return [];
+  }
+
+  static Future<List<Map<String, dynamic>>> getAiNotesByAppointment(
+      int appointmentId) async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .get(_u('/appointments/$appointmentId/ai-notes'), headers: headers)
+          .timeout(const Duration(seconds: 20));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        return _normalizeList(jsonDecode(resp.body));
+      }
+    } catch (error, stackTrace) {
+      _logError('getAiNotesByAppointment', error, stackTrace);
+    }
+    return [];
+  }
+
+  static Future<Map<String, dynamic>?> regenerateAiNotes(int documentId) async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .post(
+            _u('/appointments/documents/$documentId/ai-notes/regenerate'),
+            headers: headers,
+            body: jsonEncode({}),
+          )
+          .timeout(const Duration(seconds: 30));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        return _unwrapObject(jsonDecode(resp.body));
+      }
+    } catch (error, stackTrace) {
+      _logError('regenerateAiNotes', error, stackTrace);
     }
     return null;
   }
@@ -970,6 +1103,159 @@ class ApiService {
         return jsonDecode(resp.body) as Map<String, dynamic>;
       }
     } catch (_) {}
+    return null;
+  }
+
+  static Future<Map<String, dynamic>?> approveAppointment(
+    int id, {
+    String? remarks,
+  }) async {
+    return _appointmentJsonPut(
+      '/appointments/$id/approve',
+      {'remarks': remarks},
+      'approveAppointment',
+    );
+  }
+
+  static Future<Map<String, dynamic>?> rejectAppointment(
+    int id, {
+    String? remarks,
+  }) async {
+    return _appointmentJsonPut(
+      '/appointments/$id/reject',
+      {'remarks': remarks},
+      'rejectAppointment',
+    );
+  }
+
+  static Future<Map<String, dynamic>?> markFollowUp(
+    int id, {
+    String remarks = 'Follow-up',
+  }) async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .post(
+            _u('/appointments/mark-followup'),
+            headers: headers,
+            body: jsonEncode({
+              'appointmentIds': [id],
+              'remarks': remarks,
+            }),
+          )
+          .timeout(const Duration(seconds: 20));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        final decoded = jsonDecode(resp.body);
+        final rows = _normalizeList(decoded);
+        return rows.isNotEmpty ? rows.first : _unwrapObject(decoded);
+      }
+    } catch (error, stackTrace) {
+      _logError('markFollowUp', error, stackTrace);
+    }
+    return null;
+  }
+
+  static Future<Map<String, dynamic>?> submitCmoReview({
+    required int appointmentId,
+    String? eventType,
+    String? requestedLocation,
+    String? cmoRemarks,
+    String? pendingInformation,
+    required String status,
+    bool notifyApplicant = false,
+    bool notifyDeo = false,
+  }) async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .post(
+            _u('/appointments/$appointmentId/cmo-review'),
+            headers: headers,
+            body: jsonEncode({
+              'eventType': eventType,
+              'requestedLocation': requestedLocation,
+              'cmoRemarks': cmoRemarks,
+              'pendingInformation': pendingInformation,
+              'status': status,
+              'notifyApplicant': notifyApplicant,
+              'notifyDeo': notifyDeo,
+            }),
+          )
+          .timeout(const Duration(seconds: 20));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        return _unwrapObject(jsonDecode(resp.body));
+      }
+    } catch (error, stackTrace) {
+      _logError('submitCmoReview', error, stackTrace);
+    }
+    return null;
+  }
+
+  static Future<Map<String, dynamic>?> uploadSupportingDocument(
+    int appointmentId,
+    String filePath, {
+    String? fileName,
+  }) async {
+    try {
+      final request = http.MultipartRequest(
+        'POST',
+        _u('/appointments/$appointmentId/supporting-documents'),
+      );
+      request.headers.addAll(await _authHeaders());
+      request.files.add(await http.MultipartFile.fromPath(
+        'file',
+        filePath,
+        filename: fileName,
+      ));
+      final streamed =
+          await request.send().timeout(const Duration(seconds: 45));
+      final response = await http.Response.fromStream(streamed);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return _unwrapObject(jsonDecode(response.body));
+      }
+    } catch (error, stackTrace) {
+      _logError('uploadSupportingDocument', error, stackTrace);
+    }
+    return null;
+  }
+
+  static Future<Uint8List?> downloadDocumentBytes(int documentId) async {
+    try {
+      final headers = await _authHeaders();
+      final resp = await http
+          .get(_u('/documents/$documentId/download'), headers: headers)
+          .timeout(const Duration(seconds: 30));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        return resp.bodyBytes;
+      }
+    } catch (error, stackTrace) {
+      _logError('downloadDocumentBytes', error, stackTrace);
+    }
+    return null;
+  }
+
+  static Future<Map<String, dynamic>?> _appointmentJsonPut(
+    String path,
+    Map<String, dynamic> body,
+    String action,
+  ) async {
+    try {
+      final headers = await _headers();
+      final sanitized = Map<String, dynamic>.from(body)
+        ..removeWhere((_, value) => value == null);
+      final resp = await http
+          .put(
+            _u(path),
+            headers: headers,
+            body: jsonEncode(sanitized),
+          )
+          .timeout(const Duration(seconds: 20));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        return _unwrapObject(jsonDecode(resp.body));
+      }
+    } catch (error, stackTrace) {
+      _logError(action, error, stackTrace);
+    }
     return null;
   }
 

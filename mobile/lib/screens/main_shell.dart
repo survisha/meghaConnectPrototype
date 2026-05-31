@@ -445,40 +445,25 @@ class _MainShellState extends State<MainShell> {
   Widget _buildDrawerHeader(AuthUser user) {
     return Container(
       padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 16,
-        left: 20,
-        right: 20,
-        bottom: 20,
-      ),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF1A237E), Color(0xFF3949AB)],
-        ),
+        top: MediaQuery.of(context).padding.top + 14,
+        left: 16,
+        right: 16,
+        bottom: 14,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Image.asset('assets/logo.png', width: 58, height: 58),
-          const SizedBox(height: 12),
-          const Text(
-            'MeghaConnect',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 2),
           Text(
             user.fullName,
             style: TextStyle(
-              color: Colors.white.withAlpha(204),
-              fontSize: 13,
+              color: Colors.white.withAlpha(235),
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
             ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           _HeaderRoleBadge(role: user.role),
         ],
       ),

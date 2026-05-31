@@ -18,6 +18,11 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
   String? _error;
 
   List<_DistrictHeat> get _districts {
+    return _districtsInMapOrder
+      ..sort((a, b) => b.applications.compareTo(a.applications));
+  }
+
+  List<_DistrictHeat> get _districtsInMapOrder {
     return _allDistricts.map((district) {
       final schemeData = district.schemes[_selectedScheme] ??
           const _SchemeHeat(applications: 0, approved: 0);
@@ -32,9 +37,10 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
         pending: applications - approved,
         approvalRate: rate,
         color: _heatColor(applications),
+        mapX: district.mapX,
+        mapY: district.mapY,
       );
-    }).toList()
-      ..sort((a, b) => b.applications.compareTo(a.applications));
+    }).toList();
   }
 
   int get _totalApplications =>
@@ -94,6 +100,11 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
                     padding: const EdgeInsets.all(12),
                     children: [
                       _summaryGrid(),
+                      const SizedBox(height: 12),
+                      _MeghalayaDistrictMap(
+                        districts: _districtsInMapOrder,
+                        onDistrictTap: _showDistrictDetails,
+                      ),
                       const SizedBox(height: 12),
                       _legend(),
                       const SizedBox(height: 12),
@@ -287,8 +298,15 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
 
 class _DistrictSource {
   final String name;
+  final double mapX;
+  final double mapY;
   final Map<String, _SchemeHeat> schemes;
-  const _DistrictSource(this.name, this.schemes);
+  const _DistrictSource(
+    this.name,
+    this.mapX,
+    this.mapY,
+    this.schemes,
+  );
 }
 
 class _SchemeHeat {
@@ -304,6 +322,8 @@ class _DistrictHeat {
   final int pending;
   final int approvalRate;
   final Color color;
+  final double mapX;
+  final double mapY;
 
   const _DistrictHeat({
     required this.name,
@@ -312,11 +332,13 @@ class _DistrictHeat {
     required this.pending,
     required this.approvalRate,
     required this.color,
+    required this.mapX,
+    required this.mapY,
   });
 }
 
 const _allDistricts = [
-  _DistrictSource('East Khasi Hills', {
+  _DistrictSource('East Khasi Hills', 0.67, 0.68, {
     'ALL': _SchemeHeat(applications: 142, approved: 98),
     'CMSDF': _SchemeHeat(applications: 45, approved: 32),
     'CMSG': _SchemeHeat(applications: 38, approved: 27),
@@ -325,7 +347,7 @@ const _allDistricts = [
     'CM_ELEVATE': _SchemeHeat(applications: 12, approved: 8),
     'FOCUS_PLUS': _SchemeHeat(applications: 7, approved: 4),
   }),
-  _DistrictSource('West Garo Hills', {
+  _DistrictSource('West Garo Hills', 0.16, 0.43, {
     'ALL': _SchemeHeat(applications: 118, approved: 79),
     'CMSDF': _SchemeHeat(applications: 38, approved: 25),
     'CMSG': _SchemeHeat(applications: 32, approved: 22),
@@ -334,7 +356,7 @@ const _allDistricts = [
     'CM_ELEVATE': _SchemeHeat(applications: 9, approved: 6),
     'FOCUS_PLUS': _SchemeHeat(applications: 5, approved: 3),
   }),
-  _DistrictSource('East Garo Hills', {
+  _DistrictSource('East Garo Hills', 0.31, 0.46, {
     'ALL': _SchemeHeat(applications: 87, approved: 61),
     'CMSDF': _SchemeHeat(applications: 28, approved: 20),
     'CMSG': _SchemeHeat(applications: 24, approved: 17),
@@ -343,7 +365,7 @@ const _allDistricts = [
     'CM_ELEVATE': _SchemeHeat(applications: 7, approved: 4),
     'FOCUS_PLUS': _SchemeHeat(applications: 3, approved: 2),
   }),
-  _DistrictSource('West Khasi Hills', {
+  _DistrictSource('West Khasi Hills', 0.47, 0.50, {
     'ALL': _SchemeHeat(applications: 64, approved: 43),
     'CMSDF': _SchemeHeat(applications: 20, approved: 14),
     'CMSG': _SchemeHeat(applications: 17, approved: 12),
@@ -352,7 +374,7 @@ const _allDistricts = [
     'CM_ELEVATE': _SchemeHeat(applications: 5, approved: 3),
     'FOCUS_PLUS': _SchemeHeat(applications: 3, approved: 2),
   }),
-  _DistrictSource('Ri Bhoi', {
+  _DistrictSource('Ri Bhoi', 0.69, 0.25, {
     'ALL': _SchemeHeat(applications: 56, approved: 39),
     'CMSDF': _SchemeHeat(applications: 18, approved: 13),
     'CMSG': _SchemeHeat(applications: 15, approved: 11),
@@ -361,7 +383,7 @@ const _allDistricts = [
     'CM_ELEVATE': _SchemeHeat(applications: 5, approved: 3),
     'FOCUS_PLUS': _SchemeHeat(applications: 2, approved: 1),
   }),
-  _DistrictSource('South Garo Hills', {
+  _DistrictSource('South Garo Hills', 0.28, 0.74, {
     'ALL': _SchemeHeat(applications: 48, approved: 32),
     'CMSDF': _SchemeHeat(applications: 15, approved: 10),
     'CMSG': _SchemeHeat(applications: 13, approved: 9),
@@ -370,7 +392,7 @@ const _allDistricts = [
     'CM_ELEVATE': _SchemeHeat(applications: 4, approved: 3),
     'FOCUS_PLUS': _SchemeHeat(applications: 2, approved: 1),
   }),
-  _DistrictSource('West Jaintia Hills', {
+  _DistrictSource('West Jaintia Hills', 0.84, 0.59, {
     'ALL': _SchemeHeat(applications: 39, approved: 26),
     'CMSDF': _SchemeHeat(applications: 12, approved: 8),
     'CMSG': _SchemeHeat(applications: 10, approved: 7),
@@ -379,7 +401,7 @@ const _allDistricts = [
     'CM_ELEVATE': _SchemeHeat(applications: 3, approved: 2),
     'FOCUS_PLUS': _SchemeHeat(applications: 2, approved: 1),
   }),
-  _DistrictSource('East Jaintia Hills', {
+  _DistrictSource('East Jaintia Hills', 0.88, 0.79, {
     'ALL': _SchemeHeat(applications: 35, approved: 24),
     'CMSDF': _SchemeHeat(applications: 11, approved: 8),
     'CMSG': _SchemeHeat(applications: 9, approved: 6),
@@ -388,7 +410,7 @@ const _allDistricts = [
     'CM_ELEVATE': _SchemeHeat(applications: 3, approved: 2),
     'FOCUS_PLUS': _SchemeHeat(applications: 1, approved: 1),
   }),
-  _DistrictSource('North Garo Hills', {
+  _DistrictSource('North Garo Hills', 0.33, 0.23, {
     'ALL': _SchemeHeat(applications: 31, approved: 21),
     'CMSDF': _SchemeHeat(applications: 10, approved: 7),
     'CMSG': _SchemeHeat(applications: 8, approved: 6),
@@ -397,7 +419,7 @@ const _allDistricts = [
     'CM_ELEVATE': _SchemeHeat(applications: 3, approved: 2),
     'FOCUS_PLUS': _SchemeHeat(applications: 1, approved: 0),
   }),
-  _DistrictSource('South West Khasi Hills', {
+  _DistrictSource('South West Khasi Hills', 0.53, 0.74, {
     'ALL': _SchemeHeat(applications: 24, approved: 16),
     'CMSDF': _SchemeHeat(applications: 8, approved: 5),
     'CMSG': _SchemeHeat(applications: 6, approved: 4),
@@ -406,7 +428,7 @@ const _allDistricts = [
     'CM_ELEVATE': _SchemeHeat(applications: 2, approved: 1),
     'FOCUS_PLUS': _SchemeHeat(applications: 1, approved: 1),
   }),
-  _DistrictSource('Eastern West Khasi Hills', {
+  _DistrictSource('Eastern West Khasi Hills', 0.63, 0.43, {
     'ALL': _SchemeHeat(applications: 18, approved: 12),
     'CMSDF': _SchemeHeat(applications: 6, approved: 4),
     'CMSG': _SchemeHeat(applications: 5, approved: 3),
@@ -473,6 +495,153 @@ class _DistrictHeatCard extends StatelessWidget {
                 style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MeghalayaDistrictMap extends StatelessWidget {
+  final List<_DistrictHeat> districts;
+  final ValueChanged<_DistrictHeat> onDistrictTap;
+
+  const _MeghalayaDistrictMap({
+    required this.districts,
+    required this.onDistrictTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final maxApplications = districts.fold<int>(
+      1,
+      (max, district) =>
+          district.applications > max ? district.applications : max,
+    );
+
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            color: Colors.white,
+            child: const Row(
+              children: [
+                Icon(Icons.map, color: Color(0xFF1A237E), size: 20),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'District-wise Scheme Distribution',
+                    style: TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final width = constraints.maxWidth;
+              final bubbleScale = width < 360 ? 0.78 : 1.0;
+              return AspectRatio(
+                aspectRatio: 1216 / 464,
+                child: LayoutBuilder(
+                  builder: (context, mapConstraints) {
+                    return Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Container(color: const Color(0xFFF9FAFB)),
+                        Image.asset(
+                          'assets/state_map.png',
+                          fit: BoxFit.contain,
+                        ),
+                        for (final district in districts)
+                          _MapBubble(
+                            district: district,
+                            maxApplications: maxApplications,
+                            scale: bubbleScale,
+                            mapSize: Size(
+                              mapConstraints.maxWidth,
+                              mapConstraints.maxHeight,
+                            ),
+                            onTap: () => onDistrictTap(district),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            color: const Color(0xFFF9FAFB),
+            child: const Text(
+              'Tap bubbles for district statistics.',
+              style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MapBubble extends StatelessWidget {
+  final _DistrictHeat district;
+  final int maxApplications;
+  final double scale;
+  final Size mapSize;
+  final VoidCallback onTap;
+
+  const _MapBubble({
+    required this.district,
+    required this.maxApplications,
+    required this.scale,
+    required this.mapSize,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final intensity =
+        maxApplications <= 0 ? 0.0 : district.applications / maxApplications;
+    final size = (24 + (intensity * 34)) * scale;
+
+    return Positioned(
+      left: district.mapX * mapSize.width - size / 2,
+      top: district.mapY * mapSize.height - size / 2,
+      width: size,
+      height: size,
+      child: Tooltip(
+        message: '${district.name}: ${district.applications} applications',
+        child: InkWell(
+          borderRadius: BorderRadius.circular(999),
+          onTap: onTap,
+          child: Container(
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: district.color.withAlpha(204),
+              border: Border.all(color: Colors.white, width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha(46),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Text(
+              '${district.applications}',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: size < 34 ? 9 : 11,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
           ),
         ),
       ),
@@ -608,7 +777,7 @@ class _InfoNote extends StatelessWidget {
             SizedBox(width: 8),
             Expanded(
               child: Text(
-                'Mobile heatmap uses district intensity cards. Tap a district for detailed statistics.',
+                'Map shows district bubbles sized by application volume. Tap a bubble or district card for detailed statistics.',
                 style: TextStyle(color: Color(0xFF1E3A8A), fontSize: 12),
               ),
             ),

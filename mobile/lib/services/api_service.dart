@@ -1512,19 +1512,28 @@ class ApiService {
   }
 
   // Schedule events
-  static Future<List<dynamic>> getScheduleEvents() async {
+  static Future<List<dynamic>> getScheduleEvents({
+    DateTime? start,
+    DateTime? end,
+  }) async {
     try {
       final headers = await _headers();
+      final params = <String, String>{};
+      if (start != null) params['start'] = _localIso(start);
+      if (end != null) params['end'] = _localIso(end);
       final resp = await http
           .get(
-            _u('/schedule'),
+            _u('/schedule').replace(queryParameters: params),
             headers: headers,
           )
           .timeout(const Duration(seconds: 20));
       if (resp.statusCode == 200) {
-        return jsonDecode(resp.body) as List<dynamic>;
+        final decoded = jsonDecode(resp.body);
+        return decoded is List ? decoded : _normalizeList(decoded);
       }
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      _logError('getScheduleEvents', error, stackTrace);
+    }
     return [];
   }
 
@@ -1542,7 +1551,76 @@ class ApiService {
       if (resp.statusCode == 200 || resp.statusCode == 201) {
         return jsonDecode(resp.body) as Map<String, dynamic>;
       }
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      _logError('createScheduleEvent', error, stackTrace);
+    }
+    return null;
+  }
+
+  static Future<Map<String, dynamic>?> updateScheduleEvent(
+    int id,
+    Map<String, dynamic> body,
+  ) async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .put(
+            _u('/schedule/$id'),
+            headers: headers,
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 20));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+    } catch (error, stackTrace) {
+      _logError('updateScheduleEvent', error, stackTrace);
+    }
+    return null;
+  }
+
+  static Future<bool> deleteScheduleEvent(int id) async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .delete(_u('/schedule/$id'), headers: headers)
+          .timeout(const Duration(seconds: 20));
+      return resp.statusCode >= 200 && resp.statusCode < 300;
+    } catch (error, stackTrace) {
+      _logError('deleteScheduleEvent', error, stackTrace);
+    }
+    return false;
+  }
+
+  static String _localIso(DateTime value) {
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${value.year}-${two(value.month)}-${two(value.day)}T'
+        '${two(value.hour)}:${two(value.minute)}:${two(value.second)}';
+  }
+
+  static Future<Map<String, dynamic>?> assignAppointmentsToScheduleEvent(
+    int id, {
+    required List<int> appointmentIds,
+    String remarks = 'Scheduled',
+  }) async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .post(
+            _u('/schedule/$id/appointments'),
+            headers: headers,
+            body: jsonEncode({
+              'appointmentIds': appointmentIds,
+              'remarks': remarks,
+            }),
+          )
+          .timeout(const Duration(seconds: 20));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+    } catch (error, stackTrace) {
+      _logError('assignAppointmentsToScheduleEvent', error, stackTrace);
+    }
     return null;
   }
 

@@ -243,34 +243,37 @@ class MeghaKycStepper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-        decoration: BoxDecoration(
-          color: MeghaColors.panelBg,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            for (var i = 0; i < steps.length; i++) ...[
-              _StepDot(
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+      decoration: BoxDecoration(
+        color: MeghaColors.panelBg,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var i = 0; i < steps.length; i++) ...[
+            Expanded(
+              child: _StepDot(
                 data: steps[i],
                 active: i == currentStep,
                 completed: i < currentStep,
               ),
-              if (i != steps.length - 1)
-                Container(
-                  width: 32,
+            ),
+            if (i != steps.length - 1)
+              SizedBox(
+                width: 12,
+                child: Container(
                   height: 2,
-                  margin: const EdgeInsets.symmetric(horizontal: 6),
+                  margin: const EdgeInsets.only(top: 18),
                   color: i < currentStep
                       ? const Color(0xFF16A34A)
                       : const Color(0xFFE5E7EB),
                 ),
-            ],
+              ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -308,46 +311,41 @@ class _StepDot extends StatelessWidget {
             ? MeghaColors.primary
             : MeghaColors.muted;
 
-    return SizedBox(
-      width: 72,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-              boxShadow: active
-                  ? [
-                      BoxShadow(
-                        color: MeghaColors.primary.withAlpha(31),
-                        blurRadius: 0,
-                        spreadRadius: 4,
-                      ),
-                    ]
-                  : null,
-            ),
-            child:
-                Icon(completed ? Icons.check : data.icon, color: fg, size: 19),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            boxShadow: active
+                ? [
+                    BoxShadow(
+                      color: MeghaColors.primary.withAlpha(31),
+                      blurRadius: 0,
+                      spreadRadius: 4,
+                    ),
+                  ]
+                : null,
           ),
-          const SizedBox(height: 6),
-          Text(
-            data.label,
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: labelColor,
-              fontSize: 10.5,
-              fontWeight:
-                  active || completed ? FontWeight.w700 : FontWeight.w500,
-              height: 1.15,
-            ),
+          child: Icon(completed ? Icons.check : data.icon, color: fg, size: 17),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          data.label,
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: labelColor,
+            fontSize: 10.5,
+            fontWeight: active || completed ? FontWeight.w700 : FontWeight.w500,
+            height: 1.15,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

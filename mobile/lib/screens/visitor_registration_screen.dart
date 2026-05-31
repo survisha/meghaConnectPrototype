@@ -1313,11 +1313,27 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
               value: _designations.contains(_designationCtrl.text)
                   ? _designationCtrl.text
                   : null,
+              isExpanded: true,
               decoration:
                   InputDecoration(labelText: '${i18n.t('DESIGNATION')} *'),
+              selectedItemBuilder: (context) => [
+                for (final item in _designations)
+                  Text(
+                    item,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
               items: [
                 for (final item in _designations)
-                  DropdownMenuItem(value: item, child: Text(item)),
+                  DropdownMenuItem(
+                    value: item,
+                    child: Text(
+                      item,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
               ],
               onChanged: (value) {
                 if (value == null) return;
@@ -1707,7 +1723,11 @@ class _PrimaryProgressButton extends StatelessWidget {
               ),
             )
           : Icon(icon),
-      label: Text(label),
+      label: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
     );
   }
 }

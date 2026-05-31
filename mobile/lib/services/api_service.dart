@@ -1593,20 +1593,31 @@ class ApiService {
   }
 
   // Visitors (used by "Public Identification" screen)
-  static Future<Map<String, dynamic>?> searchPersonByPhone(String phone) async {
+  static Future<List<Map<String, dynamic>>> searchVisitorsByPhone(
+      String phone) async {
     try {
       final headers = await _headers();
       final resp = await http
           .get(
-            _u('/visitors/search/phone/$phone'),
+            _u('/visitors/search/phone/${Uri.encodeComponent(phone)}'),
             headers: headers,
           )
           .timeout(const Duration(seconds: 20));
-      if (resp.statusCode == 200) {
-        return jsonDecode(resp.body) as Map<String, dynamic>;
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        return _normalizeList(jsonDecode(resp.body));
       }
-    } catch (_) {}
-    return null;
+      if (resp.statusCode == 401 || resp.statusCode == 403) {
+        await clearToken();
+      }
+    } catch (error, stackTrace) {
+      _logError('searchVisitorsByPhone', error, stackTrace);
+    }
+    return [];
+  }
+
+  static Future<Map<String, dynamic>?> searchPersonByPhone(String phone) async {
+    final rows = await searchVisitorsByPhone(phone);
+    return rows.isEmpty ? null : rows.first;
   }
 
   static Future<List<dynamic>> searchVisitors({
@@ -1646,9 +1657,14 @@ class ApiService {
           )
           .timeout(const Duration(seconds: 20));
       if (resp.statusCode == 200) {
-        return jsonDecode(resp.body) as Map<String, dynamic>;
+        final decoded = jsonDecode(resp.body);
+        if (decoded is Map<String, dynamic>) {
+          return _unwrapObject(decoded);
+        }
       }
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      _logError('searchPersonByEpic', error, stackTrace);
+    }
     return null;
   }
 
@@ -1682,14 +1698,21 @@ class ApiService {
       final headers = await _headers();
       final resp = await http
           .get(
-            _u('/visitors/search/epic/$epic'),
+            _u('/visitors/search/epic/${Uri.encodeComponent(epic)}'),
             headers: headers,
           )
           .timeout(const Duration(seconds: 20));
-      if (resp.statusCode == 200) {
-        return jsonDecode(resp.body) as Map<String, dynamic>;
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        final decoded = jsonDecode(resp.body);
+        final visitor = _unwrapObject(decoded);
+        return visitor.isEmpty ? null : visitor;
       }
-    } catch (_) {}
+      if (resp.statusCode == 401 || resp.statusCode == 403) {
+        await clearToken();
+      }
+    } catch (error, stackTrace) {
+      _logError('searchPersonByEpic', error, stackTrace);
+    }
     return null;
   }
 
@@ -1703,9 +1726,11 @@ class ApiService {
           )
           .timeout(const Duration(seconds: 20));
       if (resp.statusCode == 200) {
-        return jsonDecode(resp.body) as List<dynamic>;
+        return _normalizeList(jsonDecode(resp.body));
       }
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      _logError('searchPersonsByName', error, stackTrace);
+    }
     return [];
   }
 
@@ -1719,9 +1744,11 @@ class ApiService {
           )
           .timeout(const Duration(seconds: 20));
       if (resp.statusCode == 200) {
-        return jsonDecode(resp.body) as List<dynamic>;
+        return _normalizeList(jsonDecode(resp.body));
       }
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      _logError('searchPersonsByDistrict', error, stackTrace);
+    }
     return [];
   }
 

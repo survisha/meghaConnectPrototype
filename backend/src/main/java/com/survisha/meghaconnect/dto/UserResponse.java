@@ -2,6 +2,7 @@ package com.survisha.meghaconnect.dto;
 
 import com.survisha.meghaconnect.entity.User;
 import lombok.*;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -16,5 +17,8 @@ public class UserResponse {
     private User.UserRole role;
     private String phoneNumber;
     private boolean active;
+    private boolean locked;
     private boolean offlineAccess;
+    private LocalDateTime lastLogin;
+    private LocalDateTime createdAt;
 }

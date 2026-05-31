@@ -1,6 +1,7 @@
 package com.survisha.meghaconnect.service;
 
 import com.survisha.meghaconnect.dto.CreateUserRequest;
+import com.survisha.meghaconnect.dto.UpdateUserRequest;
 import com.survisha.meghaconnect.dto.UserResponse;
 import com.survisha.meghaconnect.entity.User;
 import com.survisha.meghaconnect.repository.UserRepository;
@@ -155,8 +156,84 @@ public class UserService {
                 .role(user.getRole())
                 .phoneNumber(user.getPhoneNumber())
                 .active(user.isActive())
+                .locked(user.isLocked())
                 .offlineAccess(user.isOfflineAccess())
+                .lastLogin(user.getLastLogin())
+                .createdAt(user.getCreatedAt())
                 .build();
+    }
+
+    @Transactional
+    public UserResponse updateUser(Long id, UpdateUserRequest request, String actor) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new MeghaConnectException(
+                        ErrorCodeConstants.USER_NOT_FOUND,
+                        ErrorCodeConstants.format(ErrorCodeConstants.USER_NOT_FOUND_MSG, id),
+                        404));
+        String fullName = trimToNull(request.getFullName());
+        String phoneNumber = trimToNull(request.getPhoneNumber());
+        if (fullName == null) {
+            throw new MeghaConnectException(
+                    ErrorCodeConstants.MISSING_REQUIRED_FIELD,
+                    ErrorCodeConstants.format(ErrorCodeConstants.MISSING_REQUIRED_FIELD_MSG, "fullName"),
+                    400);
+        }
+        if (request.getRole() == null || !roleService.existsByRoleName(request.getRole().name())) {
+            throw new MeghaConnectException(
+                    ErrorCodeConstants.INVALID_ROLE,
+                    ErrorCodeConstants.format(ErrorCodeConstants.INVALID_ROLE_MSG, ""),
+                    400);
+        }
+        if (phoneNumber != null && userRepository.existsByPhoneNumber(phoneNumber)
+                && !phoneNumber.equals(user.getPhoneNumber())) {
+            throw new MeghaConnectException(
+                    ErrorCodeConstants.DUPLICATE_ENTRY,
+                    ErrorCodeConstants.format(ErrorCodeConstants.DUPLICATE_ENTRY_MSG, "mobile"),
+                    409);
+        }
+        user.setFullName(fullName);
+        user.setRole(request.getRole());
+        user.setPhoneNumber(phoneNumber);
+        user.setActive(request.getActive() == null || Boolean.TRUE.equals(request.getActive()));
+        user.setLocked(Boolean.TRUE.equals(request.getLocked()));
+        user.setOfflineAccess(Boolean.TRUE.equals(request.getOfflineAccess()));
+        user.setUpdatedBy(actor);
+        return toResponse(userRepository.save(user));
+    }
+
+    @Transactional
+    public UserResponse setActive(Long id, boolean active, String actor) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new MeghaConnectException(
+                        ErrorCodeConstants.USER_NOT_FOUND,
+                        ErrorCodeConstants.format(ErrorCodeConstants.USER_NOT_FOUND_MSG, id),
+                        404));
+        user.setActive(active);
+        user.setUpdatedBy(actor);
+        return toResponse(userRepository.save(user));
+    }
+
+    @Transactional
+    public UserResponse unlockUser(Long id, String actor) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new MeghaConnectException(
+                        ErrorCodeConstants.USER_NOT_FOUND,
+                        ErrorCodeConstants.format(ErrorCodeConstants.USER_NOT_FOUND_MSG, id),
+                        404));
+        user.setLocked(false);
+        user.setUpdatedBy(actor);
+        return toResponse(userRepository.save(user));
+    }
+
+    @Transactional
+    public void deleteUser(Long id) {
+        if (!userRepository.existsById(id)) {
+            throw new MeghaConnectException(
+                    ErrorCodeConstants.USER_NOT_FOUND,
+                    ErrorCodeConstants.format(ErrorCodeConstants.USER_NOT_FOUND_MSG, id),
+                    404);
+        }
+        userRepository.deleteById(id);
     }
 
     private String trimToNull(String value) {

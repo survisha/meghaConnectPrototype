@@ -1,6 +1,7 @@
 package com.survisha.meghaconnect.controller;
 
 import com.survisha.meghaconnect.dto.CreateUserRequest;
+import com.survisha.meghaconnect.dto.UpdateUserRequest;
 import com.survisha.meghaconnect.dto.UserResponse;
 import com.survisha.meghaconnect.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -67,5 +68,62 @@ public class UserController {
                 "User created",
                 userService.createUser(request, authentication != null ? authentication.getName() : "admin")
         );
+    }
+
+    @Operation(summary = "Update user", description = "Update a user without changing their password")
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','HCM','OSD')")
+    public com.survisha.meghaconnect.response.ApiResponse<UserResponse> update(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateUserRequest request,
+            Authentication authentication) {
+        return com.survisha.meghaconnect.response.ApiResponse.success(
+                "User updated",
+                userService.updateUser(id, request, actor(authentication))
+        );
+    }
+
+    @PatchMapping("/{id}/unlock")
+    @PreAuthorize("hasAnyRole('ADMIN','HCM','OSD')")
+    public com.survisha.meghaconnect.response.ApiResponse<UserResponse> unlock(
+            @PathVariable Long id,
+            Authentication authentication) {
+        return com.survisha.meghaconnect.response.ApiResponse.success(
+                "User unlocked successfully.",
+                userService.unlockUser(id, actor(authentication))
+        );
+    }
+
+    @PatchMapping("/{id}/activate")
+    @PreAuthorize("hasAnyRole('ADMIN','HCM','OSD')")
+    public com.survisha.meghaconnect.response.ApiResponse<UserResponse> activate(
+            @PathVariable Long id,
+            Authentication authentication) {
+        return com.survisha.meghaconnect.response.ApiResponse.success(
+                "User activated successfully.",
+                userService.setActive(id, true, actor(authentication))
+        );
+    }
+
+    @PatchMapping("/{id}/deactivate")
+    @PreAuthorize("hasAnyRole('ADMIN','HCM','OSD')")
+    public com.survisha.meghaconnect.response.ApiResponse<UserResponse> deactivate(
+            @PathVariable Long id,
+            Authentication authentication) {
+        return com.survisha.meghaconnect.response.ApiResponse.success(
+                "User deactivated successfully.",
+                userService.setActive(id, false, actor(authentication))
+        );
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','HCM','OSD')")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        userService.deleteUser(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    private String actor(Authentication authentication) {
+        return authentication != null ? authentication.getName() : "admin";
     }
 }

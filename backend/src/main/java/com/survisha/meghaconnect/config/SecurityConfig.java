@@ -141,13 +141,14 @@ public class SecurityConfig {
                     return new UsernameNotFoundException("User not found: " + username);
                 });
             
-            log.debug("[SECURITY] User found - Username: {}, Role: {}, Active: {}", 
-                u.getUsername(), u.getRole(), u.isActive());
+            log.debug("[SECURITY] User found - Username: {}, Role: {}, Active: {}, Locked: {}",
+                u.getUsername(), u.getRole(), u.isActive(), u.isLocked());
             
             UserDetails userDetails = org.springframework.security.core.userdetails.User.builder()
                 .username(u.getUsername())
                 .password(u.getPasswordHash())
                 .disabled(!u.isActive())
+                .accountLocked(u.isLocked())
                 .authorities(Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + u.getRole().name())))
                 .build();
             

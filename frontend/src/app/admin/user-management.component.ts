@@ -23,8 +23,14 @@ interface ManagedUser {
   role: UserRole;
   password?: string;
   phoneNumber?: string;
+  email?: string;
+  department?: string;
+  designation?: string;
   active?: boolean;
+  locked?: boolean;
   offlineAccess?: boolean;
+  lastLogin?: string;
+  createdAt?: string;
 }
 
 interface ApiResponse<T> {
@@ -45,7 +51,9 @@ interface ApiResponse<T> {
   styleUrls: ['./user-management.component.scss'],
 })
 export class UserManagementComponent implements OnInit {
-  users: ManagedUser[];
+  users: ManagedUser[] = [];
+  filteredUsers: ManagedUser[] = [];
+  pagedUsers: ManagedUser[] = [];
   showDialog = false;
   isEdit = false;
   editTarget = '';
@@ -53,18 +61,26 @@ export class UserManagementComponent implements OnInit {
   errorMsg = '';
   showPassword = false;
 
-  form: ManagedUser = { username: '', fullName: '', role: 'DATA_ENTRY_OPERATOR', password: '', phoneNumber: '' };
-  displayedColumns: string[] = ['fullName', 'username', 'phoneNumber', 'role', 'actions'];
+  form: ManagedUser = this.emptyForm();
+  displayedColumns: string[] = ['sno', 'fullName', 'username', 'phoneNumber', 'email', 'role', 'department', 'active', 'locked', 'createdAt', 'actions'];
+  pageIndex = 0;
   pageSize = 10;
-  pageSizeOptions = [5, 10, 20];
+  pageSizeOptions = [5, 10, 20, 50];
+  totalRecords = 0;
   isLoading = false;
   isSaving = false;
 
+  filters = {
+    search: '',
+    role: '',
+    active: '',
+    locked: '',
+    department: '',
+  };
+
   roleOptions: { label: string; value: UserRole }[] = [];
 
-  constructor(public auth: AuthService, private http: HttpClient) {
-    this.users = [];
-  }
+  constructor(public auth: AuthService, private http: HttpClient) {}
 
   ngOnInit(): void {
     this.loadRoles();
@@ -89,22 +105,28 @@ export class UserManagementComponent implements OnInit {
 
   roleLabel(role: UserRole): string {
     const found = this.roleOptions.find(r => r.value === role);
-    return found ? found.label : role;
+    return found ? found.label : this.toRoleLabel(role);
+  }
+
+  departments(): string[] {
+    return Array.from(new Set(this.users.map(u => (u.department || u.designation || '').trim()).filter(Boolean))).sort();
   }
 
   openNew() {
-    this.form = { username: '', fullName: '', role: this.defaultRole(), password: '', phoneNumber: '' };
+    this.form = this.emptyForm();
     this.isEdit = false;
     this.editTarget = '';
     this.errorMsg = '';
+    this.showPassword = false;
     this.showDialog = true;
   }
 
   openEdit(u: ManagedUser) {
-    this.form = { ...u };
+    this.form = { ...u, password: '' };
     this.isEdit = true;
     this.editTarget = u.username;
     this.errorMsg = '';
+    this.showPassword = false;
     this.showDialog = true;
   }
 
@@ -112,28 +134,43 @@ export class UserManagementComponent implements OnInit {
     this.successMsg = '';
     this.errorMsg = '';
 
-    if (this.isEdit) {
-      this.errorMsg = 'User update is not available yet.';
-      return;
-    }
-
     const username = this.form.username.trim();
     const fullName = this.form.fullName.trim();
     const password = (this.form.password ?? '').trim();
     const phoneNumber = (this.form.phoneNumber ?? '').trim();
 
-    if (!username || !fullName || !this.form.role || !password) {
-      this.errorMsg = 'Full name, username, role, and password are required.';
+    if (!fullName || !this.form.role || (!this.isEdit && !username)) {
+      this.errorMsg = 'Full name, username, and role are required.';
       return;
     }
-
-    if (password.length < 6) {
+    if (!this.isEdit && !password) {
+      this.errorMsg = 'Password is required for a new user.';
+      return;
+    }
+    if (password && password.length < 6) {
       this.errorMsg = 'Password must be at least 6 characters.';
       return;
     }
-
     if (phoneNumber && !/^[0-9]{10}$/.test(phoneNumber)) {
       this.errorMsg = 'Mobile number must be exactly 10 digits.';
+      return;
+    }
+
+    this.isSaving = true;
+    if (this.isEdit && this.form.id) {
+      const payload = {
+        fullName,
+        role: this.form.role,
+        phoneNumber: phoneNumber || null,
+        active: this.form.active !== false,
+        locked: this.form.locked === true,
+        offlineAccess: this.form.offlineAccess === true,
+      };
+      this.http.put<ApiResponse<ManagedUser>>(`${environment.apiUrl}/users/${this.form.id}`, payload).subscribe({
+        next: res => this.afterMutation(res.message || 'User updated successfully.'),
+        error: () => this.failMutation('Failed to update user.'),
+        complete: () => this.isSaving = false,
+      });
       return;
     }
 
@@ -146,30 +183,90 @@ export class UserManagementComponent implements OnInit {
       active: true,
       offlineAccess: false,
     };
-
-    this.isSaving = true;
     this.http.post<ApiResponse<ManagedUser>>(`${environment.apiUrl}/users`, payload).subscribe({
-      next: res => {
-        this.showDialog = false;
-        this.successMsg = res.message || 'User created successfully.';
-        this.loadUsers();
-        setTimeout(() => this.successMsg = '', 3000);
-      },
-      error: err => {
-        this.errorMsg = err?.message || 'Unable to create user.';
-        this.isSaving = false;
-      },
-      complete: () => {
-        this.isSaving = false;
-      },
+      next: res => this.afterMutation(res.message || 'User created successfully.'),
+      error: () => this.failMutation('Unable to create user.'),
+      complete: () => this.isSaving = false,
     });
   }
 
   deleteUser(u: ManagedUser) {
-    if (u.username === this.auth.user()?.username) { this.successMsg = ''; this.errorMsg = 'Cannot delete yourself.'; setTimeout(() => this.errorMsg = '', 3000); return; }
-    this.successMsg = '';
-    this.errorMsg = 'User delete is not available yet.';
-    setTimeout(() => this.errorMsg = '', 3000);
+    if (u.username === this.auth.user()?.username) {
+      this.flashError('Cannot delete yourself.');
+      return;
+    }
+    if (!u.id || !confirm('Are you sure you want to delete this user?')) return;
+    this.http.delete(`${environment.apiUrl}/users/${u.id}`).subscribe({
+      next: () => this.afterMutation('User deleted successfully.'),
+      error: () => this.flashError('Failed to delete user.'),
+    });
+  }
+
+  toggleActive(u: ManagedUser) {
+    if (u.username === this.auth.user()?.username && u.active) {
+      this.flashError('Cannot deactivate yourself.');
+      return;
+    }
+    const action = u.active ? 'deactivate' : 'activate';
+    const success = u.active ? 'User deactivated successfully.' : 'User activated successfully.';
+    const failure = u.active ? 'Failed to deactivate user.' : 'Failed to activate user.';
+    this.http.patch<ApiResponse<ManagedUser>>(`${environment.apiUrl}/users/${u.id}/${action}`, {}).subscribe({
+      next: () => this.afterMutation(success),
+      error: () => this.flashError(failure),
+    });
+  }
+
+  unlockUser(u: ManagedUser) {
+    if (!u.id || !u.locked) return;
+    this.http.patch<ApiResponse<ManagedUser>>(`${environment.apiUrl}/users/${u.id}/unlock`, {}).subscribe({
+      next: () => this.afterMutation('User unlocked successfully.'),
+      error: () => this.flashError('Failed to unlock user.'),
+    });
+  }
+
+  applyFilters(resetPage = true) {
+    if (resetPage) this.pageIndex = 0;
+    const search = this.filters.search.trim().toLowerCase();
+    this.filteredUsers = this.users.filter(user => {
+      const haystack = [
+        user.fullName, user.username, user.phoneNumber, user.email,
+      ].join(' ').toLowerCase();
+      const active = user.active !== false;
+      const locked = user.locked === true;
+      const dept = (user.department || user.designation || '').trim();
+      return (!search || haystack.includes(search))
+        && (!this.filters.role || user.role === this.filters.role)
+        && (!this.filters.active || String(active) === this.filters.active)
+        && (!this.filters.locked || String(locked) === this.filters.locked)
+        && (!this.filters.department || dept === this.filters.department);
+    });
+    this.totalRecords = this.filteredUsers.length;
+    this.updatePage();
+  }
+
+  resetFilters() {
+    this.filters = { search: '', role: '', active: '', locked: '', department: '' };
+    this.applyFilters();
+  }
+
+  changePage(delta: number) {
+    const maxPage = Math.max(0, Math.ceil(this.totalRecords / this.pageSize) - 1);
+    this.pageIndex = Math.min(maxPage, Math.max(0, this.pageIndex + delta));
+    this.updatePage();
+  }
+
+  changePageSize(size: number | string) {
+    this.pageSize = Number(size);
+    this.pageIndex = 0;
+    this.updatePage();
+  }
+
+  pageNumber(): number {
+    return this.totalRecords === 0 ? 0 : this.pageIndex + 1;
+  }
+
+  pageCount(): number {
+    return Math.ceil(this.totalRecords / this.pageSize) || 0;
   }
 
   private loadRoles() {
@@ -183,8 +280,8 @@ export class UserManagementComponent implements OnInit {
           this.form.role = this.defaultRole();
         }
       },
-      error: err => {
-        this.errorMsg = err?.message || 'Unable to load roles.';
+      error: () => {
+        this.errorMsg = 'Unable to load roles.';
         this.roleOptions = [];
       },
     });
@@ -196,15 +293,55 @@ export class UserManagementComponent implements OnInit {
       next: users => {
         this.users = (users ?? [])
           .filter(user => user.role !== 'PUBLIC' && user.role !== 'CITIZEN')
-          .map(user => ({ ...user, password: '' }));
+          .map(user => ({
+            ...user,
+            role: this.normalizeRoleName(user.role) as UserRole,
+            active: user.active !== false,
+            locked: user.locked === true,
+            password: '',
+          }));
+        this.applyFilters(false);
       },
-      error: err => {
-        this.errorMsg = err?.message || 'Unable to load users.';
-      },
-      complete: () => {
-        this.isLoading = false;
-      },
+      error: () => this.errorMsg = 'Failed to load users.',
+      complete: () => this.isLoading = false,
     });
+  }
+
+  private updatePage() {
+    const start = this.pageIndex * this.pageSize;
+    this.pagedUsers = this.filteredUsers.slice(start, start + this.pageSize);
+  }
+
+  private afterMutation(message: string) {
+    this.showDialog = false;
+    this.successMsg = message;
+    this.errorMsg = '';
+    this.loadUsers();
+    setTimeout(() => this.successMsg = '', 3000);
+  }
+
+  private failMutation(message: string) {
+    this.errorMsg = message;
+    this.isSaving = false;
+  }
+
+  private flashError(message: string) {
+    this.successMsg = '';
+    this.errorMsg = message;
+    setTimeout(() => this.errorMsg = '', 3000);
+  }
+
+  private emptyForm(): ManagedUser {
+    return {
+      username: '',
+      fullName: '',
+      role: this.defaultRole(),
+      password: '',
+      phoneNumber: '',
+      active: true,
+      locked: false,
+      offlineAccess: false,
+    };
   }
 
   private defaultRole(): UserRole {
@@ -225,6 +362,7 @@ export class UserManagementComponent implements OnInit {
     const normalized = (role ?? '').trim().toUpperCase();
     if (normalized === 'SAIDUL_OSD') return 'OSD';
     if (normalized === 'APPROVER_JT_SECY') return 'APPROVER';
+    if (normalized === 'SECURITY_POLICE') return 'SECURITY';
     return normalized;
   }
 }

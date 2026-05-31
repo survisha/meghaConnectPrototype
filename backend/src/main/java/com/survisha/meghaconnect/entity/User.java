@@ -31,6 +31,7 @@ public class User extends BaseEntity {
 
     private boolean active = true;
     private boolean offlineAccess = false;
+    private boolean locked = false;
 
     private LocalDateTime lastLogin;
 

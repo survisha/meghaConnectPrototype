@@ -1,6 +1,72 @@
 .form-group { display: flex; flex-direction: column; gap: 0.25rem; }
 .form-group label { font-size: 0.85rem; font-weight: 600; color: #374151; }
 
+.notice {
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.notice.success { background: #d1fae5; color: #065f46; }
+.notice.error { background: #fee2e2; color: #991b1b; }
+.notice.compact { margin-bottom: 0; padding: 0.6rem 0.75rem; font-size: 0.85rem; }
+
+.filters-card { margin-bottom: 1rem; }
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+
+.user-table code {
+  background: #f3f4f6;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: inline-block;
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.badge.ok { background: #d1fae5; color: #065f46; }
+.badge.warn { background: #fef3c7; color: #92400e; }
+.badge.muted { background: #f3f4f6; color: #6b7280; }
+
+.pagination-bar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.75rem;
+  padding-top: 1rem;
+  color: #4b5563;
+}
+
+.pagination-bar select {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 0.35rem 0.5rem;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
 .dialog-overlay {
   position: fixed;
   inset: 0;
@@ -69,5 +135,10 @@
 
   .dialog-actions button {
     width: 100%;
+  }
+
+  .pagination-bar {
+    align-items: stretch;
+    flex-direction: column;
   }
 }

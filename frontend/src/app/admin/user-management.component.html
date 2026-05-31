@@ -8,29 +8,80 @@
     </button>
   </div>
 
-  <div *ngIf="successMsg" style="background:#d1fae5;color:#065f46;padding:0.75rem 1rem;border-radius:6px;margin-bottom:1rem;display:flex;align-items:center;gap:0.5rem">
-    <mat-icon style="color:#065f46">check_circle</mat-icon> {{ successMsg }}
+  <div *ngIf="successMsg" class="notice success">
+    <mat-icon>check_circle</mat-icon> {{ successMsg }}
   </div>
-  <div *ngIf="errorMsg && !showDialog" style="background:#fee2e2;color:#991b1b;padding:0.75rem 1rem;border-radius:6px;margin-bottom:1rem;display:flex;align-items:center;gap:0.5rem">
-    <mat-icon style="color:#991b1b">error</mat-icon> {{ errorMsg }}
+  <div *ngIf="errorMsg && !showDialog" class="notice error">
+    <mat-icon>error</mat-icon> {{ errorMsg }}
+  </div>
+
+  <div class="section-card filters-card">
+    <div class="section-card-header" style="display:flex;align-items:center;gap:0.5rem">
+      <mat-icon>filter_alt</mat-icon> Search & Filters
+    </div>
+    <div class="filters-grid">
+      <mat-form-field appearance="outline">
+        <mat-label>Search</mat-label>
+        <input matInput [(ngModel)]="filters.search" placeholder="Name, username, mobile, email" (keyup.enter)="applyFilters()" />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Role</mat-label>
+        <mat-select [(ngModel)]="filters.role">
+          <mat-option value="">All</mat-option>
+          <mat-option *ngFor="let opt of roleOptions" [value]="opt.value">{{ opt.label }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Active</mat-label>
+        <mat-select [(ngModel)]="filters.active">
+          <mat-option value="">All</mat-option>
+          <mat-option value="true">Active</mat-option>
+          <mat-option value="false">Inactive</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Locked</mat-label>
+        <mat-select [(ngModel)]="filters.locked">
+          <mat-option value="">All</mat-option>
+          <mat-option value="true">Locked</mat-option>
+          <mat-option value="false">Unlocked</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Department / Designation</mat-label>
+        <mat-select [(ngModel)]="filters.department">
+          <mat-option value="">All</mat-option>
+          <mat-option *ngFor="let dept of departments()" [value]="dept">{{ dept }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+    <div style="display:flex;gap:0.75rem;justify-content:flex-end">
+      <button mat-stroked-button type="button" (click)="resetFilters()">Reset</button>
+      <button mat-raised-button color="primary" type="button" (click)="applyFilters()">Search</button>
+    </div>
   </div>
 
   <div class="section-card">
-    <div class="section-card-header" style="display:flex;align-items:center;gap:0.5rem">
-      <mat-icon>list</mat-icon> System Users
+    <div class="section-card-header" style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">
+      <span style="display:flex;align-items:center;gap:0.5rem"><mat-icon>list</mat-icon> System Users</span>
+      <span style="font-size:0.85rem;color:#6b7280">Total: {{ totalRecords }}</span>
     </div>
-    <div style="overflow-x: auto;">
-      <table mat-table [dataSource]="users" class="user-table">
-        <!-- Full Name Column -->
+    <div *ngIf="isLoading" style="padding:1.5rem;color:#6b7280">Loading users...</div>
+    <div style="overflow-x: auto;" *ngIf="!isLoading">
+      <table mat-table [dataSource]="pagedUsers" class="user-table">
+        <ng-container matColumnDef="sno">
+          <th mat-header-cell *matHeaderCellDef>S.No</th>
+          <td mat-cell *matCellDef="let u; let i = index">{{ pageIndex * pageSize + i + 1 }}</td>
+        </ng-container>
+
         <ng-container matColumnDef="fullName">
-          <th mat-header-cell *matHeaderCellDef>Full Name</th>
+          <th mat-header-cell *matHeaderCellDef>Name</th>
           <td mat-cell *matCellDef="let u"><strong>{{ u.fullName }}</strong></td>
         </ng-container>
 
-        <!-- Username Column -->
         <ng-container matColumnDef="username">
-          <th mat-header-cell *matHeaderCellDef>Username</th>
-          <td mat-cell *matCellDef="let u"><code style="background:#f3f4f6;padding:2px 6px;border-radius:4px">{{ u.username }}</code></td>
+          <th mat-header-cell *matHeaderCellDef>Username / Login ID</th>
+          <td mat-cell *matCellDef="let u"><code>{{ u.username }}</code></td>
         </ng-container>
 
         <ng-container matColumnDef="phoneNumber">
@@ -38,23 +89,57 @@
           <td mat-cell *matCellDef="let u">{{ u.phoneNumber || '-' }}</td>
         </ng-container>
 
-        <!-- Role Column -->
+        <ng-container matColumnDef="email">
+          <th mat-header-cell *matHeaderCellDef>Email</th>
+          <td mat-cell *matCellDef="let u">{{ u.email || '-' }}</td>
+        </ng-container>
+
         <ng-container matColumnDef="role">
           <th mat-header-cell *matHeaderCellDef>Role</th>
           <td mat-cell *matCellDef="let u">
-            <span style="padding:4px 8px;border-radius:4px;font-size:0.85rem;font-weight:500;display:inline-block"
-              [ngStyle]="roleBadge(u.role)">
-              {{ roleLabel(u.role) }}
+            <span class="badge" [ngStyle]="roleBadge(u.role)">{{ roleLabel(u.role) }}</span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="department">
+          <th mat-header-cell *matHeaderCellDef>Department / Designation</th>
+          <td mat-cell *matCellDef="let u">{{ u.department || u.designation || '-' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="active">
+          <th mat-header-cell *matHeaderCellDef>Active</th>
+          <td mat-cell *matCellDef="let u">
+            <span class="badge" [class.ok]="u.active !== false" [class.muted]="u.active === false">
+              {{ u.active !== false ? 'Active' : 'Inactive' }}
             </span>
           </td>
         </ng-container>
 
-        <!-- Actions Column -->
+        <ng-container matColumnDef="locked">
+          <th mat-header-cell *matHeaderCellDef>Locked</th>
+          <td mat-cell *matCellDef="let u">
+            <span class="badge" [class.warn]="u.locked" [class.ok]="!u.locked">
+              {{ u.locked ? 'Locked' : 'Unlocked' }}
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="createdAt">
+          <th mat-header-cell *matHeaderCellDef>Created At</th>
+          <td mat-cell *matCellDef="let u">{{ u.createdAt ? (u.createdAt | date:'dd-MMM-yyyy HH:mm') : '-' }}</td>
+        </ng-container>
+
         <ng-container matColumnDef="actions">
           <th mat-header-cell *matHeaderCellDef style="text-align:center">Actions</th>
-          <td mat-cell *matCellDef="let u; let i = index" style="text-align:center">
+          <td mat-cell *matCellDef="let u; let i = index" style="text-align:center;white-space:nowrap">
             <button [id]="'userMgmt_editBtn_' + i" mat-icon-button color="primary" (click)="openEdit(u)" matTooltip="Edit">
               <mat-icon>edit</mat-icon>
+            </button>
+            <button mat-icon-button color="primary" (click)="toggleActive(u)" [disabled]="u.username === auth.user()?.username && u.active" [matTooltip]="u.active ? 'Deactivate' : 'Activate'">
+              <mat-icon>{{ u.active ? 'block' : 'check_circle' }}</mat-icon>
+            </button>
+            <button mat-icon-button color="accent" (click)="unlockUser(u)" [disabled]="!u.locked" matTooltip="Unlock">
+              <mat-icon>lock_open</mat-icon>
             </button>
             <button [id]="'userMgmt_deleteBtn_' + i" mat-icon-button color="warn" (click)="deleteUser(u)" [disabled]="u.username === auth.user()?.username" matTooltip="Delete">
               <mat-icon>delete</mat-icon>
@@ -62,11 +147,20 @@
           </td>
         </ng-container>
 
-        <!-- Header Row -->
         <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-        <!-- Data Rows -->
         <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
       </table>
+      <div *ngIf="!pagedUsers.length" style="padding:1.5rem;text-align:center;color:#6b7280">No users found.</div>
+    </div>
+
+    <div class="pagination-bar">
+      <span>Rows per page</span>
+      <select [ngModel]="pageSize" (ngModelChange)="changePageSize($event)">
+        <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }}</option>
+      </select>
+      <span>Page {{ pageNumber() }} of {{ pageCount() }}</span>
+      <button mat-stroked-button type="button" (click)="changePage(-1)" [disabled]="pageIndex === 0">Previous</button>
+      <button mat-stroked-button type="button" (click)="changePage(1)" [disabled]="pageIndex + 1 >= pageCount()">Next</button>
     </div>
   </div>
 
@@ -80,8 +174,8 @@
       </div>
 
       <div class="dialog-content">
-        <div *ngIf="errorMsg" style="background:#fee2e2;color:#991b1b;padding:0.6rem 0.75rem;border-radius:6px;font-size:0.85rem;display:flex;gap:0.5rem;align-items:center">
-          <mat-icon style="color:#991b1b;font-size:18px;width:18px;height:18px">error</mat-icon> {{ errorMsg }}
+        <div *ngIf="errorMsg" class="notice error compact">
+          <mat-icon>error</mat-icon> {{ errorMsg }}
         </div>
 
         <mat-form-field appearance="outline" style="width:100%">
@@ -90,7 +184,7 @@
         </mat-form-field>
 
         <mat-form-field appearance="outline" style="width:100%">
-          <mat-label>Username *</mat-label>
+          <mat-label>Username / Login ID *</mat-label>
           <input id="userMgmt_usernameInput" matInput [(ngModel)]="form.username" placeholder="Username" [disabled]="isEdit" />
         </mat-form-field>
 
@@ -107,13 +201,30 @@
           <input id="userMgmt_phoneInput" matInput [(ngModel)]="form.phoneNumber" placeholder="10-digit mobile number" maxlength="10" />
         </mat-form-field>
 
-        <mat-form-field appearance="outline" style="width:100%">
+        <mat-form-field appearance="outline" style="width:100%" *ngIf="!isEdit">
           <mat-label>Password *</mat-label>
           <input id="userMgmt_passwordInput" matInput [type]="showPassword ? 'text' : 'password'" [(ngModel)]="form.password" placeholder="Set password" />
           <button id="userMgmt_togglePasswordBtn" mat-icon-button matSuffix (click)="showPassword = !showPassword" type="button">
             <mat-icon>{{ showPassword ? 'visibility_off' : 'visibility' }}</mat-icon>
           </button>
         </mat-form-field>
+
+        <div class="toggle-row" *ngIf="isEdit">
+          <label><input type="checkbox" [(ngModel)]="form.active" /> Active user</label>
+          <span class="badge" [class.ok]="form.active !== false" [class.muted]="form.active === false">
+            {{ form.active !== false ? 'Active' : 'Inactive' }}
+          </span>
+        </div>
+
+        <div class="toggle-row" *ngIf="isEdit">
+          <span>Locked status</span>
+          <span class="badge" [class.warn]="form.locked" [class.ok]="!form.locked">
+            {{ form.locked ? 'Locked' : 'Unlocked' }}
+          </span>
+          <button *ngIf="form.locked" mat-stroked-button type="button" color="primary" (click)="form.locked = false">
+            Unlock User
+          </button>
+        </div>
       </div>
 
       <div class="dialog-actions">

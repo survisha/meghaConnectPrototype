@@ -1786,6 +1786,95 @@ class ApiService {
     return [];
   }
 
+  static Future<Map<String, dynamic>?> createUser(
+      Map<String, dynamic> payload) async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .post(
+            _u('/users'),
+            headers: headers,
+            body: jsonEncode(payload),
+          )
+          .timeout(const Duration(seconds: 20));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        return _unwrapObject(jsonDecode(resp.body));
+      }
+    } catch (error, stackTrace) {
+      _logError('createUser', error, stackTrace);
+    }
+    return null;
+  }
+
+  static Future<Map<String, dynamic>?> updateUser(
+    int id,
+    Map<String, dynamic> payload,
+  ) async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .put(
+            _u('/users/$id'),
+            headers: headers,
+            body: jsonEncode(payload),
+          )
+          .timeout(const Duration(seconds: 20));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        return _unwrapObject(jsonDecode(resp.body));
+      }
+    } catch (error, stackTrace) {
+      _logError('updateUser', error, stackTrace);
+    }
+    return null;
+  }
+
+  static Future<bool> deleteUser(int id) async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .delete(_u('/users/$id'), headers: headers)
+          .timeout(const Duration(seconds: 20));
+      return resp.statusCode >= 200 && resp.statusCode < 300;
+    } catch (error, stackTrace) {
+      _logError('deleteUser', error, stackTrace);
+    }
+    return false;
+  }
+
+  static Future<Map<String, dynamic>?> setUserActive(
+    int id,
+    bool active,
+  ) async {
+    return _userPatch(id, active ? 'activate' : 'deactivate', 'setUserActive');
+  }
+
+  static Future<Map<String, dynamic>?> unlockUser(int id) async {
+    return _userPatch(id, 'unlock', 'unlockUser');
+  }
+
+  static Future<Map<String, dynamic>?> _userPatch(
+    int id,
+    String action,
+    String logAction,
+  ) async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .patch(
+            _u('/users/$id/$action'),
+            headers: headers,
+            body: jsonEncode({}),
+          )
+          .timeout(const Duration(seconds: 20));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        return _unwrapObject(jsonDecode(resp.body));
+      }
+    } catch (error, stackTrace) {
+      _logError(logAction, error, stackTrace);
+    }
+    return null;
+  }
+
   // Scheme applications
   static Future<Map<String, dynamic>> getSchemeApplications(
       {int page = 0, int size = 50}) async {

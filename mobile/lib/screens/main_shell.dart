@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/user.dart';
@@ -280,6 +281,9 @@ class _MainShellState extends State<MainShell> {
       case 'reports':
         return const ReportsScreen();
       case 'heatmap':
+        if (kDebugMode) {
+          debugPrint('MainShell destination=HeatmapScreen route=$route');
+        }
         return const HeatmapScreen();
       case 'followups':
         return const PendingFollowupsScreen();
@@ -532,6 +536,11 @@ class _MainShellState extends State<MainShell> {
           ),
         ),
         onTap: () {
+          if (kDebugMode) {
+            debugPrint(
+              'MainShell menu clicked label=${item.label} route=${item.route} current=$_currentRoute',
+            );
+          }
           Navigator.pop(context);
           context.read<NavigationService>().navigateTo(item.route!);
         },

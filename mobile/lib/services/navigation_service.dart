@@ -13,6 +13,7 @@ class AppRoutes {
   static const grievances = 'grievances';
   static const identify = 'identify';
   static const reports = 'reports';
+  static const heatmap = 'heatmap';
   static const followups = 'followups';
   static const audit = 'audit';
   static const users = 'users';
@@ -31,6 +32,7 @@ class AppRoutes {
     grievances,
     identify,
     reports,
+    heatmap,
     followups,
     audit,
     users,
@@ -45,6 +47,11 @@ class NavigationService extends ChangeNotifier {
   void navigateTo(String route) {
     final nextRoute =
         AppRoutes.all.contains(route) ? route : AppRoutes.dashboard;
+    if (kDebugMode) {
+      debugPrint(
+        'NavigationService.navigateTo clicked=$route resolved=$nextRoute current=$_currentRoute',
+      );
+    }
     if (_currentRoute == nextRoute) return;
     _currentRoute = nextRoute;
     notifyListeners();

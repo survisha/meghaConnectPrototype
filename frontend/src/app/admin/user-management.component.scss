@@ -1,6 +1,19 @@
 .form-group { display: flex; flex-direction: column; gap: 0.25rem; }
 .form-group label { font-size: 0.85rem; font-weight: 600; color: #374151; }
 
+.user-management-page {
+  padding: 1.5rem;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
 .notice {
   padding: 0.75rem 1rem;
   border-radius: 6px;
@@ -14,12 +27,49 @@
 .notice.error { background: #fee2e2; color: #991b1b; }
 .notice.compact { margin-bottom: 0; padding: 0.6rem 0.75rem; font-size: 0.85rem; }
 
-.filters-card { margin-bottom: 1rem; }
+.filters-card {
+  margin-bottom: 1.25rem;
+}
+
+.filter-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-bottom: 0.35rem;
+}
 
 .filters-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 0.85rem;
+  align-items: start;
+}
+
+.filter-actions {
+  display: flex;
   gap: 0.75rem;
+  justify-content: flex-end;
+  align-items: center;
+  padding-top: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.user-table {
+  width: 100%;
+  min-width: 860px;
+}
+
+.user-table th,
+.user-table td {
+  vertical-align: middle;
+}
+
+.user-table th.mat-column-actions,
+.user-table td.mat-column-actions,
+.actions-cell {
+  text-align: center;
+  width: 72px;
+  white-space: nowrap;
 }
 
 .user-table code {
@@ -140,5 +190,13 @@
   .pagination-bar {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .user-management-page {
+    padding: 1rem;
+  }
+
+  .filter-actions button {
+    flex: 1 1 120px;
   }
 }

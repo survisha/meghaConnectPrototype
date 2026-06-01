@@ -1,5 +1,5 @@
-<div style="padding: 1.5rem;">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
+<div class="user-management-page">
+  <div class="page-header">
     <h2 class="page-title" style="margin:0;display:flex;align-items:center;gap:0.5rem">
       <mat-icon>group</mat-icon> User Management
     </h2>
@@ -16,7 +16,7 @@
   </div>
 
   <div class="section-card filters-card">
-    <div class="section-card-header" style="display:flex;align-items:center;gap:0.5rem">
+    <div class="section-card-header filter-header">
       <mat-icon>filter_alt</mat-icon> Search & Filters
     </div>
     <div class="filters-grid">
@@ -55,7 +55,7 @@
         </mat-select>
       </mat-form-field>
     </div>
-    <div style="display:flex;gap:0.75rem;justify-content:flex-end">
+    <div class="filter-actions">
       <button mat-stroked-button type="button" (click)="resetFilters()">Reset</button>
       <button mat-raised-button color="primary" type="button" (click)="applyFilters()">Search</button>
     </div>
@@ -68,46 +68,36 @@
     </div>
     <div *ngIf="isLoading" style="padding:1.5rem;color:#6b7280">Loading users...</div>
     <div style="overflow-x: auto;" *ngIf="!isLoading">
-      <table mat-table [dataSource]="pagedUsers" class="user-table">
+      <table mat-table [dataSource]="pagedUsers" class="user-table" matSort [matSortActive]="sortActive" [matSortDirection]="sortDirection" matSortDisableClear (matSortChange)="onSort($event)">
         <ng-container matColumnDef="sno">
           <th mat-header-cell *matHeaderCellDef>S.No</th>
           <td mat-cell *matCellDef="let u; let i = index">{{ pageIndex * pageSize + i + 1 }}</td>
         </ng-container>
 
         <ng-container matColumnDef="fullName">
-          <th mat-header-cell *matHeaderCellDef>Name</th>
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Name</th>
           <td mat-cell *matCellDef="let u"><strong>{{ u.fullName }}</strong></td>
         </ng-container>
 
         <ng-container matColumnDef="username">
-          <th mat-header-cell *matHeaderCellDef>Username / Login ID</th>
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Username</th>
           <td mat-cell *matCellDef="let u"><code>{{ u.username }}</code></td>
         </ng-container>
 
         <ng-container matColumnDef="phoneNumber">
-          <th mat-header-cell *matHeaderCellDef>Mobile</th>
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Mobile</th>
           <td mat-cell *matCellDef="let u">{{ u.phoneNumber || '-' }}</td>
         </ng-container>
 
-        <ng-container matColumnDef="email">
-          <th mat-header-cell *matHeaderCellDef>Email</th>
-          <td mat-cell *matCellDef="let u">{{ u.email || '-' }}</td>
-        </ng-container>
-
         <ng-container matColumnDef="role">
-          <th mat-header-cell *matHeaderCellDef>Role</th>
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Role</th>
           <td mat-cell *matCellDef="let u">
             <span class="badge" [ngStyle]="roleBadge(u.role)">{{ roleLabel(u.role) }}</span>
           </td>
         </ng-container>
 
-        <ng-container matColumnDef="department">
-          <th mat-header-cell *matHeaderCellDef>Department / Designation</th>
-          <td mat-cell *matCellDef="let u">{{ u.department || u.designation || '-' }}</td>
-        </ng-container>
-
         <ng-container matColumnDef="active">
-          <th mat-header-cell *matHeaderCellDef>Active</th>
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Active</th>
           <td mat-cell *matCellDef="let u">
             <span class="badge" [class.ok]="u.active !== false" [class.muted]="u.active === false">
               {{ u.active !== false ? 'Active' : 'Inactive' }}
@@ -116,7 +106,7 @@
         </ng-container>
 
         <ng-container matColumnDef="locked">
-          <th mat-header-cell *matHeaderCellDef>Locked</th>
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Locked</th>
           <td mat-cell *matCellDef="let u">
             <span class="badge" [class.warn]="u.locked" [class.ok]="!u.locked">
               {{ u.locked ? 'Locked' : 'Unlocked' }}
@@ -125,25 +115,34 @@
         </ng-container>
 
         <ng-container matColumnDef="createdAt">
-          <th mat-header-cell *matHeaderCellDef>Created At</th>
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Created At</th>
           <td mat-cell *matCellDef="let u">{{ u.createdAt ? (u.createdAt | date:'dd-MMM-yyyy HH:mm') : '-' }}</td>
         </ng-container>
 
         <ng-container matColumnDef="actions">
           <th mat-header-cell *matHeaderCellDef style="text-align:center">Actions</th>
-          <td mat-cell *matCellDef="let u; let i = index" style="text-align:center;white-space:nowrap">
-            <button [id]="'userMgmt_editBtn_' + i" mat-icon-button color="primary" (click)="openEdit(u)" matTooltip="Edit">
-              <mat-icon>edit</mat-icon>
+          <td mat-cell *matCellDef="let u; let i = index" class="actions-cell">
+            <button [id]="'userMgmt_actionsBtn_' + i" mat-icon-button color="primary" [matMenuTriggerFor]="userActionsMenu" matTooltip="User actions" [attr.aria-label]="'Actions for ' + u.username">
+              <mat-icon>construction</mat-icon>
             </button>
-            <button mat-icon-button color="primary" (click)="toggleActive(u)" [disabled]="u.username === auth.user()?.username && u.active" [matTooltip]="u.active ? 'Deactivate' : 'Activate'">
-              <mat-icon>{{ u.active ? 'block' : 'check_circle' }}</mat-icon>
-            </button>
-            <button mat-icon-button color="accent" (click)="unlockUser(u)" [disabled]="!u.locked" matTooltip="Unlock">
-              <mat-icon>lock_open</mat-icon>
-            </button>
-            <button [id]="'userMgmt_deleteBtn_' + i" mat-icon-button color="warn" (click)="deleteUser(u)" [disabled]="u.username === auth.user()?.username" matTooltip="Delete">
-              <mat-icon>delete</mat-icon>
-            </button>
+            <mat-menu #userActionsMenu="matMenu">
+              <button mat-menu-item [id]="'userMgmt_editBtn_' + i" (click)="openEdit(u)">
+                <mat-icon>edit</mat-icon>
+                <span>Edit</span>
+              </button>
+              <button mat-menu-item (click)="toggleActive(u)" [disabled]="u.username === auth.user()?.username && u.active">
+                <mat-icon>{{ u.active ? 'block' : 'check_circle' }}</mat-icon>
+                <span>{{ u.active ? 'Deactivate' : 'Activate' }}</span>
+              </button>
+              <button mat-menu-item *ngIf="u.locked" (click)="unlockUser(u)">
+                <mat-icon>lock_open</mat-icon>
+                <span>Unlock</span>
+              </button>
+              <button mat-menu-item [id]="'userMgmt_deleteBtn_' + i" (click)="deleteUser(u)" [disabled]="u.username === auth.user()?.username">
+                <mat-icon>delete</mat-icon>
+                <span>Delete</span>
+              </button>
+            </mat-menu>
           </td>
         </ng-container>
 

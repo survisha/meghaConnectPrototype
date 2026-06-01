@@ -15,6 +15,8 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatSortModule, Sort } from '@angular/material/sort';
 
 interface ManagedUser {
   id?: number;
@@ -45,7 +47,7 @@ interface ApiResponse<T> {
   imports: [
     CommonModule, FormsModule, ReactiveFormsModule,
     MatButtonModule, MatTableModule, MatDialogModule, MatFormFieldModule, MatInputModule,
-    MatSelectModule, MatIconModule, MatPaginatorModule, MatTooltipModule,
+    MatSelectModule, MatIconModule, MatPaginatorModule, MatTooltipModule, MatMenuModule, MatSortModule,
   ],
   templateUrl: './user-management.component.html',
   styleUrls: ['./user-management.component.scss'],
@@ -61,8 +63,11 @@ export class UserManagementComponent implements OnInit {
   errorMsg = '';
   showPassword = false;
 
+  roleOptions: { label: string; value: UserRole }[] = [];
   form: ManagedUser = this.emptyForm();
-  displayedColumns: string[] = ['sno', 'fullName', 'username', 'phoneNumber', 'email', 'role', 'department', 'active', 'locked', 'createdAt', 'actions'];
+  displayedColumns: string[] = ['sno', 'fullName', 'username', 'phoneNumber', 'role', 'active', 'locked', 'createdAt', 'actions'];
+  sortActive: keyof ManagedUser = 'fullName';
+  sortDirection: 'asc' | 'desc' = 'asc';
   pageIndex = 0;
   pageSize = 10;
   pageSizeOptions = [5, 10, 20, 50];
@@ -77,8 +82,6 @@ export class UserManagementComponent implements OnInit {
     locked: '',
     department: '',
   };
-
-  roleOptions: { label: string; value: UserRole }[] = [];
 
   constructor(public auth: AuthService, private http: HttpClient) {}
 
@@ -168,7 +171,7 @@ export class UserManagementComponent implements OnInit {
       };
       this.http.put<ApiResponse<ManagedUser>>(`${environment.apiUrl}/users/${this.form.id}`, payload).subscribe({
         next: res => this.afterMutation(res.message || 'User updated successfully.'),
-        error: () => this.failMutation('Failed to update user.'),
+        error: error => this.failMutation(this.extractApiErrorMessage(error, 'Failed to update user.')),
         complete: () => this.isSaving = false,
       });
       return;
@@ -185,7 +188,7 @@ export class UserManagementComponent implements OnInit {
     };
     this.http.post<ApiResponse<ManagedUser>>(`${environment.apiUrl}/users`, payload).subscribe({
       next: res => this.afterMutation(res.message || 'User created successfully.'),
-      error: () => this.failMutation('Unable to create user.'),
+      error: error => this.failMutation(this.extractApiErrorMessage(error, 'Unable to create user.')),
       complete: () => this.isSaving = false,
     });
   }
@@ -198,7 +201,7 @@ export class UserManagementComponent implements OnInit {
     if (!u.id || !confirm('Are you sure you want to delete this user?')) return;
     this.http.delete(`${environment.apiUrl}/users/${u.id}`).subscribe({
       next: () => this.afterMutation('User deleted successfully.'),
-      error: () => this.flashError('Failed to delete user.'),
+      error: error => this.flashError(this.extractApiErrorMessage(error, 'Failed to delete user.')),
     });
   }
 
@@ -210,9 +213,10 @@ export class UserManagementComponent implements OnInit {
     const action = u.active ? 'deactivate' : 'activate';
     const success = u.active ? 'User deactivated successfully.' : 'User activated successfully.';
     const failure = u.active ? 'Failed to deactivate user.' : 'Failed to activate user.';
+    if (u.active && !confirm('Are you sure you want to deactivate this user?')) return;
     this.http.patch<ApiResponse<ManagedUser>>(`${environment.apiUrl}/users/${u.id}/${action}`, {}).subscribe({
       next: () => this.afterMutation(success),
-      error: () => this.flashError(failure),
+      error: error => this.flashError(this.extractApiErrorMessage(error, failure)),
     });
   }
 
@@ -220,7 +224,7 @@ export class UserManagementComponent implements OnInit {
     if (!u.id || !u.locked) return;
     this.http.patch<ApiResponse<ManagedUser>>(`${environment.apiUrl}/users/${u.id}/unlock`, {}).subscribe({
       next: () => this.afterMutation('User unlocked successfully.'),
-      error: () => this.flashError('Failed to unlock user.'),
+      error: error => this.flashError(this.extractApiErrorMessage(error, 'Failed to unlock user.')),
     });
   }
 
@@ -241,6 +245,15 @@ export class UserManagementComponent implements OnInit {
         && (!this.filters.department || dept === this.filters.department);
     });
     this.totalRecords = this.filteredUsers.length;
+    this.sortFilteredUsers();
+    this.updatePage();
+  }
+
+  onSort(sort: Sort) {
+    this.sortActive = (sort.active as keyof ManagedUser) || 'fullName';
+    this.sortDirection = (sort.direction || 'asc') as 'asc' | 'desc';
+    this.pageIndex = 0;
+    this.sortFilteredUsers();
     this.updatePage();
   }
 
@@ -280,8 +293,8 @@ export class UserManagementComponent implements OnInit {
           this.form.role = this.defaultRole();
         }
       },
-      error: () => {
-        this.errorMsg = 'Unable to load roles.';
+      error: error => {
+        this.errorMsg = this.extractApiErrorMessage(error, 'Unable to load roles.');
         this.roleOptions = [];
       },
     });
@@ -302,9 +315,43 @@ export class UserManagementComponent implements OnInit {
           }));
         this.applyFilters(false);
       },
-      error: () => this.errorMsg = 'Failed to load users.',
+      error: error => this.errorMsg = this.extractApiErrorMessage(error, 'Failed to load users.'),
       complete: () => this.isLoading = false,
     });
+  }
+
+  private sortFilteredUsers() {
+    const direction = this.sortDirection === 'desc' ? -1 : 1;
+    const active = this.sortActive;
+    this.filteredUsers = [...this.filteredUsers].sort((left, right) => {
+      const comparison = this.sortValue(left, active).localeCompare(
+        this.sortValue(right, active),
+        undefined,
+        { numeric: true, sensitivity: 'base' },
+      );
+      return comparison * direction;
+    });
+  }
+
+  private sortValue(user: ManagedUser, column: keyof ManagedUser): string {
+    switch (column) {
+      case 'fullName':
+        return user.fullName || '';
+      case 'username':
+        return user.username || '';
+      case 'phoneNumber':
+        return user.phoneNumber || '';
+      case 'role':
+        return this.roleLabel(user.role);
+      case 'active':
+        return user.active !== false ? '1' : '0';
+      case 'locked':
+        return user.locked ? '1' : '0';
+      case 'createdAt':
+        return user.createdAt ? String(new Date(user.createdAt).getTime()) : '0';
+      default:
+        return String(user[column] ?? '');
+    }
   }
 
   private updatePage() {
@@ -331,6 +378,14 @@ export class UserManagementComponent implements OnInit {
     setTimeout(() => this.errorMsg = '', 3000);
   }
 
+  private extractApiErrorMessage(error: any, fallbackMessage: string): string {
+    return error?.error?.message
+      || error?.message
+      || error?.error?.errorMessage
+      || error?.error?.details
+      || fallbackMessage;
+  }
+
   private emptyForm(): ManagedUser {
     return {
       username: '',
@@ -345,8 +400,9 @@ export class UserManagementComponent implements OnInit {
   }
 
   private defaultRole(): UserRole {
-    return this.roleOptions.find(option => option.value === 'DATA_ENTRY_OPERATOR')?.value
-      ?? this.roleOptions[0]?.value
+    const options = this.roleOptions ?? [];
+    return options.find(option => option.value === 'DATA_ENTRY_OPERATOR')?.value
+      ?? options[0]?.value
       ?? 'DATA_ENTRY_OPERATOR';
   }
 

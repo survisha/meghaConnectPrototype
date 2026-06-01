@@ -375,7 +375,7 @@ class _MainShellState extends State<MainShell> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Text(
-                  'MeghaConnect',
+                  'MeghaConnect AI',
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: Colors.white,
@@ -385,7 +385,7 @@ class _MainShellState extends State<MainShell> {
                 ),
                 if (showSubtitle)
                   Text(
-                    i18n.t('CM_OFFICE_SCHEDULING'),
+                    'AI Powered Appointment & Scheme Management Platform',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -489,6 +489,32 @@ class _MainShellState extends State<MainShell> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Row(
+            children: [
+              Image.asset('assets/logo.png', width: 42, height: 42),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'MeghaConnect AI',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    Text(
+                      'AI Powered',
+                      style: TextStyle(color: Color(0xFFC7D2FE), fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
           Text(
             user.fullName,
             style: TextStyle(

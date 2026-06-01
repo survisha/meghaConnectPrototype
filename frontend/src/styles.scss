@@ -75,7 +75,7 @@ app-login .login-shell {
   padding: clamp(1rem, 4vw, 2rem);
   background:
     linear-gradient(135deg, rgba(10, 31, 42, 0.86), rgba(15, 76, 92, 0.72)),
-    url('/asserts/meghalaya-hero.png') center / cover no-repeat;
+    url('asserts/meghalaya-hero.png') center / cover no-repeat;
 }
 
 app-login .login-shell.embedded {

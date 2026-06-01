@@ -119,7 +119,7 @@
   display: grid;
   align-items: center;
   overflow: hidden;
-  background: url('/asserts/meghalaya-hero.png') center / cover no-repeat;
+  background: url('../../asserts/meghalaya-hero.png') center / cover no-repeat;
 }
 
 .hero-overlay {
@@ -484,7 +484,7 @@
   gap: clamp(1rem, 5vw, 4rem);
   background:
     linear-gradient(135deg, rgba(7, 41, 52, 0.94), rgba(15, 107, 82, 0.84)),
-    url('/asserts/meghalaya-hero.png') center / cover no-repeat;
+    url('../../asserts/meghalaya-hero.png') center / cover no-repeat;
 }
 
 .login-copy {

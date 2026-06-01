@@ -138,10 +138,8 @@ public class VisitorPassService {
             document.addPage(page);
             try (PDPageContentStream content = new PDPageContentStream(document, page)) {
                 float y = 780;
-                drawText(content, PDType1Font.HELVETICA_BOLD, 20, 56, y, "MeghaConnect");
-                y -= 28;
-                drawText(content, PDType1Font.HELVETICA_BOLD, 16, 56, y, "Visitor Pass");
-                y -= 34;
+                drawBrandHeader(content, 56, y, "Visitor Pass");
+                y -= 62;
                 drawLine(content, 56, y, 540, y);
                 y -= 28;
 
@@ -187,8 +185,8 @@ public class VisitorPassService {
             document.addPage(page);
             try (PDPageContentStream content = new PDPageContentStream(document, page)) {
                 float y = 382;
-                drawText(content, PDType1Font.HELVETICA_BOLD, 18, 36, y, "MeghaConnect Walk-in Pass");
-                y -= 22;
+                drawBrandHeader(content, 36, y, "Walk-in Pass");
+                y -= 46;
                 drawLine(content, 36, y, 558, y);
                 y -= 28;
 
@@ -225,6 +223,41 @@ public class VisitorPassService {
     private float bullet(PDPageContentStream content, float y, String value) throws IOException {
         drawText(content, PDType1Font.HELVETICA, 10, 70, y, "- " + value);
         return y - 16;
+    }
+
+    private void drawBrandHeader(PDPageContentStream content, float x, float y, String documentTitle) throws IOException {
+        content.setNonStrokingColor(new Color(11, 31, 92));
+        drawText(content, PDType1Font.HELVETICA_BOLD, 20, x, y, "MeghaConnect AI");
+        content.setNonStrokingColor(new Color(30, 64, 175));
+        drawText(content, PDType1Font.HELVETICA_BOLD, 13, x, y - 20, documentTitle);
+        content.setNonStrokingColor(new Color(71, 85, 105));
+        drawText(content, PDType1Font.HELVETICA, 8, x, y - 34, "AI Powered Appointment & Scheme Management Platform");
+        drawMiniAiMark(content, x + 430, y - 28);
+        content.setNonStrokingColor(Color.BLACK);
+    }
+
+    private void drawMiniAiMark(PDPageContentStream content, float x, float y) throws IOException {
+        content.setStrokingColor(new Color(34, 211, 238));
+        content.setLineWidth(1.4f);
+        content.moveTo(x, y + 20);
+        content.lineTo(x + 24, y + 8);
+        content.lineTo(x + 48, y + 20);
+        content.moveTo(x, y - 4);
+        content.lineTo(x + 24, y + 8);
+        content.lineTo(x + 48, y - 4);
+        content.stroke();
+        content.setNonStrokingColor(new Color(139, 92, 246));
+        fillCircle(content, x, y + 20, 3.2f);
+        fillCircle(content, x + 48, y + 20, 3.2f);
+        fillCircle(content, x + 24, y + 8, 3.2f);
+        fillCircle(content, x, y - 4, 3.2f);
+        fillCircle(content, x + 48, y - 4, 3.2f);
+        content.setStrokingColor(Color.BLACK);
+    }
+
+    private void fillCircle(PDPageContentStream content, float cx, float cy, float radius) throws IOException {
+        content.addRect(cx - radius, cy - radius, radius * 2, radius * 2);
+        content.fill();
     }
 
     private void drawVisitorPhoto(PDDocument document,

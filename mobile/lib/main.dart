@@ -42,7 +42,7 @@ class MeghaConnectApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'MeghaConnect',
+      title: 'MeghaConnect AI',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
@@ -145,21 +145,37 @@ class _WelcomeScreen extends StatefulWidget {
   State<_WelcomeScreen> createState() => _WelcomeScreenState();
 }
 
-class _WelcomeScreenState extends State<_WelcomeScreen> {
+class _WelcomeScreenState extends State<_WelcomeScreen>
+    with SingleTickerProviderStateMixin {
   bool _loading = false;
+  late final AnimationController _pulseController;
+  late final Animation<double> _pulse;
 
   @override
   void initState() {
     super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1700),
+    )..repeat(reverse: true);
+    _pulse = Tween<double>(begin: 0.96, end: 1.06).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
     Future.delayed(const Duration(seconds: 5), () {
       if (mounted) setState(() => _loading = true);
     });
   }
 
   @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FB),
+      backgroundColor: const Color(0xFF071538),
       body: SafeArea(
         child: Center(
           child: Padding(
@@ -167,78 +183,87 @@ class _WelcomeScreenState extends State<_WelcomeScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                ClipOval(
-                  child: Image.asset(
-                    'assets/CM_Profile_Picture.jpg',
-                    width: 94,
-                    height: 94,
-                    fit: BoxFit.cover,
-                  ),
+                Image.asset(
+                  'assets/logo.png',
+                  width: 76,
+                  height: 76,
+                  fit: BoxFit.contain,
                 ),
-                const SizedBox(height: 10),
-                const Text(
-                  "Hon'ble Chief Minister",
-                  style: TextStyle(
-                    color: Color(0xFF172554),
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const Text(
-                  'Government of Meghalaya',
-                  style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
-                ),
-                const SizedBox(height: 22),
+                const SizedBox(height: 16),
                 Container(
                   width: double.infinity,
                   constraints: const BoxConstraints(maxWidth: 380),
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0xFFDBEAFE)),
+                    color: const Color(0xCC0B1F5C),
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(color: const Color(0x5538BDF8)),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withAlpha(24),
-                        blurRadius: 32,
-                        offset: const Offset(0, 16),
+                        color: Colors.black.withAlpha(76),
+                        blurRadius: 34,
+                        offset: const Offset(0, 18),
                       ),
                     ],
                   ),
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      Opacity(
-                        opacity: 0.1,
-                        child: Image.asset(
-                          'assets/state_map.png',
-                          height: 210,
-                          fit: BoxFit.contain,
-                        ),
-                      ),
                       Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Image.asset(
-                            'assets/logo.png',
-                            width: 78,
-                            height: 78,
-                            fit: BoxFit.contain,
+                          ScaleTransition(
+                            scale: _pulse,
+                            child: const _AiNetworkPulse(),
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 18),
                           const Text(
-                            'MeghaConnect',
+                            'MeghaConnect AI',
                             style: TextStyle(
-                              color: Color(0xFF1A237E),
-                              fontSize: 34,
+                              color: Colors.white,
+                              fontSize: 32,
                               fontWeight: FontWeight.w900,
                             ),
                           ),
                           const SizedBox(height: 6),
                           const Text(
-                            "Chief Minister's Office citizen service platform",
+                            'AI Powered Appointment & Scheme Management Platform',
                             textAlign: TextAlign.center,
-                            style: TextStyle(color: Color(0xFF475569)),
+                            style: TextStyle(color: Color(0xFFC7D2FE)),
+                          ),
+                          const SizedBox(height: 14),
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: 7,
+                            runSpacing: 7,
+                            children: [
+                              'Appointment Management',
+                              'Scheme Tracking',
+                              'AI Insights',
+                              'AI Notes',
+                              'Visitor Management',
+                            ]
+                                .map((label) => Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 9, vertical: 5),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withAlpha(20),
+                                        borderRadius:
+                                            BorderRadius.circular(999),
+                                        border: Border.all(
+                                            color: const Color(0x5538BDF8)),
+                                      ),
+                                      child: Text(
+                                        label,
+                                        style: const TextStyle(
+                                          color: Color(0xFFE0F2FE),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ))
+                                .toList(),
                           ),
                           if (_loading) ...[
                             const SizedBox(height: 20),
@@ -261,3 +286,63 @@ class _WelcomeScreenState extends State<_WelcomeScreen> {
     );
   }
 }
+
+class _AiNetworkPulse extends StatelessWidget {
+  const _AiNetworkPulse();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 150,
+      height: 150,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: 150,
+            height: 150,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  const Color(0xFF22D3EE).withAlpha(72),
+                  const Color(0xFF8B5CF6).withAlpha(28),
+                  Colors.transparent,
+                ],
+              ),
+            ),
+          ),
+          const Icon(Icons.event_available, size: 52, color: Colors.white),
+          for (final item in _networkNodes)
+            Positioned(
+              left: item.dx,
+              top: item.dy,
+              child: Container(
+                width: 16,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF22D3EE).withAlpha(130),
+                      blurRadius: 16,
+                      spreadRadius: 4,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+const _networkNodes = [
+  Offset(30, 32),
+  Offset(104, 32),
+  Offset(67, 67),
+  Offset(30, 102),
+  Offset(104, 102),
+];

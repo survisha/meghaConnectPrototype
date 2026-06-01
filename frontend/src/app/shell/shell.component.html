@@ -4,10 +4,10 @@
     <button id="shell_toggleSidebarBtn" class="icon-btn" (click)="toggleSidebar()">
       <mat-icon>menu</mat-icon>
     </button>
-    <span class="header-emblem">🏛️</span>
+    <img src="/asserts/logo.png" alt="MeghaConnect AI" class="header-logo">
     <div class="header-brand">
-      <div class="header-title">MeghaConnect</div>
-      <div class="header-subtitle">{{ 'CM_OFFICE_SCHEDULING' | translate }}</div>
+      <div class="header-title">MeghaConnect AI</div>
+      <div class="header-subtitle">AI Powered Appointment & Scheme Management Platform</div>
     </div>
     <div class="header-right">
       <app-language-selector></app-language-selector>
@@ -19,6 +19,7 @@
         <div style="font-size:0.85rem;font-weight:600">{{ auth.user()?.fullName }}</div>
         <div class="role-badge">{{ roleLabel }}</div>
       </div>
+      <span class="ai-badge">AI Powered</span>
       <button id="shell_logoutBtn" class="icon-btn" (click)="logout()" [title]="'LOGOUT' | translate">
         <mat-icon>logout</mat-icon>
       </button>

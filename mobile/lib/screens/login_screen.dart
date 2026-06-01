@@ -329,7 +329,6 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Widget _buildCleanLoginCard() {
-    final i18n = context.watch<AppI18n>();
     final offline = context.watch<ConnectivityService>().isOffline;
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -356,7 +355,7 @@ class _LoginScreenState extends State<LoginScreen>
         ),
         const SizedBox(height: 18),
         const Text(
-          'MeghaConnect',
+          'MeghaConnect AI',
           textAlign: TextAlign.center,
           style: TextStyle(
             color: _primaryBlue,
@@ -366,7 +365,7 @@ class _LoginScreenState extends State<LoginScreen>
         ),
         const SizedBox(height: 4),
         Text(
-          i18n.t('CM_OFFICE_SCHEDULING'),
+          'AI Powered Appointment & Scheme Management Platform',
           textAlign: TextAlign.center,
           style: TextStyle(color: Colors.grey[600], fontSize: 14),
         ),
@@ -495,7 +494,6 @@ class _LoginScreenState extends State<LoginScreen>
 
   // ignore: unused_element
   Widget _buildHeader() {
-    final i18n = context.watch<AppI18n>();
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
       decoration: const BoxDecoration(
@@ -559,7 +557,7 @@ class _LoginScreenState extends State<LoginScreen>
               ),
               const SizedBox(height: 16),
               const Text(
-                'MeghaConnect',
+                'MeghaConnect AI',
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w800,
@@ -577,15 +575,15 @@ class _LoginScreenState extends State<LoginScreen>
                   border:
                       Border.all(color: const Color(0xFF22C55E).withAlpha(77)),
                 ),
-                child: Row(
+                child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.verified_user_outlined,
+                    Icon(Icons.verified_user_outlined,
                         color: Color(0xFF86EFAC), size: 14),
-                    const SizedBox(width: 6),
+                    SizedBox(width: 6),
                     Text(
-                      i18n.t('OFFICIAL_GOVERNMENT_PORTAL'),
-                      style: const TextStyle(
+                      'AI Powered',
+                      style: TextStyle(
                         color: Color(0xFFDCFCE7),
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
@@ -596,7 +594,7 @@ class _LoginScreenState extends State<LoginScreen>
               ),
               const SizedBox(height: 8),
               Text(
-                i18n.t('CM_OFFICE_SCHEDULING'),
+                'AI Powered Appointment & Scheme Management Platform',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 13,
@@ -648,7 +646,7 @@ class _LoginScreenState extends State<LoginScreen>
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Government of Meghalaya',
+                          'AI Powered Appointment & Scheme Management Platform',
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.85),
                             fontSize: 12,

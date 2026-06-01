@@ -1,0 +1,6 @@
+# Copy this file to mobile/android/key.properties and replace all values.
+# Never commit key.properties or the keystore file.
+storeFile=C:\\path\\to\\meghaconnect-release.jks
+storePassword=change-me
+keyAlias=meghaconnect
+keyPassword=change-me

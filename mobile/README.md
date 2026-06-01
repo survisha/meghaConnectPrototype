@@ -27,6 +27,68 @@ flutter build apk
 flutter build ios
 ```
 
+## iOS Testing
+
+iOS builds require macOS with Xcode and CocoaPods installed. The generated iOS
+workspace is `ios/Runner.xcworkspace`.
+
+Current iOS configuration:
+
+- Bundle identifier: `in.gov.meghalaya.meghaconnect`
+- Display name: `Megha Connect`
+- Minimum iOS version: `12.0`
+- Signing: automatic signing is enabled, but the Apple development team must be
+  selected in Xcode before running on a physical iPhone or creating an archive.
+- Debug HTTP: local network HTTP is allowed only for Debug builds. Release and
+  production API URLs must use HTTPS.
+
+Simulator:
+
+```bash
+flutter run -d ios --dart-define=MEGHA_API_BASE_URL=http://localhost:8080/api
+```
+
+Physical iPhone:
+
+```bash
+flutter devices
+flutter run -d <device-id> --dart-define=MEGHA_API_BASE_URL=http://<LAN-IP>:8080/api
+```
+
+Debug build:
+
+```bash
+flutter build ios --debug
+```
+
+Release build:
+
+```bash
+flutter build ios --release --dart-define=MEGHA_API_BASE_URL=https://your-api-host/api
+```
+
+Before testing on iOS:
+
+```bash
+flutter doctor
+flutter clean
+flutter pub get
+flutter build ios --debug
+```
+
+Testing checklist:
+
+- [ ] Simulator test completed
+- [ ] Real iPhone test completed
+- [ ] Camera permission tested
+- [ ] Photo/file attachment tested
+- [ ] Face ID/Touch ID tested for offline login
+- [ ] API connectivity tested with the correct simulator or LAN URL
+- [ ] Offline mode tested
+- [ ] Sync pending screen tested
+- [ ] UI responsiveness tested on small and large iPhones
+- [ ] App does not crash during login, capture, upload, offline, or sync flows
+
 ## Android Release Build
 
 Release APK/AAB builds require a signing keystore and a production API URL.

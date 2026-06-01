@@ -18,8 +18,10 @@
   position: relative;
 }
 
-.header-emblem {
-  font-size: 1.5rem;
+.header-logo {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
   flex: 0 0 auto;
 }
 
@@ -30,8 +32,8 @@
 
 .header-title {
   font-size: 1.1rem;
-  font-weight: 700;
-  letter-spacing: 0.3px;
+  font-weight: 850;
+  letter-spacing: 0;
 }
 
 .header-subtitle {
@@ -41,7 +43,7 @@
 }
 
 .megha-sidebar {
-  background: #1a237e;
+  background: linear-gradient(180deg, #0b1f5c 0%, #111827 100%);
   width: 240px;
   min-height: calc(100vh - var(--app-header-height, 64px));
   transition: width 0.25s ease;
@@ -132,6 +134,19 @@
   width: 8px; height: 8px; border-radius: 50%;
   background: #ef4444;
 }
+.ai-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  border: 1px solid rgba(125, 211, 252, 0.42);
+  border-radius: 999px;
+  background: rgba(34, 211, 238, 0.14);
+  color: #e0f2fe;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 0 0.55rem;
+  white-space: nowrap;
+}
 
 @media (max-width: 1200px) {
   .megha-sidebar {
@@ -182,7 +197,8 @@
 }
 
 @media (max-width: 576px) {
-  .header-emblem,
+  .header-logo,
+  .ai-badge,
   #shell_notificationIcon {
     display: none;
   }

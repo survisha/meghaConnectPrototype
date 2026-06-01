@@ -10,6 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { apiErrorMessage } from '../../shared/api-error.util';
+import { BrandLogoComponent } from '../../shared/brand-logo/brand-logo.component';
 
 @Component({
   selector: 'app-login',
@@ -23,7 +24,8 @@ import { apiErrorMessage } from '../../shared/api-error.util';
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
-    TranslateModule
+    TranslateModule,
+    BrandLogoComponent
   ],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss'],

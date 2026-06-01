@@ -10,8 +10,9 @@
   place-items: center;
   padding: clamp(1rem, 4vw, 2rem);
   background:
-    linear-gradient(135deg, rgba(10, 31, 42, 0.86), rgba(15, 76, 92, 0.72)),
-    url('/asserts/meghalaya-hero.png') center / cover no-repeat;
+    radial-gradient(circle at 18% 18%, rgba(34, 211, 238, 0.24), transparent 28%),
+    linear-gradient(135deg, rgba(7, 21, 56, 0.92), rgba(30, 64, 175, 0.76), rgba(17, 24, 39, 0.8)),
+    url('../../../asserts/meghalaya-hero.png') center / cover no-repeat;
 }
 
 .login-shell.embedded {
@@ -41,20 +42,27 @@
   margin-bottom: 1.4rem;
 }
 
+.login-brand-logo {
+  display: block;
+  width: min(100%, 330px);
+  height: auto;
+  margin: 0 auto 0.8rem;
+}
+
 .login-eyebrow {
   width: fit-content;
   margin: 0 auto 0.55rem;
   border-radius: 999px;
   padding: 0.28rem 0.65rem;
-  background: #e8f5ef;
-  color: #0f6b52;
+  background: #eef2ff;
+  color: #4338ca;
   font-size: 0.72rem;
   font-weight: 800;
 }
 
 .login-header h2 {
   margin: 0 0 0.3rem;
-  color: #17324d;
+  color: #0b1f5c;
   font-size: 1.55rem;
   font-weight: 850;
 }

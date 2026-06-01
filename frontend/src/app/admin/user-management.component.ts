@@ -133,6 +133,12 @@ export class UserManagementComponent implements OnInit {
     this.showDialog = true;
   }
 
+  closeDialog() {
+    this.showDialog = false;
+    this.errorMsg = '';
+    this.isSaving = false;
+  }
+
   save() {
     this.successMsg = '';
     this.errorMsg = '';

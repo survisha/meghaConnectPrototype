@@ -163,11 +163,11 @@
     </div>
   </div>
 
-  <div class="dialog-overlay" *ngIf="showDialog" (click)="showDialog = false">
+  <div class="dialog-overlay" *ngIf="showDialog" (click)="closeDialog()">
     <div class="user-dialog" role="dialog" aria-modal="true" aria-labelledby="userDialogTitle" (click)="$event.stopPropagation()">
       <div class="dialog-header">
         <h2 id="userDialogTitle">{{ isEdit ? 'Edit User' : 'New User' }}</h2>
-        <button mat-icon-button color="primary" type="button" (click)="showDialog = false" matTooltip="Close">
+        <button mat-icon-button color="primary" type="button" (click)="closeDialog()" matTooltip="Close">
           <mat-icon>close</mat-icon>
         </button>
       </div>
@@ -227,7 +227,7 @@
       </div>
 
       <div class="dialog-actions">
-        <button mat-button type="button" (click)="showDialog = false">Cancel</button>
+        <button mat-button type="button" (click)="closeDialog()">Cancel</button>
         <button mat-raised-button color="primary" type="button" (click)="save()" [disabled]="isSaving">
           {{ isSaving ? 'Saving...' : (isEdit ? 'Update' : 'Create') }}
         </button>

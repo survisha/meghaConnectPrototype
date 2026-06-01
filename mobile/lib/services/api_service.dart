@@ -182,9 +182,14 @@ class ApiService {
         }
         return data;
       }
-      lastLoginError = resp.statusCode == 401 || resp.statusCode == 403
-          ? 'Invalid username or password.'
-          : 'Login failed. Please try again.';
+      lastLoginError = _messageFromResponse(
+        resp,
+        resp.statusCode == 401 ||
+                resp.statusCode == 403 ||
+                resp.statusCode == 423
+            ? 'Invalid username or password'
+            : 'Login failed. Please try again.',
+      );
       return null;
     } catch (error, stackTrace) {
       _logError('login', error, stackTrace);

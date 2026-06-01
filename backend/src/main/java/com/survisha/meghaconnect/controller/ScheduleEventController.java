@@ -68,6 +68,19 @@ public class ScheduleEventController {
         );
     }
 
+    @DeleteMapping("/{id}/appointments/{appointmentId}")
+    @PreAuthorize("hasAnyRole('CMO_OFFICER','APPROVER','HCM','OSD','ADMIN')")
+    public ScheduleEventDto removeAppointment(@PathVariable Long id,
+                                              @PathVariable Long appointmentId,
+                                              Authentication authentication) {
+        return scheduleEventService.removeAppointment(
+            id,
+            appointmentId,
+            actor(authentication),
+            role(authentication)
+        );
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('CMO_OFFICER','APPROVER','HCM','OSD','ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {

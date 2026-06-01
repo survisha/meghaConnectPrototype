@@ -15,6 +15,7 @@ import { MatNativeDateModule, provideNativeDateAdapter } from '@angular/material
 import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { DragDropModule, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { apiErrorMessage } from '../shared/api-error.util';
 
@@ -34,6 +35,7 @@ import { apiErrorMessage } from '../shared/api-error.util';
     MatCardModule,
     MatCheckboxModule,
     MatSnackBarModule,
+    MatTooltipModule,
     DragDropModule
   ],
   providers: [provideNativeDateAdapter()],
@@ -51,16 +53,19 @@ export class SchedulingComponent implements OnInit {
   errorMsg = '';
 
   newEvent: Partial<ScheduleEvent> = {};
+  editingEvent: ScheduleEvent | null = null;
   newEventStartDate: Date | null = null;
   newEventEndDate: Date | null = null;
   newEventStartTime = '10:00';
   newEventEndTime = '11:00';
+  readonly today = this.startOfDay(new Date());
   publicDarbarCandidates: Appointment[] = [];
   publicDarbarCandidateIds = new Set<number>();
   publicDarbarCandidatesLoading = false;
   publicDarbarAssignmentLoading = false;
   publicDarbarAssignmentError = '';
   publicDarbarRemarks = 'Scheduled';
+  selectedCandidateDetail: Appointment | null = null;
   private readonly followUpStatuses: AppointmentStatus[] = ['APPROVED', 'FOLLOWUP'];
 
   hours = Array.from({ length: 13 }, (_, i) => `${String(i + 8).padStart(2,'0')}:00`);
@@ -125,6 +130,10 @@ export class SchedulingComponent implements OnInit {
 
   onDateSelected(date: Date | null) {
     if (date) {
+      if (this.isPastCalendarDate(date)) {
+        this.snackBar.open('Previous dates cannot be selected for scheduling.', 'Close', { duration: 4000 });
+        return;
+      }
       this.selectedDate = date;
       // Automatically switch to day view to show events
       this.viewMode = 'day';
@@ -179,12 +188,37 @@ export class SchedulingComponent implements OnInit {
   }
 
   openAddEvent() {
+    const defaultDate = this.defaultEventDate();
+    const start = this.defaultStartTime();
+    const end = this.addMinutesToClock(start, 60);
     this.newEvent = {};
-    this.newEventStartDate = new Date(this.selectedDate);
-    this.newEventEndDate = new Date(this.selectedDate);
-    this.newEventStartTime = '10:00';
-    this.newEventEndTime = '11:00';
+    this.editingEvent = null;
+    this.newEventStartDate = defaultDate;
+    this.newEventEndDate = new Date(defaultDate);
+    this.newEventStartTime = start;
+    this.newEventEndTime = end;
     this.showAddDialog = true;
+  }
+
+  openEditEvent(event: ScheduleEvent) {
+    const start = new Date(event.startTime);
+    const end = new Date(event.endTime);
+    this.editingEvent = event;
+    this.newEvent = { ...event };
+    this.newEventStartDate = Number.isNaN(start.getTime()) ? this.defaultEventDate() : start;
+    this.newEventEndDate = Number.isNaN(end.getTime()) ? this.newEventStartDate : end;
+    this.newEventStartTime = Number.isNaN(start.getTime()) ? this.defaultStartTime() : this.clockValue(start);
+    this.newEventEndTime = Number.isNaN(end.getTime()) ? this.addMinutesToClock(this.newEventStartTime, 60) : this.clockValue(end);
+    this.showDialog = false;
+    this.showAddDialog = true;
+  }
+
+  closeAddDialog() {
+    this.showAddDialog = false;
+    this.editingEvent = null;
+    this.newEvent = {};
+    this.newEventStartDate = null;
+    this.newEventEndDate = null;
   }
 
   formatTime(dt: string) {
@@ -227,25 +261,37 @@ export class SchedulingComponent implements OnInit {
   }
 
   addEvent() {
+    this.saveEvent();
+  }
+
+  saveEvent() {
     const startTime = this.combineDateAndTime(this.newEventStartDate, this.newEventStartTime);
     const endTime = this.combineDateAndTime(this.newEventEndDate, this.newEventEndTime);
-    if (startTime && this.isPastDateTime(startTime)) {
-      this.snackBar.open('Cannot schedule an event in the past.', 'Close', { duration: 4000 });
+    const validation = this.validateEventTimes(startTime, endTime);
+    if (validation) {
+      this.snackBar.open(validation, 'Close', { duration: 4000 });
       return;
     }
     if (this.newEvent.title && this.newEvent.eventType && startTime && endTime && this.newEvent.location) {
-      this.scheduleEventService.create({ ...this.newEvent, startTime, endTime }).subscribe({
-        next: created => {
-          this.events = [...this.events, created].sort((a, b) =>
-            new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
-          );
+      const payload = { ...this.newEvent, startTime, endTime };
+      const request = this.editingEvent?.id
+        ? this.scheduleEventService.update(this.editingEvent.id, payload)
+        : this.scheduleEventService.create(payload);
+      const wasEdit = Boolean(this.editingEvent?.id);
+      request.subscribe({
+        next: saved => {
+          this.events = this.editingEvent?.id
+            ? this.events.map(event => event.id === saved.id ? saved : event)
+            : [...this.events, saved];
+          this.events = this.events.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
           this.newEvent = {};
           this.newEventStartDate = null;
           this.newEventEndDate = null;
+          this.editingEvent = null;
           this.showAddDialog = false;
-          this.snackBar.open('Event created successfully.', 'Close', { duration: 4000 });
+          this.snackBar.open(wasEdit ? 'Event updated successfully.' : 'Event created successfully.', 'Close', { duration: 4000 });
         },
-        error: error => this.errorMsg = apiErrorMessage(error, 'Unable to create schedule event.')
+        error: error => this.errorMsg = apiErrorMessage(error, this.editingEvent ? 'Failed to update event.' : 'Failed to create event.')
       });
     }
   }
@@ -256,7 +302,11 @@ export class SchedulingComponent implements OnInit {
       this.newEvent.eventType &&
       this.newEvent.location &&
       this.combineDateAndTime(this.newEventStartDate, this.newEventStartTime) &&
-      this.combineDateAndTime(this.newEventEndDate, this.newEventEndTime)
+      this.combineDateAndTime(this.newEventEndDate, this.newEventEndTime) &&
+      !this.validateEventTimes(
+        this.combineDateAndTime(this.newEventStartDate, this.newEventStartTime),
+        this.combineDateAndTime(this.newEventEndDate, this.newEventEndTime)
+      )
     );
   }
 
@@ -313,14 +363,79 @@ export class SchedulingComponent implements OnInit {
         this.selectedEvent = saved;
         this.events = this.events.map(event => event.id === saved.id ? saved : event);
         this.publicDarbarCandidateIds.clear();
+        this.selectedCandidateDetail = null;
         this.loadPublicDarbarCandidates();
         this.publicDarbarAssignmentLoading = false;
+        this.snackBar.open('Application added to event.', 'Close', { duration: 4000 });
       },
       error: error => {
         this.publicDarbarAssignmentError = apiErrorMessage(error, 'Unable to assign follow-up applications to this event.');
         this.publicDarbarAssignmentLoading = false;
       }
     });
+  }
+
+  viewCandidateDetails(appointment: Appointment) {
+    this.selectedCandidateDetail = appointment;
+    this.publicDarbarCandidateIds.clear();
+    this.publicDarbarCandidateIds.add(appointment.id);
+  }
+
+  closeCandidateDetails() {
+    this.selectedCandidateDetail = null;
+  }
+
+  addCandidateFromDetails(appointment: Appointment) {
+    this.publicDarbarCandidateIds.clear();
+    this.publicDarbarCandidateIds.add(appointment.id);
+    this.assignSelectedPublicDarbarAppointments();
+  }
+
+  removeAssignedAppointment(appointment: Appointment) {
+    if (!this.selectedEvent?.id || !appointment.id) return;
+    if (!window.confirm('Remove this application from the event and return it to follow-up?')) return;
+    this.publicDarbarAssignmentLoading = true;
+    this.publicDarbarAssignmentError = '';
+    this.scheduleEventService.removeAppointment(this.selectedEvent.id, appointment.id).subscribe({
+      next: saved => {
+        this.selectedEvent = saved;
+        this.events = this.events.map(event => event.id === saved.id ? saved : event);
+        this.loadPublicDarbarCandidates();
+        this.publicDarbarAssignmentLoading = false;
+        this.snackBar.open('Application removed from event and moved back to follow-up.', 'Close', { duration: 4000 });
+      },
+      error: error => {
+        this.publicDarbarAssignmentError = apiErrorMessage(error, 'Failed to remove application from event.');
+        this.publicDarbarAssignmentLoading = false;
+      }
+    });
+  }
+
+  priorityInsight(appointment: Appointment): { level: 'High' | 'Medium' | 'Low'; message: string } {
+    const applicantId = appointment.applicantId || appointment.applicant?.id;
+    const related = [...this.publicDarbarCandidates, ...this.selectedAppointments]
+      .filter(item => (item.applicantId || item.applicant?.id) === applicantId);
+    const pendingCount = related.filter(item => this.isFollowUpStatus(item.status)).length;
+    const ageDays = appointment.createdAt
+      ? Math.max(0, Math.floor((Date.now() - new Date(appointment.createdAt).getTime()) / 86400000))
+      : 0;
+    const meetings = appointment.meetingCountLast6Months ?? 0;
+    if (pendingCount >= 3 || meetings > 0 || ageDays >= 14) {
+      return {
+        level: 'High',
+        message: `High priority: ${pendingCount || 1} pending appointment(s), ${meetings} recent CM visit(s), follow-up age ${ageDays} day(s).`,
+      };
+    }
+    if (pendingCount >= 2 || ageDays >= 7) {
+      return {
+        level: 'Medium',
+        message: `Medium priority: Follow-up pending for ${ageDays} day(s) with ${pendingCount || 1} active request(s).`,
+      };
+    }
+    return {
+      level: 'Low',
+      message: 'Low priority: First or recent follow-up request.',
+    };
   }
 
   private isFollowUpStatus(status: AppointmentStatus): boolean {
@@ -370,6 +485,8 @@ export class SchedulingComponent implements OnInit {
     }
     
     const newEnd = new Date(newStart.getTime() + duration);
+    const payloadStart = this.toLocalDateTime(newStart);
+    const payloadEnd = this.toLocalDateTime(newEnd);
 
     if (droppedEvent.sourceType === 'APPOINTMENT' && droppedEvent.appointmentId) {
       this.appointmentService.rescheduleAppointmentDate(droppedEvent.appointmentId, {
@@ -387,18 +504,31 @@ export class SchedulingComponent implements OnInit {
       });
       return;
     }
+    if (!droppedEvent.id) {
+      this.snackBar.open('Unable to update schedule event: missing event id.', 'Close', { duration: 4000 });
+      return;
+    }
     
     const updatedEvent: Partial<ScheduleEvent> = {
       title: droppedEvent.title,
       eventType: droppedEvent.eventType,
-      startTime: this.toLocalDateTime(newStart),
-      endTime: this.toLocalDateTime(newEnd),
+      startTime: payloadStart,
+      endTime: payloadEnd,
       location: droppedEvent.location,
       travelTimeMinutes: droppedEvent.travelTimeMinutes,
       description: droppedEvent.description,
       shortNotes: droppedEvent.shortNotes,
       isConflict: droppedEvent.isConflict
     };
+
+    console.info('Schedule event drag/drop update', {
+      eventId: droppedEvent.id,
+      oldStart: droppedEvent.startTime,
+      oldEnd: droppedEvent.endTime,
+      newStart: payloadStart,
+      newEnd: payloadEnd,
+      payload: updatedEvent,
+    });
 
     this.scheduleEventService.update(droppedEvent.id, updatedEvent).subscribe({
       next: saved => {
@@ -438,8 +568,7 @@ export class SchedulingComponent implements OnInit {
   }
 
   private isPastCalendarDate(date: Date) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = this.startOfDay(new Date());
     const value = new Date(date);
     value.setHours(0, 0, 0, 0);
     return value < today;
@@ -448,6 +577,64 @@ export class SchedulingComponent implements OnInit {
   private isPastDateTime(value: string | Date) {
     const date = value instanceof Date ? value : new Date(value);
     return date.getTime() < Date.now();
+  }
+
+  onEventDateChange(kind: 'start' | 'end') {
+    if (kind === 'start' && this.newEventStartDate && this.isPastCalendarDate(this.newEventStartDate)) {
+      this.newEventStartDate = this.today;
+      this.snackBar.open('Start date cannot be in the past.', 'Close', { duration: 4000 });
+    }
+    if (kind === 'end' && this.newEventEndDate && this.isPastCalendarDate(this.newEventEndDate)) {
+      this.newEventEndDate = this.newEventStartDate ?? this.today;
+      this.snackBar.open('End date cannot be in the past.', 'Close', { duration: 4000 });
+    }
+    if (this.newEventStartDate && this.newEventEndDate && this.startOfDay(this.newEventEndDate) < this.startOfDay(this.newEventStartDate)) {
+      this.newEventEndDate = new Date(this.newEventStartDate);
+      this.snackBar.open('End date cannot be before start date.', 'Close', { duration: 4000 });
+    }
+  }
+
+  private validateEventTimes(startTime: string | null, endTime: string | null): string | null {
+    if (!startTime || !endTime) return 'Start and end date/time are required.';
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+    if (this.isPastCalendarDate(start)) return 'Start date cannot be in the past.';
+    if (this.isPastDateTime(start)) return 'Start time cannot be in the past.';
+    if (this.isPastCalendarDate(end)) return 'End date cannot be in the past.';
+    if (end < start) return 'End date cannot be before start date.';
+    if (end.getTime() === start.getTime()) return 'End time must be after start time.';
+    return null;
+  }
+
+  private startOfDay(date: Date): Date {
+    const value = new Date(date);
+    value.setHours(0, 0, 0, 0);
+    return value;
+  }
+
+  private defaultEventDate(): Date {
+    const selected = this.startOfDay(this.selectedDate);
+    return selected < this.today ? new Date(this.today) : new Date(selected);
+  }
+
+  private defaultStartTime(): string {
+    const date = this.defaultEventDate();
+    if (!this.isSameDay(date, new Date())) return '10:00';
+    const next = new Date();
+    next.setMinutes(0, 0, 0);
+    next.setHours(next.getHours() + 1);
+    return this.clockValue(next);
+  }
+
+  private clockValue(date: Date): string {
+    return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+  }
+
+  private addMinutesToClock(clock: string, minutesToAdd: number): string {
+    const [hours, minutes] = clock.split(':').map(Number);
+    const date = new Date();
+    date.setHours(hours, minutes + minutesToAdd, 0, 0);
+    return this.clockValue(date);
   }
 }
 

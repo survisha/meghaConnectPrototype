@@ -185,6 +185,66 @@ public class ScheduleEventService {
     }
 
     @Transactional
+    public ScheduleEventDto removeAppointment(Long eventId,
+                                              Long appointmentId,
+                                              String actor,
+                                              String actorRole) {
+        if (eventId == null || appointmentId == null) {
+            throw workflowException(
+                ErrorCodeConstants.MISSING_REQUIRED_FIELD,
+                ErrorCodeConstants.format(ErrorCodeConstants.MISSING_REQUIRED_FIELD_MSG, "eventId/appointmentId"),
+                HttpStatus.BAD_REQUEST
+            );
+        }
+
+        ScheduleEvent event = scheduleEventRepository.findById(eventId)
+            .orElseThrow(() -> workflowException(
+                ErrorCodeConstants.SCHEDULE_EVENT_NOT_FOUND,
+                ErrorCodeConstants.format(ErrorCodeConstants.SCHEDULE_EVENT_NOT_FOUND_MSG, eventId),
+                HttpStatus.NOT_FOUND
+            ));
+
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+            .orElseThrow(() -> workflowException(
+                ErrorCodeConstants.APPOINTMENT_NOT_FOUND,
+                ErrorCodeConstants.format(ErrorCodeConstants.APPOINTMENT_NOT_FOUND_MSG, appointmentId),
+                HttpStatus.NOT_FOUND
+            ));
+
+        if (appointment.getScheduleEvent() == null
+            || appointment.getScheduleEvent().getId() == null
+            || !appointment.getScheduleEvent().getId().equals(eventId)) {
+            throw workflowException(
+                ErrorCodeConstants.APPT_INVALID_STATUS,
+                "Selected application is not assigned to this event.",
+                HttpStatus.CONFLICT
+            );
+        }
+
+        Appointment.AppointmentStatus oldStatus = appointment.getStatus();
+        appointment.setScheduleEvent(null);
+        appointment.setScheduledDateTime(null);
+        appointment.setScheduledDurationMinutes(null);
+        appointment.setStatus(Appointment.AppointmentStatus.FOLLOWUP);
+        appointment.setApproverRemarks(firstNonBlank(appointment.getApproverRemarks(), "Returned to follow-up"));
+        appointment.setUpdatedBy(actor);
+        Appointment saved = appointmentRepository.save(appointment);
+        appointmentAuditService.recordStatusChange(
+            saved,
+            oldStatus,
+            saved.getStatus(),
+            "REMOVED_FROM_EVENT",
+            "Application removed from schedule event and returned to follow-up.",
+            actor,
+            actorRole
+        );
+
+        return scheduleEventRepository.findByIdWithAppointments(eventId, KNOWN_APPOINTMENT_STATUSES)
+            .map(this::toDto)
+            .orElseGet(() -> toDto(event));
+    }
+
+    @Transactional
     public void delete(Long id) {
         scheduleEventRepository.deleteById(id);
     }

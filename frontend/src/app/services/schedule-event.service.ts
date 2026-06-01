@@ -38,6 +38,10 @@ export class ScheduleEventService {
     return this.http.post<ScheduleEvent>(`${this.baseUrl}/${eventId}/appointments`, request);
   }
 
+  removeAppointment(eventId: number, appointmentId: number): Observable<ScheduleEvent> {
+    return this.http.delete<ScheduleEvent>(`${this.baseUrl}/${eventId}/appointments/${appointmentId}`);
+  }
+
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
   }

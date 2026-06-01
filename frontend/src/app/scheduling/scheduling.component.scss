@@ -280,7 +280,8 @@
 
 .appointment-list div {
   display: grid;
-  grid-template-columns: 1fr 1.5fr 1fr;
+  grid-template-columns: 1fr 1.5fr 1fr auto;
+  align-items: center;
   gap: 0.75rem;
   padding: 0.65rem;
   border-radius: 6px;
@@ -302,11 +303,13 @@
   overflow: auto;
   padding: 0.2rem;
 
-  mat-checkbox {
+  .candidate-row {
     border: 1px solid #e5e7eb;
     border-radius: 6px;
     padding: 0.55rem 0.7rem;
     background: #f8fafc;
+    display: grid;
+    gap: 0.35rem;
   }
 
   strong,
@@ -320,6 +323,70 @@
     color: #64748b;
     font-size: 0.8rem;
   }
+}
+
+.link-button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: #1a237e;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+  padding: 0;
+  text-align: left;
+  text-decoration: underline;
+}
+
+.priority-chip {
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 0.7rem;
+  font-weight: 800;
+  justify-self: start;
+  padding: 0.15rem 0.5rem;
+  text-transform: uppercase;
+}
+
+.priority-high { background: #fee2e2; color: #991b1b; }
+.priority-medium { background: #fef3c7; color: #92400e; }
+.priority-low { background: #dcfce7; color: #166534; }
+
+.candidate-detail {
+  border: 1px solid #c7d2fe;
+  border-radius: 8px;
+  background: #f8fafc;
+  margin-top: 0.85rem;
+  padding: 0.9rem;
+}
+
+.candidate-detail-header,
+.candidate-detail-actions {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.candidate-detail-header h4 {
+  color: #1a237e;
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.candidate-detail-actions {
+  justify-content: flex-end;
+  margin-top: 0.85rem;
+}
+
+.priority-panel {
+  align-items: center;
+  border-radius: 6px;
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.85rem;
 }
 
 .assignment-empty,

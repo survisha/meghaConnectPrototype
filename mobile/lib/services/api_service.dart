@@ -1624,6 +1624,27 @@ class ApiService {
     return null;
   }
 
+  static Future<Map<String, dynamic>?> removeAppointmentFromScheduleEvent(
+    int eventId,
+    int appointmentId,
+  ) async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .delete(
+            _u('/schedule/$eventId/appointments/$appointmentId'),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 20));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+    } catch (error, stackTrace) {
+      _logError('removeAppointmentFromScheduleEvent', error, stackTrace);
+    }
+    return null;
+  }
+
   // Audit logs
   static Future<Map<String, dynamic>> getAuditLogs({
     int page = 0,

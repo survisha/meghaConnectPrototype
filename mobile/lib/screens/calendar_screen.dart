@@ -123,7 +123,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   List<_Event> _events = [];
   List<Map<String, String>> _eventTypes = _fallbackTypes;
   _CalendarView _view = _CalendarView.day;
-  DateTime _selectedDate = DateTime.now();
+  DateTime _selectedDate = _startOfDay(DateTime.now());
   bool _loading = true;
   String? _error;
 
@@ -326,7 +326,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       count: _eventsForDay(start.add(Duration(days: i))).length,
                       selected: _isSameDay(
                           start.add(Duration(days: i)), _selectedDate),
+                      disabled: _isPastDay(start.add(Duration(days: i))),
                       onTap: () {
+                        if (_isPastDay(start.add(Duration(days: i)))) {
+                          _snack(
+                              'Previous dates cannot be selected for scheduling.',
+                              success: false);
+                          return;
+                        }
                         setState(() {
                           _selectedDate = start.add(Duration(days: i));
                           _view = _CalendarView.day;
@@ -371,8 +378,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 final currentMonth = date.month == _selectedDate.month;
                 final count = _eventsForDay(date).length;
                 final selected = _isSameDay(date, _selectedDate);
+                final disabled = _isPastDay(date);
                 return InkWell(
                   onTap: () {
+                    if (disabled) {
+                      _snack(
+                          'Previous dates cannot be selected for scheduling.',
+                          success: false);
+                      return;
+                    }
                     setState(() {
                       _selectedDate = date;
                       _view = _CalendarView.day;
@@ -402,10 +416,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           '${date.day}',
                           style: TextStyle(
                             color: currentMonth
-                                ? const Color(0xFF111827)
+                                ? disabled
+                                    ? const Color(0xFF9CA3AF)
+                                    : const Color(0xFF111827)
                                 : const Color(0xFF9CA3AF),
                             fontWeight: FontWeight.w800,
                             fontSize: 12,
+                            decoration: disabled
+                                ? TextDecoration.lineThrough
+                                : TextDecoration.none,
                           ),
                         ),
                         const Spacer(),
@@ -632,14 +651,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   icon: Icons.groups, title: 'Appointments in This Event'),
               const SizedBox(height: 8),
               for (final appointment in event.appointments)
-                _MapRow(
-                  _text(appointment['applicationId'], '-'),
-                  _firstText([
-                    appointment['applicantName'],
-                    appointment['applicant'] is Map
-                        ? (appointment['applicant'] as Map)['fullName']
-                        : null,
-                  ], '-'),
+                _AppointmentAssignmentRow(
+                  appointment: appointment,
+                  onRemove: _canManage && event.id != null
+                      ? () => _removeAssignedAppointment(event, appointment)
+                      : null,
                 ),
             ],
             const SizedBox(height: 18),
@@ -683,13 +699,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
         TextEditingController(text: existing?.travelMinutes?.toString() ?? '');
     String type = existing?.type ?? (_eventTypes.first['code'] ?? 'A4');
     String location = existing?.location ?? 'SHILLONG';
-    DateTime startDate = existing?.start ?? _selectedDate;
-    DateTime endDate =
-        existing?.end ?? _selectedDate.add(const Duration(hours: 1));
+    final defaultDate =
+        _isPastDay(_selectedDate) ? _startOfDay(DateTime.now()) : _selectedDate;
+    DateTime startDate = existing?.start ?? defaultDate;
+    DateTime endDate = existing?.end ?? defaultDate;
     TimeOfDay startTime = TimeOfDay.fromDateTime(
-        existing?.start ?? _withTime(_selectedDate, 10, 0));
-    TimeOfDay endTime = TimeOfDay.fromDateTime(
-        existing?.end ?? _withTime(_selectedDate, 11, 0));
+        existing?.start ?? _defaultStartDateTime(defaultDate));
+    TimeOfDay endTime = TimeOfDay.fromDateTime(existing?.end ??
+        _defaultStartDateTime(defaultDate).add(const Duration(hours: 1)));
     bool saving = false;
 
     await showDialog<void>(
@@ -699,8 +716,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
           Future<void> pickDate(bool start) async {
             final picked = await showDatePicker(
               context: ctx,
-              initialDate: start ? startDate : endDate,
-              firstDate: DateTime.now().subtract(const Duration(days: 0)),
+              initialDate: _isPastDay(start ? startDate : endDate)
+                  ? _startOfDay(DateTime.now())
+                  : (start ? startDate : endDate),
+              firstDate: _startOfDay(DateTime.now()),
               lastDate: DateTime.now().add(const Duration(days: 730)),
             );
             if (picked == null) return;
@@ -943,6 +962,45 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return true;
   }
 
+  Future<void> _removeAssignedAppointment(
+    _Event event,
+    Map<String, dynamic> appointment,
+  ) async {
+    final eventId = event.id;
+    final appointmentId = (appointment['id'] as num?)?.toInt();
+    if (eventId == null || appointmentId == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Remove Application'),
+        content: const Text(
+            'Remove this application from the event and return it to follow-up?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    final result = await ApiService.removeAppointmentFromScheduleEvent(
+      eventId,
+      appointmentId,
+    );
+    if (result == null) {
+      _snack('Failed to remove application from event.', success: false);
+      return;
+    }
+    _snack('Application removed from event and moved back to follow-up.');
+    if (mounted) Navigator.pop(context);
+    await _loadEvents();
+  }
+
   Future<void> _confirmDelete(_Event event) async {
     if (event.id == null) {
       setState(() => _events = _events.where((e) => e != event).toList());
@@ -981,13 +1039,30 @@ class _CalendarScreenState extends State<CalendarScreen> {
     required DateTime start,
     required DateTime end,
   }) {
-    if (title.trim().isEmpty) return 'Title is required.';
-    if (type.trim().isEmpty) return 'Event type is required.';
-    if (location.trim().isEmpty) return 'Location is required.';
-    if (start.isBefore(DateTime.now())) {
-      return 'Cannot schedule an event in the past.';
+    if (title.trim().isEmpty) {
+      return 'Title is required.';
     }
-    if (!end.isAfter(start)) return 'End time must be after start time.';
+    if (type.trim().isEmpty) {
+      return 'Event type is required.';
+    }
+    if (location.trim().isEmpty) {
+      return 'Location is required.';
+    }
+    if (_isPastDay(start)) {
+      return 'Start date cannot be in the past.';
+    }
+    if (start.isBefore(DateTime.now())) {
+      return 'Start time cannot be in the past.';
+    }
+    if (_isPastDay(end)) {
+      return 'End date cannot be in the past.';
+    }
+    if (end.isBefore(start)) {
+      return 'End date cannot be before start date.';
+    }
+    if (!end.isAfter(start)) {
+      return 'End time must be after start time.';
+    }
     return null;
   }
 
@@ -1049,12 +1124,14 @@ class _DayChip extends StatelessWidget {
   final DateTime date;
   final int count;
   final bool selected;
+  final bool disabled;
   final VoidCallback onTap;
 
   const _DayChip({
     required this.date,
     required this.count,
     required this.selected,
+    this.disabled = false,
     required this.onTap,
   });
 
@@ -1076,12 +1153,22 @@ class _DayChip extends StatelessWidget {
         child: Column(
           children: [
             Text(_weekdayShort(date.weekday),
-                style:
-                    const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                style: TextStyle(
+                    color: disabled ? const Color(0xFF9CA3AF) : null,
+                    decoration: disabled
+                        ? TextDecoration.lineThrough
+                        : TextDecoration.none,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700)),
             const SizedBox(height: 3),
             Text('${date.day}',
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
+                style: TextStyle(
+                    color: disabled ? const Color(0xFF9CA3AF) : null,
+                    decoration: disabled
+                        ? TextDecoration.lineThrough
+                        : TextDecoration.none,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900)),
             if (count > 0) Text('$count', style: const TextStyle(fontSize: 10)),
           ],
         ),
@@ -1286,6 +1373,62 @@ class _MapRow extends StatelessWidget {
   }
 }
 
+class _AppointmentAssignmentRow extends StatelessWidget {
+  final Map<String, dynamic> appointment;
+  final VoidCallback? onRemove;
+
+  const _AppointmentAssignmentRow({
+    required this.appointment,
+    this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final applicationId = _text(appointment['applicationId'], '-');
+    final applicantName = _firstText([
+      appointment['applicantName'],
+      appointment['applicant'] is Map
+          ? (appointment['applicant'] as Map)['fullName']
+          : null,
+    ], '-');
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(applicationId,
+                    style: const TextStyle(
+                        color: Color(0xFF1A237E),
+                        fontWeight: FontWeight.w900,
+                        decoration: TextDecoration.underline)),
+                const SizedBox(height: 2),
+                Text(applicantName),
+                Text(
+                  _priorityInsight(appointment),
+                  style: const TextStyle(
+                      color: Color(0xFF92400E),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700),
+                ),
+              ],
+            ),
+          ),
+          if (onRemove != null)
+            TextButton.icon(
+              onPressed: onRemove,
+              icon: const Icon(Icons.remove_circle_outline),
+              label: const Text('Remove'),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class _Pill extends StatelessWidget {
   final String label;
   final Color color;
@@ -1309,12 +1452,21 @@ class _Pill extends StatelessWidget {
 DateTime _startOfDay(DateTime date) =>
     DateTime(date.year, date.month, date.day);
 
+bool _isPastDay(DateTime date) =>
+    _startOfDay(date).isBefore(_startOfDay(DateTime.now()));
+
 DateTime _startOfWeek(DateTime date) {
   return _startOfDay(date).subtract(Duration(days: date.weekday - 1));
 }
 
 DateTime _withTime(DateTime date, int hour, int minute) =>
     DateTime(date.year, date.month, date.day, hour, minute);
+
+DateTime _defaultStartDateTime(DateTime date) {
+  if (!_isSameDay(date, DateTime.now())) return _withTime(date, 10, 0);
+  final next = DateTime.now();
+  return DateTime(next.year, next.month, next.day, next.hour + 1);
+}
 
 DateTime _combineDateAndTime(DateTime date, TimeOfDay time) =>
     DateTime(date.year, date.month, date.day, time.hour, time.minute);
@@ -1403,3 +1555,19 @@ String _firstText(List<dynamic> values, [String fallback = '']) {
 
 String _statusLabel(dynamic value) =>
     _text(value, '-').replaceAll('_', ' ').toUpperCase();
+
+String _priorityInsight(Map<String, dynamic> appointment) {
+  final created = DateTime.tryParse(_text(appointment['createdAt']));
+  final ageDays = created == null
+      ? 0
+      : DateTime.now().difference(created).inDays.clamp(0, 9999);
+  final meetings =
+      (appointment['meetingCountLast6Months'] as num?)?.toInt() ?? 0;
+  if (meetings > 0 || ageDays >= 14) {
+    return 'High priority: $meetings recent CM visit(s), follow-up age $ageDays day(s).';
+  }
+  if (ageDays >= 7) {
+    return 'Medium priority: Follow-up pending for $ageDays day(s).';
+  }
+  return 'Low priority: First or recent follow-up request.';
+}

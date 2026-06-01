@@ -103,7 +103,7 @@ public class SecurityConfig {
                     "/api/v1/kyc/aadhaar/kycResults"
                 ).permitAll()
                 .antMatchers("/api/v1/reference/**").permitAll() // Public reference data dropdowns
-                .antMatchers("/api/ai/chatbot").permitAll()
+                .antMatchers("/api/ai/chatbot", "/api/v1/ai/chatbot").permitAll()
                 // All other API requests require authentication
                 .antMatchers("/api/**").authenticated()
                 

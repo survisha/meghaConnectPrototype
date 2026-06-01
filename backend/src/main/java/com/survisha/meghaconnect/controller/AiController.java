@@ -29,19 +29,20 @@ import java.util.Map;
 /**
  * AI Endpoints for the MeghaConnect system.
  *
- * AI endpoints are under /api/ai. Citizen chatbot remains public; document,
- * dashboard, prioritization, and duplicate checks require authenticated staff.
+ * AI endpoints are available under both /api/ai and /api/v1/ai. Citizen chatbot
+ * remains public; document, dashboard, prioritization, and duplicate checks
+ * require authenticated staff.
  *
  * Endpoints:
  *   POST  /api/ai/analyze-document  – R004/R005: Document extraction + summary
  *   POST  /api/ai/check-duplicate   – R006: Duplicate application detection
  *   POST  /api/ai/suggest-priority  – R007: Meeting priority recommendation
- *   POST  /api/ai/chatbot           – R008: Citizen chatbot Q&A
+ *   POST  /api/v1/ai/chatbot        – R008: Citizen chatbot Q&A
  *   POST  /api/ai/suggest-slots     – R015: Appointment slot suggestions
- *   GET   /api/ai/dashboard-insights – R010: AI dashboard insights for officers
+ *   GET   /api/v1/ai/dashboard-insights – R010: AI dashboard insights for officers
  */
 @RestController
-@RequestMapping("/api/ai")
+@RequestMapping({"/api/ai", "/api/v1/ai"})
 @RequiredArgsConstructor
 @Tag(name = "AI Integration", description = "AI-powered intelligent endpoints for document analysis, duplicate detection, and chatbot")
 public class AiController {

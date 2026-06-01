@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { environment } from '../../environments/environment';
 
 export interface AiExtractedFields {
   projectName?: string;
@@ -43,29 +44,41 @@ export interface DuplicateCheckResponse {
   dateSubmitted?: string;
 }
 
+export interface AiHealthResponse {
+  provider: string;
+  model: string;
+  available: boolean;
+  message: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AiDocumentService {
+  private readonly aiBaseUrl = `${environment.apiUrl}/ai`;
 
   constructor(private http: HttpClient) {}
 
   analyzeDocument(file: File): Observable<AiDocumentAnalysisResponse> {
     const formData = new FormData();
     formData.append('file', file);
-    return this.http.post<AiDocumentAnalysisResponse>('/api/ai/analyze-document', formData).pipe(
+    return this.http.post<AiDocumentAnalysisResponse>(`${this.aiBaseUrl}/analyze-document`, formData).pipe(
       catchError(() => of(this.getMockAnalysis(file.name)))
     );
   }
 
   checkDuplicate(request: DuplicateCheckRequest): Observable<DuplicateCheckResponse> {
-    return this.http.post<DuplicateCheckResponse>('/api/ai/check-duplicate', request).pipe(
+    return this.http.post<DuplicateCheckResponse>(`${this.aiBaseUrl}/check-duplicate`, request).pipe(
       catchError(() => of({ isDuplicate: false }))
     );
   }
 
   suggestPriority(agendaType: string, agendaBrief: string): Observable<{ level: 'HIGH' | 'MEDIUM' | 'LOW'; reason: string }> {
     return this.http.post<{ level: 'HIGH' | 'MEDIUM' | 'LOW'; reason: string }>(
-      '/api/ai/suggest-priority', { agendaType, agendaBrief }
+      `${this.aiBaseUrl}/suggest-priority`, { agendaType, agendaBrief }
     ).pipe(catchError(() => of(this.getMockPriority(agendaType))));
+  }
+
+  health(): Observable<AiHealthResponse> {
+    return this.http.get<AiHealthResponse>(`${this.aiBaseUrl}/health`);
   }
 
   /** Local mock for demo/offline mode */

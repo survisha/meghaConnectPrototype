@@ -751,6 +751,40 @@ class ApiService {
     return null;
   }
 
+  static Future<Map<String, dynamic>?> getAiHealth() async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .get(_u('/ai/health'), headers: headers)
+          .timeout(const Duration(seconds: 20));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        return _unwrapObject(jsonDecode(resp.body));
+      }
+    } catch (error, stackTrace) {
+      _logError('getAiHealth', error, stackTrace);
+    }
+    return null;
+  }
+
+  static Future<Map<String, dynamic>?> getAppointmentPriorityInsight(
+      int appointmentId) async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .get(
+            _u('/ai/appointments/$appointmentId/priority-insight'),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 20));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        return _unwrapObject(jsonDecode(resp.body));
+      }
+    } catch (error, stackTrace) {
+      _logError('getAppointmentPriorityInsight', error, stackTrace);
+    }
+    return null;
+  }
+
   static Future<List<Map<String, dynamic>>> getHcmActionAppointments(
       String date) async {
     try {

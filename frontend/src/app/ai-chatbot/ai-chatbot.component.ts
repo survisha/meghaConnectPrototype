@@ -5,6 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import { catchError } from 'rxjs/operators';
 import { of } from 'rxjs';
 import { MatIconModule } from '@angular/material/icon';
+import { environment } from '../../environments/environment';
 
 interface ChatMessage {
   role: 'user' | 'bot';
@@ -59,7 +60,7 @@ export class AiChatbotComponent {
     this.loading = true;
 
     // Try AI API first, fall back to FAQ
-    this.http.post<{ answer: string }>('/api/ai/chatbot', { question: text }).pipe(
+    this.http.post<{ answer: string }>(`${environment.apiUrl}/ai/chatbot`, { question: text }).pipe(
       catchError(() => of({ answer: this.getLocalAnswer(text) }))
     ).subscribe((res: { answer: string }) => {
       this.loading = false;

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { MatIconModule } from '@angular/material/icon';
 import { apiErrorMessage } from '../shared/api-error.util';
+import { environment } from '../../environments/environment';
 
 interface SchemeInsight { scheme: string; count: number; percentage: number; }
 interface DistrictInsight { district: string; applications: number; }
@@ -31,7 +32,7 @@ export class AiInsightsDashboardComponent implements OnInit {
   constructor(private http: HttpClient) {}
 
   ngOnInit() {
-    this.http.get<AiDashboardInsights>('/api/ai/dashboard-insights').subscribe({
+    this.http.get<AiDashboardInsights>(`${environment.apiUrl}/ai/dashboard-insights`).subscribe({
       next: data => {
         this.insights = data ?? null;
         this.loading = false;

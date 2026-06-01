@@ -77,6 +77,13 @@ export interface AppointmentDocumentAiNotes {
   updatedAt?: string;
 }
 
+export interface AppointmentPriorityInsight {
+  level: 'HIGH' | 'MEDIUM' | 'LOW';
+  score: number;
+  reasons: string[];
+  recommendation: string;
+}
+
 export interface CmoReviewRequest {
   appointmentId: number;
   eventType?: EventType;
@@ -255,6 +262,12 @@ export class AppointmentService {
   regenerateAiNotes(documentId: number): Observable<AppointmentDocumentAiNotes> {
     return this.http.post<unknown>(`${this.baseUrl}/documents/${documentId}/ai-notes/regenerate`, {})
       .pipe(map(res => this.normalizeAiNotes(this.unwrapData(res))));
+  }
+
+  getAiPriorityInsight(appointmentId: number): Observable<AppointmentPriorityInsight> {
+    return this.http.get<AppointmentPriorityInsight>(
+      `${environment.apiUrl}/ai/appointments/${appointmentId}/priority-insight`
+    );
   }
 
   approveAppointment(id: number, request: ApproveRejectRequest): Observable<Appointment> {

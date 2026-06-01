@@ -10,6 +10,8 @@ public class ErrorCodeConstants {
     // ========== GENERAL ERRORS ==========
     public static final String GENERAL_ERROR = "ERR_000";
     public static final String GENERAL_ERROR_MSG = "An unexpected error occurred";
+    public static final String UNEXPECTED_ERROR = "ERR_500";
+    public static final String UNEXPECTED_ERROR_MSG = "An unexpected error occurred";
 
     // ========== INPUT VALIDATION ERRORS (ERR_001 - ERR_009) ==========
     public static final String FULL_NAME_REQUIRED = "ERR_001";
@@ -158,6 +160,12 @@ public class ErrorCodeConstants {
 
     public static final String USER_NOT_AUTHENTICATED = "ERR_035";
     public static final String USER_NOT_AUTHENTICATED_MSG = "User authentication failed";
+
+    public static final String USER_ACCOUNT_LOCKED = "ERR_035_LOCKED";
+    public static final String USER_ACCOUNT_LOCKED_MSG = "Account is locked";
+
+    public static final String USER_ACCOUNT_INACTIVE = "ERR_035_INACTIVE";
+    public static final String USER_ACCOUNT_INACTIVE_MSG = "User account is inactive";
 
     public static final String TOKEN_EXPIRED = "ERR_036";
     public static final String TOKEN_EXPIRED_MSG = "JWT token has expired";

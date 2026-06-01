@@ -8,7 +8,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
@@ -60,19 +63,41 @@ public class AuthService {
             
             return response;
         } catch (BadCredentialsException e) {
-            log.error("[AUTH] Login failed for user: {} - Invalid credentials", request.getUsername());
+            log.warn("[AUTH] Failed login username={} reason=invalid_credentials", request.getUsername());
             throw new MeghaConnectException(
                 ErrorCodeConstants.INVALID_CREDENTIALS,
                 ErrorCodeConstants.INVALID_CREDENTIALS_MSG,
                 401
             );
-        } catch (Exception e) {
-            log.error("[AUTH] Login failed for user: {} - Error: {} - Message: {}", 
-                request.getUsername(), e.getClass().getSimpleName(), e.getMessage());
+        } catch (LockedException e) {
+            log.warn("[AUTH] Failed login username={} reason=account_locked", request.getUsername());
+            throw new MeghaConnectException(
+                ErrorCodeConstants.USER_ACCOUNT_LOCKED,
+                ErrorCodeConstants.USER_ACCOUNT_LOCKED_MSG,
+                423
+            );
+        } catch (DisabledException e) {
+            log.warn("[AUTH] Failed login username={} reason=account_inactive", request.getUsername());
+            throw new MeghaConnectException(
+                ErrorCodeConstants.USER_ACCOUNT_INACTIVE,
+                ErrorCodeConstants.USER_ACCOUNT_INACTIVE_MSG,
+                403
+            );
+        } catch (AuthenticationException e) {
+            log.warn("[AUTH] Failed login username={} reason=authentication_failed type={}",
+                request.getUsername(), e.getClass().getSimpleName());
             throw new MeghaConnectException(
                 ErrorCodeConstants.INVALID_CREDENTIALS,
                 ErrorCodeConstants.INVALID_CREDENTIALS_MSG,
                 401
+            );
+        } catch (RuntimeException e) {
+            log.error("[AUTH] Login failed for user: {} - Error: {} - Message: {}",
+                request.getUsername(), e.getClass().getSimpleName(), e.getMessage());
+            throw new MeghaConnectException(
+                ErrorCodeConstants.UNEXPECTED_ERROR,
+                ErrorCodeConstants.UNEXPECTED_ERROR_MSG,
+                500
             );
         }
     }

@@ -6,6 +6,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
@@ -26,7 +28,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleMeghaConnectException(MeghaConnectException ex, WebRequest request) {
         ErrorResponse error = buildError(
                 ex.getErrorCode(),
-                RequestContextUtil.sanitizeForClient(ex.getMessage(), ErrorCodeConstants.GENERAL_ERROR_MSG),
+                clientSafeMessage(ex),
                 ex.getErrorId(),
                 ex.getHttpStatus(),
                 request
@@ -120,15 +122,28 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ErrorResponse> handleAuthentication(AuthenticationException ex, WebRequest request) {
+        String errorCode = ErrorCodeConstants.USER_NOT_AUTHENTICATED;
+        String message = ErrorCodeConstants.USER_NOT_AUTHENTICATED_MSG;
+        HttpStatus status = HttpStatus.UNAUTHORIZED;
+        if (ex instanceof LockedException) {
+            errorCode = ErrorCodeConstants.USER_ACCOUNT_LOCKED;
+            message = ErrorCodeConstants.USER_ACCOUNT_LOCKED_MSG;
+            status = HttpStatus.LOCKED;
+        } else if (ex instanceof DisabledException) {
+            errorCode = ErrorCodeConstants.USER_ACCOUNT_INACTIVE;
+            message = ErrorCodeConstants.USER_ACCOUNT_INACTIVE_MSG;
+            status = HttpStatus.FORBIDDEN;
+        }
+
         ErrorResponse error = buildError(
-                ErrorCodeConstants.USER_NOT_AUTHENTICATED,
-                ErrorCodeConstants.USER_NOT_AUTHENTICATED_MSG,
+                errorCode,
+                message,
                 "AUTH-" + System.nanoTime(),
-                HttpStatus.UNAUTHORIZED.value(),
+                status.value(),
                 request
         );
         logHandledException(error, ex);
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+        return ResponseEntity.status(status).body(error);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
@@ -224,8 +239,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneral(Exception ex, WebRequest request) {
         ErrorResponse error = buildError(
-                ErrorCodeConstants.GENERAL_ERROR,
-                ErrorCodeConstants.GENERAL_ERROR_MSG,
+                ErrorCodeConstants.UNEXPECTED_ERROR,
+                ErrorCodeConstants.UNEXPECTED_ERROR_MSG,
                 "GENERAL-" + System.nanoTime(),
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 request
@@ -243,6 +258,19 @@ public class GlobalExceptionHandler {
         error.setPath(resolvePath(request));
         error.setRequestId(RequestContextUtil.getRequestId());
         return error;
+    }
+
+    private String clientSafeMessage(MeghaConnectException ex) {
+        if (ErrorCodeConstants.INVALID_CREDENTIALS.equals(ex.getErrorCode())) {
+            return ErrorCodeConstants.INVALID_CREDENTIALS_MSG;
+        }
+        if (ErrorCodeConstants.USER_ACCOUNT_LOCKED.equals(ex.getErrorCode())) {
+            return ErrorCodeConstants.USER_ACCOUNT_LOCKED_MSG;
+        }
+        if (ErrorCodeConstants.USER_ACCOUNT_INACTIVE.equals(ex.getErrorCode())) {
+            return ErrorCodeConstants.USER_ACCOUNT_INACTIVE_MSG;
+        }
+        return RequestContextUtil.sanitizeForClient(ex.getMessage(), ErrorCodeConstants.GENERAL_ERROR_MSG);
     }
 
     private String resolvePath(WebRequest request) {

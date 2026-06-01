@@ -1,11 +1,21 @@
 ai:
+  provider: ${AI_PROVIDER:ollama}
+  timeout-seconds: ${AI_TIMEOUT_SECONDS:60}
   ollama:
-    enabled: true
+    enabled: ${OLLAMA_ENABLED:true}
     base-url: ${OLLAMA_BASE_URL:http://127.0.0.1:11434}
     model: ${OLLAMA_MODEL:llama3.2}
-    generate-endpoint: /api/generate
-    timeout-seconds: 120
-    max-input-chars: 12000
+    generate-endpoint: ${OLLAMA_GENERATE_ENDPOINT:/api/generate}
+    timeout-seconds: ${AI_TIMEOUT_SECONDS:60}
+    max-input-chars: ${AI_MAX_INPUT_CHARS:12000}
+  openai:
+    base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
+    api-key: ${OPENAI_API_KEY:}
+    model: ${OPENAI_MODEL:gpt-4o-mini}
+  azure-openai:
+    endpoint: ${AZURE_OPENAI_ENDPOINT:}
+    api-key: ${AZURE_OPENAI_API_KEY:}
+    deployment: ${AZURE_OPENAI_DEPLOYMENT:}
 
 sms:
   enabled: ${SMS_ENABLED:true}

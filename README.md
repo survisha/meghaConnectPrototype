@@ -369,11 +369,81 @@ curl "https://meghaconnect.cloud/api/v1/qr/movements?date=2026-05-15&gateName=Ma
   -H "Authorization: Bearer $ADMIN_TOKEN"
 ```
 
+## AI provider and model configuration
+
+The backend AI calls are routed through configuration. To change the AI model,
+do not edit Java code. Change environment variables or the matching
+`application*.yml` keys, then restart the backend service.
+
+Common keys in all backend profile files:
+
+```yaml
+ai:
+  provider: ${AI_PROVIDER:ollama}
+  timeout-seconds: ${AI_TIMEOUT_SECONDS:60}
+  ollama:
+    enabled: ${OLLAMA_ENABLED:true}
+    base-url: ${OLLAMA_BASE_URL:http://127.0.0.1:11434}
+    model: ${OLLAMA_MODEL:llama3.2}
+    generate-endpoint: ${OLLAMA_GENERATE_ENDPOINT:/api/generate}
+    timeout-seconds: ${AI_TIMEOUT_SECONDS:60}
+    max-input-chars: ${AI_MAX_INPUT_CHARS:12000}
+  openai:
+    base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
+    api-key: ${OPENAI_API_KEY:}
+    model: ${OPENAI_MODEL:gpt-4o-mini}
+  azure-openai:
+    endpoint: ${AZURE_OPENAI_ENDPOINT:}
+    api-key: ${AZURE_OPENAI_API_KEY:}
+    deployment: ${AZURE_OPENAI_DEPLOYMENT:}
+```
+
+For the current Ollama setup, change only the model env var:
+
+```bash
+export AI_PROVIDER=ollama
+export OLLAMA_BASE_URL=http://127.0.0.1:11434
+export OLLAMA_MODEL=llama3.2
+```
+
+Example model switch:
+
+```bash
+ollama pull mistral
+export OLLAMA_MODEL=mistral
+sudo systemctl restart meghaconnect-api
+```
+
+For UAT/production systemd deployments, put the values in the service env file:
+
+```text
+/etc/meghaconnect/meghaconnect-api.env
+/etc/meghaconnect/meghaconnect-api-prod.env
+```
+
+Then restart the relevant service:
+
+```bash
+sudo systemctl restart meghaconnect-api
+sudo systemctl restart meghaconnect-api-prod
+```
+
+Verify the selected provider and model:
+
+```bash
+curl "https://meghaconnect.cloud/api/ai/health" -H "Authorization: Bearer $OFFICER_TOKEN"
+curl "https://www.meghaconnect.com/api/ai/health" -H "Authorization: Bearer $OFFICER_TOKEN"
+```
+
+`AI_PROVIDER=openai` and `AI_PROVIDER=azure-openai` are configuration placeholders
+for future provider implementations. The current working provider is `ollama`.
+
 ## Ollama AI document notes verification
 
 Configure Ollama for backend-only AI notes generation:
 
 ```bash
+export AI_PROVIDER=ollama
 export OLLAMA_BASE_URL=http://localhost:11434
 export OLLAMA_MODEL=llama3.2
 ```

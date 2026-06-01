@@ -3,6 +3,9 @@ package com.survisha.meghaconnect.controller;
 import com.survisha.meghaconnect.entity.Appointment;
 import com.survisha.meghaconnect.repository.AppointmentRepository;
 import com.survisha.meghaconnect.service.AiDocumentIntelligenceService;
+import com.survisha.meghaconnect.service.AppointmentPriorityScoringService;
+import com.survisha.meghaconnect.service.LLMProviderService;
+import com.survisha.meghaconnect.service.LlmHealth;
 import com.survisha.meghaconnect.service.RequestValidationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -12,10 +15,12 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashMap;
 import java.util.List;
@@ -46,6 +51,8 @@ public class AiController {
     private final AiDocumentIntelligenceService aiService;
     private final AppointmentRepository appointmentRepository;
     private final RequestValidationService validationService;
+    private final LLMProviderService llmProviderService;
+    private final AppointmentPriorityScoringService priorityScoringService;
 
     // ── R004 / R005: Document Analysis ───────────────────────────────────────
 
@@ -214,6 +221,21 @@ public class AiController {
         return ResponseEntity.ok(insights);
     }
 
+    @GetMapping("/health")
+    @PreAuthorize("hasAnyRole('ADMIN','OSD','APPROVER','CMO','CMO_OFFICER','HCM')")
+    public ResponseEntity<Map<String, Object>> health() {
+        return ResponseEntity.ok(toHealthResponse(llmProviderService.healthCheck()));
+    }
+
+    @GetMapping("/appointments/{appointmentId}/priority-insight")
+    @PreAuthorize("hasAnyRole('ADMIN','OSD','APPROVER','CMO','CMO_OFFICER','HCM','DATA_ENTRY_OPERATOR')")
+    public ResponseEntity<AppointmentPriorityScoringService.PriorityScore> priorityInsight(
+            @PathVariable Long appointmentId) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Appointment not found"));
+        return ResponseEntity.ok(priorityScoringService.score(appointment));
+    }
+
     // ── Helper ────────────────────────────────────────────────────────────────
 
     private static String getString(Map<String, Object> map, String key) {
@@ -221,5 +243,14 @@ public class AiController {
         if (v == null) return null;
         String s = v.toString().trim();
         return s.isEmpty() ? null : s;
+    }
+
+    static Map<String, Object> toHealthResponse(LlmHealth health) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("provider", health.getProvider());
+        response.put("model", health.getModel());
+        response.put("available", health.isAvailable());
+        response.put("message", health.getMessage());
+        return response;
     }
 }

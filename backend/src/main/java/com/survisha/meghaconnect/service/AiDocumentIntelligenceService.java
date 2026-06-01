@@ -17,7 +17,7 @@ import java.util.*;
  * AI Document Intelligence Service.
  *
  * Provides:
- *   - Document text extraction via DocumentExtractionService
+ *   - Document text extraction via OcrService, with placeholder fallback for image OCR
  *   - Structured field extraction from document text (R004)
  *   - Document summarization (R005)
  *   - Duplicate application detection (R006)
@@ -27,12 +27,11 @@ import java.util.*;
  *   - Dashboard insights (R010)
  *
  * Integration strategy (two-tier):
- *   TIER 1 – Ollama (local):
- *     When {@code ai.ollama.enabled} is true, applicable methods delegate to
- *     {@link AiClientService}. The extracted text is sent to the configured local
- *     Ollama model and a structured system prompt guides the response format.
+ *   TIER 1 – configured LLM provider:
+ *     Applicable methods delegate to {@link AiClientService}, which routes calls
+ *     through the provider-independent LLM facade.
  *   TIER 2 – Rule-based fallback:
- *     When Ollama is disabled or unavailable, the service falls back to its
+ *     When the configured provider is disabled or unavailable, the service falls back to its
  *     built-in deterministic keyword/regex engine.
  *     This guarantees the application is fully functional offline or during
  *     initial deployment without any API credentials.
@@ -43,7 +42,7 @@ public class AiDocumentIntelligenceService {
 
     private static final Logger log = LoggerFactory.getLogger(AiDocumentIntelligenceService.class);
 
-    private final DocumentExtractionService extractionService;
+    private final OcrService extractionService;
     private final AppointmentRepository appointmentRepository;
     private final AiClientService aiClient;
 
@@ -103,9 +102,9 @@ public class AiDocumentIntelligenceService {
     /**
      * Analyse an uploaded document: extract text, infer structured fields, generate summary.
      *
-     * When Ollama is available the extracted text is sent for both
+     * When the configured LLM provider is available the extracted text is sent for both
      * structured field extraction (R004) and summarization (R005).
-     * Falls back to rule-based engine when Ollama is unavailable.
+     * Falls back to rule-based engine when the provider is unavailable.
      *
      * @param file uploaded MultipartFile
      * @return map with keys: success, summary, extractedFields, priorityLevel, priorityReason, duplicateFlag
@@ -136,7 +135,7 @@ public class AiDocumentIntelligenceService {
 
     /**
      * Extract structured fields from document text.
-     * Uses Ollama if available; falls back to rule-based parser.
+     * Uses the configured LLM provider if available; falls back to rule-based parser.
      */
     private Map<String, Object> extractFieldsWithAi(String text) {
         if (aiClient.isAvailable()) {
@@ -184,7 +183,7 @@ public class AiDocumentIntelligenceService {
 
     /**
      * Generate a document summary.
-     * Uses Ollama if available; falls back to rule-based template.
+     * Uses the configured LLM provider if available; falls back to rule-based template.
      */
     private String summarizeWithAi(String text, Map<String, Object> extractedFields) {
         if (aiClient.isAvailable()) {
@@ -199,7 +198,7 @@ public class AiDocumentIntelligenceService {
 
     /**
      * Recommend a priority level from document text.
-     * Uses Ollama if available; falls back to rule-based classifier.
+     * Uses the configured LLM provider if available; falls back to rule-based classifier.
      */
     private String inferPriorityWithAi(String schemeHint, String text) {
         if (aiClient.isAvailable()) {
@@ -275,7 +274,7 @@ public class AiDocumentIntelligenceService {
 
     /**
      * Recommend a meeting priority level based on agenda type and brief.
-     * Uses Ollama when available; falls back to rule-based classifier.
+     * Uses the configured LLM provider when available; falls back to rule-based classifier.
      *
      * @param agendaType  agenda type string
      * @param agendaBrief free-text description
@@ -295,7 +294,7 @@ public class AiDocumentIntelligenceService {
 
     /**
      * Answer a citizen's question.
-     * Uses Ollama when available; falls back to rule-based FAQ matching.
+     * Uses the configured LLM provider when available; falls back to rule-based FAQ matching.
      *
      * @param question citizen's question
      * @return answer string
@@ -305,7 +304,7 @@ public class AiDocumentIntelligenceService {
             return "Please type your question and I will try to help.";
         }
 
-        // Attempt Ollama response first
+        // Attempt provider response first
         if (aiClient.isAvailable()) {
             Optional<String> aiAnswer = aiClient.chat(SYSTEM_CHATBOT, question.trim());
             if (aiAnswer.isPresent()) {
@@ -489,7 +488,7 @@ public class AiDocumentIntelligenceService {
         List<Map<String, Object>> districtList = buildTopList(districtCounts, 6, "district");
         List<Map<String, Object>> categoryList = buildTopCategories();
 
-        // AI narrative note – use Ollama when available for richer insight
+        // AI narrative note - use the configured provider when available for richer insight
         String topScheme = topSchemes.isEmpty() ? "CMSDF" : (String) topSchemes.get(0).get("scheme");
         String aiNote;
         if (aiClient.isAvailable()) {

@@ -1,4 +1,4 @@
-import { Component, OnDestroy, ChangeDetectorRef, OnInit } from '@angular/core';
+import { Component, OnDestroy, ChangeDetectorRef, OnInit, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -147,6 +147,11 @@ interface VerifiedKycData {
   styleUrls: ['./visitor-register.component.scss'],
 })
 export class VisitorRegisterComponent implements OnInit, OnDestroy {
+  @ViewChild('visitorNameInput') visitorNameInput?: ElementRef<HTMLInputElement>;
+
+  private readonly epicPattern = /^[A-Z]{3}[0-9]{7}$/;
+  private readonly namePattern = /^[A-Za-z]+(?: [A-Za-z]+)*$/;
+
   // Multi-step KYC flow
   currentStep: KycStep = 'id-entry';
   
@@ -194,6 +199,9 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   mobileValidationMsg = '';
   mobileValidationType: MobileValidationType = '';
   mobileCheckLoading = false;
+  epicTouched = false;
+  nameTouched = false;
+  mobileTouched = false;
   duplicateRegistrationBlocked = false;
   verifiedKycData: VerifiedKycData | null = null;
   districtAutoPopulated = false;
@@ -315,15 +323,15 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
   get canValidateId(): boolean {
     if (this.form.idType === 'EPIC') {
-      const hasValidEpic = /^[A-Za-z]{3}[0-9]{7}$/.test(this.form.epicNumber);
-      const hasValidName = this.form.visitorName && this.form.visitorName.trim().length > 0;
+      const hasValidEpic = this.epicPattern.test(this.form.epicNumber);
+      const hasValidName = this.isValidName(this.form.visitorName);
       return hasValidEpic && !!hasValidName;
     }
     if (this.form.idType === 'AADHAAR') {
       return /^\d{12}$/.test(this.form.aadhaarNumber);
     }
     if (this.form.idType === 'NONE') {
-      return !!this.form.fullName.trim() && this.isManualPhoneValid && !this.duplicateRegistrationBlocked;
+      return this.isValidName(this.form.fullName) && this.isManualPhoneValid && !this.duplicateRegistrationBlocked;
     }
     return false;
   }
@@ -373,7 +381,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
   validateId() {
     if (!this.canValidateId) {
-      this.errorMsg = this.t('ERROR_INVALID_ID_AND_NAME');
+      this.markIdStepTouched();
+      this.errorMsg = this.primaryValidationMessage || this.t('ERROR_INVALID_ID_AND_NAME');
       return;
     }
 
@@ -1495,6 +1504,9 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.mobileValidationMsg = '';
     this.mobileValidationType = '';
     this.mobileCheckLoading = false;
+    this.epicTouched = false;
+    this.nameTouched = false;
+    this.mobileTouched = false;
     this.duplicateRegistrationBlocked = false;
 
     // Stop camera and clear photo capture state
@@ -1594,7 +1606,62 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     }
   }
 
+  get epicValidationMessage(): string {
+    if (this.form.idType !== 'EPIC' || !this.epicTouched) return '';
+    if (!this.form.epicNumber) return 'EPIC number is required.';
+    if (!this.epicPattern.test(this.form.epicNumber)) return 'EPIC number must be 3 letters followed by 7 digits.';
+    return '';
+  }
+
+  get activeNameValue(): string {
+    return this.form.idType === 'NONE' ? this.form.fullName : this.form.visitorName;
+  }
+
+  get nameValidationMessage(): string {
+    if ((this.form.idType !== 'EPIC' && this.form.idType !== 'NONE') || !this.nameTouched) return '';
+    const name = this.activeNameValue.trim();
+    if (!name) return 'Name is required.';
+    if (!this.isValidName(name)) return 'Name should contain only letters and spaces.';
+    return '';
+  }
+
+  get mobileFieldValidationMessage(): string {
+    if ((this.form.idType !== 'EPIC' && this.form.idType !== 'NONE') || !this.mobileTouched) return '';
+    if (!this.manualPhone) return 'Mobile number is required.';
+    if (!this.isManualPhoneValid) return 'Mobile number must be 10 digits.';
+    return '';
+  }
+
+  get primaryValidationMessage(): string {
+    return this.epicValidationMessage || this.nameValidationMessage || this.mobileFieldValidationMessage;
+  }
+
+  private markIdStepTouched() {
+    if (this.form.idType === 'EPIC') this.epicTouched = true;
+    if (this.form.idType === 'EPIC' || this.form.idType === 'NONE') {
+      this.nameTouched = true;
+      this.mobileTouched = true;
+    }
+  }
+
+  private isValidName(value: string): boolean {
+    return this.namePattern.test(this.normalizeName(value));
+  }
+
+  private normalizeName(value: string): string {
+    return (value || '').replace(/\s+/g, ' ').trim();
+  }
+
+  private cleanNameInput(value: string, uppercase = false): string {
+    const clean = (value || '')
+      .replace(/[^A-Za-z ]/g, '')
+      .replace(/^\s+/, '')
+      .replace(/\s{2,}/g, ' ');
+    return uppercase ? clean.toUpperCase() : clean;
+  }
+
   sanitizeManualPhone() {
+    this.mobileTouched = true;
     this.manualPhone = this.manualPhone.replace(/\D/g, '');
     this.form.phoneNumber = this.manualPhone;
     this.resetOtpVerification();
@@ -1609,6 +1676,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   }
 
   onMobileBlur() {
+    this.mobileTouched = true;
     if (!this.manualPhone) {
       this.mobileValidationMsg = '';
       this.mobileValidationType = '';
@@ -1710,7 +1778,18 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   }
 
   sanitizeEpicInput() {
-    this.form.epicNumber = this.form.epicNumber.toUpperCase();
+    this.epicTouched = true;
+    const raw = (this.form.epicNumber || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    let next = '';
+    for (const char of raw) {
+      if (next.length < 3) {
+        if (/[A-Z]/.test(char)) next += char;
+      } else if (next.length < 10) {
+        if (/\d/.test(char)) next += char;
+      }
+      if (next.length === 10) break;
+    }
+    this.form.epicNumber = next;
     this.resetOtpVerification();
     this.otpSent = false;
     this.otpCode = '';
@@ -1718,6 +1797,32 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.duplicateRegistrationBlocked = false;
     this.mobileValidationMsg = '';
     this.mobileValidationType = '';
+    if (this.form.epicNumber.length === 10 && this.epicPattern.test(this.form.epicNumber)) {
+      setTimeout(() => this.visitorNameInput?.nativeElement.focus());
+    }
+  }
+
+  sanitizeVisitorName() {
+    this.nameTouched = true;
+    this.form.visitorName = this.cleanNameInput(this.form.visitorName, true);
+    this.resetOtpVerification();
+    this.otpSent = false;
+    this.otpCode = '';
+    this.clearVisibleErrors();
+  }
+
+  sanitizeFullName() {
+    this.nameTouched = true;
+    this.form.fullName = this.cleanNameInput(this.form.fullName);
+    this.clearVisibleErrors();
+  }
+
+  trimVisitorName() {
+    this.form.visitorName = this.normalizeName(this.form.visitorName).toUpperCase();
+  }
+
+  trimFullName() {
+    this.form.fullName = this.normalizeName(this.form.fullName);
   }
 
   /**
@@ -1749,6 +1854,9 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.mobileValidationType = '';
     this.mobileCheckLoading = false;
     this.duplicateRegistrationBlocked = false;
+    this.epicTouched = false;
+    this.nameTouched = false;
+    this.mobileTouched = false;
     this.verifiedKycData = null;
     this.form = {
       fullName: '',

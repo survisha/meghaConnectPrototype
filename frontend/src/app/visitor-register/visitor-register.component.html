@@ -123,7 +123,8 @@
 
           <mat-form-field appearance="outline" class="full-width" *ngIf="form.idType === 'NONE'">
             <mat-label>Full Name *</mat-label>
-            <input matInput type="text" [(ngModel)]="form.fullName" placeholder="Enter visitor full name" (input)="clearVisibleErrors()" />
+            <input matInput type="text" [(ngModel)]="form.fullName" placeholder="Enter visitor full name" (input)="sanitizeFullName()" (blur)="trimFullName()" />
+            <mat-error *ngIf="nameValidationMessage">{{ nameValidationMessage }}</mat-error>
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="full-width" *ngIf="form.idType === 'EPIC'">
@@ -135,9 +136,11 @@
               [(ngModel)]="form.epicNumber"
               placeholder="e.g. ABC1234567"
               maxlength="10"
+              autocomplete="off"
               (input)="sanitizeEpicInput()"
             />
             <mat-hint><mat-icon>info</mat-icon> {{ 'EPIC_FORMAT_HINT' | translate }}</mat-hint>
+            <mat-error *ngIf="epicValidationMessage">{{ epicValidationMessage }}</mat-error>
           </mat-form-field>
 
           <!-- Visitor Name Field (for EPIC verification) -->
@@ -145,13 +148,16 @@
             <mat-label>{{ 'VISITOR_NAME_VOTER_CARD' | translate }} *</mat-label>
             <input
               matInput
+              #visitorNameInput
               id="register_visitorNameInput"
               type="text"
               [(ngModel)]="form.visitorName"
               placeholder="e.g. MAREIAM MOSSANG"
-              (input)="form.visitorName = form.visitorName.toUpperCase(); resetOtpVerification(); otpSent = false; otpCode = ''; clearVisibleErrors()"
+              (input)="sanitizeVisitorName()"
+              (blur)="trimVisitorName()"
             />
             <mat-hint><mat-icon>info</mat-icon> {{ 'VISITOR_NAME_VOTER_CARD_HINT' | translate }}</mat-hint>
+            <mat-error *ngIf="nameValidationMessage">{{ nameValidationMessage }}</mat-error>
           </mat-form-field>
 
           
@@ -185,6 +191,7 @@
               [(ngModel)]="manualPhone"
               [placeholder]="'ENTER_10_DIGIT_MOBILE' | translate"
               maxlength="10"
+              inputmode="numeric"
               (input)="sanitizeManualPhone()"
               (blur)="onMobileBlur()"
             />
@@ -196,11 +203,11 @@
           </mat-form-field>
 
           <div
-            *ngIf="mobileValidationMsg && !otpSent && (form.idType === 'EPIC' || form.idType === 'NONE')"
+            *ngIf="(mobileFieldValidationMessage || mobileValidationMsg) && !otpSent && (form.idType === 'EPIC' || form.idType === 'NONE')"
             class="mobile-validation-msg"
-            [ngClass]="mobileValidationType">
-            <mat-icon>{{ mobileValidationIcon }}</mat-icon>
-            <span>{{ mobileValidationMsg }}</span>
+            [ngClass]="mobileFieldValidationMessage ? 'error' : mobileValidationType">
+            <mat-icon>{{ mobileFieldValidationMessage ? 'error' : mobileValidationIcon }}</mat-icon>
+            <span>{{ mobileFieldValidationMessage || mobileValidationMsg }}</span>
           </div>
 
           <!-- OVSE QR Code Display (shown when idType === AADHAAR and Qr is generated) -->

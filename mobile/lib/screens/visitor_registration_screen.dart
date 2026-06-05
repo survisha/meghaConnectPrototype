@@ -51,6 +51,8 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
   final _agendaTypeCtrl = TextEditingController(text: 'B2');
   final _briefDescriptionCtrl = TextEditingController();
   final _imagePicker = ImagePicker();
+  final _visitorNameFocus = FocusNode();
+  final _generateOtpFocus = FocusNode();
 
   int _step = 0;
   String _idType = 'EPIC';
@@ -128,6 +130,8 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
     _emailCtrl.dispose();
     _agendaTypeCtrl.dispose();
     _briefDescriptionCtrl.dispose();
+    _visitorNameFocus.dispose();
+    _generateOtpFocus.dispose();
     super.dispose();
   }
 
@@ -135,6 +139,26 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
     _error = null;
     _warning = null;
     _success = null;
+  }
+
+  bool get _hasValidEpic =>
+      RegExp(r'^[A-Z]{3}[0-9]{7}$').hasMatch(_epicCtrl.text.trim());
+
+  bool get _hasValidVisitorName => RegExp(r'^[A-Za-z]+(?: [A-Za-z]+)*$')
+      .hasMatch(_visitorNameCtrl.text.trim().replaceAll(RegExp(r'\s+'), ' '));
+
+  bool get _hasValidMobile =>
+      RegExp(r'^\d{10}$').hasMatch(_phoneCtrl.text.trim());
+
+  bool get _canGenerateRegistrationOtp {
+    if (_loading) return false;
+    if (_idType == 'EPIC') {
+      return _hasValidEpic && _hasValidVisitorName && _hasValidMobile;
+    }
+    if (_idType == 'NONE') {
+      return _hasValidVisitorName && _hasValidMobile;
+    }
+    return true;
   }
 
   void _setOutsideMeghalaya(bool value) {
@@ -860,9 +884,14 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
                 controller: _epicCtrl,
                 textCapitalization: TextCapitalization.characters,
                 inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9]')),
-                  LengthLimitingTextInputFormatter(10),
+                  _EpicInputFormatter(),
                 ],
+                onChanged: (_) {
+                  setState(_clearMessages);
+                  if (_hasValidEpic) {
+                    _visitorNameFocus.requestFocus();
+                  }
+                },
                 decoration: InputDecoration(
                   labelText: '${i18n.t('EPIC_NUMBER')} *',
                   prefixIcon: const Icon(Icons.credit_card_outlined),
@@ -871,8 +900,11 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
                 validator: (v) {
                   if (_idType != 'EPIC') return null;
                   final epic = (v ?? '').trim().toUpperCase();
+                  if (epic.isEmpty) {
+                    return 'EPIC number is required.';
+                  }
                   if (!RegExp(r'^[A-Z]{3}[0-9]{7}$').hasMatch(epic)) {
-                    return i18n.t('ENTER_EPIC_NUMBER');
+                    return 'EPIC number must be 3 letters followed by 7 digits.';
                   }
                   return null;
                 },
@@ -880,24 +912,27 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _visitorNameCtrl,
+                focusNode: _visitorNameFocus,
                 textCapitalization: TextCapitalization.characters,
+                inputFormatters: const [
+                  _NameInputFormatter(uppercase: true),
+                ],
                 decoration: InputDecoration(
                   labelText: '${i18n.t('VISITOR_NAME_VOTER_CARD')} *',
                   prefixIcon: const Icon(Icons.person_outline),
                   helperText: i18n.t('VISITOR_NAME_VOTER_CARD_HINT'),
                 ),
                 onChanged: (v) {
-                  final next = v.toUpperCase();
-                  if (next == v) return;
-                  _visitorNameCtrl.value = TextEditingValue(
-                    text: next,
-                    selection: TextSelection.collapsed(offset: next.length),
-                  );
+                  setState(_clearMessages);
                 },
                 validator: (v) {
                   if (_idType != 'EPIC') return null;
                   if (v == null || v.trim().isEmpty) {
-                    return i18n.t('VISITOR_NAME_VOTER_CARD');
+                    return 'Name is required.';
+                  }
+                  if (!RegExp(r'^[A-Za-z]+(?: [A-Za-z]+)*$')
+                      .hasMatch(v.trim().replaceAll(RegExp(r'\s+'), ' '))) {
+                    return 'Name should contain only letters and spaces.';
                   }
                   return null;
                 },
@@ -910,6 +945,13 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
                   FilteringTextInputFormatter.digitsOnly,
                   LengthLimitingTextInputFormatter(10),
                 ],
+                onChanged: (value) {
+                  setState(_clearMessages);
+                  if (value.length == 10) {
+                    FocusScope.of(context).unfocus();
+                    _generateOtpFocus.requestFocus();
+                  }
+                },
                 decoration: InputDecoration(
                   labelText: '${i18n.t('MOBILE_NUMBER')} *',
                   prefixIcon: const Icon(Icons.phone_outlined),
@@ -917,8 +959,11 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
                 ),
                 validator: (v) {
                   if (_idType != 'EPIC') return null;
-                  if (v == null || v.length != 10) {
-                    return i18n.t('ERROR_VALID_10_DIGIT_MOBILE');
+                  if (v == null || v.isEmpty) {
+                    return 'Mobile number is required.';
+                  }
+                  if (v.length != 10) {
+                    return 'Mobile number must be 10 digits.';
                   }
                   return null;
                 },
@@ -926,11 +971,15 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
               const SizedBox(height: 12),
               MeghaStatusBanner.info(i18n.t('WILL_VALIDATE_ID_SEND_OTP')),
               const SizedBox(height: 18),
-              _PrimaryProgressButton(
-                loading: _loading,
-                icon: Icons.send_outlined,
-                label: i18n.t('GENERATE_OTP'),
-                onPressed: _startEpicFlow,
+              Focus(
+                focusNode: _generateOtpFocus,
+                child: _PrimaryProgressButton(
+                  loading: _loading,
+                  icon: Icons.send_outlined,
+                  label: i18n.t('GENERATE_OTP'),
+                  onPressed:
+                      _canGenerateRegistrationOtp ? _startEpicFlow : null,
+                ),
               ),
             ] else if (_idType == 'AADHAAR') ...[
               TextFormField(
@@ -969,6 +1018,10 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
               TextFormField(
                 controller: _visitorNameCtrl,
                 textCapitalization: TextCapitalization.words,
+                inputFormatters: const [
+                  _NameInputFormatter(),
+                ],
+                onChanged: (_) => setState(_clearMessages),
                 decoration: const InputDecoration(
                   labelText: 'Full Name *',
                   prefixIcon: Icon(Icons.person_outline),
@@ -976,7 +1029,11 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
                 validator: (v) {
                   if (_idType != 'NONE') return null;
                   if (v == null || v.trim().isEmpty) {
-                    return 'Enter visitor name';
+                    return 'Name is required.';
+                  }
+                  if (!RegExp(r'^[A-Za-z]+(?: [A-Za-z]+)*$')
+                      .hasMatch(v.trim().replaceAll(RegExp(r'\s+'), ' '))) {
+                    return 'Name should contain only letters and spaces.';
                   }
                   return null;
                 },
@@ -989,6 +1046,13 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
                   FilteringTextInputFormatter.digitsOnly,
                   LengthLimitingTextInputFormatter(10),
                 ],
+                onChanged: (value) {
+                  setState(_clearMessages);
+                  if (value.length == 10) {
+                    FocusScope.of(context).unfocus();
+                    _generateOtpFocus.requestFocus();
+                  }
+                },
                 decoration: const InputDecoration(
                   labelText: 'Mobile Number *',
                   prefixIcon: Icon(Icons.phone_outlined),
@@ -996,8 +1060,11 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
                 ),
                 validator: (v) {
                   if (_idType != 'NONE') return null;
-                  if (v == null || v.length != 10) {
-                    return 'Enter a valid 10 digit mobile number';
+                  if (v == null || v.isEmpty) {
+                    return 'Mobile number is required.';
+                  }
+                  if (v.length != 10) {
+                    return 'Mobile number must be 10 digits.';
                   }
                   return null;
                 },
@@ -1007,11 +1074,15 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
                 'No ID registration skips EPIC/Aadhaar verification and keeps KYC status as Pending.',
               ),
               const SizedBox(height: 18),
-              _PrimaryProgressButton(
-                loading: _loading,
-                icon: Icons.send_outlined,
-                label: i18n.t('GENERATE_OTP'),
-                onPressed: _startNoIdFlow,
+              Focus(
+                focusNode: _generateOtpFocus,
+                child: _PrimaryProgressButton(
+                  loading: _loading,
+                  icon: Icons.send_outlined,
+                  label: i18n.t('GENERATE_OTP'),
+                  onPressed:
+                      _canGenerateRegistrationOtp ? _startNoIdFlow : null,
+                ),
               ),
             ],
           ],
@@ -1700,7 +1771,7 @@ class _PrimaryProgressButton extends StatelessWidget {
   final bool loading;
   final IconData icon;
   final String label;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
 
   const _PrimaryProgressButton({
     required this.loading,
@@ -1728,6 +1799,56 @@ class _PrimaryProgressButton extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
+    );
+  }
+}
+
+class _EpicInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final raw =
+        newValue.text.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
+    final buffer = StringBuffer();
+
+    for (final char in raw.characters) {
+      if (buffer.length < 3) {
+        if (RegExp(r'[A-Z]').hasMatch(char)) buffer.write(char);
+      } else if (buffer.length < 10) {
+        if (RegExp(r'\d').hasMatch(char)) buffer.write(char);
+      }
+
+      if (buffer.length == 10) break;
+    }
+
+    final text = buffer.toString();
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+}
+
+class _NameInputFormatter extends TextInputFormatter {
+  final bool uppercase;
+
+  const _NameInputFormatter({this.uppercase = false});
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    var text = newValue.text.replaceAll(RegExp(r'[^A-Za-z ]'), '');
+    text = text
+        .replaceFirst(RegExp(r'^\s+'), '')
+        .replaceAll(RegExp(r'\s{2,}'), ' ');
+    if (uppercase) text = text.toUpperCase();
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
     );
   }
 }

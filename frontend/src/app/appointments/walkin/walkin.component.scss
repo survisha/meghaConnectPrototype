@@ -248,6 +248,62 @@
   gap: 1rem;
 }
 
+.visitor-selection-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.visitor-option {
+  display: block;
+  min-width: 0;
+  padding: 0.85rem 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.visitor-option:has(.mat-mdc-radio-checked) {
+  border-color: #1a237e;
+  background: #eef2ff;
+}
+
+.visitor-option-content {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.visitor-option-main,
+.visitor-option-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.85rem;
+  align-items: center;
+  min-width: 0;
+}
+
+.visitor-option-main {
+  color: #111827;
+  font-size: 0.9rem;
+}
+
+.visitor-option-main span,
+.visitor-option-meta span {
+  color: #475569;
+  font-size: 0.8rem;
+}
+
+.visitor-result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.visitor-result-actions button {
+  min-height: 42px;
+}
+
 .found-layout {
   display: grid;
   grid-template-columns: minmax(280px, 0.85fr) minmax(320px, 1.15fr);
@@ -354,6 +410,12 @@
   border-top: 1px solid #e5e7eb;
 }
 
+.kyc-retry-panel {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #e5e7eb;
+}
+
 .visitor-update-header {
   display: flex;
   align-items: center;
@@ -369,6 +431,12 @@
 }
 
 .visitor-update-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.kyc-retry-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.75rem;
@@ -606,6 +674,7 @@
   .detail-pairs,
   .import-summary,
   .visitor-update-grid,
+  .kyc-retry-grid,
   .photo-update-area {
     grid-template-columns: 1fr;
   }

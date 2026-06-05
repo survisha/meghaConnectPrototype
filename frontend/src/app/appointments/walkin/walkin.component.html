@@ -106,7 +106,7 @@
             <mat-form-field appearance="outline">
               <mat-label>Phone Number</mat-label>
               <mat-icon matPrefix>phone</mat-icon>
-              <input matInput [(ngModel)]="phoneNumber" placeholder="10-digit mobile" />
+              <input matInput maxlength="10" [(ngModel)]="phoneNumber" (input)="onSearchPhoneInput()" placeholder="10-digit mobile" />
             </mat-form-field>
 
             <span class="or-divider">OR</span>
@@ -136,7 +136,7 @@
         </div>
       </div>
 
-      <div class="result-section" *ngIf="notFound || foundPerson">
+      <div class="result-section" *ngIf="notFound || showSearchResults">
         <div *ngIf="notFound" class="section-card result-card">
           <div class="section-card-header warning-header">
             <mat-icon>person_add</mat-icon>
@@ -151,7 +151,53 @@
           </div>
         </div>
 
-        <div *ngIf="foundPerson" class="section-card result-card">
+        <div *ngIf="showSearchResults" class="section-card result-card">
+          <div class="section-card-header success-header">
+            <mat-icon>group</mat-icon>
+            Matching Visitors Found
+          </div>
+          <div class="section-card-body">
+            <mat-radio-group
+              class="visitor-selection-list"
+              [(ngModel)]="selectedVisitorId"
+              (ngModelChange)="selectVisitor($event)">
+              <mat-radio-button
+                *ngFor="let visitor of matchingVisitors"
+                class="visitor-option"
+                [value]="visitor.id">
+                <div class="visitor-option-content">
+                  <div class="visitor-option-main">
+                    <strong>{{ visitor.fullName || 'Visitor' }}</strong>
+                    <span>EPIC: {{ visitorIdentityLabel(visitor) }}</span>
+                    <span>Mobile: {{ visitor.phoneNumber || '—' }}</span>
+                    <span>KYC: {{ kycStatusLabel(visitor) }}</span>
+                  </div>
+                  <div class="visitor-option-meta">
+                    <span>ID Type: {{ visitorIdType(visitor) }}</span>
+                    <span>{{ visitor.address || visitor.addressLine || visitor.constituency || 'Address not available' }}</span>
+                  </div>
+                </div>
+              </mat-radio-button>
+            </mat-radio-group>
+
+            <div class="visitor-result-actions">
+              <button mat-stroked-button type="button" [disabled]="!selectedVisitor" (click)="openUpdateDetailsPanel()">
+                <mat-icon>manage_accounts</mat-icon>
+                Update Details
+              </button>
+              <button mat-stroked-button type="button" [disabled]="!selectedVisitor" (click)="openKycPanel()">
+                <mat-icon>verified_user</mat-icon>
+                Perform KYC
+              </button>
+              <button mat-raised-button color="accent" type="button" [disabled]="!selectedVisitor" (click)="openAppointmentPanel()">
+                <mat-icon>assignment</mat-icon>
+                Create Appointment
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="foundPerson && (showUpdateDetailsPanel || showKycPanel || showAppointmentPanel)" class="section-card result-card">
           <div class="section-card-header success-header">
             <mat-icon>check_circle</mat-icon>
             Existing Applicant Found
@@ -159,7 +205,7 @@
           <div class="section-card-body found-layout">
             <div class="applicant-panel">
               <div class="person-card">
-                <div class="person-avatar">{{ foundPerson.fullName[0] }}</div>
+                <div class="person-avatar">{{ visitorInitial(foundPerson) }}</div>
                 <div>
                   <div class="person-name">{{ foundPerson.fullName }}</div>
                   <div class="muted-text">{{ foundPerson.designation || '—' }}</div>
@@ -190,7 +236,7 @@
               </div>
             </div>
 
-            <div class="appointment-panel">
+            <div class="appointment-panel" *ngIf="showAppointmentPanel">
               <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Appointment Agenda</mat-label>
                 <mat-select [(ngModel)]="agendaType">
@@ -217,7 +263,38 @@
             </div>
           </div>
 
-          <div class="visitor-update-panel">
+          <div class="kyc-retry-panel" *ngIf="showKycPanel">
+            <div class="visitor-update-header">
+              <mat-icon>verified_user</mat-icon>
+              Perform KYC Verification
+            </div>
+
+            <div class="kyc-retry-grid">
+              <mat-form-field appearance="outline">
+                <mat-label>Name</mat-label>
+                <input matInput [(ngModel)]="kycRetryForm.name" (input)="onKycNameInput()" />
+                <mat-error *ngIf="kycRetrySubmitted && kycNameError">{{ kycNameError }}</mat-error>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>EPIC Number</mat-label>
+                <input matInput maxlength="10" placeholder="ABC1234567" [(ngModel)]="kycRetryForm.epicNumber" (input)="onKycEpicInput()" />
+                <mat-error *ngIf="kycRetrySubmitted && kycEpicError">{{ kycEpicError }}</mat-error>
+              </mat-form-field>
+            </div>
+
+            <div *ngIf="visitorUpdateError" class="error-banner">
+              <mat-icon>error</mat-icon>
+              {{ visitorUpdateError }}
+            </div>
+
+            <button mat-raised-button color="primary" type="button" class="save-visitor-action" [disabled]="retryingKyc || !isKycRetryFormValid" (click)="retryKycVerification()">
+              <mat-icon>verified</mat-icon>
+              {{ retryingKyc ? 'Verifying...' : 'Fetch / Verify EPIC' }}
+            </button>
+          </div>
+
+          <div class="visitor-update-panel" *ngIf="showUpdateDetailsPanel">
             <div class="visitor-update-header">
               <mat-icon>manage_accounts</mat-icon>
               Update Missing Visitor Details

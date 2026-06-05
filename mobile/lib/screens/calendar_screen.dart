@@ -160,6 +160,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Future<void> _loadEvents() async {
+    if (!mounted) return;
     setState(() {
       _loading = true;
       _error = null;
@@ -184,7 +185,19 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ..sort((a, b) => a.start.compareTo(b.start));
 
   bool get _canManage {
-    final role = context.watch<AuthService>().user!.role;
+    final role =
+        context.select<AuthService, UserRole?>((auth) => auth.user?.role);
+    return {
+      UserRole.ADMIN,
+      UserRole.OSD,
+      UserRole.HCM,
+      UserRole.CMO_OFFICER,
+      UserRole.APPROVER,
+    }.contains(role);
+  }
+
+  bool get _canManageSnapshot {
+    final role = context.read<AuthService>().user?.role;
     return {
       UserRole.ADMIN,
       UserRole.OSD,
@@ -562,6 +575,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   void _showEventDetail(_Event event) {
     final color = _typeColor(event.type);
+    final canManage = _canManageSnapshot;
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -653,20 +667,20 @@ class _CalendarScreenState extends State<CalendarScreen> {
               for (final appointment in event.appointments)
                 _AppointmentAssignmentRow(
                   appointment: appointment,
-                  onRemove: _canManage && event.id != null
+                  onRemove: canManage && event.id != null
                       ? () => _removeAssignedAppointment(event, appointment)
                       : null,
                 ),
             ],
             const SizedBox(height: 18),
-            if (_canManage && event.sourceType != 'APPOINTMENT')
+            if (canManage && event.sourceType != 'APPOINTMENT')
               Row(
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: () {
                         Navigator.pop(ctx);
-                        _showEventForm(event);
+                        if (mounted) _showEventForm(event);
                       },
                       icon: const Icon(Icons.edit_outlined),
                       label: const Text('Edit'),
@@ -677,7 +691,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     child: OutlinedButton.icon(
                       onPressed: () {
                         Navigator.pop(ctx);
-                        _confirmDelete(event);
+                        if (mounted) _confirmDelete(event);
                       },
                       icon: const Icon(Icons.delete_outline),
                       label: const Text('Delete'),
@@ -722,7 +736,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
               firstDate: _startOfDay(DateTime.now()),
               lastDate: DateTime.now().add(const Duration(days: 730)),
             );
-            if (picked == null) return;
+            if (picked == null || !ctx.mounted) return;
             setLocalState(() {
               if (start) {
                 startDate = picked;
@@ -738,7 +752,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
               context: ctx,
               initialTime: start ? startTime : endTime,
             );
-            if (picked == null) return;
+            if (picked == null || !ctx.mounted) return;
             setLocalState(() {
               if (start) {
                 startTime = picked;
@@ -895,7 +909,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           ),
                         );
                         if (!ctx.mounted) return;
-                        if (ok) Navigator.pop(ctx);
+                        if (ok) {
+                          Navigator.of(ctx).pop();
+                          return;
+                        }
                         setLocalState(() => saving = false);
                       },
                 icon: Icon(existing == null ? Icons.check : Icons.save),
@@ -916,8 +933,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
     required _Event? existing,
     required _Event event,
   }) async {
+    if (!mounted) return false;
     final online = context.read<ConnectivityService>().isOnline;
     if (!online && existing == null) {
+      if (!mounted) return false;
       setState(() {
         _events = [
           ..._events,
@@ -947,11 +966,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final result = existing == null
         ? await ApiService.createScheduleEvent(event.toPayload())
         : await ApiService.updateScheduleEvent(existing.id!, event.toPayload());
-    if (result == null) {
+    if (!mounted) return false;
+    if (result == null || result['success'] == false) {
       _snack(
-          existing == null
-              ? 'Failed to create event.'
-              : 'Failed to update event.',
+          result?['message']?.toString() ??
+              (existing == null
+                  ? 'Failed to create event.'
+                  : 'Failed to update event.'),
           success: false);
       return false;
     }
@@ -987,22 +1008,24 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ],
       ),
     );
-    if (confirmed != true) return;
+    if (!mounted || confirmed != true) return;
     final result = await ApiService.removeAppointmentFromScheduleEvent(
       eventId,
       appointmentId,
     );
+    if (!mounted) return;
     if (result == null) {
       _snack('Failed to remove application from event.', success: false);
       return;
     }
     _snack('Application removed from event and moved back to follow-up.');
-    if (mounted) Navigator.pop(context);
+    if (Navigator.of(context).canPop()) Navigator.of(context).pop();
     await _loadEvents();
   }
 
   Future<void> _confirmDelete(_Event event) async {
     if (event.id == null) {
+      if (!mounted) return;
       setState(() => _events = _events.where((e) => e != event).toList());
       _snack('Pending offline event removed.');
       return;
@@ -1022,8 +1045,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ],
       ),
     );
-    if (confirmed != true) return;
+    if (!mounted || confirmed != true) return;
     final ok = await ApiService.deleteScheduleEvent(event.id!);
+    if (!mounted) return;
     if (!ok) {
       _snack('Failed to delete event.', success: false);
       return;
@@ -1067,6 +1091,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   void _shiftDate(int delta) {
+    if (!mounted) return;
     setState(() {
       if (_view == _CalendarView.day) {
         _selectedDate = _selectedDate.add(Duration(days: delta));
@@ -1110,6 +1135,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   void _snack(String message, {bool success = true}) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),

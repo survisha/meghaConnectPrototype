@@ -379,6 +379,21 @@
   padding: 0.75rem 1rem;
 }
 
+.kyc-success-card {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+}
+
+.kyc-success-card mat-icon {
+  color: #059669;
+}
+
 .appointment-item {
   align-items: flex-start;
 }
@@ -500,6 +515,43 @@
   gap: 0.75rem;
   flex-wrap: wrap;
   padding: 0 1rem 1rem;
+}
+
+.kyc-retry-modal {
+  width: min(460px, 100%);
+}
+
+.kyc-retry-body {
+  padding: 1rem;
+}
+
+.form-label {
+  display: block;
+  margin: 0.35rem 0 0.3rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #374151;
+}
+
+.form-input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+  color: #111827;
+  font-size: 0.9rem;
+}
+
+.form-input:focus {
+  outline: 2px solid #c7d2fe;
+  border-color: #6366f1;
+}
+
+.field-error {
+  margin-top: 0.25rem;
+  color: #dc2626;
+  font-size: 0.76rem;
 }
 
 @media (max-width: 576px) {

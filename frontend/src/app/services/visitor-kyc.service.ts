@@ -178,7 +178,7 @@ export class VisitorKycService {
     return this.http.get<KycDataResponse>(`${environment.apiUrl}/kyc/aadhaar/result/${txnId}`);
   }
 
-  retryKyc(visitorId: number): Observable<{
+  retryKyc(visitorId: number, payload: { name: string; epicNumber: string }): Observable<{
     success: boolean;
     message: string;
     kycStatus: string;
@@ -186,6 +186,7 @@ export class VisitorKycService {
     requestId?: string;
     canProceed?: boolean;
     hardFailure?: boolean;
+    profile?: Record<string, unknown>;
   }> {
     return this.http.post<{
       success: boolean;
@@ -195,7 +196,8 @@ export class VisitorKycService {
       requestId?: string;
       canProceed?: boolean;
       hardFailure?: boolean;
-    }>(`${environment.apiUrl}/visitor/auth/profile/${visitorId}/kyc/retry`, {});
+      profile?: Record<string, unknown>;
+    }>(`${environment.apiUrl}/visitor/auth/profile/${visitorId}/kyc/retry`, payload);
   }
 
   /**

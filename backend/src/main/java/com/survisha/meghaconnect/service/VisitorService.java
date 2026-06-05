@@ -3,8 +3,10 @@ package com.survisha.meghaconnect.service;
 import com.survisha.meghaconnect.entity.Visitor;
 import com.survisha.meghaconnect.repository.VisitorRepository;
 import com.survisha.meghaconnect.dto.AssociateVisitorDto;
+import com.survisha.meghaconnect.dto.EpicVerificationData;
 import com.survisha.meghaconnect.dto.PublicRegistrationDto;
 import com.survisha.meghaconnect.dto.VisitorDto;
+import com.survisha.meghaconnect.dto.PollingDetails;
 import com.survisha.meghaconnect.exception.*;
 import com.survisha.meghaconnect.util.DateTimeUtil;
 import com.survisha.meghaconnect.util.RequestContextUtil;
@@ -587,11 +589,82 @@ public class VisitorService {
     }
 
     @Transactional
+    public Visitor completeEpicKycRetry(Long visitorId, String name, String epicNumber,
+                                        EpicVerificationData epicData, String requestId, String actor) {
+        Visitor visitor = visitorRepository.findById(visitorId)
+                .orElseThrow(() -> new VisitorNotFoundException(visitorId));
+
+        String normalizedEpic = trimToNull(epicNumber);
+        if (normalizedEpic != null) {
+            normalizedEpic = normalizedEpic.toUpperCase();
+        }
+        Optional<Visitor> existingEpicVisitor = visitorRepository.findByEpicNumber(normalizedEpic);
+        if (existingEpicVisitor.isPresent() && !existingEpicVisitor.get().getId().equals(visitorId)) {
+            throw new VisitorRegistrationValidationException(
+                    ErrorCodeConstants.DUPLICATE_EPIC_MOBILE_REGISTRATION,
+                    ErrorCodeConstants.DUPLICATE_EPIC_MOBILE_REGISTRATION_MSG
+            );
+        }
+
+        String verifiedName = firstNonBlank(epicData != null ? epicData.getVerifiedName() : null, name);
+        String address = buildEpicAddress(epicData);
+        PollingDetails pollingDetails = epicData != null ? epicData.getPollingDetails() : null;
+
+        visitor.setFullName(verifiedName);
+        visitor.setEpicNumber(normalizedEpic);
+        visitor.setKycType(ValidationConstants.ID_TYPE_EPIC);
+        visitor.setKycProvider(ValidationConstants.ID_TYPE_EPIC);
+        visitor.setKycStatus("KYC_VERIFIED");
+        visitor.setKycVerified(true);
+        visitor.setKycVerifiedAt(DateTimeUtil.nowIST());
+        visitor.setKycFailureReason(null);
+        visitor.setKycRequestId(firstNonBlank(requestId, epicData != null ? epicData.getVoterIdVerificationRequestId() : null));
+        visitor.setKycLastAttemptAt(DateTimeUtil.nowIST());
+        visitor.setUpdatedBy(firstNonBlank(actor, "visitor_" + visitorId));
+
+        if (address != null) {
+            visitor.setAddress(address);
+            visitor.setFullAddress(address);
+            visitor.setAddress1(address);
+            visitor.setAddressLine(address);
+            visitor.setLocation(address);
+        }
+        if (epicData != null) {
+            visitor.setState(trimToNull(epicData.getBorrowerAddressState()));
+            visitor.setDistrict(trimToNull(epicData.getBorrowerAddressDistrict()));
+            visitor.setGender(trimToNull(epicData.getBorrowerGender()));
+            visitor.setAssemblyConstituencyNumber(trimToNull(epicData.getAssemblyConstituencyNumber()));
+            visitor.setAssemblyConstituencyName(trimToNull(epicData.getAssemblyConstituencyName()));
+            visitor.setConstituency(firstNonBlank(
+                    formatConstituency(epicData.getAssemblyConstituencyName(), epicData.getAssemblyConstituencyNumber()),
+                    visitor.getConstituency()));
+            visitor.setBorrowerAddressHouseNumber(trimToNull(epicData.getBorrowerAddressHouseNumber()));
+            visitor.setBorrowerAddressSectionNumber(trimToNull(epicData.getBorrowerAddressSectionNumber()));
+            visitor.setRelativeNameOnVoterId(trimToNull(epicData.getRelativeNameOnVoterId()));
+            visitor.setPollingPartNo(trimToNull(pollingDetails != null ? pollingDetails.getPollingPartNo() : null));
+            visitor.setBooth(trimToNull(pollingDetails != null ? pollingDetails.getPollingPartNo() : null));
+            visitor.setBoothVillage(trimToNull(pollingDetails != null ? pollingDetails.getPollingstationpartname() : null));
+            visitor.setNameMatchScore(epicData.getNameMatchScore());
+            visitor.setIdFound(epicData.isIdFound());
+            visitor.setVoterIdVerificationRequestId(trimToNull(epicData.getVoterIdVerificationRequestId()));
+            visitor.setVoterIdVerificationCompletionTimestamp(trimToNull(epicData.getVoterIdVerificationCompletionTimestamp()));
+        }
+
+        Visitor saved = visitorRepository.save(visitor);
+        auditLogService.log("Visitor", saved.getId(), "KYC_RETRY_VERIFIED",
+                "KYC status changed from pending to verified using EPIC. requestId="
+                        + firstNonBlank(requestId, RequestContextUtil.getRequestId()),
+                firstNonBlank(actor, "visitor_" + visitorId));
+        return saved;
+    }
+
+    @Transactional
     public Visitor markKycRetryFailed(Long visitorId, String reason, String requestId, String actor) {
         Visitor visitor = visitorRepository.findById(visitorId)
                 .orElseThrow(() -> new VisitorNotFoundException(visitorId));
         visitor.setKycStatus("KYC_PENDING");
         visitor.setKycVerified(false);
+        visitor.setKycProvider(ValidationConstants.ID_TYPE_EPIC);
         visitor.setKycFailureReason(trimToNull(reason));
         visitor.setKycRequestId(trimToNull(requestId));
         visitor.setKycLastAttemptAt(DateTimeUtil.nowIST());
@@ -743,5 +816,37 @@ public class VisitorService {
             return cleanName + " / " + cleanNumber;
         }
         return firstNonBlank(cleanName, cleanNumber);
+    }
+
+    private String buildEpicAddress(EpicVerificationData data) {
+        if (data == null) {
+            return null;
+        }
+        return firstNonBlank(
+                joinAddressParts(
+                        data.getBorrowerAddressHouseNumber(),
+                        data.getBorrowerAddressSectionNumber(),
+                        data.getDistrict(),
+                        data.getState()),
+                data.getDistrict(),
+                data.getState());
+    }
+
+    private String joinAddressParts(String... parts) {
+        if (parts == null) {
+            return null;
+        }
+        StringBuilder builder = new StringBuilder();
+        for (String part : parts) {
+            String value = trimToNull(part);
+            if (value == null || "Not Available".equalsIgnoreCase(value)) {
+                continue;
+            }
+            if (builder.length() > 0) {
+                builder.append(", ");
+            }
+            builder.append(value);
+        }
+        return trimToNull(builder.toString());
     }
 }

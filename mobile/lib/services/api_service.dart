@@ -1643,10 +1643,20 @@ class ApiService {
       if (resp.statusCode == 200 || resp.statusCode == 201) {
         return jsonDecode(resp.body) as Map<String, dynamic>;
       }
+      return {
+        'success': false,
+        'message': _messageFromResponse(
+          resp,
+          'Failed to create event. Please try again.',
+        ),
+      };
     } catch (error, stackTrace) {
       _logError('createScheduleEvent', error, stackTrace);
     }
-    return null;
+    return {
+      'success': false,
+      'message': 'Network issue. Please check your connection and try again.',
+    };
   }
 
   static Future<Map<String, dynamic>?> updateScheduleEvent(
@@ -1665,10 +1675,20 @@ class ApiService {
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
         return jsonDecode(resp.body) as Map<String, dynamic>;
       }
+      return {
+        'success': false,
+        'message': _messageFromResponse(
+          resp,
+          'Failed to update event. Please try again.',
+        ),
+      };
     } catch (error, stackTrace) {
       _logError('updateScheduleEvent', error, stackTrace);
     }
-    return null;
+    return {
+      'success': false,
+      'message': 'Network issue. Please check your connection and try again.',
+    };
   }
 
   static Future<bool> deleteScheduleEvent(int id) async {
@@ -1882,6 +1902,43 @@ class ApiService {
       _logError('getVisitorProfileById', error, stackTrace);
     }
     return null;
+  }
+
+  static Future<Map<String, dynamic>> retryVisitorKyc({
+    required int visitorId,
+    required String name,
+    required String epicNumber,
+  }) async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .post(
+            _u('/visitor/auth/profile/$visitorId/kyc/retry'),
+            headers: headers,
+            body: jsonEncode({
+              'name': name.trim(),
+              'epicNumber': epicNumber.trim().toUpperCase(),
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        final decoded = jsonDecode(resp.body);
+        if (decoded is Map<String, dynamic>) return decoded;
+      }
+      return {
+        'success': false,
+        'message': _messageFromResponse(
+          resp,
+          'Unable to verify EPIC details. Please try again.',
+        ),
+      };
+    } catch (error, stackTrace) {
+      _logError('retryVisitorKyc', error, stackTrace);
+      return {
+        'success': false,
+        'message': 'Network issue. Please check your connection and try again.',
+      };
+    }
   }
 
   static Future<Map<String, dynamic>?> searchPersonByEpic(String epic) async {

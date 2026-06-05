@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
@@ -56,7 +57,7 @@ type VisitorSchemeApplication = SchemeApplication & {
 @Component({
   selector: 'app-visitor-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, Tag, AiChatbotComponent, MatIconModule],
+  imports: [CommonModule, FormsModule, RouterLink, Tag, AiChatbotComponent, MatIconModule],
   templateUrl: './visitor-dashboard.component.html',
   styleUrls: ['./visitor-dashboard.component.scss'],
 })
@@ -72,6 +73,13 @@ export class VisitorDashboardComponent implements OnInit {
   selectedScheme: SchemeEntry | null = null;
   downloadingPassId: number | null = null;
   retryingKyc = false;
+  kycRetryOpen = false;
+  kycRetrySubmitted = false;
+  kycVerifiedGraphic = false;
+  kycRetryForm = {
+    name: '',
+    epicNumber: '',
+  };
 
   visitorProfile: VisitorProfile | null = null;
   visitorPhotoUrl = '';
@@ -360,28 +368,98 @@ export class VisitorDashboardComponent implements OnInit {
     return (this.visitorProfile?.kycStatus || 'PENDING').replace(/_/g, ' ');
   }
 
+  openKycRetryPanel(): void {
+    this.errorMsg = '';
+    this.successMsg = '';
+    this.kycRetrySubmitted = false;
+    this.kycRetryForm = {
+      name: this.visitorProfile?.fullName || '',
+      epicNumber: '',
+    };
+    this.kycRetryOpen = true;
+  }
+
+  closeKycRetryPanel(): void {
+    if (this.retryingKyc) {
+      return;
+    }
+    this.kycRetryOpen = false;
+    this.kycRetrySubmitted = false;
+  }
+
+  onKycNameInput(): void {
+    this.kycRetryForm.name = this.kycRetryForm.name.replace(/[^A-Za-z ]/g, '').replace(/\s{2,}/g, ' ');
+  }
+
+  onKycEpicInput(): void {
+    const clean = this.kycRetryForm.epicNumber.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    let next = '';
+    for (const char of clean) {
+      if (next.length < 3 && /[A-Z]/.test(char)) {
+        next += char;
+      } else if (next.length >= 3 && next.length < 10 && /[0-9]/.test(char)) {
+        next += char;
+      }
+      if (next.length === 10) break;
+    }
+    this.kycRetryForm.epicNumber = next;
+  }
+
+  get kycNameError(): string {
+    const name = this.kycRetryForm.name.trim();
+    if (!name) return 'Name is required.';
+    if (!/^[A-Za-z ]+$/.test(name)) return 'Name should contain only letters and spaces.';
+    return '';
+  }
+
+  get kycEpicError(): string {
+    const epic = this.kycRetryForm.epicNumber.trim().toUpperCase();
+    if (!epic) return 'EPIC number is required.';
+    if (!/^[A-Z]{3}[0-9]{7}$/.test(epic)) return 'EPIC number must be 3 letters followed by 7 digits.';
+    return '';
+  }
+
+  get isKycRetryFormValid(): boolean {
+    return !this.kycNameError && !this.kycEpicError;
+  }
+
   retryKycVerification(): void {
     const visitorId = Number(sessionStorage.getItem('megha_visitor_id') || 0);
-    if (!visitorId || this.retryingKyc) {
+    this.kycRetrySubmitted = true;
+    this.onKycNameInput();
+    this.onKycEpicInput();
+    if (!visitorId || this.retryingKyc || !this.isKycRetryFormValid) {
       return;
     }
     this.errorMsg = '';
     this.successMsg = '';
     this.retryingKyc = true;
-    this.visitorKycService.retryKyc(visitorId).subscribe({
+    this.visitorKycService.retryKyc(visitorId, {
+      name: this.kycRetryForm.name.trim(),
+      epicNumber: this.kycRetryForm.epicNumber.trim().toUpperCase(),
+    }).subscribe({
       next: res => {
         this.retryingKyc = false;
-        if (this.visitorProfile) {
-          this.visitorProfile = {
-            ...this.visitorProfile,
-            kycStatus: res.kycStatus,
-            kycProvider: res.kycProvider,
-            kycVerified: !!res.success,
-          };
+        if (res.success) {
+          if (res.profile) {
+            this.visitorProfile = res.profile as unknown as VisitorProfile;
+          } else if (this.visitorProfile) {
+            this.visitorProfile = {
+              ...this.visitorProfile,
+              fullName: this.kycRetryForm.name.trim(),
+              kycStatus: res.kycStatus,
+              kycProvider: res.kycProvider,
+              kycType: 'EPIC',
+              kycVerified: true,
+            };
+          }
+          this.kycRetryOpen = false;
+          this.kycVerifiedGraphic = true;
+          this.successMsg = res.message || 'KYC verification completed successfully.';
+          this.loadProfile(String(visitorId));
+          return;
         }
-        this.successMsg = res.message || (res.success
-          ? 'KYC verification completed successfully.'
-          : 'KYC service is still unavailable. Please try after some time.');
+        this.errorMsg = res.message || 'Unable to verify EPIC details. Please check the EPIC number and name.';
       },
       error: err => {
         this.retryingKyc = false;

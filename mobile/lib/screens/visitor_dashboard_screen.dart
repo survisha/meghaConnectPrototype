@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
@@ -111,6 +112,8 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
   List<_MyAppointment> _appointments = [];
   List<_MyScheme> _schemes = [];
   List<_MyGrievance> _grievances = [];
+  Map<String, dynamic>? _visitorProfile;
+  bool _kycVerifiedGraphic = false;
 
   static const _timeline = [
     ('Application Submitted', '–', _primaryBlue),
@@ -155,12 +158,17 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
           ? ApiService.getSchemeApplicationsForVisitor(visitorId, size: 5)
           : ApiService.getSchemeApplications(size: 5),
       ApiService.getGrievances(size: 5),
+      visitorId != null && visitorId > 0
+          ? ApiService.getVisitorProfileById(visitorId)
+          : Future<Map<String, dynamic>?>.value(null),
     ]);
     if (!mounted) return;
-    final apptPage = results[0];
-    final schemePage = results[1];
-    final grievancePage = results[2];
+    final apptPage = results[0] ?? <String, dynamic>{};
+    final schemePage = results[1] ?? <String, dynamic>{};
+    final grievancePage = results[2] ?? <String, dynamic>{};
+    final profile = results[3];
     setState(() {
+      _visitorProfile = profile;
       _appointments = ((apptPage['content'] as List<dynamic>?) ?? []).map((e) {
         final m = e as Map<String, dynamic>;
         return _MyAppointment(
@@ -197,6 +205,12 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
       }).toList();
       _loading = false;
     });
+  }
+
+  bool get _isKycPending {
+    final status = _visitorProfile?['kycStatus']?.toString().toUpperCase();
+    final verified = _visitorProfile?['kycVerified'] == true;
+    return status == 'KYC_PENDING' || (!verified && status == 'PENDING');
   }
 
   Future<void> _onRefresh() async {
@@ -361,6 +375,14 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
                             TextStyle(color: Color(0xFF92400E), fontSize: 12),
                       ),
                     ),
+                    const SizedBox(height: 16),
+                  ],
+                  if (_kycVerifiedGraphic) ...[
+                    _KycSuccessCard(),
+                    const SizedBox(height: 16),
+                  ],
+                  if (_isKycPending) ...[
+                    _KycPendingCard(onVerify: () => _openKycRetrySheet(name)),
                     const SizedBox(height: 16),
                   ],
 
@@ -595,6 +617,44 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
     );
   }
 
+  Future<void> _openKycRetrySheet(String fallbackName) async {
+    final visitorId = context.read<AuthService>().user?.visitorId;
+    if (visitorId == null || visitorId <= 0) return;
+    final result = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => _KycRetrySheet(
+        initialName: _visitorProfile?['fullName']?.toString() ?? fallbackName,
+        visitorId: visitorId,
+      ),
+    );
+    if (!mounted || result == null) return;
+    final ok = result['success'] == true;
+    final message = result['message']?.toString() ??
+        (ok
+            ? 'KYC verification completed successfully.'
+            : 'Unable to verify EPIC details.');
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+    if (ok) {
+      setState(() {
+        final profile = result['profile'];
+        if (profile is Map<String, dynamic>) {
+          _visitorProfile = profile;
+        } else {
+          _visitorProfile = {
+            ...?_visitorProfile,
+            'kycStatus': result['kycStatus'] ?? 'KYC_VERIFIED',
+            'kycProvider': result['kycProvider'] ?? 'EPIC',
+            'kycVerified': true,
+          };
+        }
+        _kycVerifiedGraphic = true;
+      });
+      await _loadData();
+    }
+  }
+
   void _showSchemeDetails(_MyScheme scheme) {
     showDialog<void>(
       context: context,
@@ -676,6 +736,262 @@ class _SummaryTile extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _KycPendingCard extends StatelessWidget {
+  final VoidCallback onVerify;
+  const _KycPendingCard({required this.onVerify});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBEB),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFFCD34D)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.verified_user_outlined, color: Color(0xFF92400E)),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text(
+              'Your KYC verification is pending. Please verify your identity using EPIC details.',
+              style: TextStyle(color: Color(0xFF92400E), fontSize: 12),
+            ),
+          ),
+          const SizedBox(width: 8),
+          TextButton(
+            onPressed: onVerify,
+            child: const Text('Verify with EPIC'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _KycSuccessCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFECFDF5),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFA7F3D0)),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.check_circle, color: Color(0xFF059669)),
+          SizedBox(width: 10),
+          Text(
+            'KYC Verified Successfully',
+            style: TextStyle(
+              color: Color(0xFF047857),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _KycRetrySheet extends StatefulWidget {
+  final String initialName;
+  final int visitorId;
+  const _KycRetrySheet({required this.initialName, required this.visitorId});
+
+  @override
+  State<_KycRetrySheet> createState() => _KycRetrySheetState();
+}
+
+class _KycRetrySheetState extends State<_KycRetrySheet> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _nameCtrl;
+  final _epicCtrl = TextEditingController();
+  bool _submitting = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController(text: widget.initialName);
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _epicCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    setState(() => _error = null);
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _submitting = true);
+    final result = await ApiService.retryVisitorKyc(
+      visitorId: widget.visitorId,
+      name: _nameCtrl.text.trim(),
+      epicNumber: _epicCtrl.text.trim().toUpperCase(),
+    );
+    if (!mounted) return;
+    setState(() => _submitting = false);
+    if (result['success'] == true) {
+      Navigator.of(context).pop(result);
+    } else {
+      setState(() {
+        _error = result['message']?.toString() ??
+            'Unable to verify EPIC details. Please check the EPIC number and name.';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
+        child: Form(
+          key: _formKey,
+          onChanged: () => setState(() {}),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Verify with EPIC',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed:
+                        _submitting ? null : () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _nameCtrl,
+                textCapitalization: TextCapitalization.words,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z ]'))
+                ],
+                decoration: const InputDecoration(
+                  labelText: 'Name',
+                  border: OutlineInputBorder(),
+                  errorMaxLines: 2,
+                ),
+                validator: (value) {
+                  final name = value?.trim() ?? '';
+                  if (name.isEmpty) return 'Name is required.';
+                  if (!RegExp(r'^[A-Za-z ]+$').hasMatch(name)) {
+                    return 'Name should contain only letters and spaces.';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _epicCtrl,
+                textCapitalization: TextCapitalization.characters,
+                maxLength: 10,
+                inputFormatters: [_EpicInputFormatter()],
+                decoration: const InputDecoration(
+                  labelText: 'EPIC Number',
+                  hintText: 'ABC1234567',
+                  border: OutlineInputBorder(),
+                  counterText: '',
+                  errorMaxLines: 2,
+                ),
+                validator: (value) {
+                  final epic = value?.trim().toUpperCase() ?? '';
+                  if (epic.isEmpty) return 'EPIC number is required.';
+                  if (!RegExp(r'^[A-Z]{3}[0-9]{7}$').hasMatch(epic)) {
+                    return 'EPIC number must be 3 letters followed by 7 digits.';
+                  }
+                  return null;
+                },
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 10),
+                Text(_error!,
+                    style: const TextStyle(color: _red, fontSize: 12)),
+              ],
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _submitting
+                          ? null
+                          : () => Navigator.of(context).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed:
+                          _submitting || !_isLocallyValid ? null : _submit,
+                      child:
+                          Text(_submitting ? 'Verifying...' : 'Fetch / Verify'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  bool get _isLocallyValid {
+    final name = _nameCtrl.text.trim();
+    final epic = _epicCtrl.text.trim().toUpperCase();
+    return RegExp(r'^[A-Za-z ]+$').hasMatch(name) &&
+        RegExp(r'^[A-Z]{3}[0-9]{7}$').hasMatch(epic);
+  }
+}
+
+class _EpicInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final raw =
+        newValue.text.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
+    final buffer = StringBuffer();
+    for (final codeUnit in raw.codeUnits) {
+      final char = String.fromCharCode(codeUnit);
+      if (buffer.length < 3 && RegExp(r'[A-Z]').hasMatch(char)) {
+        buffer.write(char);
+      } else if (buffer.length >= 3 &&
+          buffer.length < 10 &&
+          RegExp(r'[0-9]').hasMatch(char)) {
+        buffer.write(char);
+      }
+      if (buffer.length == 10) break;
+    }
+    final text = buffer.toString();
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
     );
   }
 }

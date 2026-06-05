@@ -5,10 +5,14 @@
   <div *ngIf="successMsg" class="success-message" style="margin-bottom:1rem">
     {{ successMsg }}
   </div>
+  <div *ngIf="kycVerifiedGraphic" class="kyc-success-card" style="margin-bottom:1rem">
+    <mat-icon>check_circle</mat-icon>
+    <strong>KYC Verified Successfully</strong>
+  </div>
   <div *ngIf="isKycPending" class="warning-message" style="margin-bottom:1rem">
-    Your KYC verification is pending because the verification service is currently unavailable. Please try again later.
-    <button type="button" class="btn-small btn-outline-small" style="margin-left:0.75rem" [disabled]="retryingKyc" (click)="retryKycVerification()">
-      {{ retryingKyc ? 'Retrying...' : 'Retry KYC Verification' }}
+    Your KYC verification is pending. Please verify your identity using EPIC details.
+    <button type="button" class="btn-small btn-outline-small" style="margin-left:0.75rem" [disabled]="retryingKyc" (click)="openKycRetryPanel()">
+      Verify with EPIC
     </button>
   </div>
 
@@ -243,6 +247,51 @@
 
   <!-- R008: AI Chatbot Widget -->
   <app-ai-chatbot></app-ai-chatbot>
+
+  <div *ngIf="kycRetryOpen" class="modal-backdrop" (click)="closeKycRetryPanel()">
+    <div class="details-modal kyc-retry-modal" (click)="$event.stopPropagation()">
+      <div class="details-header">
+        <div>
+          <div class="details-title">Verify with EPIC</div>
+          <div class="item-id">Complete pending KYC</div>
+        </div>
+        <button type="button" class="photo-preview-close" (click)="closeKycRetryPanel()" aria-label="Close KYC verification">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      <div class="kyc-retry-body">
+        <label class="form-label" for="kycRetryNameInput">Name</label>
+        <input
+          id="kycRetryNameInput"
+          class="form-input"
+          type="text"
+          [(ngModel)]="kycRetryForm.name"
+          (input)="onKycNameInput()"
+          autocomplete="name" />
+        <div *ngIf="kycRetrySubmitted && kycNameError" class="field-error">{{ kycNameError }}</div>
+
+        <label class="form-label" for="kycRetryEpicInput">EPIC Number</label>
+        <input
+          id="kycRetryEpicInput"
+          class="form-input"
+          type="text"
+          maxlength="10"
+          placeholder="ABC1234567"
+          [(ngModel)]="kycRetryForm.epicNumber"
+          (input)="onKycEpicInput()"
+          autocomplete="off" />
+        <div *ngIf="kycRetrySubmitted && kycEpicError" class="field-error">{{ kycEpicError }}</div>
+      </div>
+      <div class="details-actions">
+        <button type="button" class="btn-small btn-outline-small" [disabled]="retryingKyc" (click)="closeKycRetryPanel()">
+          Cancel
+        </button>
+        <button type="button" class="btn-small btn-primary-small" [disabled]="retryingKyc || !isKycRetryFormValid" (click)="retryKycVerification()">
+          {{ retryingKyc ? 'Verifying...' : 'Fetch / Verify' }}
+        </button>
+      </div>
+    </div>
+  </div>
 
   <div *ngIf="selectedAppointment" class="modal-backdrop" (click)="closeAppointmentDetails()">
     <div class="details-modal" (click)="$event.stopPropagation()">

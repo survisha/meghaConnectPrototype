@@ -3,9 +3,11 @@ package com.survisha.meghaconnect.service;
 import com.survisha.common.sms.SmsService;
 import com.survisha.meghaconnect.dto.EpicVerificationRequest;
 import com.survisha.meghaconnect.dto.EpicVerificationResponse;
+import com.survisha.meghaconnect.dto.EpicVerificationData;
 import com.survisha.meghaconnect.dto.PublicRegistrationDto;
 import com.survisha.meghaconnect.entity.Visitor;
 import com.survisha.meghaconnect.exception.ErrorCodeConstants;
+import com.survisha.meghaconnect.exception.RequestValidationException;
 import com.survisha.meghaconnect.exception.VisitorNotFoundException;
 import com.survisha.meghaconnect.util.ValidationConstants;
 import com.survisha.meghaconnect.util.RequestContextUtil;
@@ -373,35 +375,39 @@ public class VisitorAuthService {
         return response;
     }
 
-    public Map<String, Object> retryKyc(Long visitorId) {
+    public Map<String, Object> retryKyc(Long visitorId, Map<String, String> body) {
+        String name = validationService.requireText(body, "name");
+        if (!name.matches("^[A-Za-z ]+$")) {
+            throw new RequestValidationException(
+                    ErrorCodeConstants.INVALID_FIELD_FORMAT,
+                    "Name should contain only letters and spaces."
+            );
+        }
+        String epicNumber = validationService.requireEpic(body != null ? body.get(ValidationConstants.FIELD_EPIC_NUMBER) : null);
+
         Visitor visitor = visitorService.retryKyc(visitorId, "visitor_" + visitorId);
         auditLogService.log("Visitor", visitorId, "KYC_RETRY_ATTEMPTED",
-                "KYC retry attempted. Provider=" + firstNonBlank(visitor.getKycProvider(), visitor.getKycType()),
+                "KYC retry attempted with EPIC payload.",
                 "visitor_" + visitorId);
 
-        if (!ValidationConstants.ID_TYPE_EPIC.equalsIgnoreCase(visitor.getKycType())) {
-            Visitor updated = visitorService.markKycRetryFailed(
-                    visitorId,
-                    "Aadhaar retry requires a fresh QR verification from the registration screen.",
-                    RequestContextUtil.getRequestId(),
-                    "visitor_" + visitorId);
-            return retryResponse(updated, false,
-                    "KYC service is still unavailable. Please try after some time.");
-        }
-
         EpicVerificationResponse epicResponse = epicVerificationService.verifyEpic(EpicVerificationRequest.builder()
-                .epicNumber(visitor.getEpicNumber())
-                .visitorName(visitor.getFullName())
+                .epicNumber(epicNumber)
+                .visitorName(name)
                 .phoneNumber(visitor.getPhoneNumber())
                 .build());
 
         if (epicResponse != null && epicResponse.isSuccess()) {
-            Visitor updated = visitorService.markKycVerified(
+            EpicVerificationData data = epicResponse.getData();
+            Visitor updated = visitorService.completeEpicKycRetry(
                     visitorId,
-                    "DEMOGRAPHIC_MATCHED",
+                    name,
+                    epicNumber,
+                    data,
                     epicResponse.getRequestId(),
                     "visitor_" + visitorId);
-            return retryResponse(updated, true, "KYC verification completed successfully.");
+            Map<String, Object> response = retryResponse(updated, true, "KYC verification completed successfully.");
+            response.put("profile", getProfile(visitorId));
+            return response;
         }
 
         if (epicResponse != null && isServiceUnavailable(epicResponse.getCode(), epicResponse.getMessage())) {
@@ -411,11 +417,16 @@ public class VisitorAuthService {
                     epicResponse.getRequestId(),
                     "visitor_" + visitorId);
             return retryResponse(updated, false,
-                    "KYC service is still unavailable. Please try after some time.");
+                    "EPIC verification service is currently unavailable. Please try again later.");
         }
 
-        Map<String, Object> response = retryResponse(visitor, false,
-                epicResponse != null ? epicResponse.getMessage() : "KYC verification failed.");
+        Visitor updated = visitorService.markKycRetryFailed(
+                visitorId,
+                epicResponse != null ? epicResponse.getMessage() : "Unable to verify EPIC details.",
+                epicResponse != null ? epicResponse.getRequestId() : RequestContextUtil.getRequestId(),
+                "visitor_" + visitorId);
+        Map<String, Object> response = retryResponse(updated, false,
+                "Unable to verify EPIC details. Please check the EPIC number and name.");
         response.put("hardFailure", true);
         return response;
     }
@@ -425,7 +436,7 @@ public class VisitorAuthService {
         response.put("success", verified);
         response.put("visitorId", visitor.getId());
         response.put("kycStatus", visitor.getKycStatus());
-        response.put("kycProvider", firstNonBlank(visitor.getKycProvider(), visitor.getKycType()));
+        response.put("kycProvider", firstNonBlank(visitor.getKycProvider(), visitor.getKycType(), ValidationConstants.ID_TYPE_EPIC));
         response.put("requestId", RequestContextUtil.getRequestId());
         response.put("message", message);
         response.put("canProceed", true);

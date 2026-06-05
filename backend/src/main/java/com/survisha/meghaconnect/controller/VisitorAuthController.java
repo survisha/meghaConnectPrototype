@@ -121,9 +121,10 @@ public class VisitorAuthController {
     @PostMapping("/profile/{visitorId}/kyc/retry")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, Object>> retryKyc(@PathVariable Long visitorId,
+                                                        @RequestBody(required = false) Map<String, String> body,
                                                         Authentication authentication) {
         assertVisitorOwnerOrStaff(visitorId, authentication);
-        return ResponseEntity.ok(visitorAuthService.retryKyc(visitorId));
+        return ResponseEntity.ok(visitorAuthService.retryKyc(visitorId, body));
     }
 
     private void assertVisitorOwnerOrStaff(Long visitorId, Authentication authentication) {

@@ -54,8 +54,30 @@ Color _statusColor(String status) {
   }
 }
 
+String _text(dynamic value, [String fallback = '']) {
+  final text = value?.toString().trim() ?? '';
+  return text.isEmpty ? fallback : text;
+}
+
+String _firstText(List<dynamic> values, [String fallback = '']) {
+  for (final value in values) {
+    final text = _text(value);
+    if (text.isNotEmpty) return text;
+  }
+  return fallback;
+}
+
 class GrievanceScreen extends StatefulWidget {
-  const GrievanceScreen({super.key});
+  final bool initialOpenForm;
+  final int? visitorId;
+  final Map<String, dynamic>? visitorProfile;
+
+  const GrievanceScreen({
+    super.key,
+    this.initialOpenForm = false,
+    this.visitorId,
+    this.visitorProfile,
+  });
 
   @override
   State<GrievanceScreen> createState() => _GrievanceScreenState();
@@ -71,11 +93,21 @@ class _GrievanceScreenState extends State<GrievanceScreen> {
   void initState() {
     super.initState();
     _loadGrievances();
+    if (widget.initialOpenForm) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _showNewGrievanceForm(context);
+      });
+    }
   }
 
   Future<void> _loadGrievances() async {
     setState(() => _loading = true);
-    final data = await ApiService.getGrievances();
+    final auth = context.read<AuthService>();
+    final isPublic = auth.user?.role == UserRole.PUBLIC;
+    final visitorId = widget.visitorId ?? auth.user?.visitorId;
+    final data = await ApiService.getGrievances(
+      visitorId: isPublic ? visitorId : null,
+    );
     if (!mounted) return;
     final content = (data['content'] as List<dynamic>?) ?? [];
     setState(() {
@@ -302,6 +334,9 @@ class _GrievanceScreenState extends State<GrievanceScreen> {
   }
 
   void _showNewGrievanceForm(BuildContext context) {
+    final auth = context.read<AuthService>();
+    final visitorId = widget.visitorId ?? auth.user?.visitorId;
+    final profile = widget.visitorProfile ?? const <String, dynamic>{};
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -313,12 +348,21 @@ class _GrievanceScreenState extends State<GrievanceScreen> {
           bottom: MediaQuery.of(context).viewInsets.bottom,
         ),
         child: _NewGrievanceForm(
+          visitorId: visitorId,
+          initialName: _firstText([profile['fullName'], auth.user?.fullName]),
+          initialPhone:
+              _firstText([profile['phoneNumber'], auth.user?.username]),
+          initialDistrict: _text(profile['district']),
+          initialConstituency: _firstText([
+            profile['constituency'],
+            profile['assemblyConstituencyName'],
+          ]),
           onSubmit: (body, localGrievance) async {
             final offline = context.read<ConnectivityService>().isOffline;
             final result =
                 offline ? null : await ApiService.createGrievance(body);
             if (!context.mounted) return;
-            if (result == null) {
+            if (result == null && offline) {
               await OfflineRepository().enqueue(
                 entityType: SyncEntityType.action,
                 localEntityId: localGrievance.ticketId,
@@ -331,6 +375,26 @@ class _GrievanceScreenState extends State<GrievanceScreen> {
                 const SnackBar(
                     content: Text('No internet connection. Saved offline.')),
               );
+            }
+            if (result != null && result['success'] == false) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(result['message']?.toString() ??
+                      'Failed to submit grievance.'),
+                  backgroundColor: const Color(0xFF991B1B),
+                ),
+              );
+              return;
+            }
+            if (result == null && !offline) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content:
+                      Text('Failed to submit grievance. Please try again.'),
+                  backgroundColor: Color(0xFF991B1B),
+                ),
+              );
+              return;
             }
             final created = result != null
                 ? _Grievance(
@@ -350,11 +414,17 @@ class _GrievanceScreenState extends State<GrievanceScreen> {
             Navigator.pop(context);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content:
-                    Text('Grievance submitted! Ticket: ${created.ticketId}'),
+                content: Text(
+                  created.ticketId.isEmpty || created.ticketId == 'PENDING'
+                      ? 'Grievance submitted successfully.'
+                      : 'Grievance submitted successfully. Ticket: ${created.ticketId}',
+                ),
                 backgroundColor: const Color(0xFF065F46),
               ),
             );
+            if (widget.initialOpenForm) {
+              Navigator.of(context).pop(true);
+            }
           },
         ),
       ),
@@ -669,8 +739,22 @@ class _ActionChip extends StatelessWidget {
 }
 
 class _NewGrievanceForm extends StatefulWidget {
-  final void Function(Map<String, dynamic> body, _Grievance local) onSubmit;
-  const _NewGrievanceForm({required this.onSubmit});
+  final int? visitorId;
+  final String initialName;
+  final String initialPhone;
+  final String initialDistrict;
+  final String initialConstituency;
+  final Future<void> Function(Map<String, dynamic> body, _Grievance local)
+      onSubmit;
+
+  const _NewGrievanceForm({
+    required this.onSubmit,
+    this.visitorId,
+    this.initialName = '',
+    this.initialPhone = '',
+    this.initialDistrict = '',
+    this.initialConstituency = '',
+  });
 
   @override
   State<_NewGrievanceForm> createState() => _NewGrievanceFormState();
@@ -685,6 +769,7 @@ class _NewGrievanceFormState extends State<_NewGrievanceForm> {
   String? _category;
   final _subjectCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
+  bool _submitting = false;
 
   static const _districts = [
     'East Khasi Hills',
@@ -698,15 +783,26 @@ class _NewGrievanceFormState extends State<_NewGrievanceForm> {
     'North Garo Hills',
   ];
   static const _categories = [
-    'Public Services',
-    'Infrastructure',
-    'Health',
-    'Education',
-    'Employment',
-    'Welfare Scheme',
-    'Law & Order',
-    'Others',
+    {'value': 'PUBLIC_SERVICES', 'label': 'Public Services'},
+    {'value': 'INFRASTRUCTURE', 'label': 'Infrastructure'},
+    {'value': 'HEALTH', 'label': 'Health'},
+    {'value': 'EDUCATION', 'label': 'Education'},
+    {'value': 'EMPLOYMENT', 'label': 'Employment'},
+    {'value': 'WELFARE_SCHEME', 'label': 'Welfare Scheme'},
+    {'value': 'LAW_ORDER', 'label': 'Law & Order'},
+    {'value': 'OTHERS', 'label': 'Others'},
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl.text = widget.initialName;
+    _phoneCtrl.text = widget.initialPhone;
+    _constituencyCtrl.text = widget.initialConstituency;
+    if (_districts.contains(widget.initialDistrict)) {
+      _district = widget.initialDistrict;
+    }
+  }
 
   @override
   void dispose() {
@@ -771,7 +867,10 @@ class _NewGrievanceFormState extends State<_NewGrievanceForm> {
               decoration:
                   const InputDecoration(labelText: 'Category *', isDense: true),
               items: _categories
-                  .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                  .map((c) => DropdownMenuItem(
+                        value: c['value'],
+                        child: Text(c['label'] ?? c['value'] ?? ''),
+                      ))
                   .toList(),
               onChanged: (v) => setState(() => _category = v),
             ),
@@ -817,22 +916,28 @@ class _NewGrievanceFormState extends State<_NewGrievanceForm> {
             children: [
               if (_step > 0)
                 OutlinedButton.icon(
-                  onPressed: () => setState(() => _step--),
+                  onPressed: _submitting ? null : () => setState(() => _step--),
                   icon: const Icon(Icons.chevron_left),
                   label: const Text('Back'),
                 ),
               const Spacer(),
               if (_step < 2)
                 ElevatedButton.icon(
-                  onPressed: () => setState(() => _step++),
+                  onPressed: _submitting ? null : _nextStep,
                   icon: const Icon(Icons.chevron_right),
                   label: const Text('Next'),
                 )
               else
                 ElevatedButton.icon(
-                  onPressed: _submit,
-                  icon: const Icon(Icons.send),
-                  label: const Text('Submit'),
+                  onPressed: _submitting ? null : _submit,
+                  icon: _submitting
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.send),
+                  label: Text(_submitting ? 'Submitting...' : 'Submit'),
                   style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF065F46)),
                 ),
@@ -875,26 +980,84 @@ class _NewGrievanceFormState extends State<_NewGrievanceForm> {
     );
   }
 
-  void _submit() {
+  void _nextStep() {
+    final message = _validationMessageForStep(_step);
+    if (message != null) {
+      _showError(message);
+      return;
+    }
+    setState(() => _step++);
+  }
+
+  String? _validationMessageForStep(int step) {
+    if (step == 0) {
+      if (_nameCtrl.text.trim().isEmpty) return 'Full name is required.';
+      if (_phoneCtrl.text.trim().isEmpty) return 'Mobile number is required.';
+      if (!RegExp(r'^[0-9]{10}$').hasMatch(_phoneCtrl.text.trim())) {
+        return 'Enter a valid 10-digit mobile number.';
+      }
+      if ((_district ?? '').trim().isEmpty) return 'District is required.';
+    }
+    if (step == 1) {
+      if ((_category ?? '').trim().isEmpty) return 'Category is required.';
+      if (_subjectCtrl.text.trim().isEmpty) return 'Subject is required.';
+      if (_descCtrl.text.trim().isEmpty) return 'Description is required.';
+    }
+    return null;
+  }
+
+  Future<void> _submit() async {
+    final firstInvalidStep = _validationMessageForStep(0) != null
+        ? 0
+        : _validationMessageForStep(1) != null
+            ? 1
+            : null;
+    if (firstInvalidStep != null) {
+      setState(() => _step = firstInvalidStep);
+      _showError(_validationMessageForStep(firstInvalidStep)!);
+      return;
+    }
+    if (_submitting) return;
+    setState(() => _submitting = true);
     final body = {
-      'applicantName': _nameCtrl.text,
+      if (widget.visitorId != null && widget.visitorId! > 0)
+        'visitorId': widget.visitorId,
+      'applicantName': _nameCtrl.text.trim(),
+      'phoneNumber': _phoneCtrl.text.trim(),
       'district': _district ?? '',
-      'category': _category ?? 'Others',
-      'subject': _subjectCtrl.text,
-      'description': _descCtrl.text,
-      'status': 'SUBMITTED',
+      'constituency': _constituencyCtrl.text.trim(),
+      'category': _category ?? 'OTHERS',
+      'subject': _subjectCtrl.text.trim(),
+      'description': _descCtrl.text.trim(),
     };
     final local = _Grievance(
       backendId: 0,
       ticketId: 'PENDING',
-      applicantName: _nameCtrl.text,
+      applicantName: _nameCtrl.text.trim(),
       district: _district ?? '',
-      category: _category ?? 'Others',
-      subject: _subjectCtrl.text,
-      description: _descCtrl.text,
+      category: _categoryLabel(_category ?? 'OTHERS'),
+      subject: _subjectCtrl.text.trim(),
+      description: _descCtrl.text.trim(),
       status: 'SUBMITTED',
       submittedAt: 'Today',
     );
-    widget.onSubmit(body, local);
+    await widget.onSubmit(body, local);
+    if (mounted) setState(() => _submitting = false);
+  }
+
+  String _categoryLabel(String value) {
+    return _categories.firstWhere(
+      (item) => item['value'] == value,
+      orElse: () => {'label': value},
+    )['label']!;
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: const Color(0xFF991B1B),
+      ),
+    );
   }
 }

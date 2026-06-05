@@ -4,13 +4,13 @@ import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
 import '../services/connectivity_service.dart';
-import '../services/navigation_service.dart';
 import 'pending_sync_screen.dart';
 import '../core/i18n/app_i18n.dart';
 import '../widgets/megha_ui.dart';
 import 'new_appointment_screen.dart';
 import 'guest_appointment_screen.dart';
 import 'scheme_form_screen.dart';
+import 'grievance_screen.dart';
 
 class _SummaryCard {
   final String label;
@@ -157,7 +157,7 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
       visitorId != null && visitorId > 0
           ? ApiService.getSchemeApplicationsForVisitor(visitorId, size: 5)
           : ApiService.getSchemeApplications(size: 5),
-      ApiService.getGrievances(size: 5),
+      ApiService.getGrievances(size: 5, visitorId: visitorId),
       visitorId != null && visitorId > 0
           ? ApiService.getVisitorProfileById(visitorId)
           : Future<Map<String, dynamic>?>.value(null),
@@ -220,7 +220,6 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
-    final nav = context.read<NavigationService>();
     final i18n = context.watch<AppI18n>();
     final name = auth.user?.fullName ?? 'Visitor';
 
@@ -425,7 +424,7 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
                         icon: Icons.comment_outlined,
                         label: 'Raise\nGrievance',
                         color: _amber,
-                        onTap: () => nav.navigateTo('grievances'),
+                        onTap: () => _openGrievanceScreen(openForm: true),
                       ),
                     ],
                   ),
@@ -515,7 +514,7 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
                     title: 'My Grievances',
                     icon: Icons.comment_outlined,
                     action: TextButton(
-                      onPressed: () => nav.navigateTo('grievances'),
+                      onPressed: () => _openGrievanceScreen(openForm: true),
                       child:
                           const Text('+ Raise', style: TextStyle(fontSize: 12)),
                     ),
@@ -615,6 +614,23 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _openGrievanceScreen({bool openForm = false}) async {
+    final visitorId = context.read<AuthService>().user?.visitorId;
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => GrievanceScreen(
+          initialOpenForm: openForm,
+          visitorId: visitorId,
+          visitorProfile: _visitorProfile,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    if (changed == true) {
+      await _loadData();
+    }
   }
 
   Future<void> _openKycRetrySheet(String fallbackName) async {
@@ -1011,6 +1027,7 @@ class _QuickActionBtn extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),

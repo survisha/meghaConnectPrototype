@@ -1547,13 +1547,22 @@ class ApiService {
   }
 
   // Grievances
-  static Future<Map<String, dynamic>> getGrievances(
-      {int page = 0, int size = 50}) async {
+  static Future<Map<String, dynamic>> getGrievances({
+    int page = 0,
+    int size = 50,
+    int? visitorId,
+  }) async {
     try {
       final headers = await _headers();
+      final path = visitorId != null && visitorId > 0
+          ? '/grievances/visitor/$visitorId'
+          : '/grievances';
       final resp = await http
           .get(
-            _u('/grievances?page=$page&size=$size'),
+            _u(path).replace(queryParameters: {
+              'page': page.toString(),
+              'size': size.toString(),
+            }),
             headers: headers,
           )
           .timeout(const Duration(seconds: 20));
@@ -1578,7 +1587,16 @@ class ApiService {
       if (resp.statusCode == 200 || resp.statusCode == 201) {
         return jsonDecode(resp.body) as Map<String, dynamic>;
       }
-    } catch (_) {}
+      return {
+        'success': false,
+        'message': _messageFromResponse(
+          resp,
+          'Failed to submit grievance. Please try again.',
+        ),
+      };
+    } catch (error, stackTrace) {
+      _logError('createGrievance', error, stackTrace);
+    }
     return null;
   }
 

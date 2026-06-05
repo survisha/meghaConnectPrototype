@@ -23,6 +23,7 @@ public class AppointmentDocumentAiNotes extends BaseEntity {
         PENDING,
         PROCESSING,
         COMPLETED,
+        PARTIAL_SUCCESS,
         FAILED
     }
 

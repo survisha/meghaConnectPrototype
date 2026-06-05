@@ -7,6 +7,7 @@ import '../core/security/secure_app_storage.dart';
 
 class ApiService {
   static Uri _u(String path) => Uri.parse('${AppConfig.apiV1BaseUrl}$path');
+  static Uri _fileApi(String path) => Uri.parse('${AppConfig.apiBaseUrl}$path');
   static String? lastLoginError;
 
   static Future<String?> getToken() async {
@@ -63,16 +64,38 @@ class ApiService {
     required http.Response response,
     Map<String, dynamic>? body,
   }) {
-    final code = body?['code']?.toString().toUpperCase() ?? '';
-    final message = body?['message']?.toString().toLowerCase() ?? '';
+    final code =
+        (body?['code'] ?? body?['errorCode'])?.toString().toUpperCase() ?? '';
+    final rawMessage = body?['message']?.toString().trim() ?? '';
+    final message = rawMessage.toLowerCase();
+    final remainingAttempts =
+        ((body?['attemptsRemaining'] ?? body?['remainingAttempts']) as num?)
+            ?.toInt();
+    final waitTimeMinutes = (body?['waitTimeMinutes'] as num?)?.toInt();
 
     if (code.contains('EXPIRED') || message.contains('expired')) {
       return 'OTP expired. Please request a new OTP.';
+    }
+    if (code.contains('MAX') ||
+        code.contains('LOCK') ||
+        message.contains('maximum otp') ||
+        message.contains('locked')) {
+      final wait =
+          waitTimeMinutes != null && waitTimeMinutes > 0 ? waitTimeMinutes : 30;
+      return 'Too many failed OTP attempts. Please try again after $wait minutes.';
     }
     if (code.contains('INVALID') ||
         code.contains('VALIDATION') ||
         message.contains('invalid otp') ||
         message.contains('wrong otp')) {
+      if (remainingAttempts != null && remainingAttempts >= 0) {
+        if (remainingAttempts == 0) {
+          return 'Account locked. Please request a new OTP or try again later.';
+        }
+        final suffix = remainingAttempts == 1 ? 'chance' : 'chances';
+        return 'Invalid OTP. $remainingAttempts more $suffix.';
+      }
+      if (rawMessage.isNotEmpty) return rawMessage;
       return 'Invalid OTP. Please try again.';
     }
     if (response.statusCode >= 500) {
@@ -210,10 +233,14 @@ class ApiService {
   static Future<Map<String, dynamic>> generateVisitorOtp({
     required String phoneNumber,
     String? epicNumber,
+    int? visitorId,
     bool registrationFlow = false,
   }) async {
     try {
       final body = <String, dynamic>{'phoneNumber': phoneNumber};
+      if (visitorId != null && visitorId > 0) {
+        body['visitorId'] = visitorId.toString();
+      }
       if (registrationFlow) {
         body['purpose'] = 'REGISTRATION';
         body['registrationFlow'] = 'true';
@@ -254,9 +281,13 @@ class ApiService {
     required String phoneNumber,
     required String otp,
     String? epicNumber,
+    int? visitorId,
   }) async {
     try {
       final body = <String, dynamic>{'phoneNumber': phoneNumber, 'otp': otp};
+      if (visitorId != null && visitorId > 0) {
+        body['visitorId'] = visitorId.toString();
+      }
       body['purpose'] = 'LOGIN';
       body['registrationFlow'] = false;
       final epic = (epicNumber ?? '').trim();
@@ -287,9 +318,16 @@ class ApiService {
       } catch (_) {}
       return {
         'success': false,
-        'code': 'HTTP_${resp.statusCode}',
+        'code': decoded?['code'] ??
+            decoded?['errorCode'] ??
+            'HTTP_${resp.statusCode}',
         'message': _otpFailureMessage(response: resp, body: decoded),
         'requiresEpic': decoded?['requiresEpic'] == true,
+        'attemptsRemaining':
+            decoded?['attemptsRemaining'] ?? decoded?['remainingAttempts'],
+        'remainingAttempts':
+            decoded?['remainingAttempts'] ?? decoded?['attemptsRemaining'],
+        'waitTimeMinutes': decoded?['waitTimeMinutes'],
       };
     } catch (error, stackTrace) {
       _logError('validateVisitorOtp', error, stackTrace);
@@ -1360,13 +1398,28 @@ class ApiService {
     try {
       final headers = await _authHeaders();
       final resp = await http
-          .get(_u('/documents/$documentId/download'), headers: headers)
+          .get(_fileApi('/files/download/$documentId'), headers: headers)
           .timeout(const Duration(seconds: 30));
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
         return resp.bodyBytes;
       }
     } catch (error, stackTrace) {
       _logError('downloadDocumentBytes', error, stackTrace);
+    }
+    return null;
+  }
+
+  static Future<Uint8List?> previewDocumentBytes(int documentId) async {
+    try {
+      final headers = await _authHeaders();
+      final resp = await http
+          .get(_fileApi('/files/preview/$documentId'), headers: headers)
+          .timeout(const Duration(seconds: 30));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        return resp.bodyBytes;
+      }
+    } catch (error, stackTrace) {
+      _logError('previewDocumentBytes', error, stackTrace);
     }
     return null;
   }
@@ -2029,6 +2082,36 @@ class ApiService {
         return jsonDecode(resp.body) as Map<String, dynamic>;
       }
     } catch (_) {}
+    return {'content': [], 'totalElements': 0};
+  }
+
+  static Future<Map<String, dynamic>> getSchemeApplicationsForVisitor(
+    int visitorId, {
+    int size = 5,
+  }) async {
+    if (visitorId <= 0) return {'content': [], 'totalElements': 0};
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .get(
+            _u('/scheme-applications/visitor/$visitorId'),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 20));
+      if (resp.statusCode == 200) {
+        final decoded = jsonDecode(resp.body);
+        if (decoded is List) {
+          final content = decoded
+              .whereType<Map>()
+              .map((row) => Map<String, dynamic>.from(row))
+              .take(size)
+              .toList();
+          return {'content': content, 'totalElements': decoded.length};
+        }
+      }
+    } catch (error, stackTrace) {
+      _logError('getSchemeApplicationsForVisitor', error, stackTrace);
+    }
     return {'content': [], 'totalElements': 0};
   }
 

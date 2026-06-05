@@ -110,14 +110,9 @@
 
       <!-- Step 2: Enter OTP -->
       <ng-container *ngIf="step === 'enter-otp'">
-        <div *ngIf="successMsg" class="success-msg">
-          <mat-icon>check_circle</mat-icon>
-          <span>{{ successMsg }}</span>
-        </div>
-
         <div class="phone-display">
           <mat-icon>phone</mat-icon>
-          <span>{{ 'OTP_SENT_TO' | translate: { phone: phoneNumber } }}</span>
+          <span>{{ 'OTP_SENT_TO' | translate: { phone: maskedPhoneNumber } }}</span>
         </div>
 
         <mat-form-field appearance="outline" class="full-width">
@@ -132,6 +127,10 @@
             [(ngModel)]="otp"
             [placeholder]="'ENTER_6_DIGIT_OTP' | translate"
             maxlength="6"
+            inputmode="numeric"
+            (keydown)="allowDigitsOnly($event)"
+            (paste)="pasteOtp($event)"
+            (input)="onOtpInput()"
             (keyup.enter)="validateOtp()"
             autofocus
           />
@@ -144,7 +143,7 @@
           </div>
         </div>
 
-        <button mat-raised-button color="primary" class="full-width" [disabled]="loading" (click)="validateOtp()">
+        <button mat-raised-button color="primary" class="full-width" [disabled]="loading || otpLocked" (click)="validateOtp()">
           <mat-icon>check</mat-icon>
           <span *ngIf="!loading">{{ 'VERIFY_LOGIN' | translate }}</span>
           <span *ngIf="loading"><mat-icon class="spin-icon">sync</mat-icon> {{ 'VERIFYING' | translate }}</span>

@@ -190,14 +190,21 @@
           <div class="item-main">
             <div class="item-id">{{ s.id }}</div>
             <div class="item-text">{{ s.title }}</div>
+            <div class="appointment-subtext">
+              <span>Submitted {{ s.submittedDate }}</span>
+              <span *ngIf="s.extra">{{ s.extra }}</span>
+            </div>
           </div>
           <div class="item-meta">
             <span class="scheme-badge">{{ s.date }}</span>
             <p-tag [value]="s.status | titlecase" [severity]="getStatusSeverity(s.status)"></p-tag>
             <span *ngIf="s.extra" class="item-amount">{{ s.extra }}</span>
+            <button type="button" class="btn-small btn-outline-small" (click)="viewScheme(s)">
+              View
+            </button>
           </div>
         </div>
-        <div *ngIf="mySchemes.length === 0" class="empty-state">No active scheme applications.</div>
+        <div *ngIf="mySchemes.length === 0" class="empty-state">No scheme applications submitted yet.</div>
         <a routerLink="/schemes/apply" class="view-link">+ Apply for Scheme</a>
       </div>
     </div>
@@ -271,6 +278,34 @@
           {{ downloadingPassId === selectedAppointment.id ? 'Downloading...' : 'Download Visitor Pass' }}
         </button>
         <span *ngIf="!canDownloadPass(selectedAppointment)" class="pass-hint">Pass available after appointment scheduling.</span>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="selectedScheme" class="modal-backdrop" (click)="closeSchemeDetails()">
+    <div class="details-modal" (click)="$event.stopPropagation()">
+      <div class="details-header">
+        <div>
+          <div class="details-title">Scheme Application Details</div>
+          <div class="item-id">{{ selectedScheme.applicationNumber }}</div>
+        </div>
+        <button type="button" class="photo-preview-close" (click)="closeSchemeDetails()" aria-label="Close scheme details">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      <div class="details-grid">
+        <div><span>Scheme</span><strong>{{ selectedScheme.title }}</strong></div>
+        <div><span>Application Number</span><strong>{{ selectedScheme.applicationNumber }}</strong></div>
+        <div><span>Status</span><strong>{{ selectedScheme.status | titlecase }}</strong></div>
+        <div><span>Submitted Date</span><strong>{{ selectedScheme.submittedDate }}</strong></div>
+        <div><span>Project</span><strong>{{ selectedScheme.application.projectName || '—' }}</strong></div>
+        <div><span>Estimated Cost</span><strong>{{ selectedScheme.application.estimatedCost || '—' }}</strong></div>
+        <div><span>Beneficiary Type</span><strong>{{ selectedScheme.application.beneficiaryType || '—' }}</strong></div>
+        <div><span>Category</span><strong>{{ selectedScheme.application.projectCategory || '—' }}</strong></div>
+      </div>
+      <div class="details-brief">
+        <span>Remarks / Justification</span>
+        <p>{{ schemeRemarks(selectedScheme.application) }}</p>
       </div>
     </div>
   </div>

@@ -126,7 +126,7 @@ public class VisitorOtpService {
      * @throws OtpMaxAttemptsExceededException if max attempts exceeded
      * @throws OtpValidationFailedException if OTP is wrong
      */
-    @Transactional
+    @Transactional(noRollbackFor = {OtpValidationFailedException.class, OtpMaxAttemptsExceededException.class})
     public String validateOtpAndLogin(String phone, String submittedOtp) {
         List<Visitor> visitors = visitorRepository.findByPhoneNumber(phone);
         if (visitors.size() != 1) {
@@ -139,11 +139,11 @@ public class VisitorOtpService {
         return validateOtpAndLogin(phone, submittedOtp, visitors.get(0).getId());
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = {OtpValidationFailedException.class, OtpMaxAttemptsExceededException.class})
     public String validateOtpAndLogin(String phone, String submittedOtp, Long visitorId) {
         Optional<OtpTemp> optRecord =
-                otpTempRepository.findTopByPhoneNumberAndVisitorIdAndConsumedFalseAndExpiresAtAfterOrderByCreatedAtDesc(
-                        phone, visitorId, DateTimeUtil.nowIST());
+                otpTempRepository.findTopByPhoneNumberAndVisitorIdAndConsumedFalseOrderByCreatedAtDesc(
+                        phone, visitorId);
 
         if (!optRecord.isPresent()) {
             throw new OtpExpiredException();
@@ -155,10 +155,17 @@ public class VisitorOtpService {
             throw new OtpMaxAttemptsExceededException();
         }
 
+        if (record.getExpiresAt() == null || record.getExpiresAt().isBefore(DateTimeUtil.nowIST())) {
+            throw new OtpExpiredException();
+        }
+
         if (!record.getOtpCode().equals(submittedOtp)) {
             record.setAttemptCount(record.getAttemptCount() + 1);
             otpTempRepository.save(record);
             int remaining = MAX_OTP_ATTEMPTS - record.getAttemptCount();
+            if (remaining <= 0) {
+                throw new OtpMaxAttemptsExceededException();
+            }
             throw new OtpValidationFailedException(remaining);
         }
 
@@ -244,8 +251,7 @@ public class VisitorOtpService {
     @Transactional
     public boolean validateKycOtp(String phone, String submittedOtp) {
         Optional<OtpTemp> optRecord =
-                otpTempRepository.findTopByPhoneNumberAndVisitorIdIsNullAndConsumedFalseAndExpiresAtAfterOrderByCreatedAtDesc(
-                        phone, DateTimeUtil.nowIST());
+                otpTempRepository.findTopByPhoneNumberAndVisitorIdIsNullAndConsumedFalseOrderByCreatedAtDesc(phone);
 
         if (!optRecord.isPresent()) {
             throw new OtpExpiredException();
@@ -255,6 +261,10 @@ public class VisitorOtpService {
 
         if (record.getAttemptCount() >= MAX_OTP_ATTEMPTS) {
             throw new OtpMaxAttemptsExceededException();
+        }
+
+        if (record.getExpiresAt() == null || record.getExpiresAt().isBefore(DateTimeUtil.nowIST())) {
+            throw new OtpExpiredException();
         }
 
         if (!record.getOtpCode().equals(submittedOtp)) {

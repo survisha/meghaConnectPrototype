@@ -34,7 +34,15 @@ class _MyScheme {
   final String project;
   final String status;
   final String amount;
-  const _MyScheme(this.id, this.scheme, this.project, this.status, this.amount);
+  final String submittedDate;
+  const _MyScheme(
+    this.id,
+    this.scheme,
+    this.project,
+    this.status,
+    this.amount,
+    this.submittedDate,
+  );
 }
 
 class _MyGrievance {
@@ -140,9 +148,12 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
 
   Future<void> _loadData() async {
     setState(() => _loading = true);
+    final visitorId = context.read<AuthService>().user?.visitorId;
     final results = await Future.wait([
       ApiService.getMyAppointments(),
-      ApiService.getSchemeApplications(size: 5),
+      visitorId != null && visitorId > 0
+          ? ApiService.getSchemeApplicationsForVisitor(visitorId, size: 5)
+          : ApiService.getSchemeApplications(size: 5),
       ApiService.getGrievances(size: 5),
     ]);
     if (!mounted) return;
@@ -171,6 +182,7 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
           m['projectName'] as String? ?? '',
           m['status'] as String? ?? '',
           costLabel,
+          _fmtDate(m['createdAt'] as String?),
         );
       }).toList();
       _grievances =
@@ -463,11 +475,13 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
                             children: _schemes
                                 .map((s) => _ItemRow(
                                       id: s.id,
-                                      title: s.project,
-                                      subtitle: '${s.scheme} · ${s.amount}',
+                                      title: s.scheme,
+                                      subtitle:
+                                          'Application #${s.id} · ${s.submittedDate}',
                                       statusLabel:
                                           s.status.replaceAll('_', ' '),
                                       statusColor: _schemeColor(s.status),
+                                      onView: () => _showSchemeDetails(s),
                                     ))
                                 .toList(),
                           ),
@@ -578,6 +592,42 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
           body: const SchemeFormScreen(),
         ),
       ),
+    );
+  }
+
+  void _showSchemeDetails(_MyScheme scheme) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title:
+            Text(scheme.scheme.isEmpty ? 'Scheme Application' : scheme.scheme),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _dialogLine('Application Number', scheme.id),
+            _dialogLine('Submitted Date', scheme.submittedDate),
+            _dialogLine('Current Status', scheme.status.replaceAll('_', ' ')),
+            if (scheme.project.isNotEmpty)
+              _dialogLine('Project', scheme.project),
+            if (scheme.amount.isNotEmpty)
+              _dialogLine('Estimated Cost', scheme.amount),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _dialogLine(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text('$label: ${value.isEmpty ? '-' : value}'),
     );
   }
 }
@@ -730,12 +780,14 @@ class _ItemRow extends StatelessWidget {
   final String subtitle;
   final String statusLabel;
   final Color statusColor;
+  final VoidCallback? onView;
   const _ItemRow(
       {required this.id,
       required this.title,
       required this.subtitle,
       required this.statusLabel,
-      required this.statusColor});
+      required this.statusColor,
+      this.onView});
 
   @override
   Widget build(BuildContext context) {
@@ -778,6 +830,13 @@ class _ItemRow extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                     color: statusColor)),
           ),
+          if (onView != null) ...[
+            const SizedBox(width: 6),
+            TextButton(
+              onPressed: onView,
+              child: const Text('View', style: TextStyle(fontSize: 12)),
+            ),
+          ],
         ],
       ),
     );

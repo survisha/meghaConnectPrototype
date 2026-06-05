@@ -116,7 +116,7 @@ public class VisitorAuthService {
         if (registrationFlow) {
             visitorOtpService.generateKycOtp(phone);
         } else {
-            LoginResolution resolution = resolveLoginVisitor(phone, optionalEpic(body));
+            LoginResolution resolution = resolveLoginVisitor(phone, optionalEpic(body), optionalVisitorId(body));
             if (!resolution.success) {
                 return loginResolutionResponse(resolution);
             }
@@ -158,7 +158,7 @@ public class VisitorAuthService {
             return response;
         }
 
-        LoginResolution resolution = resolveLoginVisitor(phone, optionalEpic(body));
+        LoginResolution resolution = resolveLoginVisitor(phone, optionalEpic(body), optionalVisitorId(body));
         if (!resolution.success) {
             return loginResolutionResponse(resolution);
         }
@@ -187,7 +187,38 @@ public class VisitorAuthService {
         return validationService.requireEpic(body.get(ValidationConstants.FIELD_EPIC_NUMBER));
     }
 
-    private LoginResolution resolveLoginVisitor(String phone, String epic) {
+    private Long optionalVisitorId(Map<String, String> body) {
+        if (body == null || validationService.isBlank(body.get("visitorId"))) {
+            return null;
+        }
+        try {
+            Long visitorId = Long.parseLong(body.get("visitorId").trim());
+            return visitorId > 0 ? visitorId : null;
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    private LoginResolution resolveLoginVisitor(String phone, String epic, Long visitorId) {
+        if (visitorId != null) {
+            return visitorService.findById(visitorId)
+                    .map(visitor -> {
+                        if (visitor.getPhoneNumber() == null || !visitor.getPhoneNumber().equals(phone)) {
+                            log.info("Visitor login resolution selected visitor phone mismatch visitorId={} phone={}",
+                                    visitorId, RequestContextUtil.maskPhone(phone));
+                            return LoginResolution.failure(CODE_VISITOR_NOT_FOUND, MSG_VISITOR_NOT_FOUND, false);
+                        }
+                        if (epic != null && (visitor.getEpicNumber() == null
+                                || !visitor.getEpicNumber().equalsIgnoreCase(epic))) {
+                            log.info("Visitor login resolution selected visitor EPIC mismatch visitorId={} phone={}",
+                                    visitorId, RequestContextUtil.maskPhone(phone));
+                            return LoginResolution.failure(CODE_MOBILE_EPIC_NOT_FOUND, MSG_MOBILE_EPIC_NOT_FOUND, true);
+                        }
+                        return LoginResolution.success(visitor);
+                    })
+                    .orElseGet(() -> LoginResolution.failure(CODE_VISITOR_NOT_FOUND, MSG_VISITOR_NOT_FOUND, false));
+        }
+
         if (epic == null) {
             List<Visitor> visitors = visitorService.findAllByPhone(phone);
             if (visitors.isEmpty()) {

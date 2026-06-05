@@ -685,7 +685,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     const notes = this.getAiNotes(appointment);
     if (notes.some(note => note.status === 'PROCESSING')) return 'PROCESSING';
     if (notes.some(note => note.status === 'PENDING')) return 'PENDING';
-    if (notes.some(note => note.status === 'COMPLETED')) return 'COMPLETED';
+    if (notes.some(note => note.status === 'COMPLETED' || note.status === 'PARTIAL_SUCCESS')) return 'COMPLETED';
     if (notes.some(note => note.status === 'FAILED')) return 'FAILED';
     return 'NONE';
   }
@@ -707,7 +707,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   }
 
   getAiNotesPreview(appointment: Appointment) {
-    const completed = this.getAiNotes(appointment).find(note => note.status === 'COMPLETED' && note.aiSummary);
+    const completed = this.getAiNotes(appointment).find(note => (note.status === 'COMPLETED' || note.status === 'PARTIAL_SUCCESS') && note.aiSummary);
     if (!completed) return '';
     return this.compactText(completed.aiSummary, 90);
   }
@@ -1928,8 +1928,20 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     return this.getDocumentMimeType(doc) === 'application/pdf' || this.getDocumentExtension(doc) === 'pdf';
   }
 
+  isWordDocument(doc: AppointmentDocument | null = this.selectedDocument) {
+    const mimeType = this.getDocumentMimeType(doc);
+    const extension = this.getDocumentExtension(doc);
+    return mimeType === 'application/msword'
+      || mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      || ['doc', 'docx'].includes(extension);
+  }
+
+  shouldRenderPdfPreview(doc: AppointmentDocument | null = this.selectedDocument) {
+    return this.isPdfDocument(doc) || this.isWordDocument(doc);
+  }
+
   canInlinePreview(doc: AppointmentDocument | null = this.selectedDocument) {
-    return this.isImageDocument(doc) || this.isPdfDocument(doc);
+    return this.isImageDocument(doc) || this.isPdfDocument(doc) || this.isWordDocument(doc);
   }
 
   private selectedDocumentObjectUrl = '';

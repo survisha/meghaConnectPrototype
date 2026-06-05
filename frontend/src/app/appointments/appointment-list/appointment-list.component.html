@@ -369,7 +369,7 @@
           <h3>{{ note.fileName || 'Document' }}</h3>
         </div>
         <span class="ai-status-chip" [ngClass]="'ai-status-' + note.status.toLowerCase()">
-          <mat-icon>{{ note.status === 'COMPLETED' ? 'auto_awesome' : note.status === 'FAILED' ? 'error_outline' : 'hourglass_empty' }}</mat-icon>
+          <mat-icon>{{ note.status === 'COMPLETED' || note.status === 'PARTIAL_SUCCESS' ? 'auto_awesome' : note.status === 'FAILED' ? 'error_outline' : 'hourglass_empty' }}</mat-icon>
           {{ note.status }}
         </span>
       </header>
@@ -1172,7 +1172,7 @@
              [src]="selectedDocumentUrl"
              [alt]="selectedDocument.fileName">
 
-        <iframe *ngIf="isPdfDocument(selectedDocument)"
+        <iframe *ngIf="shouldRenderPdfPreview(selectedDocument)"
                 class="document-preview-frame"
                 [src]="selectedDocumentPreviewUrl"
                 title="Document preview"></iframe>
@@ -1182,10 +1182,10 @@
     <ng-template #documentDownloadPanel>
       <div class="document-download-panel">
         <mat-icon>draft</mat-icon>
-        <h3>{{ getDocumentKindLabel(selectedDocument) }} preview is not available in the browser</h3>
+        <h3>Preview not available.</h3>
         <p>
-          This file is attached to the appointment, but this browser cannot render it inside the review panel.
-          Use the button below to open or download the original document.
+          {{ getDocumentKindLabel(selectedDocument) }} documents cannot be rendered in this browser review panel.
+          Download document to view.
         </p>
         <button mat-raised-button color="primary" type="button" (click)="downloadDocument(selectedDocument)" [disabled]="documentDownloadLoading">
           <mat-icon>download</mat-icon>

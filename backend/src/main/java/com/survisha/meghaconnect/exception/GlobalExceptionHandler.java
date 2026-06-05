@@ -65,6 +65,21 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(ex.getHttpStatus()).body(error);
     }
 
+    @ExceptionHandler(OtpMaxAttemptsExceededException.class)
+    public ResponseEntity<ErrorResponse> handleOtpMaxAttemptsExceeded(OtpMaxAttemptsExceededException ex, WebRequest request) {
+        ErrorResponse error = buildError(
+                ex.getErrorCode(),
+                ex.getMessage(),
+                ex.getErrorId(),
+                ex.getHttpStatus(),
+                request
+        );
+        error.setWaitTimeMinutes(ex.getWaitTimeMinutes());
+        error.setAttemptsRemaining(0);
+        logHandledException(error, ex);
+        return ResponseEntity.status(ex.getHttpStatus()).body(error);
+    }
+
     @ExceptionHandler(SchedulingConflictException.class)
     public ResponseEntity<ErrorResponse> handleSchedulingConflict(SchedulingConflictException ex, WebRequest request) {
         ErrorResponse error = buildError(
@@ -263,6 +278,12 @@ public class GlobalExceptionHandler {
     private String clientSafeMessage(MeghaConnectException ex) {
         if (ex instanceof VisitorRegistrationValidationException) {
             return ex.getMessage();
+        }
+        if (ErrorCodeConstants.OTP_EXPIRED_OR_NOT_FOUND.equals(ex.getErrorCode())) {
+            return ErrorCodeConstants.OTP_EXPIRED_OR_NOT_FOUND_MSG;
+        }
+        if (ErrorCodeConstants.OTP_LOCKED.equals(ex.getErrorCode())) {
+            return ErrorCodeConstants.OTP_LOCKED_MSG;
         }
         if (ErrorCodeConstants.INVALID_CREDENTIALS.equals(ex.getErrorCode())) {
             return ErrorCodeConstants.INVALID_CREDENTIALS_MSG;

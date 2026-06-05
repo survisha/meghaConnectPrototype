@@ -59,7 +59,7 @@ export interface GuestAppointmentResponse {
   message: string;
 }
 
-export type AiNotesStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+export type AiNotesStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'PARTIAL_SUCCESS' | 'FAILED';
 
 export interface AppointmentDocumentAiNotes {
   id: number;

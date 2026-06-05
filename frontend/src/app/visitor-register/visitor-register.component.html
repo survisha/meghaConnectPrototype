@@ -184,6 +184,9 @@
               [(ngModel)]="otpCode"
               [placeholder]="'ENTER_6_DIGIT_OTP' | translate"
               maxlength="6"
+              inputmode="numeric"
+              (keydown)="allowDigitsOnly($event)"
+              (paste)="pasteOtpCode($event)"
               (input)="sanitizeOtpInput()"
               style="text-align:center;font-size:1.5rem;letter-spacing:0.5rem;font-weight:600"
             />
@@ -386,6 +389,9 @@
               [(ngModel)]="otpCode"
               [placeholder]="'ENTER_6_DIGIT_OTP' | translate"
               maxlength="6"
+              inputmode="numeric"
+              (keydown)="allowDigitsOnly($event)"
+              (paste)="pasteOtpCode($event)"
               (input)="sanitizeOtpInput()"
               style="text-align:center;font-size:1.5rem;letter-spacing:0.5rem;font-weight:600"
             />

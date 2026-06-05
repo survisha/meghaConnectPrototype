@@ -25,6 +25,7 @@ export interface ValidateOtpRequest {
   phoneNumber: string;
   otp: string;
   epicNumber?: string;
+  visitorId?: number;
   purpose?: 'LOGIN' | 'REGISTRATION';
   registrationFlow?: boolean;
 }

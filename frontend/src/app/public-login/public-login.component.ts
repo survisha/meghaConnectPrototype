@@ -78,6 +78,7 @@ export class PublicLoginComponent {
   requiresEpic = false;
   registrationOptions: LoginRegistrationOption[] = [];
   selectedVisitorId: number | null = null;
+  otpLocked = false;
 
   /** OTP returned in mock response (for demo only – remove when SMS gateway is live) */
   mockOtp = '';
@@ -114,10 +115,14 @@ export class PublicLoginComponent {
     this.errorMsg = '';
     this.warningMsg = '';
     this.successMsg = '';
+    this.otpLocked = false;
     this.loading = true;
-    const payload: { phoneNumber: string; epicNumber?: string } = {
+    const payload: { phoneNumber: string; epicNumber?: string; visitorId?: number } = {
       phoneNumber: this.phoneNumber,
     };
+    if (this.selectedVisitorId) {
+      payload.visitorId = this.selectedVisitorId;
+    }
 
     const normalizedEpic = this.epicNumber.trim().toUpperCase();
     const selectedEpic = this.selectedRegistration?.epicNumber?.trim().toUpperCase() || normalizedEpic;
@@ -155,6 +160,10 @@ export class PublicLoginComponent {
 
   validateOtp() {
     this.errorMsg = '';
+    if (this.otpLocked) {
+      this.errorMsg = 'Too many failed OTP attempts. Please try again after 30 minutes.';
+      return;
+    }
     if (!this.otp || this.otp.length !== 6) {
       this.errorMsg = this.translate.instant('ERROR_VALID_6_DIGIT_OTP');
       return;
@@ -164,6 +173,7 @@ export class PublicLoginComponent {
     this.auth.validateOtp({
       phoneNumber: this.phoneNumber,
       epicNumber: selectedEpic || undefined,
+      visitorId: this.selectedVisitorId || undefined,
       otp: this.otp,
     }).subscribe({
       next: res => {
@@ -181,6 +191,11 @@ export class PublicLoginComponent {
       },
       error: err => {
         this.loading = false;
+        const code = err?.error?.code || err?.error?.errorCode;
+        const attemptsRemaining = err?.error?.attemptsRemaining ?? err?.error?.remainingAttempts;
+        if (code === 'OTP_LOCKED' || attemptsRemaining === 0) {
+          this.otpLocked = true;
+        }
         this.errorMsg = apiErrorMessage(err, this.translate.instant('ERROR_OTP_VERIFICATION_FAILED_TRY'));
       },
     });
@@ -195,6 +210,7 @@ export class PublicLoginComponent {
     this.warningMsg = '';
     this.successMsg = '';
     this.mockOtp = '';
+    this.otpLocked = false;
   }
 
   onMobileInput() {
@@ -207,6 +223,11 @@ export class PublicLoginComponent {
     this.registrationOptions = [];
     this.selectedVisitorId = null;
     this.otp = '';
+  }
+
+  get maskedPhoneNumber(): string {
+    if (!this.phoneNumber || this.phoneNumber.length < 4) return this.phoneNumber;
+    return '******' + this.phoneNumber.slice(-4);
   }
 
   private isTextEditingShortcut(event: KeyboardEvent): boolean {
@@ -246,6 +267,24 @@ export class PublicLoginComponent {
     const cursor = Math.min(start + digits.length, next.length);
     input.setSelectionRange(cursor, cursor);
     this.onMobileInput();
+  }
+
+  pasteOtp(event: ClipboardEvent) {
+    event.preventDefault();
+    const input = event.target as HTMLInputElement;
+    const digits = (event.clipboardData?.getData('text') || '').replace(/\D/g, '');
+    const start = input.selectionStart ?? input.value.length;
+    const end = input.selectionEnd ?? input.value.length;
+    const next = `${input.value.slice(0, start)}${digits}${input.value.slice(end)}`.slice(0, 6);
+    input.value = next;
+    this.otp = next;
+    const cursor = Math.min(start + digits.length, next.length);
+    input.setSelectionRange(cursor, cursor);
+  }
+
+  onOtpInput() {
+    this.otp = this.otp.replace(/\D/g, '');
+    this.errorMsg = '';
   }
 
   onEpicInput() {

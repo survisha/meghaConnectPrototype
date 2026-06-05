@@ -166,6 +166,8 @@ final _navTree = <_NavItem>[
       UserRole.HCM,
       UserRole.ADMIN,
       UserRole.OSD,
+      UserRole.APPROVER,
+      UserRole.CMO_OFFICER,
       UserRole.DATA_ENTRY_OPERATOR,
       UserRole.SECURITY_POLICE,
     ],

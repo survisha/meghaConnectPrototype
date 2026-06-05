@@ -57,7 +57,7 @@ export class ShellComponent implements OnInit {
     { labelKey: 'REGISTER_VISITOR', icon: 'person_add', route: '/deo/register-visitor',
       roles: ['DATA_ENTRY_OPERATOR'] },
     { labelKey: 'PUBLIC_IDENTIFICATION', icon: 'badge', route: '/identify',
-      roles: ['HCM','ADMIN','OSD','DATA_ENTRY_OPERATOR'] },
+      roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER','DATA_ENTRY_OPERATOR'] },
     {
       labelKey: 'REPORTS', icon: 'bar_chart', expanded: false,
       roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER'],

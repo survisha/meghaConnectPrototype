@@ -16,6 +16,7 @@ public class ErrorResponse {
     private String path;
     private String requestId;
     private Integer remainingAttempts;
+    private Integer attemptsRemaining;
     private Integer waitTimeMinutes;
     private Object details;
 
@@ -107,6 +108,16 @@ public class ErrorResponse {
 
     public void setRemainingAttempts(Integer remainingAttempts) {
         this.remainingAttempts = remainingAttempts;
+        this.attemptsRemaining = remainingAttempts;
+    }
+
+    public Integer getAttemptsRemaining() {
+        return attemptsRemaining;
+    }
+
+    public void setAttemptsRemaining(Integer attemptsRemaining) {
+        this.attemptsRemaining = attemptsRemaining;
+        this.remainingAttempts = attemptsRemaining;
     }
 
     public Integer getWaitTimeMinutes() {

@@ -39,6 +39,7 @@ class _LoginScreenState extends State<LoginScreen>
   String? _publicNotice;
   bool _publicNoticeIsWarning = false;
   bool _otpSent = false;
+  bool _otpLocked = false;
   bool _requiresEpic = false;
   String? _epicForOtpLogin;
   int? _selectedVisitorId;
@@ -106,6 +107,7 @@ class _LoginScreenState extends State<LoginScreen>
     setState(() {
       _publicLoading = true;
       _publicNotice = null;
+      _otpLocked = false;
     });
     final i18n = context.read<AppI18n>();
 
@@ -149,6 +151,7 @@ class _LoginScreenState extends State<LoginScreen>
     final result = await ApiService.generateVisitorOtp(
       phoneNumber: phone,
       epicNumber: epic,
+      visitorId: _selectedVisitorId,
     );
 
     if (!mounted) return;
@@ -161,9 +164,9 @@ class _LoginScreenState extends State<LoginScreen>
     if (success) {
       setState(() {
         _otpSent = true;
+        _otpLocked = false;
         _requiresEpic = false;
         _epicForOtpLogin = epic?.trim();
-        _selectedVisitorId = null;
         _registrationOptions = [];
         _publicNotice = null;
         _publicNoticeIsWarning = false;
@@ -212,6 +215,14 @@ class _LoginScreenState extends State<LoginScreen>
 
   Future<void> _publicLogin() async {
     if (!_publicFormKey.currentState!.validate()) return;
+    if (_otpLocked) {
+      setState(() {
+        _publicNotice =
+            'Too many failed OTP attempts. Please try again after 30 minutes.';
+        _publicNoticeIsWarning = false;
+      });
+      return;
+    }
     setState(() {
       _publicLoading = true;
       _publicNotice = null;
@@ -228,6 +239,7 @@ class _LoginScreenState extends State<LoginScreen>
       phoneNumber: phone,
       otp: otp,
       epicNumber: epic,
+      visitorId: _selectedVisitorId,
     );
 
     if (!mounted) return;
@@ -237,9 +249,14 @@ class _LoginScreenState extends State<LoginScreen>
     final message = (result['message'] as String?)?.trim();
 
     if (!success) {
+      final code = result['code']?.toString().toUpperCase() ?? '';
+      final attemptsRemaining =
+          (result['attemptsRemaining'] as num?)?.toInt() ??
+              (result['remainingAttempts'] as num?)?.toInt();
       setState(() {
         _publicLoading = false;
         _requiresEpic = requiresEpic;
+        _otpLocked = code == 'OTP_LOCKED' || attemptsRemaining == 0;
         _publicNotice = message?.isNotEmpty == true
             ? message
             : i18n.t('ERROR_INVALID_OTP_TRY');
@@ -992,6 +1009,7 @@ class _LoginScreenState extends State<LoginScreen>
                   setState(() {
                     _requiresEpic = false;
                     _otpSent = false;
+                    _otpLocked = false;
                     _epicForOtpLogin = null;
                     _selectedVisitorId = null;
                     _registrationOptions = [];
@@ -1076,7 +1094,7 @@ class _LoginScreenState extends State<LoginScreen>
               SizedBox(
                 height: 48,
                 child: ElevatedButton(
-                  onPressed: _publicLoading ? null : _publicLogin,
+                  onPressed: _publicLoading || _otpLocked ? null : _publicLogin,
                   child: _publicLoading
                       ? const SizedBox(
                           height: 20,

@@ -151,6 +151,8 @@ public class ErrorCodeConstants {
 
     public static final String OTP_MAX_ATTEMPTS_EXCEEDED = "ERR_032";
     public static final String OTP_MAX_ATTEMPTS_EXCEEDED_MSG = "Maximum OTP verification attempts exceeded. Please request a new OTP";
+    public static final String OTP_LOCKED = "OTP_LOCKED";
+    public static final String OTP_LOCKED_MSG = "Too many failed OTP attempts. Please try again after 30 minutes.";
 
     public static final String OTP_INVALID = "ERR_033";
     public static final String OTP_INVALID_MSG = "Invalid OTP. %d attempts remaining";

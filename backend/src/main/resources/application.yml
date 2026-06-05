@@ -17,6 +17,16 @@ ai:
     api-key: ${AZURE_OPENAI_API_KEY:}
     deployment: ${AZURE_OPENAI_DEPLOYMENT:}
 
+document:
+  preview:
+    conversion:
+      enabled: ${DOCUMENT_PREVIEW_CONVERSION_ENABLED:true}
+      timeout-seconds: ${DOCUMENT_PREVIEW_CONVERSION_TIMEOUT_SECONDS:30}
+    converter: LIBREOFFICE
+    libreoffice:
+      path: ${LIBREOFFICE_PATH:soffice}
+    cache-dir: ${DOCUMENT_PREVIEW_CACHE_DIR:${java.io.tmpdir}/meghaconnect-preview-cache}
+
 sms:
   enabled: ${SMS_ENABLED:true}
   provider: ping4sms

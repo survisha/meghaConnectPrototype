@@ -94,6 +94,10 @@ public class AppointmentDocumentAiNotesService {
             DocumentUpload document = documentUploadRepository.findById(documentId.get())
                     .orElseThrow(() -> new ResourceNotFoundException("Document not found: " + documentId.get()));
             String documentText = textExtractionService.extractText(document);
+            if (documentText == null || documentText.isBlank()) {
+                completePartial(noteId, partialNotesForUnreadableDocument());
+                return;
+            }
             String rawResponse = ollamaAiNotesService.generateNotes(documentText);
             ParsedAiNotes parsed = parseAiNotes(rawResponse);
             complete(noteId, rawResponse, parsed);
@@ -139,8 +143,54 @@ public class AppointmentDocumentAiNotesService {
     }
 
     @Transactional
+    protected void completePartial(Long noteId, ParsedAiNotes parsed) {
+        aiNotesRepository.findById(noteId).ifPresent(notes -> {
+            notes.setAiSummary(parsed.summary());
+            notes.setImportantDetails(parsed.importantDetails());
+            notes.setMissingInfo(parsed.missingInfo());
+            notes.setRiskFlags(parsed.riskFlags());
+            notes.setRawAiResponse(String.join("\n\n",
+                    "Summary: " + parsed.summary(),
+                    "Important Details: " + parsed.importantDetails(),
+                    "Missing or Unclear Information: " + parsed.missingInfo(),
+                    "Risk Flags: " + parsed.riskFlags()));
+            notes.setStatus(AiNoteStatus.PARTIAL_SUCCESS);
+            notes.setErrorMessage(null);
+            notes.setModelName(ollamaAiNotesService.getModelName());
+            aiNotesRepository.save(notes);
+            log.info("Partially completed AI notes requestId={} appointmentId={} documentId={} status={}",
+                    RequestContextUtil.getRequestId(),
+                    resolveAppointmentId(notes),
+                    resolveDocumentId(notes),
+                    notes.getStatus());
+        });
+    }
+
+    @Transactional
     protected void fail(Long noteId, Exception error) {
         aiNotesRepository.findById(noteId).ifPresent(notes -> {
+            if (isUnreadableDocumentError(error)) {
+                ParsedAiNotes partial = partialNotesForUnreadableDocument();
+                notes.setAiSummary(partial.summary());
+                notes.setImportantDetails(partial.importantDetails());
+                notes.setMissingInfo(partial.missingInfo());
+                notes.setRiskFlags(partial.riskFlags());
+                notes.setRawAiResponse(String.join("\n\n",
+                        "Summary: " + partial.summary(),
+                        "Important Details: " + partial.importantDetails(),
+                        "Missing or Unclear Information: " + partial.missingInfo(),
+                        "Risk Flags: " + partial.riskFlags()));
+                notes.setStatus(AiNoteStatus.PARTIAL_SUCCESS);
+                notes.setErrorMessage(null);
+                notes.setModelName(ollamaAiNotesService.getModelName());
+                aiNotesRepository.save(notes);
+                log.info("Partially completed unreadable AI notes requestId={} appointmentId={} documentId={} status={}",
+                        RequestContextUtil.getRequestId(),
+                        resolveAppointmentId(notes),
+                        resolveDocumentId(notes),
+                        notes.getStatus());
+                return;
+            }
             notes.setStatus(AiNoteStatus.FAILED);
             notes.setErrorMessage(limitErrorMessage(error.getMessage()));
             notes.setModelName(ollamaAiNotesService.getModelName());
@@ -240,20 +290,34 @@ public class AppointmentDocumentAiNotesService {
         return value.length() > 1000 ? value.substring(0, 1000) : value;
     }
 
+    private boolean isUnreadableDocumentError(Exception error) {
+        String message = error.getMessage();
+        return message != null
+                && (message.contains("No extractable text")
+                || message.contains("Unable to extract text from uploaded document"));
+    }
+
+    private ParsedAiNotes partialNotesForUnreadableDocument() {
+        return new ParsedAiNotes(
+                "The uploaded file appears to be an image/document proof. No clear readable text was detected.",
+                "Image uploaded as supporting document. Manual verification may be required.",
+                "Readable document text could not be detected.",
+                "Low image clarity or non-readable text may require manual review."
+        );
+    }
+
     private Long resolveAppointmentId(AppointmentDocumentAiNotes notes) {
         if (notes.getAppointmentId() != null) {
             return notes.getAppointmentId();
         }
-        Appointment appointment = notes.getAppointment();
-        return appointment != null ? appointment.getId() : null;
+        return null;
     }
 
     private Long resolveDocumentId(AppointmentDocumentAiNotes notes) {
         if (notes.getDocumentId() != null) {
             return notes.getDocumentId();
         }
-        DocumentUpload document = notes.getDocument();
-        return document != null ? document.getId() : null;
+        return null;
     }
 
     public record AiNotesGenerationRequested(Long noteId) {}

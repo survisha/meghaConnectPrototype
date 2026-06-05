@@ -28,6 +28,9 @@ public class DocumentTextExtractionService {
     public String extractText(DocumentUpload document) {
         Path documentPath = fileStorageService.resolveDocumentPath(document);
         String fileName = firstNonBlank(document.getOriginalFilename(), document.getStoredFileName(), "document-" + document.getId());
+        if (isImageDocument(document, fileName)) {
+            return imageDocumentContext(document, fileName);
+        }
         Metadata metadata = new Metadata();
         metadata.set(TikaCoreProperties.RESOURCE_NAME_KEY, fileName);
         if (document.getContentType() != null && !document.getContentType().isBlank()) {
@@ -52,6 +55,39 @@ public class DocumentTextExtractionService {
         } catch (TikaException | SAXException | java.io.IOException | RuntimeException e) {
             throw new IllegalStateException("Unable to extract text from uploaded document.", e);
         }
+    }
+
+    private boolean isImageDocument(DocumentUpload document, String fileName) {
+        String contentType = firstNonBlank(document.getContentType(), document.getMimeType(), "");
+        String lowerName = fileName == null ? "" : fileName.toLowerCase();
+        return contentType.toLowerCase().startsWith("image/")
+                || lowerName.endsWith(".jpg")
+                || lowerName.endsWith(".jpeg")
+                || lowerName.endsWith(".png")
+                || lowerName.endsWith(".webp")
+                || lowerName.endsWith(".gif")
+                || lowerName.endsWith(".bmp");
+    }
+
+    private String imageDocumentContext(DocumentUpload document, String fileName) {
+        String documentType = firstNonBlank(document.getDocumentType(), "IMAGE_DOCUMENT");
+        String contentType = firstNonBlank(document.getContentType(), document.getMimeType(), "image");
+        String uploadedBy = firstNonBlank(document.getUploadedBy(), "unknown");
+
+        return limit("""
+                Image document uploaded for appointment review.
+                File name: %s
+                Document type: %s
+                Content type: %s
+                Document reference: %s
+                Uploaded by: %s
+
+                This file is an image, so plain text extraction is not available in the current runtime.
+                Treat it as visual evidence or a meeting proof photo. Staff should inspect the image preview directly.
+                For meeting proof photos, check whether the visitor is visible, whether a signed or stamped document is visible,
+                whether date/signature/official marks are legible, and whether the image appears relevant to the appointment.
+                Do not invent names, dates, signatures, amounts, or document contents unless they are explicitly available from metadata above.
+                """.formatted(fileName, documentType, contentType, document.getId(), uploadedBy));
     }
 
     private String limit(String value) {

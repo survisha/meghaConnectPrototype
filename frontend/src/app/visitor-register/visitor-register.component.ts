@@ -1752,6 +1752,12 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.sanitizeManualPhone();
   }
 
+  pasteOtpCode(event: ClipboardEvent) {
+    const digits = (event.clipboardData?.getData('text') || '').replace(/\D/g, '');
+    this.otpCode = this.applySanitizedPaste(event, digits, 6);
+    this.sanitizeOtpInput();
+  }
+
   pasteVisitorName(event: ClipboardEvent) {
     const pasted = event.clipboardData?.getData('text') || '';
     const clean = this.cleanNameInput(pasted, true);

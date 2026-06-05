@@ -448,7 +448,7 @@ export class DashboardComponent implements OnInit {
       { label: 'Apply for Scheme', matIcon: 'work', route: '/schemes/apply', severity: 'warning',
         roles: ['ADMIN', 'OSD'] },
       { label: 'Identify Person', matIcon: 'badge', route: '/identify', severity: 'info',
-        roles: ['HCM', 'ADMIN', 'OSD', 'DATA_ENTRY_OPERATOR'] },
+        roles: ['HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER', 'DATA_ENTRY_OPERATOR'] },
       { label: 'Scheme Heatmap', matIcon: 'map', route: '/reports/heatmap', severity: 'secondary',
         roles: ['HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER'] },
       { label: 'View Reports', matIcon: 'bar_chart', route: '/reports', severity: 'info',

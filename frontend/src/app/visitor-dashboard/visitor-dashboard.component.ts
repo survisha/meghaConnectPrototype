@@ -7,7 +7,8 @@ import { AuthService } from '../services/auth.service';
 import { AppointmentService } from '../services/appointment.service';
 import { GrievanceService } from '../services/grievance.service';
 import { VisitorKycService } from '../services/visitor-kyc.service';
-import { Appointment } from '../models';
+import { SchemeService } from '../services/scheme.service';
+import { Appointment, SchemeApplication } from '../models';
 import { Tag } from 'primeng/tag';
 import { AiChatbotComponent } from '../ai-chatbot/ai-chatbot.component';
 import { MatIconModule } from '@angular/material/icon';
@@ -36,6 +37,21 @@ interface VisitorProfile {
 
 interface VisitorCard { label: string; value: string | number; icon: string; color: string; bg: string; }
 interface ListEntry { id: string; title: string; status: string; date: string; extra?: string; }
+interface SchemeEntry extends ListEntry {
+  application: SchemeApplication;
+  applicationNumber: string;
+  submittedDate: string;
+}
+
+type VisitorSchemeApplication = SchemeApplication & {
+  applicationNumber?: string;
+  applicationId?: string | number;
+  schemeName?: string;
+  schemeCode?: string;
+  remarks?: string;
+  submittedDate?: string;
+  lastUpdated?: string;
+};
 
 @Component({
   selector: 'app-visitor-dashboard',
@@ -47,12 +63,13 @@ interface ListEntry { id: string; title: string; status: string; date: string; e
 export class VisitorDashboardComponent implements OnInit {
   cards: VisitorCard[] = [];
   myAppointments: Appointment[] = [];
-  mySchemes: ListEntry[] = [];
+  mySchemes: SchemeEntry[] = [];
   myGrievances: ListEntry[] = [];
   loading = false;
   errorMsg = '';
   successMsg = '';
   selectedAppointment: Appointment | null = null;
+  selectedScheme: SchemeEntry | null = null;
   downloadingPassId: number | null = null;
   retryingKyc = false;
 
@@ -68,7 +85,8 @@ export class VisitorDashboardComponent implements OnInit {
     private http: HttpClient,
     private appointmentService: AppointmentService,
     private grievanceService: GrievanceService,
-    private visitorKycService: VisitorKycService
+    private visitorKycService: VisitorKycService,
+    private schemeService: SchemeService
   ) {}
 
   ngOnInit() {
@@ -95,6 +113,7 @@ export class VisitorDashboardComponent implements OnInit {
     if (visitorId) {
       this.loadProfile(visitorId);
       this.loadGrievances(Number(visitorId));
+      this.loadSchemes(Number(visitorId));
     }
     this.loadAppointments();
   }
@@ -154,6 +173,41 @@ export class VisitorDashboardComponent implements OnInit {
     });
   }
 
+  private loadSchemes(visitorId: number) {
+    if (!visitorId) {
+      this.mySchemes = [];
+      this.updateCards();
+      return;
+    }
+
+    this.schemeService.getApplicationsByVisitor(visitorId).subscribe({
+      next: applications => {
+        this.mySchemes = (applications || []).map(application => this.toSchemeEntry(application));
+        this.updateCards();
+      },
+      error: err => {
+        this.errorMsg = apiErrorMessage(err, 'Unable to load your scheme applications.');
+        this.mySchemes = [];
+        this.updateCards();
+      }
+    });
+  }
+
+  private toSchemeEntry(application: SchemeApplication): SchemeEntry {
+    const scheme = application as VisitorSchemeApplication;
+    const applicationNumber = this.schemeApplicationNumber(scheme);
+    return {
+      id: applicationNumber,
+      applicationNumber,
+      title: this.schemeName(scheme),
+      status: scheme.status || 'SUBMITTED',
+      date: this.formatDate(scheme.submittedDate || scheme.createdAt),
+      submittedDate: this.formatDate(scheme.submittedDate || scheme.createdAt),
+      extra: scheme.projectName || undefined,
+      application,
+    };
+  }
+
   private updateCards() {
     this.cards = [
       { label: 'My Appointments', value: this.myAppointments.length, icon: 'event', color: '#1a237e', bg: '#e8eaf6' },
@@ -198,6 +252,30 @@ export class VisitorDashboardComponent implements OnInit {
 
   closeAppointmentDetails(): void {
     this.selectedAppointment = null;
+  }
+
+  viewScheme(scheme: SchemeEntry): void {
+    this.selectedScheme = scheme;
+  }
+
+  closeSchemeDetails(): void {
+    this.selectedScheme = null;
+  }
+
+  schemeApplicationNumber(application: SchemeApplication | null | undefined): string {
+    const value = application as VisitorSchemeApplication | null | undefined;
+    return String(value?.applicationNumber || value?.applicationId || application?.id || '—');
+  }
+
+  schemeName(application: SchemeApplication | null | undefined): string {
+    const value = application as VisitorSchemeApplication | null | undefined;
+    const raw = value?.schemeName || value?.schemeCode || application?.schemeType || 'Scheme Application';
+    return raw.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  schemeRemarks(application: SchemeApplication | null | undefined): string {
+    const value = application as VisitorSchemeApplication | null | undefined;
+    return value?.remarks || application?.justification || '—';
   }
 
   downloadVisitorPass(appointment: Appointment): void {

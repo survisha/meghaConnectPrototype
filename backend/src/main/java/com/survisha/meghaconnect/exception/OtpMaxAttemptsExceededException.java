@@ -5,18 +5,23 @@ package com.survisha.meghaconnect.exception;
  * User has tried to verify OTP too many times with incorrect values.
  */
 public class OtpMaxAttemptsExceededException extends MeghaConnectException {
+    private static final int WAIT_TIME_MINUTES = 30;
     
     public OtpMaxAttemptsExceededException() {
-        super(ErrorCodeConstants.OTP_MAX_ATTEMPTS_EXCEEDED, 
-              ErrorCodeConstants.OTP_MAX_ATTEMPTS_EXCEEDED_MSG, 
+        super(ErrorCodeConstants.OTP_LOCKED, 
+              ErrorCodeConstants.OTP_LOCKED_MSG, 
               429);
     }
 
     public OtpMaxAttemptsExceededException(String message) {
-        super(ErrorCodeConstants.OTP_MAX_ATTEMPTS_EXCEEDED, message, 429);
+        super(ErrorCodeConstants.OTP_LOCKED, message, 429);
     }
 
     public OtpMaxAttemptsExceededException(String message, Throwable cause) {
-        super(ErrorCodeConstants.OTP_MAX_ATTEMPTS_EXCEEDED, message, 429, cause);
+        super(ErrorCodeConstants.OTP_LOCKED, message, 429, cause);
+    }
+
+    public int getWaitTimeMinutes() {
+        return WAIT_TIME_MINUTES;
     }
 }

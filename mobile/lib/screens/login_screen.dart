@@ -213,6 +213,39 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 
+  void _changePublicNumber() {
+    setState(() {
+      _phoneCtrl.clear();
+      _publicEpicCtrl.clear();
+      _otpCtrl.clear();
+      _publicLoading = false;
+      _publicNotice = null;
+      _publicNoticeIsWarning = false;
+      _otpSent = false;
+      _otpLocked = false;
+      _requiresEpic = false;
+      _epicForOtpLogin = null;
+      _selectedVisitorId = null;
+      _registrationOptions = [];
+    });
+    _publicFormKey.currentState?.reset();
+  }
+
+  void _clearPublicSelectionForMobileEdit() {
+    setState(() {
+      _requiresEpic = false;
+      _otpSent = false;
+      _otpLocked = false;
+      _epicForOtpLogin = null;
+      _selectedVisitorId = null;
+      _registrationOptions = [];
+      _publicNotice = null;
+      _publicNoticeIsWarning = false;
+    });
+    _publicEpicCtrl.clear();
+    _otpCtrl.clear();
+  }
+
   Future<void> _publicLogin() async {
     if (!_publicFormKey.currentState!.validate()) return;
     if (_otpLocked) {
@@ -1005,19 +1038,12 @@ class _LoginScreenState extends State<LoginScreen>
                 hintText: i18n.t('ENTER_10_DIGIT_MOBILE'),
               ),
               onChanged: (_) {
-                if (_requiresEpic || _otpSent || _publicNotice != null) {
-                  setState(() {
-                    _requiresEpic = false;
-                    _otpSent = false;
-                    _otpLocked = false;
-                    _epicForOtpLogin = null;
-                    _selectedVisitorId = null;
-                    _registrationOptions = [];
-                    _publicNotice = null;
-                    _publicNoticeIsWarning = false;
-                  });
-                  _publicEpicCtrl.clear();
-                  _otpCtrl.clear();
+                if (_requiresEpic ||
+                    _otpSent ||
+                    _selectedVisitorId != null ||
+                    _registrationOptions.isNotEmpty ||
+                    _publicNotice != null) {
+                  _clearPublicSelectionForMobileEdit();
                 }
               },
               validator: (v) {
@@ -1107,6 +1133,12 @@ class _LoginScreenState extends State<LoginScreen>
                       : Text(i18n.t('VERIFY_LOGIN'),
                           style: const TextStyle(fontSize: 16)),
                 ),
+              ),
+              const SizedBox(height: 8),
+              TextButton.icon(
+                onPressed: _publicLoading ? null : _changePublicNumber,
+                icon: const Icon(Icons.arrow_back),
+                label: Text(i18n.t('CHANGE_NUMBER')),
               ),
             ],
             const SizedBox(height: 20),

@@ -204,13 +204,23 @@ export class PublicLoginComponent {
   // ── Helpers ─────────────────────────────────────────────────────────────
 
   goBack() {
+    this.changeNumber();
+  }
+
+  changeNumber() {
     this.step = 'enter-mobile';
+    this.phoneNumber = '';
+    this.epicNumber = '';
     this.otp = '';
     this.errorMsg = '';
     this.warningMsg = '';
     this.successMsg = '';
     this.mockOtp = '';
     this.otpLocked = false;
+    this.loading = false;
+    this.requiresEpic = false;
+    this.registrationOptions = [];
+    this.selectedVisitorId = null;
   }
 
   onMobileInput() {

@@ -521,7 +521,9 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
       _clearMessages();
     });
 
-    final district = _outsideMeghalaya ? 'NA' : _districtCtrl.text.trim();
+    final district = _outsideMeghalaya
+        ? 'NA'
+        : _normalizeLettersAndSpaces(_districtCtrl.text);
     final booth = _outsideMeghalaya ? 'NA' : _boothCtrl.text.trim();
     final payload = <String, dynamic>{
       'phoneNumber': _phoneCtrl.text.trim(),
@@ -1446,14 +1448,27 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
             if (!_outsideMeghalaya) ...[
               TextFormField(
                 controller: _districtCtrl,
+                enabled: _idType == 'NONE',
+                keyboardType: TextInputType.text,
+                textCapitalization: TextCapitalization.words,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z ]')),
+                  const _LettersAndSpacesInputFormatter(),
+                ],
                 decoration:
                     InputDecoration(labelText: '${i18n.t('DISTRICT')} *'),
                 validator: (v) {
-                  if (v == null || v.trim().isEmpty) {
-                    return i18n.t('ERROR_DISTRICT_REQUIRED');
+                  if (_outsideMeghalaya || _idType != 'NONE') return null;
+                  final district = _normalizeLettersAndSpaces(v ?? '');
+                  if (district.isEmpty) {
+                    return 'District is required.';
+                  }
+                  if (!_isValidDistrict(district)) {
+                    return 'District should contain only letters and spaces.';
                   }
                   return null;
                 },
+                onChanged: (_) => setState(() {}),
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -1803,6 +1818,19 @@ class _PrimaryProgressButton extends StatelessWidget {
   }
 }
 
+String _normalizeLettersAndSpaces(String value) {
+  return value
+      .replaceAll(RegExp(r'[^A-Za-z ]'), '')
+      .replaceFirst(RegExp(r'^\s+'), '')
+      .replaceAll(RegExp(r'\s{2,}'), ' ')
+      .trim();
+}
+
+bool _isValidDistrict(String value) {
+  return RegExp(r'^[A-Za-z]+(?: [A-Za-z]+)*$')
+      .hasMatch(_normalizeLettersAndSpaces(value));
+}
+
 class _EpicInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
@@ -1824,6 +1852,25 @@ class _EpicInputFormatter extends TextInputFormatter {
     }
 
     final text = buffer.toString();
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+}
+
+class _LettersAndSpacesInputFormatter extends TextInputFormatter {
+  const _LettersAndSpacesInputFormatter();
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final text = newValue.text
+        .replaceAll(RegExp(r'[^A-Za-z ]'), '')
+        .replaceFirst(RegExp(r'^\s+'), '')
+        .replaceAll(RegExp(r'\s{2,}'), ' ');
     return TextEditingValue(
       text: text,
       selection: TextSelection.collapsed(offset: text.length),

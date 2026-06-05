@@ -55,12 +55,16 @@ export class PublicIdentificationComponent {
   meetingHistoryColumns: string[] = ['date', 'department', 'purpose', 'status'];
   schemeHistory: CitizenSchemeHistory[] = [];
   meetingHistory: CitizenAppointmentHistory[] = [];
+  lastVisited: CitizenAppointmentHistory | null = null;
+  upcomingAppointment: CitizenAppointmentHistory | null = null;
 
   constructor(private visitorSearchService: VisitorSearchService) {}
 
   populateHistory() {
     this.schemeHistory = [];
     this.meetingHistory = [];
+    this.lastVisited = null;
+    this.upcomingAppointment = null;
     this.citizenHistory = null;
     this.historyError = '';
     this.historyLoading = false;
@@ -287,6 +291,7 @@ export class PublicIdentificationComponent {
         this.citizenHistory = history;
         this.schemeHistory = history.schemes || [];
         this.meetingHistory = history.appointments || [];
+        this.processVisitHistory(this.meetingHistory);
         if (this.selected && this.selected.id === citizenId && history.photoUrl) {
           this.selected = { ...this.selected, photoUrl: history.photoUrl };
           this.selectedPhotoLoadFailed = false;
@@ -297,9 +302,49 @@ export class PublicIdentificationComponent {
         this.historyError = apiErrorMessage(error, 'Unable to load citizen history. Please try again.');
         this.schemeHistory = [];
         this.meetingHistory = [];
+        this.lastVisited = null;
+        this.upcomingAppointment = null;
         this.citizenHistory = null;
       },
     });
+  }
+
+  private processVisitHistory(records: CitizenAppointmentHistory[]): void {
+    const now = new Date();
+    const datedRecords = (records || [])
+      .map(record => ({ record, date: this.parseHistoryDate(record.dateTime) }))
+      .filter((item): item is { record: CitizenAppointmentHistory; date: Date } => !!item.date);
+
+    const pastRecords = datedRecords
+      .filter(item => item.date.getTime() < now.getTime())
+      .filter(item => this.isPastVisitStatus(item.record.status))
+      .sort((a, b) => b.date.getTime() - a.date.getTime());
+
+    const upcomingRecords = datedRecords
+      .filter(item => item.date.getTime() >= now.getTime())
+      .filter(item => this.isUpcomingStatus(item.record.status))
+      .sort((a, b) => a.date.getTime() - b.date.getTime());
+
+    this.lastVisited = pastRecords[0]?.record || null;
+    this.upcomingAppointment = upcomingRecords[0]?.record || null;
+  }
+
+  private parseHistoryDate(value?: string | null): Date | null {
+    if (!value) return null;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  private isPastVisitStatus(status?: string | null): boolean {
+    const normalized = (status || '').toUpperCase();
+    if (!normalized) return true;
+    return ['COMPLETED', 'VISITED', 'CLOSED', 'EXITED', 'RESOLVED'].includes(normalized);
+  }
+
+  private isUpcomingStatus(status?: string | null): boolean {
+    const normalized = (status || '').toUpperCase();
+    if (!normalized) return true;
+    return ['SCHEDULED', 'APPROVED', 'UPCOMING', 'PENDING_VISIT', 'APPROVED_WITH_DATE_TIME', 'HCM_ACCEPTED'].includes(normalized);
   }
 
   private getVisitorPhotoUrl(visitor?: Visitor | null): string {

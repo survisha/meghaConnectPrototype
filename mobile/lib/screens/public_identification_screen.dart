@@ -501,6 +501,8 @@ class _PublicIdentificationScreenState
     final history = _history;
     final schemes = history?.schemes ?? const <Map<String, dynamic>>[];
     final meetings = history?.appointments ?? const <Map<String, dynamic>>[];
+    final lastVisited = _lastVisited(meetings);
+    final upcomingAppointment = _upcomingAppointment(meetings);
     final photoSource = _firstText([history?.photoUrl, person.photoSource]);
 
     return Column(
@@ -604,7 +606,11 @@ class _PublicIdentificationScreenState
                   ),
                 )
               else ...[
-                _HistorySummary(history),
+                _HistorySummary(
+                  history,
+                  lastVisited: lastVisited,
+                  upcomingAppointment: upcomingAppointment,
+                ),
                 const SizedBox(height: 14),
                 _HistorySection(
                   title: 'Scheme History',
@@ -798,19 +804,33 @@ class _AvatarFallback extends StatelessWidget {
 
 class _HistorySummary extends StatelessWidget {
   final _CitizenHistory history;
-  const _HistorySummary(this.history);
+  final Map<String, dynamic>? lastVisited;
+  final Map<String, dynamic>? upcomingAppointment;
+
+  const _HistorySummary(
+    this.history, {
+    required this.lastVisited,
+    required this.upcomingAppointment,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
       children: [
-        Expanded(
-          child: _SummaryBox('Total visits', '${history.visitCount}'),
+        _SummaryBox('Total visits', '${history.visitCount}'),
+        const SizedBox(height: 8),
+        _AppointmentSummaryCard(
+          title: 'Last Visited',
+          icon: Icons.history,
+          item: lastVisited,
+          emptyText: 'No previous visit found.',
         ),
-        const SizedBox(width: 8),
-        Expanded(
-          child:
-              _SummaryBox('Last visited', _fmtDateTime(history.lastVisitedAt)),
+        const SizedBox(height: 8),
+        _AppointmentSummaryCard(
+          title: 'Upcoming Appointment',
+          icon: Icons.event_available_outlined,
+          item: upcomingAppointment,
+          emptyText: 'No upcoming appointment scheduled.',
         ),
       ],
     );
@@ -840,6 +860,80 @@ class _SummaryBox extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontWeight: FontWeight.w800)),
+        ],
+      ),
+    );
+  }
+}
+
+class _AppointmentSummaryCard extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final Map<String, dynamic>? item;
+  final String emptyText;
+
+  const _AppointmentSummaryCard({
+    required this.title,
+    required this.icon,
+    required this.item,
+    required this.emptyText,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final record = item;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 18, color: MeghaColors.primary),
+              const SizedBox(width: 6),
+              Text(
+                title,
+                style: const TextStyle(
+                  color: MeghaColors.text,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (record == null)
+            Text(emptyText, style: const TextStyle(color: MeghaColors.muted))
+          else ...[
+            Text(
+              _fmtDateTime(record['dateTime']),
+              style: const TextStyle(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _display(_text(record['purpose'])),
+              style: const TextStyle(color: MeghaColors.text, fontSize: 13),
+            ),
+            if (_text(record['department']).isNotEmpty) ...[
+              const SizedBox(height: 3),
+              Text(
+                [
+                  _text(record['department']),
+                  _text(record['officerName']),
+                ].where((value) => value.isNotEmpty).join(' / '),
+                style: const TextStyle(color: MeghaColors.muted, fontSize: 12),
+              ),
+            ],
+            const SizedBox(height: 6),
+            _StatusPill(_statusLabel(_text(record['status'])),
+                _statusColor(_text(record['status']))),
+          ],
         ],
       ),
     );
@@ -1141,6 +1235,63 @@ String _statusLabel(String status) {
       .map((word) =>
           word.isEmpty ? word : '${word[0].toUpperCase()}${word.substring(1)}')
       .join(' ');
+}
+
+Map<String, dynamic>? _lastVisited(List<Map<String, dynamic>> records) {
+  final now = DateTime.now();
+  final past = records
+      .map((record) => MapEntry(record, _parseHistoryDate(record['dateTime'])))
+      .where((entry) =>
+          entry.value != null &&
+          entry.value!.isBefore(now) &&
+          _isPastVisitStatus(_text(entry.key['status'])))
+      .toList()
+    ..sort((a, b) => b.value!.compareTo(a.value!));
+  return past.isEmpty ? null : past.first.key;
+}
+
+Map<String, dynamic>? _upcomingAppointment(List<Map<String, dynamic>> records) {
+  final now = DateTime.now();
+  final upcoming = records
+      .map((record) => MapEntry(record, _parseHistoryDate(record['dateTime'])))
+      .where((entry) =>
+          entry.value != null &&
+          !entry.value!.isBefore(now) &&
+          _isUpcomingStatus(_text(entry.key['status'])))
+      .toList()
+    ..sort((a, b) => a.value!.compareTo(b.value!));
+  return upcoming.isEmpty ? null : upcoming.first.key;
+}
+
+DateTime? _parseHistoryDate(dynamic value) {
+  final raw = value?.toString().trim() ?? '';
+  if (raw.isEmpty) return null;
+  return DateTime.tryParse(raw)?.toLocal();
+}
+
+bool _isPastVisitStatus(String status) {
+  final normalized = status.toUpperCase();
+  if (normalized.isEmpty) return true;
+  return {
+    'COMPLETED',
+    'VISITED',
+    'CLOSED',
+    'EXITED',
+    'RESOLVED',
+  }.contains(normalized);
+}
+
+bool _isUpcomingStatus(String status) {
+  final normalized = status.toUpperCase();
+  if (normalized.isEmpty) return true;
+  return {
+    'SCHEDULED',
+    'APPROVED',
+    'UPCOMING',
+    'PENDING_VISIT',
+    'APPROVED_WITH_DATE_TIME',
+    'HCM_ACCEPTED',
+  }.contains(normalized);
 }
 
 Color _statusColor(String status) {

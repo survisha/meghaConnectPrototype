@@ -174,7 +174,7 @@
 
 .history-summary {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.75rem;
   margin-bottom: 1rem;
 
@@ -197,6 +197,56 @@
     color: #111827;
     font-size: 0.95rem;
   }
+}
+
+.visit-split-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.visit-summary-card {
+  padding: 0.85rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fff;
+
+  strong {
+    display: block;
+    color: #111827;
+    font-size: 0.95rem;
+    margin-bottom: 0.35rem;
+  }
+
+  p {
+    margin: 0.2rem 0;
+    color: #4b5563;
+    font-size: 0.82rem;
+  }
+}
+
+.visit-summary-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #374151;
+  font-size: 0.78rem;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: #1a237e;
+  }
+}
+
+.visit-empty-text {
+  color: #6b7280 !important;
+  font-style: italic;
 }
 
 .history-subtext {

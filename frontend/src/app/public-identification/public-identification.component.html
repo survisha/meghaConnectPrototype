@@ -190,9 +190,39 @@
                   <span>Total visits</span>
                   <strong>{{ citizenHistory.visitCount }}</strong>
                 </div>
-                <div>
-                  <span>Last visited</span>
-                  <strong>{{ formatDateTime(citizenHistory.lastVisitedAt) }}</strong>
+              </div>
+
+              <div class="visit-split-grid">
+                <div class="visit-summary-card">
+                  <div class="visit-summary-title">
+                    <mat-icon>history</mat-icon>
+                    <span>Last Visited</span>
+                  </div>
+                  <ng-container *ngIf="lastVisited; else noPreviousVisit">
+                    <strong>{{ formatDateTime(lastVisited.dateTime) }}</strong>
+                    <p>{{ displayValue(lastVisited.purpose) }}</p>
+                    <p>{{ displayValue(lastVisited.department) }}<span *ngIf="lastVisited.officerName"> - {{ lastVisited.officerName }}</span></p>
+                    <mat-chip class="status-chip" [ngClass]="statusClass(lastVisited.status)">{{ statusLabel(lastVisited.status) }}</mat-chip>
+                  </ng-container>
+                  <ng-template #noPreviousVisit>
+                    <p class="visit-empty-text">No previous visit found.</p>
+                  </ng-template>
+                </div>
+
+                <div class="visit-summary-card">
+                  <div class="visit-summary-title">
+                    <mat-icon>event_available</mat-icon>
+                    <span>Upcoming Appointment</span>
+                  </div>
+                  <ng-container *ngIf="upcomingAppointment; else noUpcomingAppointment">
+                    <strong>{{ formatDateTime(upcomingAppointment.dateTime) }}</strong>
+                    <p>{{ displayValue(upcomingAppointment.department) }}</p>
+                    <p>{{ displayValue(upcomingAppointment.purpose) }}</p>
+                    <mat-chip class="status-chip" [ngClass]="statusClass(upcomingAppointment.status)">{{ statusLabel(upcomingAppointment.status) }}</mat-chip>
+                  </ng-container>
+                  <ng-template #noUpcomingAppointment>
+                    <p class="visit-empty-text">No upcoming appointment scheduled.</p>
+                  </ng-template>
                 </div>
               </div>
 

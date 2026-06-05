@@ -151,6 +151,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
   private readonly epicPattern = /^[A-Z]{3}[0-9]{7}$/;
   private readonly namePattern = /^[A-Za-z]+(?: [A-Za-z]+)*$/;
+  private readonly districtPattern = /^[A-Za-z]+(?: [A-Za-z]+)*$/;
 
   // Multi-step KYC flow
   currentStep: KycStep = 'id-entry';
@@ -1063,11 +1064,19 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       && hasValidPhone
       && !!this.form.designation
       && !!this.form.livePhoto
-      && (this.form.outsideState || !!this.form.district.trim());
+      && (this.form.outsideState || this.isValidDistrict(this.form.district));
   }
 
   get isDistrictReadOnly(): boolean {
     return this.districtAutoPopulated && !!this.form.district.trim();
+  }
+
+  get districtValidationMessage(): string {
+    if (this.form.outsideState) return '';
+    const district = this.form.district.trim();
+    if (!district) return 'District is required.';
+    if (!this.isValidDistrict(district)) return 'District should contain only letters and spaces.';
+    return '';
   }
 
   get isConstituencyReadOnly(): boolean {
@@ -1351,8 +1360,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (!this.form.outsideState && !this.form.district.trim()) {
-      this.errorMsg = this.t('ERROR_DISTRICT_REQUIRED');
+    if (!this.form.outsideState && this.districtValidationMessage) {
+      this.errorMsg = this.districtValidationMessage;
       return;
     }
 
@@ -1733,6 +1742,13 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     }
   }
 
+  allowLettersAndSpacesOnly(event: KeyboardEvent) {
+    if (this.isTextEditingShortcut(event)) return;
+    if (event.key.length === 1 && !/^[A-Za-z ]$/.test(event.key)) {
+      event.preventDefault();
+    }
+  }
+
   private applySanitizedPaste(event: ClipboardEvent, value: string, maxLength?: number): string {
     event.preventDefault();
     const input = event.target as HTMLInputElement;
@@ -1772,6 +1788,13 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.nameRejectedInput = pasted !== clean;
     this.form.fullName = this.applySanitizedPaste(event, clean);
     this.sanitizeFullName();
+  }
+
+  pasteDistrict(event: ClipboardEvent) {
+    const pasted = event.clipboardData?.getData('text') || '';
+    const clean = this.cleanLettersAndSpacesInput(pasted);
+    this.form.district = this.applySanitizedPaste(event, clean);
+    this.sanitizeDistrict();
   }
 
   sanitizeManualPhone() {
@@ -1945,12 +1968,35 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.clearVisibleErrors();
   }
 
+  sanitizeDistrict() {
+    if (this.isDistrictReadOnly) return;
+    this.form.district = this.cleanLettersAndSpacesInput(this.form.district);
+    this.form.location = this.form.district.trim();
+    this.clearVisibleErrors();
+  }
+
   trimVisitorName() {
     this.form.visitorName = this.normalizeName(this.form.visitorName).toUpperCase();
   }
 
   trimFullName() {
     this.form.fullName = this.normalizeName(this.form.fullName);
+  }
+
+  trimDistrict() {
+    this.form.district = this.cleanLettersAndSpacesInput(this.form.district).trim();
+    this.form.location = this.form.district;
+  }
+
+  private cleanLettersAndSpacesInput(value: string): string {
+    return (value || '')
+      .replace(/[^A-Za-z ]/g, '')
+      .replace(/^\s+/, '')
+      .replace(/\s{2,}/g, ' ');
+  }
+
+  private isValidDistrict(value: string): boolean {
+    return this.districtPattern.test(this.cleanLettersAndSpacesInput(value).trim());
   }
 
   /**

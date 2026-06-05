@@ -772,7 +772,11 @@
                 [(ngModel)]="form.district"
                 [disabled]="isDistrictReadOnly"
                 [placeholder]="'DISTRICT_PLACEHOLDER' | translate"
-                (input)="clearVisibleErrors()" />
+                (keydown)="allowLettersAndSpacesOnly($event)"
+                (paste)="pasteDistrict($event)"
+                (input)="sanitizeDistrict()"
+                (blur)="trimDistrict()" />
+              <mat-error *ngIf="districtValidationMessage">{{ districtValidationMessage }}</mat-error>
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>{{ 'CONSTITUENCY' | translate }}</mat-label>

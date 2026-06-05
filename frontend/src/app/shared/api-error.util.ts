@@ -29,7 +29,10 @@ export function apiErrorBodyMessage(errorBody: unknown, fallbackMessage = 'An un
       stringValue(payload['errorMessage']) ||
       stringValue(payload['error']);
     if (message) {
-      return message;
+      return errorCode ? `${errorCode}: ${message}` : message;
+    }
+    if (errorCode) {
+      return errorCode;
     }
   }
 

@@ -44,6 +44,9 @@
             [(ngModel)]="phoneNumber"
             [placeholder]="'ENTER_10_DIGIT_MOBILE' | translate"
             maxlength="10"
+            inputmode="numeric"
+            (keydown)="allowDigitsOnly($event)"
+            (paste)="pastePhoneNumber($event)"
             (input)="onMobileInput()"
             (keyup.enter)="checkMobile()"
           />

@@ -202,6 +202,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   epicTouched = false;
   nameTouched = false;
   mobileTouched = false;
+  epicRejectedInput = false;
+  nameRejectedInput = false;
   duplicateRegistrationBlocked = false;
   verifiedKycData: VerifiedKycData | null = null;
   districtAutoPopulated = false;
@@ -243,6 +245,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   private livenessFrameId: number | null = null;
   private livenessAnalysisInProgress = false;
   private lastLivenessAnalysisAt = 0;
+  private registrationOtpRequestId = 0;
   private readonly handleCameraDeviceChange = () => {
     void this.loadCameraDevices(true);
   };
@@ -423,6 +426,12 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
    * Verify EPIC number against Election Commission API
    */
   verifyEpic() {
+    const requestId = ++this.registrationOtpRequestId;
+    this.errorMsg = '';
+    this.successMsg = '';
+    this.otpSent = false;
+    this.idValidated = false;
+
     const epicRequest = {
       epicNumber: this.form.epicNumber,
       visitorName: this.form.visitorName.toUpperCase(),
@@ -431,6 +440,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
     this.kycService.verifyEpic(epicRequest).subscribe({
       next: res => {
+        if (requestId !== this.registrationOtpRequestId) return;
         this.loading = false;
         
         if (res.code === '200' && res.data) {
@@ -446,21 +456,29 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
           this.actualPhoneNumber = this.manualPhone;
           this.form.phoneNumber = this.manualPhone;
           this.loading = true;
-          this.generateRegistrationOtp();
+          this.generateRegistrationOtp(requestId);
         } else if (res.code === '400') {
           // Name mismatch or validation error
           this.errorMsg = res.message || this.t('ERROR_NAME_VERIFICATION_FAILED');
           this.successMsg = '';
+          this.otpSent = false;
+          this.idValidated = false;
         } else {
           // EPIC verification failed or other error
           const errorMsg = res.message || this.t('EPIC_VERIFICATION_FAILED');
           this.errorMsg = errorMsg;
           this.successMsg = '';
+          this.otpSent = false;
+          this.idValidated = false;
           this.loading = false;
         }
       },
       error: err => {
+        if (requestId !== this.registrationOtpRequestId) return;
         this.loading = false;
+        this.successMsg = '';
+        this.otpSent = false;
+        this.idValidated = false;
         if (this.isKycServiceUnavailable(err)) {
           this.offerKycPendingFallback('EPIC', apiErrorMessage(err, 'Election Commission API is currently unavailable'), err?.error?.requestId);
           return;
@@ -479,11 +497,15 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       this.errorMsg = this.t('ERROR_MOBILE_BEFORE_OTP');
       return;
     }
+    if (this.form.idType === 'EPIC' && !this.idValidated) {
+      this.errorMsg = this.t('ERROR_FAILED_VERIFY_EPIC_TRY');
+      return;
+    }
     this.loading = true;
-    this.generateRegistrationOtp();
+    this.generateRegistrationOtp(++this.registrationOtpRequestId);
   }
 
-  private generateRegistrationOtp() {
+  private generateRegistrationOtp(requestId = ++this.registrationOtpRequestId) {
     this.http.post<{ success: boolean; otp?: string; message: string }>(
       `${environment.apiUrl}/visitor/auth/generate-otp`,
       {
@@ -493,6 +515,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       }
     ).subscribe({
       next: res => {
+        if (requestId !== this.registrationOtpRequestId) return;
         this.loading = false;
         if (res.success) {
           this.resetOtpVerification();
@@ -507,7 +530,9 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
         }
       },
       error: err => {
+        if (requestId !== this.registrationOtpRequestId) return;
         this.loading = false;
+        this.successMsg = '';
         this.errorMsg = apiErrorMessage(err, this.t('ERROR_FAILED_GENERATE_OTP_TRY'));
       }
     });
@@ -1379,6 +1404,11 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       aadhaarAppId: this.form.aadhaarAppId,
       agendaType: this.form.agendaType,
       briefDescription: this.form.briefDescription,
+      consentAccepted: true,
+      consentVersion: '2026-05-25',
+      consentTimestamp: new Date().toISOString(),
+      privacyPolicyUrl: 'https://www.meghaconnect.com/privacy-policy',
+      termsUrl: 'https://www.meghaconnect.com/terms',
     };
 
     if (this.form.idType === 'EPIC') {
@@ -1482,6 +1512,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
    * This clears any previous errors, operations, and ongoing processes
    */
   onIdTypeChange(idType: VisitorRegistrationForm['idType']) {
+    this.invalidatePendingRegistrationOtp();
     this.form.idType = idType;
     this.isAadhaarFlow = idType === 'AADHAAR';
 
@@ -1507,6 +1538,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.epicTouched = false;
     this.nameTouched = false;
     this.mobileTouched = false;
+    this.epicRejectedInput = false;
+    this.nameRejectedInput = false;
     this.duplicateRegistrationBlocked = false;
 
     // Stop camera and clear photo capture state
@@ -1608,6 +1641,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
   get epicValidationMessage(): string {
     if (this.form.idType !== 'EPIC' || !this.epicTouched) return '';
+    if (this.epicRejectedInput) return 'EPIC number must be 3 letters followed by 7 digits.';
     if (!this.form.epicNumber) return 'EPIC number is required.';
     if (!this.epicPattern.test(this.form.epicNumber)) return 'EPIC number must be 3 letters followed by 7 digits.';
     return '';
@@ -1620,6 +1654,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   get nameValidationMessage(): string {
     if ((this.form.idType !== 'EPIC' && this.form.idType !== 'NONE') || !this.nameTouched) return '';
     const name = this.activeNameValue.trim();
+    if (this.nameRejectedInput) return 'Name should contain only letters and spaces.';
     if (!name) return 'Name is required.';
     if (!this.isValidName(name)) return 'Name should contain only letters and spaces.';
     return '';
@@ -1652,6 +1687,10 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     return (value || '').replace(/\s+/g, ' ').trim();
   }
 
+  private invalidatePendingRegistrationOtp() {
+    this.registrationOtpRequestId++;
+  }
+
   private cleanNameInput(value: string, uppercase = false): string {
     const clean = (value || '')
       .replace(/[^A-Za-z ]/g, '')
@@ -1660,8 +1699,78 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     return uppercase ? clean.toUpperCase() : clean;
   }
 
+  private isTextEditingShortcut(event: KeyboardEvent): boolean {
+    return event.ctrlKey
+      || event.metaKey
+      || [
+        'Backspace',
+        'Delete',
+        'Tab',
+        'Enter',
+        'Escape',
+        'ArrowLeft',
+        'ArrowRight',
+        'ArrowUp',
+        'ArrowDown',
+        'Home',
+        'End',
+      ].includes(event.key);
+  }
+
+  allowDigitsOnly(event: KeyboardEvent) {
+    if (this.isTextEditingShortcut(event)) return;
+    if (event.key.length === 1 && !/^\d$/.test(event.key)) {
+      event.preventDefault();
+    }
+  }
+
+  allowNameOnly(event: KeyboardEvent) {
+    if (this.isTextEditingShortcut(event)) return;
+    if (event.key.length === 1 && !/^[A-Za-z ]$/.test(event.key)) {
+      event.preventDefault();
+      this.nameTouched = true;
+      this.nameRejectedInput = true;
+    }
+  }
+
+  private applySanitizedPaste(event: ClipboardEvent, value: string, maxLength?: number): string {
+    event.preventDefault();
+    const input = event.target as HTMLInputElement;
+    const start = input.selectionStart ?? input.value.length;
+    const end = input.selectionEnd ?? input.value.length;
+    const next = `${input.value.slice(0, start)}${value}${input.value.slice(end)}`;
+    const limited = typeof maxLength === 'number' ? next.slice(0, maxLength) : next;
+    input.value = limited;
+    const cursor = Math.min(start + value.length, limited.length);
+    input.setSelectionRange(cursor, cursor);
+    return limited;
+  }
+
+  pasteManualPhone(event: ClipboardEvent) {
+    const digits = (event.clipboardData?.getData('text') || '').replace(/\D/g, '');
+    this.manualPhone = this.applySanitizedPaste(event, digits, 10);
+    this.sanitizeManualPhone();
+  }
+
+  pasteVisitorName(event: ClipboardEvent) {
+    const pasted = event.clipboardData?.getData('text') || '';
+    const clean = this.cleanNameInput(pasted, true);
+    this.nameRejectedInput = pasted.toUpperCase() !== clean;
+    this.form.visitorName = this.applySanitizedPaste(event, clean);
+    this.sanitizeVisitorName();
+  }
+
+  pasteFullName(event: ClipboardEvent) {
+    const pasted = event.clipboardData?.getData('text') || '';
+    const clean = this.cleanNameInput(pasted);
+    this.nameRejectedInput = pasted !== clean;
+    this.form.fullName = this.applySanitizedPaste(event, clean);
+    this.sanitizeFullName();
+  }
+
   sanitizeManualPhone() {
     this.mobileTouched = true;
+    this.invalidatePendingRegistrationOtp();
     this.manualPhone = this.manualPhone.replace(/\D/g, '');
     this.form.phoneNumber = this.manualPhone;
     this.resetOtpVerification();
@@ -1779,7 +1888,9 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
   sanitizeEpicInput() {
     this.epicTouched = true;
-    const raw = (this.form.epicNumber || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    this.invalidatePendingRegistrationOtp();
+    const original = this.form.epicNumber || '';
+    const raw = original.toUpperCase().replace(/[^A-Z0-9]/g, '');
     let next = '';
     for (const char of raw) {
       if (next.length < 3) {
@@ -1789,12 +1900,14 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       }
       if (next.length === 10) break;
     }
+    this.epicRejectedInput = original.toUpperCase() !== next && !this.epicPattern.test(next);
     this.form.epicNumber = next;
     this.resetOtpVerification();
     this.otpSent = false;
     this.otpCode = '';
     this.errorMsg = '';
     this.duplicateRegistrationBlocked = false;
+    this.idValidated = false;
     this.mobileValidationMsg = '';
     this.mobileValidationType = '';
     if (this.form.epicNumber.length === 10 && this.epicPattern.test(this.form.epicNumber)) {
@@ -1804,16 +1917,25 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
   sanitizeVisitorName() {
     this.nameTouched = true;
-    this.form.visitorName = this.cleanNameInput(this.form.visitorName, true);
+    this.invalidatePendingRegistrationOtp();
+    const original = this.form.visitorName || '';
+    const next = this.cleanNameInput(original, true);
+    this.nameRejectedInput = original.toUpperCase() !== next;
+    this.form.visitorName = next;
     this.resetOtpVerification();
     this.otpSent = false;
     this.otpCode = '';
+    this.idValidated = false;
     this.clearVisibleErrors();
   }
 
   sanitizeFullName() {
     this.nameTouched = true;
-    this.form.fullName = this.cleanNameInput(this.form.fullName);
+    this.invalidatePendingRegistrationOtp();
+    const original = this.form.fullName || '';
+    const next = this.cleanNameInput(original);
+    this.nameRejectedInput = original !== next;
+    this.form.fullName = next;
     this.clearVisibleErrors();
   }
 
@@ -1835,6 +1957,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   }
 
   resetForm() {
+    this.invalidatePendingRegistrationOtp();
     this.currentStep = 'id-entry';
     this.idValidated = false;
     this.otpSent = false;
@@ -1857,6 +1980,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.epicTouched = false;
     this.nameTouched = false;
     this.mobileTouched = false;
+    this.epicRejectedInput = false;
+    this.nameRejectedInput = false;
     this.verifiedKycData = null;
     this.form = {
       fullName: '',

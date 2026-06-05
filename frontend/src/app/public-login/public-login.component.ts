@@ -209,6 +209,45 @@ export class PublicLoginComponent {
     this.otp = '';
   }
 
+  private isTextEditingShortcut(event: KeyboardEvent): boolean {
+    return event.ctrlKey
+      || event.metaKey
+      || [
+        'Backspace',
+        'Delete',
+        'Tab',
+        'Enter',
+        'Escape',
+        'ArrowLeft',
+        'ArrowRight',
+        'ArrowUp',
+        'ArrowDown',
+        'Home',
+        'End',
+      ].includes(event.key);
+  }
+
+  allowDigitsOnly(event: KeyboardEvent) {
+    if (this.isTextEditingShortcut(event)) return;
+    if (event.key.length === 1 && !/^\d$/.test(event.key)) {
+      event.preventDefault();
+    }
+  }
+
+  pastePhoneNumber(event: ClipboardEvent) {
+    event.preventDefault();
+    const input = event.target as HTMLInputElement;
+    const digits = (event.clipboardData?.getData('text') || '').replace(/\D/g, '');
+    const start = input.selectionStart ?? input.value.length;
+    const end = input.selectionEnd ?? input.value.length;
+    const next = `${input.value.slice(0, start)}${digits}${input.value.slice(end)}`.slice(0, 10);
+    input.value = next;
+    this.phoneNumber = next;
+    const cursor = Math.min(start + digits.length, next.length);
+    input.setSelectionRange(cursor, cursor);
+    this.onMobileInput();
+  }
+
   onEpicInput() {
     this.epicNumber = this.epicNumber.toUpperCase().replace(/[^A-Z0-9]/g, '');
     this.errorMsg = '';

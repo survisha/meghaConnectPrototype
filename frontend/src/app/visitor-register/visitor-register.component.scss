@@ -271,6 +271,30 @@ textarea.input-field { resize: vertical; }
   margin: -0.35rem 0 1rem;
 }
 
+.field-validation-msg {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  border-radius: 8px;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  margin: -0.7rem 0 0.85rem;
+}
+
+.field-validation-msg mat-icon {
+  flex: 0 0 auto;
+  font-size: 1rem;
+  width: 1rem;
+  height: 1rem;
+}
+
+.field-validation-msg.error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+}
+
 .mobile-validation-msg mat-icon,
 .inline-hint-icon {
   flex: 0 0 auto;

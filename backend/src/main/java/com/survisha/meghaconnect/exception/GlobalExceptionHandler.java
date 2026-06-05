@@ -261,6 +261,9 @@ public class GlobalExceptionHandler {
     }
 
     private String clientSafeMessage(MeghaConnectException ex) {
+        if (ex instanceof VisitorRegistrationValidationException) {
+            return ex.getMessage();
+        }
         if (ErrorCodeConstants.INVALID_CREDENTIALS.equals(ex.getErrorCode())) {
             return ErrorCodeConstants.INVALID_CREDENTIALS_MSG;
         }

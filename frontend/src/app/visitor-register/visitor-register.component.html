@@ -123,9 +123,12 @@
 
           <mat-form-field appearance="outline" class="full-width" *ngIf="form.idType === 'NONE'">
             <mat-label>Full Name *</mat-label>
-            <input matInput type="text" [(ngModel)]="form.fullName" placeholder="Enter visitor full name" (input)="sanitizeFullName()" (blur)="trimFullName()" />
-            <mat-error *ngIf="nameValidationMessage">{{ nameValidationMessage }}</mat-error>
+            <input matInput type="text" [(ngModel)]="form.fullName" placeholder="Enter visitor full name" (keydown)="allowNameOnly($event)" (paste)="pasteFullName($event)" (input)="sanitizeFullName()" (blur)="trimFullName()" />
           </mat-form-field>
+          <div class="field-validation-msg error" *ngIf="form.idType === 'NONE' && nameValidationMessage">
+            <mat-icon>error</mat-icon>
+            <span>{{ nameValidationMessage }}</span>
+          </div>
 
           <mat-form-field appearance="outline" class="full-width" *ngIf="form.idType === 'EPIC'">
             <mat-label>{{ 'EPIC_NUMBER' | translate }} *</mat-label>
@@ -140,8 +143,11 @@
               (input)="sanitizeEpicInput()"
             />
             <mat-hint><mat-icon>info</mat-icon> {{ 'EPIC_FORMAT_HINT' | translate }}</mat-hint>
-            <mat-error *ngIf="epicValidationMessage">{{ epicValidationMessage }}</mat-error>
           </mat-form-field>
+          <div class="field-validation-msg error" *ngIf="form.idType === 'EPIC' && epicValidationMessage">
+            <mat-icon>error</mat-icon>
+            <span>{{ epicValidationMessage }}</span>
+          </div>
 
           <!-- Visitor Name Field (for EPIC verification) -->
           <mat-form-field appearance="outline" class="full-width" *ngIf="form.idType === 'EPIC'">
@@ -153,12 +159,17 @@
               type="text"
               [(ngModel)]="form.visitorName"
               placeholder="e.g. MAREIAM MOSSANG"
+              (keydown)="allowNameOnly($event)"
+              (paste)="pasteVisitorName($event)"
               (input)="sanitizeVisitorName()"
               (blur)="trimVisitorName()"
             />
             <mat-hint><mat-icon>info</mat-icon> {{ 'VISITOR_NAME_VOTER_CARD_HINT' | translate }}</mat-hint>
-            <mat-error *ngIf="nameValidationMessage">{{ nameValidationMessage }}</mat-error>
           </mat-form-field>
+          <div class="field-validation-msg error" *ngIf="form.idType === 'EPIC' && nameValidationMessage">
+            <mat-icon>error</mat-icon>
+            <span>{{ nameValidationMessage }}</span>
+          </div>
 
           
 
@@ -192,6 +203,8 @@
               [placeholder]="'ENTER_10_DIGIT_MOBILE' | translate"
               maxlength="10"
               inputmode="numeric"
+              (keydown)="allowDigitsOnly($event)"
+              (paste)="pasteManualPhone($event)"
               (input)="sanitizeManualPhone()"
               (blur)="onMobileBlur()"
             />

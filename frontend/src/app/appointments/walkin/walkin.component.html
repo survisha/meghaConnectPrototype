@@ -185,7 +185,7 @@
                 <mat-icon>manage_accounts</mat-icon>
                 Update Details
               </button>
-              <button mat-stroked-button type="button" [disabled]="!selectedVisitor" (click)="openKycPanel()">
+              <button mat-stroked-button type="button" [disabled]="!isKycPending(selectedVisitor)" (click)="openKycPanel()">
                 <mat-icon>verified_user</mat-icon>
                 Perform KYC
               </button>

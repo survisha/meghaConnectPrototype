@@ -162,6 +162,10 @@ export class WalkinComponent implements OnDestroy {
       this.errorMsg = 'Select a visitor before performing KYC.';
       return;
     }
+    if (!this.isKycPending(this.selectedVisitor)) {
+      this.errorMsg = 'KYC is already completed or matched for the selected visitor.';
+      return;
+    }
     this.hideActionPanels();
     this.foundPerson = this.selectedVisitor;
     this.kycRetryForm = {
@@ -203,7 +207,8 @@ export class WalkinComponent implements OnDestroy {
   }
 
   isKycPending(visitor: Visitor | null): boolean {
-    return !!visitor && (visitor.kycStatus === 'KYC_PENDING' || visitor.kycStatus === 'PENDING');
+    const status = visitor?.kycStatus?.trim().toUpperCase();
+    return !status || status === 'KYC_PENDING' || status === 'PENDING';
   }
 
   kycStatusLabel(visitor: Visitor | null): string {

@@ -237,20 +237,20 @@ public class VisitorPassService {
     }
 
     private void drawMiniLogoMark(PDPageContentStream content, float x, float y) throws IOException {
-        content.setStrokingColor(new Color(10, 150, 205));
+        content.setStrokingColor(new Color(20, 150, 232));
         content.setLineWidth(6.5f);
+        content.setLineCapStyle(1);
+        content.setLineJoinStyle(1);
         content.moveTo(x + 7, y);
-        content.lineTo(x + 7, y + 24);
-        content.moveTo(x + 7, y + 24);
-        content.curveTo(x + 17, y + 35, x + 25, y + 8, x + 34, y + 14);
-        content.curveTo(x + 41, y + 8, x + 49, y + 35, x + 59, y + 24);
-        content.moveTo(x + 59, y + 24);
+        content.lineTo(x + 7, y + 23);
+        content.curveTo(x + 18, y + 36, x + 26, y + 7, x + 34, y + 13);
+        content.curveTo(x + 42, y + 7, x + 50, y + 36, x + 59, y + 23);
         content.lineTo(x + 59, y);
         content.stroke();
-        content.setNonStrokingColor(new Color(4, 92, 219));
-        fillCircle(content, x + 7, y + 36, 5.4f);
-        content.setNonStrokingColor(new Color(10, 196, 184));
-        fillCircle(content, x + 59, y + 36, 5.4f);
+        content.setNonStrokingColor(new Color(11, 94, 215));
+        fillCircle(content, x + 7, y + 36, 5.6f);
+        content.setNonStrokingColor(new Color(23, 195, 200));
+        fillCircle(content, x + 59, y + 36, 5.6f);
         content.setStrokingColor(Color.BLACK);
     }
 

@@ -6,10 +6,11 @@ Add-Type -AssemblyName System.Drawing
 
 $ErrorActionPreference = "Stop"
 
-$blue = [System.Drawing.Color]::FromArgb(255, 4, 92, 219)
-$darkBlue = [System.Drawing.Color]::FromArgb(255, 7, 31, 92)
-$teal = [System.Drawing.Color]::FromArgb(255, 10, 196, 184)
-$muted = [System.Drawing.Color]::FromArgb(255, 75, 85, 99)
+$blue = [System.Drawing.Color]::FromArgb(255, 11, 94, 215)
+$midBlue = [System.Drawing.Color]::FromArgb(255, 20, 150, 232)
+$darkBlue = [System.Drawing.Color]::FromArgb(255, 8, 43, 122)
+$teal = [System.Drawing.Color]::FromArgb(255, 23, 195, 200)
+$muted = [System.Drawing.Color]::FromArgb(255, 85, 85, 85)
 $white = [System.Drawing.Color]::White
 $transparent = [System.Drawing.Color]::FromArgb(0, 255, 255, 255)
 
@@ -20,7 +21,12 @@ function Ensure-Dir([string]$Path) {
 }
 
 function New-GradientBrush([System.Drawing.RectangleF]$Rect) {
-    return [System.Drawing.Drawing2D.LinearGradientBrush]::new($Rect, $blue, $teal, 0)
+    $brush = [System.Drawing.Drawing2D.LinearGradientBrush]::new($Rect, $blue, $teal, 0)
+    $blend = [System.Drawing.Drawing2D.ColorBlend]::new(3)
+    $blend.Positions = [single[]](0, 0.52, 1)
+    $blend.Colors = [System.Drawing.Color[]]($blue, $midBlue, $teal)
+    $brush.InterpolationColors = $blend
+    return $brush
 }
 
 function Draw-RoundLine($Graphics, [float]$X1, [float]$Y1, [float]$X2, [float]$Y2, [float]$Width, $Brush) {
@@ -34,38 +40,45 @@ function Draw-RoundLine($Graphics, [float]$X1, [float]$Y1, [float]$X2, [float]$Y
 function Draw-LogoMark($Graphics, [float]$X, [float]$Y, [float]$W, [float]$H) {
     $rect = [System.Drawing.RectangleF]::new($X, $Y, $W, $H)
     $grad = New-GradientBrush $rect
-    $lineWidth = $W * 0.16
+    $lineWidth = $W * 0.14
 
-    Draw-RoundLine $Graphics ($X + $W * 0.18) ($Y + $H * 0.68) ($X + $W * 0.18) ($Y + $H * 0.43) $lineWidth $grad
-
-    $path = [System.Drawing.Drawing2D.GraphicsPath]::new()
-    $path.StartFigure()
-    $path.AddBezier(
-        ($X + $W * 0.18), ($Y + $H * 0.43),
-        ($X + $W * 0.28), ($Y + $H * 0.31),
-        ($X + $W * 0.38), ($Y + $H * 0.55),
-        ($X + $W * 0.48), ($Y + $H * 0.64)
-    )
-    $path.AddBezier(
-        ($X + $W * 0.48), ($Y + $H * 0.64),
-        ($X + $W * 0.54), ($Y + $H * 0.70),
-        ($X + $W * 0.61), ($Y + $H * 0.55),
-        ($X + $W * 0.72), ($Y + $H * 0.43)
-    )
     $pen = [System.Drawing.Pen]::new($grad, $lineWidth)
     $pen.StartCap = [System.Drawing.Drawing2D.LineCap]::Round
     $pen.EndCap = [System.Drawing.Drawing2D.LineCap]::Round
     $pen.LineJoin = [System.Drawing.Drawing2D.LineJoin]::Round
+
+    $leftX = $X + $W * 0.18
+    $rightX = $X + $W * 0.82
+    $bodyTop = $Y + $H * 0.36
+    $bodyBottom = $Y + $H * 0.88
+    $shoulderY = $Y + $H * 0.43
+    $valleyY = $Y + $H * 0.69
+    $centerX = $X + $W * 0.50
+
+    $path = [System.Drawing.Drawing2D.GraphicsPath]::new()
+    $path.StartFigure()
+    $path.AddLine($leftX, $bodyBottom, $leftX, $bodyTop)
+    $path.AddBezier(
+        $leftX, $shoulderY,
+        ($X + $W * 0.30), ($Y + $H * 0.28),
+        ($X + $W * 0.39), ($Y + $H * 0.59),
+        $centerX, $valleyY
+    )
+    $path.AddBezier(
+        $centerX, $valleyY,
+        ($X + $W * 0.61), ($Y + $H * 0.59),
+        ($X + $W * 0.70), ($Y + $H * 0.28),
+        $rightX, $shoulderY
+    )
+    $path.AddLine($rightX, $bodyTop, $rightX, $bodyBottom)
     $Graphics.DrawPath($pen, $path)
-    $pen.Dispose()
     $path.Dispose()
+    $pen.Dispose()
 
-    Draw-RoundLine $Graphics ($X + $W * 0.82) ($Y + $H * 0.68) ($X + $W * 0.82) ($Y + $H * 0.43) $lineWidth $grad
-    Draw-RoundLine $Graphics ($X + $W * 0.72) ($Y + $H * 0.43) ($X + $W * 0.82) ($Y + $H * 0.43) $lineWidth $grad
-
-    $head = $W * 0.12
-    $Graphics.FillEllipse($grad, $X + $W * 0.12, $Y + $H * 0.04, $head, $head)
-    $Graphics.FillEllipse($grad, $X + $W * 0.76, $Y + $H * 0.04, $head, $head)
+    $head = $W * 0.13
+    $headY = $Y + $H * 0.03
+    $Graphics.FillEllipse($grad, $leftX - ($head / 2), $headY, $head, $head)
+    $Graphics.FillEllipse($grad, $rightX - ($head / 2), $headY, $head, $head)
     $grad.Dispose()
 }
 
@@ -75,35 +88,43 @@ function Draw-LogoLockup($Graphics, [int]$Width, [int]$Height, [switch]$WhiteVar
     $Graphics.TextRenderingHint = [System.Drawing.Text.TextRenderingHint]::AntiAliasGridFit
 
     if ($IconOnly) {
-        $side = [Math]::Min($Width, $Height) * 0.78
-        Draw-LogoMark $Graphics (($Width - $side) / 2) (($Height - $side) / 2) $side $side
+        $iconW = [Math]::Min($Width, $Height) * 0.60
+        $iconH = $iconW * 0.70
+        Draw-LogoMark $Graphics (($Width - $iconW) / 2) (($Height - $iconH) / 2) $iconW $iconH
         return
     }
 
-    $markW = $Width * 0.52
-    $markH = $Height * 0.42
-    Draw-LogoMark $Graphics (($Width - $markW) / 2) ($Height * 0.05) $markW $markH
+    $markW = $Width * 0.46
+    $markH = $markW * 0.70
+    Draw-LogoMark $Graphics (($Width - $markW) / 2) ($Height * 0.02) $markW $markH
 
-    $brandSize = [Math]::Max(16, $Height * 0.115)
+    $brandSize = [Math]::Max(16, $Height * 0.11)
     $tagSize = [Math]::Max(8, $Height * 0.036)
     $brandFont = [System.Drawing.Font]::new("Segoe UI", $brandSize, [System.Drawing.FontStyle]::Bold)
     $tagFont = [System.Drawing.Font]::new("Segoe UI", $tagSize, [System.Drawing.FontStyle]::Regular)
-    $brand = "MEGHACONNECT"
+    $brandLeft = "MEGHA"
+    $brandRight = "CONNECT"
     $tag = "CONNECTING PEOPLE, EMPOWERING LIVES"
-    $brandBrush = if ($WhiteVariant) { [System.Drawing.SolidBrush]::new($white) } else { New-GradientBrush ([System.Drawing.RectangleF]::new(0, 0, $Width, $Height)) }
+    $brandLeftBrush = if ($WhiteVariant) { [System.Drawing.SolidBrush]::new($white) } else { [System.Drawing.SolidBrush]::new($darkBlue) }
+    $brandRightBrush = if ($WhiteVariant) { [System.Drawing.SolidBrush]::new($white) } else { [System.Drawing.SolidBrush]::new($teal) }
     $tagBrush = if ($WhiteVariant) { [System.Drawing.SolidBrush]::new($white) } else { [System.Drawing.SolidBrush]::new($muted) }
 
-    $brandSizeMeasured = $Graphics.MeasureString($brand, $brandFont)
-    $brandY = $Height * 0.58
-    $Graphics.DrawString($brand, $brandFont, $brandBrush, (($Width - $brandSizeMeasured.Width) / 2), $brandY)
+    $brandLeftSize = $Graphics.MeasureString($brandLeft, $brandFont)
+    $brandRightSize = $Graphics.MeasureString($brandRight, $brandFont)
+    $brandWidth = $brandLeftSize.Width + $brandRightSize.Width - ($brandSize * 0.06)
+    $brandY = $Height * 0.68
+    $brandX = ($Width - $brandWidth) / 2
+    $Graphics.DrawString($brandLeft, $brandFont, $brandLeftBrush, $brandX, $brandY)
+    $Graphics.DrawString($brandRight, $brandFont, $brandRightBrush, ($brandX + $brandLeftSize.Width - ($brandSize * 0.06)), $brandY)
 
     $tagSizeMeasured = $Graphics.MeasureString($tag, $tagFont)
-    $tagY = $Height * 0.78
+    $tagY = $Height * 0.84
     $Graphics.DrawString($tag, $tagFont, $tagBrush, (($Width - $tagSizeMeasured.Width) / 2), $tagY)
 
     $brandFont.Dispose()
     $tagFont.Dispose()
-    $brandBrush.Dispose()
+    $brandLeftBrush.Dispose()
+    $brandRightBrush.Dispose()
     $tagBrush.Dispose()
 }
 
@@ -152,30 +173,34 @@ function Save-Ico([string]$Path, [string[]]$PngPaths) {
 }
 
 function Write-Svg([string]$Path, [string]$TextColor, [string]$TagColor) {
+if ($TextColor -eq "#FFFFFF") {
+    $wordmark = '<tspan fill="#FFFFFF">MEGHA</tspan><tspan fill="#FFFFFF">CONNECT</tspan>'
+} else {
+    $wordmark = '<tspan fill="#082B7A">MEGHA</tspan><tspan fill="#17C3C8">CONNECT</tspan>'
+}
 @"
 <svg role="img" aria-label="MeghaConnect logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 430">
   <title>MeghaConnect</title>
   <defs>
-    <linearGradient id="mcGradient" x1="160" y1="35" x2="740" y2="330" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#045CDB"/>
-      <stop offset="1" stop-color="#0AC4B8"/>
-    </linearGradient>
-    <linearGradient id="mcTextGradient" x1="130" y1="0" x2="770" y2="0" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#071F5C"/>
-      <stop offset="1" stop-color="#0AC4B8"/>
+    <linearGradient id="mcGradient" x1="180" y1="0" x2="720" y2="0" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B5ED7"/>
+      <stop offset="0.52" stop-color="#1496E8"/>
+      <stop offset="1" stop-color="#17C3C8"/>
     </linearGradient>
   </defs>
-  <g fill="none" stroke="url(#mcGradient)" stroke-linecap="round" stroke-width="74">
-    <path d="M210 238V136C210 136 270 115 326 170L396 240C420 264 455 264 480 240L550 170C606 115 670 136 670 136V238"/>
+  <g fill="none" stroke="url(#mcGradient)" stroke-linecap="round" stroke-linejoin="round" stroke-width="74">
+    <path d="M220 255V150 C220 142 220 142 220 142 C300 64 372 188 450 232 C528 188 600 64 680 142 C680 142 680 142 680 150 V255"/>
   </g>
-  <circle cx="210" cy="70" r="42" fill="url(#mcGradient)"/>
-  <circle cx="670" cy="70" r="42" fill="url(#mcGradient)"/>
-  <text x="450" y="335" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="72" font-weight="850" letter-spacing="10" fill="$TextColor">MEGHACONNECT</text>
+  <circle cx="220" cy="62" r="34" fill="url(#mcGradient)"/>
+  <circle cx="680" cy="62" r="34" fill="url(#mcGradient)"/>
+  <text x="450" y="333" text-anchor="middle" font-family="Inter, Montserrat, Poppins, Segoe UI, Arial, sans-serif" font-size="70" font-weight="900" letter-spacing="7">
+    $wordmark
+  </text>
   <g fill="none" stroke="$TagColor" stroke-width="1.5" opacity="0.85">
-    <path d="M115 383H220"/>
-    <path d="M680 383H785"/>
+    <path d="M118 382H216"/>
+    <path d="M684 382H782"/>
   </g>
-  <text x="450" y="392" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="22" font-weight="500" letter-spacing="7" fill="$TagColor">CONNECTING PEOPLE, EMPOWERING LIVES</text>
+  <text x="450" y="390" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="21" font-weight="500" letter-spacing="5" fill="$TagColor">CONNECTING PEOPLE, EMPOWERING LIVES</text>
 </svg>
 "@ | Set-Content -LiteralPath $Path -Encoding UTF8
 }

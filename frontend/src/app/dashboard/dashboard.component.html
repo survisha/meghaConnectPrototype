@@ -1,50 +1,7 @@
 <div>
-  <div class="dashboard-brand-header">
-    <div class="dashboard-brand-copy">
-      <app-brand-logo class="dashboard-brand-logo" label="MeghaConnect AI"></app-brand-logo>
-      <div>
-        <h2 class="page-title">Dashboard</h2>
-        <p>AI Powered Appointment & Scheme Management Platform</p>
-      </div>
-    </div>
-    <div class="dashboard-user-panel">
-      <span class="ai-powered-chip"><mat-icon>auto_awesome</mat-icon> AI Powered</span>
-      <strong>{{ auth.user()?.fullName || 'Current User' }}</strong>
-      <span>{{ auth.user()?.role || 'Role' }}</span>
-      <small>
-        <mat-icon>calendar_today</mat-icon>
-        {{ currentDateLabel }}
-      </small>
-    </div>
-  </div>
+  
 
-  <div class="ai-module-strip" *ngIf="showCharts">
-    <article>
-      <mat-icon>smart_toy</mat-icon>
-      <strong>MeghaBot</strong>
-      <span>Citizen guidance</span>
-    </article>
-    <article>
-      <mat-icon>description</mat-icon>
-      <strong>AI Notes</strong>
-      <span>Document summaries</span>
-    </article>
-    <article>
-      <mat-icon>insights</mat-icon>
-      <strong>AI Dashboard Insights</strong>
-      <span>Operational signals</span>
-    </article>
-    <article>
-      <mat-icon>document_scanner</mat-icon>
-      <strong>OCR Understanding</strong>
-      <span>Document intelligence</span>
-    </article>
-    <article>
-      <mat-icon>trending_up</mat-icon>
-      <strong>Predictive Analytics</strong>
-      <span>Future readiness</span>
-    </article>
-  </div>
+  
 
   <div *ngIf="errorMsg" class="error-message" style="margin-bottom:1rem">
     {{ errorMsg }}

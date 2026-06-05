@@ -1,6 +1,5 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
-import { MatIconModule } from '@angular/material/icon';
 import { RouterOutlet } from '@angular/router';
 import { LanguageService } from './i18n/language.service';
 import { BrandLogoComponent } from './shared/brand-logo/brand-logo.component';
@@ -8,25 +7,13 @@ import { BrandLogoComponent } from './shared/brand-logo/brand-logo.component';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, MatIconModule, BrandLogoComponent],
+  imports: [CommonModule, RouterOutlet, BrandLogoComponent],
   template: `
     <div *ngIf="showWelcome" class="welcome-screen">
       <div class="welcome-top">
-        <app-brand-logo class="welcome-logo-lockup" label="MeghaConnect logo" src="/asserts/logo-white.svg"></app-brand-logo>
+        <app-brand-logo class="welcome-logo-lockup" label="MeghaConnect logo"></app-brand-logo>
       </div>
       <div class="welcome-main">
-        <div class="ai-orbit" aria-hidden="true">
-          <span class="node node-a"></span>
-          <span class="node node-b"></span>
-          <span class="node node-c"></span>
-          <span class="node node-d"></span>
-          <span class="node node-e"></span>
-          <span class="link link-a"></span>
-          <span class="link link-b"></span>
-          <span class="link link-c"></span>
-          <span class="link link-d"></span>
-          <mat-icon class="orbit-calendar">event_available</mat-icon>
-        </div>
         <h1>MeghaConnect</h1>
         <p>Connecting People, Empowering Lives</p>
         <div class="welcome-features" aria-label="Platform highlights">
@@ -51,9 +38,9 @@ import { BrandLogoComponent } from './shared/brand-logo/brand-logo.component';
       gap: 1.5rem;
       padding: 1.25rem;
       background:
-        radial-gradient(circle at 50% 30%, rgba(34, 211, 238, 0.18), transparent 32%),
-        linear-gradient(145deg, #071538 0%, #0b1f5c 50%, #111827 100%);
-      color: #ffffff;
+        radial-gradient(circle at 50% 20%, rgba(23, 195, 200, 0.18), transparent 34%),
+        linear-gradient(145deg, #f8fcff 0%, #eef8fb 52%, #ffffff 100%);
+      color: #082b7a;
       text-align: center;
       overflow: hidden;
     }
@@ -66,7 +53,7 @@ import { BrandLogoComponent } from './shared/brand-logo/brand-logo.component';
     .welcome-logo-lockup {
       width: min(84vw, 390px);
       height: auto;
-      filter: drop-shadow(0 18px 42px rgba(0, 0, 0, 0.24));
+      filter: none;
     }
     .welcome-main {
       position: relative;
@@ -76,66 +63,18 @@ import { BrandLogoComponent } from './shared/brand-logo/brand-logo.component';
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      border: 1px solid rgba(125, 211, 252, 0.26);
+      border: 1px solid rgba(20, 150, 232, 0.18);
       border-radius: 24px;
-      background: rgba(7, 21, 56, 0.64);
-      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.3);
+      background: rgba(255, 255, 255, 0.9);
+      box-shadow: 0 18px 54px rgba(8, 43, 122, 0.12);
       overflow: hidden;
       padding: 2rem 1.25rem;
       backdrop-filter: blur(18px);
     }
-    .ai-orbit {
-      position: relative;
-      width: 168px;
-      height: 168px;
-      margin-bottom: 1rem;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(34, 211, 238, 0.2), rgba(139, 92, 246, 0.08) 54%, transparent 70%);
-      animation: welcome-pulse 1.8s ease-in-out infinite;
-    }
-    .node,
-    .link,
-    .orbit-calendar {
-      position: absolute;
-    }
-    .node {
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      background: #ffffff;
-      box-shadow: 0 0 0 8px rgba(34, 211, 238, 0.2), 0 0 20px rgba(34, 211, 238, 0.72);
-    }
-    .node-a { left: 28px; top: 34px; }
-    .node-b { right: 28px; top: 34px; }
-    .node-c { left: 76px; top: 76px; }
-    .node-d { left: 28px; bottom: 34px; }
-    .node-e { right: 28px; bottom: 34px; }
-    .link {
-      height: 2px;
-      width: 72px;
-      background: linear-gradient(90deg, rgba(34, 211, 238, 0.2), rgba(255, 255, 255, 0.84), rgba(139, 92, 246, 0.24));
-      transform-origin: left center;
-    }
-    .link-a { left: 42px; top: 47px; }
-    .link-b { left: 42px; top: 48px; transform: rotate(38deg); }
-    .link-c { left: 88px; top: 90px; transform: rotate(-38deg); }
-    .link-d { left: 42px; bottom: 47px; }
-    .orbit-calendar {
-      inset: 0;
-      margin: auto;
-      width: 58px;
-      height: 58px;
-      display: grid;
-      place-items: center;
-      border-radius: 18px;
-      background: rgba(255, 255, 255, 0.14);
-      color: #ffffff;
-      font-size: 34px;
-    }
     .welcome-main h1 {
       position: relative;
       margin: 0;
-      color: #ffffff;
+      color: #082b7a;
       font-size: clamp(2.1rem, 8vw, 3.6rem);
       font-weight: 900;
       letter-spacing: 0;
@@ -143,7 +82,7 @@ import { BrandLogoComponent } from './shared/brand-logo/brand-logo.component';
     .welcome-main p {
       position: relative;
       margin: 0.5rem 0 0;
-      color: #c7d2fe;
+      color: #555555;
       font-size: 0.95rem;
     }
     .welcome-features {
@@ -155,10 +94,10 @@ import { BrandLogoComponent } from './shared/brand-logo/brand-logo.component';
       margin-top: 1.1rem;
     }
     .welcome-features span {
-      border: 1px solid rgba(125, 211, 252, 0.28);
+      border: 1px solid rgba(23, 195, 200, 0.22);
       border-radius: 999px;
-      background: rgba(255, 255, 255, 0.08);
-      color: #e0f2fe;
+      background: rgba(23, 195, 200, 0.08);
+      color: #082b7a;
       font-size: 0.72rem;
       font-weight: 750;
       padding: 0.34rem 0.65rem;
@@ -168,8 +107,8 @@ import { BrandLogoComponent } from './shared/brand-logo/brand-logo.component';
       width: 34px;
       height: 34px;
       margin-top: 1.25rem;
-      border: 3px solid rgba(255, 255, 255, 0.16);
-      border-top-color: #22d3ee;
+      border: 3px solid rgba(11, 94, 215, 0.14);
+      border-top-color: #17c3c8;
       border-radius: 50%;
       animation: welcome-spin 0.8s linear infinite;
     }

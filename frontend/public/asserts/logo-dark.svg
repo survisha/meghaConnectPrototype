@@ -1,24 +1,23 @@
 ﻿<svg role="img" aria-label="MeghaConnect logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 430">
   <title>MeghaConnect</title>
   <defs>
-    <linearGradient id="mcGradient" x1="160" y1="35" x2="740" y2="330" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#045CDB"/>
-      <stop offset="1" stop-color="#0AC4B8"/>
-    </linearGradient>
-    <linearGradient id="mcTextGradient" x1="130" y1="0" x2="770" y2="0" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#071F5C"/>
-      <stop offset="1" stop-color="#0AC4B8"/>
+    <linearGradient id="mcGradient" x1="180" y1="0" x2="720" y2="0" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B5ED7"/>
+      <stop offset="0.52" stop-color="#1496E8"/>
+      <stop offset="1" stop-color="#17C3C8"/>
     </linearGradient>
   </defs>
-  <g fill="none" stroke="url(#mcGradient)" stroke-linecap="round" stroke-width="74">
-    <path d="M210 238V136C210 136 270 115 326 170L396 240C420 264 455 264 480 240L550 170C606 115 670 136 670 136V238"/>
+  <g fill="none" stroke="url(#mcGradient)" stroke-linecap="round" stroke-linejoin="round" stroke-width="74">
+    <path d="M220 255V150 C220 142 220 142 220 142 C300 64 372 188 450 232 C528 188 600 64 680 142 C680 142 680 142 680 150 V255"/>
   </g>
-  <circle cx="210" cy="70" r="42" fill="url(#mcGradient)"/>
-  <circle cx="670" cy="70" r="42" fill="url(#mcGradient)"/>
-  <text x="450" y="335" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="72" font-weight="850" letter-spacing="10" fill="url(#mcTextGradient)">MEGHACONNECT</text>
+  <circle cx="220" cy="62" r="34" fill="url(#mcGradient)"/>
+  <circle cx="680" cy="62" r="34" fill="url(#mcGradient)"/>
+  <text x="450" y="333" text-anchor="middle" font-family="Inter, Montserrat, Poppins, Segoe UI, Arial, sans-serif" font-size="70" font-weight="900" letter-spacing="7">
+    <tspan fill="#082B7A">MEGHA</tspan><tspan fill="#17C3C8">CONNECT</tspan>
+  </text>
   <g fill="none" stroke="#4B5563" stroke-width="1.5" opacity="0.85">
-    <path d="M115 383H220"/>
-    <path d="M680 383H785"/>
+    <path d="M118 382H216"/>
+    <path d="M684 382H782"/>
   </g>
-  <text x="450" y="392" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="22" font-weight="500" letter-spacing="7" fill="#4B5563">CONNECTING PEOPLE, EMPOWERING LIVES</text>
+  <text x="450" y="390" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="21" font-weight="500" letter-spacing="5" fill="#4B5563">CONNECTING PEOPLE, EMPOWERING LIVES</text>
 </svg>

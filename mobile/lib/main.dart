@@ -175,7 +175,7 @@ class _WelcomeScreenState extends State<_WelcomeScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF071538),
+      backgroundColor: const Color(0xFFF8FCFF),
       body: SafeArea(
         child: Center(
           child: Padding(
@@ -183,27 +183,20 @@ class _WelcomeScreenState extends State<_WelcomeScreen>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Image.asset(
-                  'assets/logo-small.png',
-                  width: 76,
-                  height: 76,
-                  fit: BoxFit.contain,
-                ),
-                const SizedBox(height: 16),
                 Container(
                   width: double.infinity,
                   constraints: const BoxConstraints(maxWidth: 360),
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 26),
+                      const EdgeInsets.symmetric(horizontal: 22, vertical: 30),
                   decoration: BoxDecoration(
-                    color: const Color(0xCC0B1F5C),
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: const Color(0x5538BDF8)),
+                    color: Colors.white.withAlpha(242),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0x332096E8)),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withAlpha(76),
-                        blurRadius: 34,
-                        offset: const Offset(0, 18),
+                        color: const Color(0xFF082B7A).withAlpha(24),
+                        blurRadius: 36,
+                        offset: const Offset(0, 16),
                       ),
                     ],
                   ),
@@ -216,17 +209,17 @@ class _WelcomeScreenState extends State<_WelcomeScreen>
                           ScaleTransition(
                             scale: _pulse,
                             child: Image.asset(
-                              'assets/logo-white.png',
-                              width: 260,
-                              height: 124,
+                              'assets/logo.png',
+                              width: 280,
+                              height: 134,
                               fit: BoxFit.contain,
                             ),
                           ),
-                          const SizedBox(height: 18),
+                          const SizedBox(height: 12),
                           const Text(
                             'MeghaConnect',
                             style: TextStyle(
-                              color: Colors.white,
+                              color: Color(0xFF082B7A),
                               fontSize: 30,
                               fontWeight: FontWeight.w900,
                             ),
@@ -235,7 +228,7 @@ class _WelcomeScreenState extends State<_WelcomeScreen>
                           const Text(
                             'Connecting People, Empowering Lives',
                             textAlign: TextAlign.center,
-                            style: TextStyle(color: Color(0xFFC7D2FE)),
+                            style: TextStyle(color: Color(0xFF555555)),
                           ),
                           const SizedBox(height: 14),
                           Wrap(
@@ -245,24 +238,24 @@ class _WelcomeScreenState extends State<_WelcomeScreen>
                             children: [
                               'Appointment Management',
                               'Scheme Tracking',
-                              'AI Insights',
-                              'AI Notes',
+                              'Citizen Services',
+                              'Public Darbar',
                               'Visitor Management',
                             ]
                                 .map((label) => Container(
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 9, vertical: 5),
                                       decoration: BoxDecoration(
-                                        color: Colors.white.withAlpha(20),
+                                        color: const Color(0x1417C3C8),
                                         borderRadius:
                                             BorderRadius.circular(999),
                                         border: Border.all(
-                                            color: const Color(0x5538BDF8)),
+                                            color: const Color(0x3317C3C8)),
                                       ),
                                       child: Text(
                                         label,
                                         style: const TextStyle(
-                                          color: Color(0xFFE0F2FE),
+                                          color: Color(0xFF082B7A),
                                           fontSize: 11,
                                           fontWeight: FontWeight.w700,
                                         ),
@@ -275,7 +268,10 @@ class _WelcomeScreenState extends State<_WelcomeScreen>
                             const SizedBox(
                               width: 34,
                               height: 34,
-                              child: CircularProgressIndicator(strokeWidth: 3),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 3,
+                                color: Color(0xFF17C3C8),
+                              ),
                             ),
                           ],
                         ],

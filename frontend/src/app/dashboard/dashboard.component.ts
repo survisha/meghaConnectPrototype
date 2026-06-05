@@ -13,7 +13,7 @@ import { UIChart } from 'primeng/chart';
 import { AiInsightsDashboardComponent } from '../ai-insights-dashboard/ai-insights-dashboard.component';
 import { Appointment, AuditEntry, EventType, ScheduleEvent, SchemeApplication } from '../models';
 import { apiErrorMessage } from '../shared/api-error.util';
-import { BrandLogoComponent } from '../shared/brand-logo/brand-logo.component';
+
 
 interface QuickAction { label: string; matIcon: string; route: string; severity: string; }
 
@@ -44,7 +44,7 @@ interface DashboardActivityItem {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, MatButtonModule, MatIconModule, UIChart, AiInsightsDashboardComponent, BrandLogoComponent],
+  imports: [CommonModule, RouterLink, MatButtonModule, MatIconModule, UIChart, AiInsightsDashboardComponent],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss'],
 })

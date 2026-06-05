@@ -56,6 +56,7 @@ export class PublicIdentificationComponent {
   schemeHistory: CitizenSchemeHistory[] = [];
   meetingHistory: CitizenAppointmentHistory[] = [];
   lastVisited: CitizenAppointmentHistory | null = null;
+  lastVisitedAtDisplay = '';
   upcomingAppointment: CitizenAppointmentHistory | null = null;
 
   constructor(private visitorSearchService: VisitorSearchService) {}
@@ -64,6 +65,7 @@ export class PublicIdentificationComponent {
     this.schemeHistory = [];
     this.meetingHistory = [];
     this.lastVisited = null;
+    this.lastVisitedAtDisplay = '';
     this.upcomingAppointment = null;
     this.citizenHistory = null;
     this.historyError = '';
@@ -195,7 +197,7 @@ export class PublicIdentificationComponent {
   }
 
   get hasAnyHistory(): boolean {
-    return this.schemeHistory.length > 0 || this.meetingHistory.length > 0;
+    return this.schemeHistory.length > 0 || this.meetingHistory.length > 0 || !!this.citizenHistory?.lastVisitedAt;
   }
 
   get groupVisitHistory(): CitizenAppointmentHistory[] {
@@ -208,6 +210,10 @@ export class PublicIdentificationComponent {
 
   get selectedPhotoUrl(): string {
     return this.getVisitorPhotoUrl(this.selected);
+  }
+
+  formatAppointmentDateTime(appointment?: CitizenAppointmentHistory | null): string {
+    return this.formatDateTime(appointment ? this.getAppointmentDateTime(appointment) : null);
   }
 
   toggleSelectedPhotoPreview(): void {
@@ -291,7 +297,7 @@ export class PublicIdentificationComponent {
         this.citizenHistory = history;
         this.schemeHistory = history.schemes || [];
         this.meetingHistory = history.appointments || [];
-        this.processVisitHistory(this.meetingHistory);
+        this.mapFullHistoryResponse(history);
         if (this.selected && this.selected.id === citizenId && history.photoUrl) {
           this.selected = { ...this.selected, photoUrl: history.photoUrl };
           this.selectedPhotoLoadFailed = false;
@@ -303,16 +309,22 @@ export class PublicIdentificationComponent {
         this.schemeHistory = [];
         this.meetingHistory = [];
         this.lastVisited = null;
+        this.lastVisitedAtDisplay = '';
         this.upcomingAppointment = null;
         this.citizenHistory = null;
       },
     });
   }
 
+  private mapFullHistoryResponse(history: PublicIdentificationHistory): void {
+    this.lastVisitedAtDisplay = history.lastVisitedAt ? this.formatDateTime(history.lastVisitedAt) : '';
+    this.processVisitHistory(history.appointments || []);
+  }
+
   private processVisitHistory(records: CitizenAppointmentHistory[]): void {
     const now = new Date();
     const datedRecords = (records || [])
-      .map(record => ({ record, date: this.parseHistoryDate(record.dateTime) }))
+      .map(record => ({ record, date: this.parseHistoryDate(this.getAppointmentDateTime(record)) }))
       .filter((item): item is { record: CitizenAppointmentHistory; date: Date } => !!item.date);
 
     const pastRecords = datedRecords
@@ -322,11 +334,28 @@ export class PublicIdentificationComponent {
 
     const upcomingRecords = datedRecords
       .filter(item => item.date.getTime() >= now.getTime())
-      .filter(item => this.isUpcomingStatus(item.record.status))
+      .filter(item => (item.record.status || '').toUpperCase() === 'SCHEDULED')
       .sort((a, b) => a.date.getTime() - b.date.getTime());
 
     this.lastVisited = pastRecords[0]?.record || null;
     this.upcomingAppointment = upcomingRecords[0]?.record || null;
+  }
+
+  getAppointmentDateTime(appointment: CitizenAppointmentHistory): string | null {
+    const dateOnly = this.firstNonBlank(
+      appointment.appointmentDate,
+      appointment.visitDate,
+      appointment.eventDate,
+      appointment.meetingDate
+    );
+    const timeOnly = this.firstNonBlank(appointment.startTime);
+    const combinedDateTime = dateOnly && timeOnly ? `${dateOnly}T${timeOnly}` : dateOnly;
+    return this.firstNonBlank(
+      appointment.scheduledAt,
+      appointment.appointmentDateTime,
+      appointment.dateTime,
+      combinedDateTime
+    ) || null;
   }
 
   private parseHistoryDate(value?: string | null): Date | null {
@@ -341,24 +370,18 @@ export class PublicIdentificationComponent {
     return ['COMPLETED', 'VISITED', 'CLOSED', 'EXITED', 'RESOLVED'].includes(normalized);
   }
 
-  private isUpcomingStatus(status?: string | null): boolean {
-    const normalized = (status || '').toUpperCase();
-    if (!normalized) return true;
-    return ['SCHEDULED', 'APPROVED', 'UPCOMING', 'PENDING_VISIT', 'APPROVED_WITH_DATE_TIME', 'HCM_ACCEPTED'].includes(normalized);
-  }
-
   private getVisitorPhotoUrl(visitor?: Visitor | null): string {
     if (!visitor) {
       return '';
     }
 
-    const inlinePhoto = this.firstNonBlank(visitor.livePhotoBase64, visitor.photoBase64, visitor.photoUrl);
-    if (inlinePhoto) {
-      return this.normalizePhotoSource(inlinePhoto);
+    const canonicalPhoto = this.firstNonBlank(visitor.photoUrl, visitor.photoStoragePath, visitor.photoPath);
+    if (canonicalPhoto) {
+      return this.normalizePhotoSource(canonicalPhoto);
     }
 
-    const storedPath = this.firstNonBlank(visitor.livePhotoPath, visitor.photoStoragePath, visitor.photoPath);
-    return storedPath ? this.normalizePhotoSource(storedPath) : '';
+    const fallbackPhoto = this.firstNonBlank(visitor.livePhotoPath, visitor.livePhotoBase64, visitor.photoBase64);
+    return fallbackPhoto ? this.normalizePhotoSource(fallbackPhoto) : '';
   }
 
   private normalizePhotoSource(value: string): string {

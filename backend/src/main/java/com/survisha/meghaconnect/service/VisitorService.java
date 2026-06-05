@@ -266,6 +266,8 @@ public class VisitorService {
         if (visitor == null) {
             return null;
         }
+        String canonicalPhotoPath = firstNonBlank(visitor.getPhotoStoragePath(), visitor.getPhotoPath(), visitor.getLivePhotoPath());
+        String livePhotoPath = samePath(visitor.getLivePhotoPath(), canonicalPhotoPath) ? null : trimToNull(visitor.getLivePhotoPath());
 
         return VisitorDto.builder()
                 .id(visitor.getId())
@@ -302,8 +304,9 @@ public class VisitorService {
                 .agendaType(visitor.getAgendaType())
                 .briefDescription(visitor.getBriefDescription())
                 .partNumber(visitor.getPollingPartNo())
-                .photoStoragePath(visitor.getPhotoStoragePath())
-                .livePhotoPath(visitor.getLivePhotoPath())
+                .photoStoragePath(canonicalPhotoPath)
+                .photoUrl(toUploadUrl(canonicalPhotoPath))
+                .livePhotoPath(livePhotoPath)
                 .photoPath(visitor.getPhotoPath())
                 .createdAt(visitor.getCreatedAt())
                 .updatedAt(visitor.getUpdatedAt())
@@ -332,6 +335,23 @@ public class VisitorService {
                 .role("ASSOCIATE")
                 .createdAt(visitor.getCreatedAt())
                 .build();
+    }
+
+    private String toUploadUrl(String path) {
+        String clean = trimToNull(path);
+        if (clean == null) {
+            return null;
+        }
+        if (clean.startsWith("http://") || clean.startsWith("https://") || clean.startsWith("/uploads/")) {
+            return clean;
+        }
+        return "/uploads/" + clean.replaceFirst("^/+", "");
+    }
+
+    private boolean samePath(String left, String right) {
+        String a = trimToNull(left);
+        String b = trimToNull(right);
+        return a != null && b != null && a.equals(b);
     }
 
     public List<VisitorDto> toDtos(List<Visitor> visitors) {

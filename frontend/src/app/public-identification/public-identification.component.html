@@ -198,11 +198,13 @@
                     <mat-icon>history</mat-icon>
                     <span>Last Visited</span>
                   </div>
-                  <ng-container *ngIf="lastVisited; else noPreviousVisit">
-                    <strong>{{ formatDateTime(lastVisited.dateTime) }}</strong>
-                    <p>{{ displayValue(lastVisited.purpose) }}</p>
-                    <p>{{ displayValue(lastVisited.department) }}<span *ngIf="lastVisited.officerName"> - {{ lastVisited.officerName }}</span></p>
-                    <mat-chip class="status-chip" [ngClass]="statusClass(lastVisited.status)">{{ statusLabel(lastVisited.status) }}</mat-chip>
+                  <ng-container *ngIf="lastVisitedAtDisplay || lastVisited; else noPreviousVisit">
+                    <strong>{{ lastVisitedAtDisplay || formatAppointmentDateTime(lastVisited) }}</strong>
+                    <ng-container *ngIf="lastVisited">
+                      <p>{{ displayValue(lastVisited.purpose) }}</p>
+                      <p>{{ displayValue(lastVisited.department) }}<span *ngIf="lastVisited.officerName"> - {{ lastVisited.officerName }}</span></p>
+                      <mat-chip class="status-chip" [ngClass]="statusClass(lastVisited.status)">{{ statusLabel(lastVisited.status) }}</mat-chip>
+                    </ng-container>
                   </ng-container>
                   <ng-template #noPreviousVisit>
                     <p class="visit-empty-text">No previous visit found.</p>
@@ -215,7 +217,7 @@
                     <span>Upcoming Appointment</span>
                   </div>
                   <ng-container *ngIf="upcomingAppointment; else noUpcomingAppointment">
-                    <strong>{{ formatDateTime(upcomingAppointment.dateTime) }}</strong>
+                    <strong>{{ formatAppointmentDateTime(upcomingAppointment) }}</strong>
                     <p>{{ displayValue(upcomingAppointment.department) }}</p>
                     <p>{{ displayValue(upcomingAppointment.purpose) }}</p>
                     <mat-chip class="status-chip" [ngClass]="statusClass(upcomingAppointment.status)">{{ statusLabel(upcomingAppointment.status) }}</mat-chip>

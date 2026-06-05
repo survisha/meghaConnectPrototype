@@ -501,7 +501,9 @@ class _PublicIdentificationScreenState
     final history = _history;
     final schemes = history?.schemes ?? const <Map<String, dynamic>>[];
     final meetings = history?.appointments ?? const <Map<String, dynamic>>[];
-    final lastVisited = _lastVisited(meetings);
+    final lastVisited = _text(history?.lastVisitedAt).isNotEmpty
+        ? {'dateTime': history!.lastVisitedAt}
+        : _lastVisited(meetings);
     final upcomingAppointment = _upcomingAppointment(meetings);
     final photoSource = _firstText([history?.photoUrl, person.photoSource]);
 
@@ -597,7 +599,10 @@ class _PublicIdentificationScreenState
                 )
               else if (_historyError != null)
                 _InlineError(_historyError!)
-              else if (history == null || (schemes.isEmpty && meetings.isEmpty))
+              else if (history == null ||
+                  (schemes.isEmpty &&
+                      meetings.isEmpty &&
+                      history.lastVisitedAt.isEmpty))
                 const Padding(
                   padding: EdgeInsets.all(12),
                   child: Text(
@@ -912,14 +917,15 @@ class _AppointmentSummaryCard extends StatelessWidget {
             Text(emptyText, style: const TextStyle(color: MeghaColors.muted))
           else ...[
             Text(
-              _fmtDateTime(record['dateTime']),
+              _fmtDateTime(_appointmentDateTime(record)),
               style: const TextStyle(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 4),
-            Text(
-              _display(_text(record['purpose'])),
-              style: const TextStyle(color: MeghaColors.text, fontSize: 13),
-            ),
+            if (_text(record['purpose']).isNotEmpty)
+              Text(
+                _text(record['purpose']),
+                style: const TextStyle(color: MeghaColors.text, fontSize: 13),
+              ),
             if (_text(record['department']).isNotEmpty) ...[
               const SizedBox(height: 3),
               Text(
@@ -930,9 +936,11 @@ class _AppointmentSummaryCard extends StatelessWidget {
                 style: const TextStyle(color: MeghaColors.muted, fontSize: 12),
               ),
             ],
-            const SizedBox(height: 6),
-            _StatusPill(_statusLabel(_text(record['status'])),
-                _statusColor(_text(record['status']))),
+            if (_text(record['status']).isNotEmpty) ...[
+              const SizedBox(height: 6),
+              _StatusPill(_statusLabel(_text(record['status'])),
+                  _statusColor(_text(record['status']))),
+            ],
           ],
         ],
       ),
@@ -1000,7 +1008,7 @@ class _MeetingHistoryCard extends StatelessWidget {
         _text(item['officerName']),
       ].where((value) => value.isNotEmpty).join(' / '),
       meta: [
-        _fmtDateTime(item['dateTime']),
+        _fmtDateTime(_appointmentDateTime(item)),
         _text(item['role']) == 'ASSOCIATE'
             ? 'Associate Visitor'
             : 'Primary Visitor',
@@ -1240,7 +1248,8 @@ String _statusLabel(String status) {
 Map<String, dynamic>? _lastVisited(List<Map<String, dynamic>> records) {
   final now = DateTime.now();
   final past = records
-      .map((record) => MapEntry(record, _parseHistoryDate(record['dateTime'])))
+      .map((record) =>
+          MapEntry(record, _parseHistoryDate(_appointmentDateTime(record))))
       .where((entry) =>
           entry.value != null &&
           entry.value!.isBefore(now) &&
@@ -1253,14 +1262,34 @@ Map<String, dynamic>? _lastVisited(List<Map<String, dynamic>> records) {
 Map<String, dynamic>? _upcomingAppointment(List<Map<String, dynamic>> records) {
   final now = DateTime.now();
   final upcoming = records
-      .map((record) => MapEntry(record, _parseHistoryDate(record['dateTime'])))
+      .map((record) =>
+          MapEntry(record, _parseHistoryDate(_appointmentDateTime(record))))
       .where((entry) =>
           entry.value != null &&
           !entry.value!.isBefore(now) &&
-          _isUpcomingStatus(_text(entry.key['status'])))
+          _text(entry.key['status']).toUpperCase() == 'SCHEDULED')
       .toList()
     ..sort((a, b) => a.value!.compareTo(b.value!));
   return upcoming.isEmpty ? null : upcoming.first.key;
+}
+
+String _appointmentDateTime(Map<String, dynamic> item) {
+  final dateOnly = _firstText([
+    item['appointmentDate'],
+    item['visitDate'],
+    item['eventDate'],
+    item['meetingDate'],
+  ]);
+  final timeOnly = _text(item['startTime']);
+  final combined = dateOnly.isNotEmpty && timeOnly.isNotEmpty
+      ? '${dateOnly}T$timeOnly'
+      : dateOnly;
+  return _firstText([
+    item['scheduledAt'],
+    item['appointmentDateTime'],
+    item['dateTime'],
+    combined,
+  ]);
 }
 
 DateTime? _parseHistoryDate(dynamic value) {
@@ -1278,19 +1307,6 @@ bool _isPastVisitStatus(String status) {
     'CLOSED',
     'EXITED',
     'RESOLVED',
-  }.contains(normalized);
-}
-
-bool _isUpcomingStatus(String status) {
-  final normalized = status.toUpperCase();
-  if (normalized.isEmpty) return true;
-  return {
-    'SCHEDULED',
-    'APPROVED',
-    'UPCOMING',
-    'PENDING_VISIT',
-    'APPROVED_WITH_DATE_TIME',
-    'HCM_ACCEPTED',
   }.contains(normalized);
 }
 
@@ -1317,18 +1333,18 @@ Color _statusColor(String status) {
 }
 
 String _photoSource(Map<String, dynamic> raw) {
-  final inline = _firstText([
-    raw['livePhotoBase64'],
-    raw['photoBase64'],
+  final canonical = _firstText([
     raw['photoUrl'],
-  ]);
-  if (inline.isNotEmpty) return _normalizePhotoSource(inline);
-  final stored = _firstText([
-    raw['livePhotoPath'],
     raw['photoStoragePath'],
     raw['photoPath'],
   ]);
-  return stored.isEmpty ? '' : _normalizePhotoSource(stored);
+  if (canonical.isNotEmpty) return _normalizePhotoSource(canonical);
+  final fallback = _firstText([
+    raw['livePhotoPath'],
+    raw['livePhotoBase64'],
+    raw['photoBase64'],
+  ]);
+  return fallback.isEmpty ? '' : _normalizePhotoSource(fallback);
 }
 
 String _normalizePhotoSource(String value) {

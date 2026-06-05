@@ -44,6 +44,7 @@ public class VisitorDto {
     private String partNumber;
     /** Relative path/key in the file store (e.g. "visitors/42/photo.jpg"). */
     private String photoStoragePath;
+    private String photoUrl;
     private String livePhotoPath;
     private String photoPath;
     private String livePhotoBase64;

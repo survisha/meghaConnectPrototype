@@ -46,6 +46,13 @@ export interface CitizenAppointmentHistory {
   appointmentId: number;
   applicationId?: string;
   dateTime?: string;
+  scheduledAt?: string;
+  appointmentDateTime?: string;
+  appointmentDate?: string;
+  visitDate?: string;
+  eventDate?: string;
+  startTime?: string;
+  meetingDate?: string;
   department?: string;
   officerName?: string;
   purpose?: string;

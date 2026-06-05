@@ -43,6 +43,7 @@ public class PublicIdentificationService {
         List<Appointment> appointments = mergeAppointments(primaryAppointments, associateMappings);
 
         LocalDateTime lastVisitedAt = appointments.stream()
+                .filter(this::isPastVisit)
                 .map(this::latestAppointmentTime)
                 .filter(value -> value != null)
                 .max(LocalDateTime::compareTo)
@@ -59,7 +60,7 @@ public class PublicIdentificationService {
         return PublicIdentificationHistoryDto.builder()
                 .citizenId(citizen.getId())
                 .citizenName(citizen.getFullName())
-                .photoUrl(firstNonBlank(citizen.getLivePhotoPath(), citizen.getPhotoStoragePath(), citizen.getPhotoPath()))
+                .photoUrl(toUploadUrl(firstNonBlank(citizen.getPhotoStoragePath(), citizen.getPhotoPath(), citizen.getLivePhotoPath())))
                 .visitCount(appointments.size())
                 .lastVisitedAt(lastVisitedAt)
                 .schemes(schemeApplications.stream()
@@ -126,6 +127,29 @@ public class PublicIdentificationService {
         return appointment.getScheduledDateTime() != null
                 ? appointment.getScheduledDateTime()
                 : firstNonNull(appointment.getUpdatedAt(), appointment.getCreatedAt());
+    }
+
+    private boolean isPastVisit(Appointment appointment) {
+        LocalDateTime appointmentTime = latestAppointmentTime(appointment);
+        if (appointmentTime == null || appointmentTime.isAfter(LocalDateTime.now())) {
+            return false;
+        }
+        if (appointment.getStatus() == null) {
+            return true;
+        }
+        String status = appointment.getStatus().name();
+        return List.of("COMPLETED", "VISITED", "CLOSED", "EXITED", "RESOLVED").contains(status);
+    }
+
+    private String toUploadUrl(String path) {
+        String clean = firstNonBlank(path);
+        if (clean.isEmpty()) {
+            return "";
+        }
+        if (clean.startsWith("http://") || clean.startsWith("https://") || clean.startsWith("/uploads/")) {
+            return clean;
+        }
+        return "/uploads/" + clean.replaceFirst("^/+", "");
     }
 
     private LocalDateTime schemeSortTime(SchemeApplication application) {

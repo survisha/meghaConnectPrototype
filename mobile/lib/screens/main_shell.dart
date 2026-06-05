@@ -367,7 +367,7 @@ class _MainShellState extends State<MainShell> {
       ),
       title: Row(
         children: [
-          Image.asset('assets/logo.png', width: 38, height: 38),
+          Image.asset('assets/logo-small.png', width: 38, height: 38),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -375,7 +375,7 @@ class _MainShellState extends State<MainShell> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Text(
-                  'MeghaConnect AI',
+                  'MeghaConnect',
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: Colors.white,
@@ -385,7 +385,7 @@ class _MainShellState extends State<MainShell> {
                 ),
                 if (showSubtitle)
                   Text(
-                    'AI Powered Appointment & Scheme Management Platform',
+                    'Connecting People, Empowering Lives',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -491,14 +491,14 @@ class _MainShellState extends State<MainShell> {
         children: [
           Row(
             children: [
-              Image.asset('assets/logo.png', width: 42, height: 42),
+              Image.asset('assets/logo-small.png', width: 42, height: 42),
               const SizedBox(width: 10),
               const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'MeghaConnect AI',
+                      'MeghaConnect',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 17,
@@ -506,7 +506,7 @@ class _MainShellState extends State<MainShell> {
                       ),
                     ),
                     Text(
-                      'AI Powered',
+                      'Official Portal',
                       style: TextStyle(color: Color(0xFFC7D2FE), fontSize: 11),
                     ),
                   ],

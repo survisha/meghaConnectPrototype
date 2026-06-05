@@ -350,12 +350,12 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
               ],
             ),
-            child: Image.asset('assets/logo.png', fit: BoxFit.contain),
+            child: Image.asset('assets/logo-small.png', fit: BoxFit.contain),
           ),
         ),
         const SizedBox(height: 18),
         const Text(
-          'MeghaConnect AI',
+          'MeghaConnect',
           textAlign: TextAlign.center,
           style: TextStyle(
             color: _primaryBlue,
@@ -365,7 +365,7 @@ class _LoginScreenState extends State<LoginScreen>
         ),
         const SizedBox(height: 4),
         Text(
-          'AI Powered Appointment & Scheme Management Platform',
+          'Connecting People, Empowering Lives',
           textAlign: TextAlign.center,
           style: TextStyle(color: Colors.grey[600], fontSize: 14),
         ),
@@ -551,13 +551,13 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
                 padding: const EdgeInsets.all(12),
                 child: Image.asset(
-                  'assets/logo.png',
+                  'assets/logo-small.png',
                   fit: BoxFit.contain,
                 ),
               ),
               const SizedBox(height: 16),
               const Text(
-                'MeghaConnect AI',
+                'MeghaConnect',
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w800,
@@ -594,7 +594,7 @@ class _LoginScreenState extends State<LoginScreen>
               ),
               const SizedBox(height: 8),
               Text(
-                'AI Powered Appointment & Scheme Management Platform',
+                'Connecting People, Empowering Lives',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 13,
@@ -646,7 +646,7 @@ class _LoginScreenState extends State<LoginScreen>
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'AI Powered Appointment & Scheme Management Platform',
+                          'Connecting People, Empowering Lives',
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.85),
                             fontSize: 12,

@@ -395,7 +395,7 @@ class MeghaBrandHeader extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Image.asset(
-                      'assets/logo.png',
+                      'assets/logo-small.png',
                       width: 54,
                       height: 54,
                       fit: BoxFit.contain,

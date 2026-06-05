@@ -228,7 +228,7 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
         ),
         title: Row(
           children: [
-            Image.asset('assets/logo.png', width: 38, height: 38),
+            Image.asset('assets/logo-small.png', width: 38, height: 38),
             const SizedBox(width: 10),
             Expanded(
               child: Column(

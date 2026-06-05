@@ -12,7 +12,7 @@ import { BrandLogoComponent } from './shared/brand-logo/brand-logo.component';
   template: `
     <div *ngIf="showWelcome" class="welcome-screen">
       <div class="welcome-top">
-        <app-brand-logo class="welcome-logo-lockup" label="MeghaConnect AI logo"></app-brand-logo>
+        <app-brand-logo class="welcome-logo-lockup" label="MeghaConnect logo" src="/asserts/logo-white.svg"></app-brand-logo>
       </div>
       <div class="welcome-main">
         <div class="ai-orbit" aria-hidden="true">
@@ -27,13 +27,13 @@ import { BrandLogoComponent } from './shared/brand-logo/brand-logo.component';
           <span class="link link-d"></span>
           <mat-icon class="orbit-calendar">event_available</mat-icon>
         </div>
-        <h1>MeghaConnect AI</h1>
-        <p>AI Powered Appointment & Scheme Management Platform</p>
+        <h1>MeghaConnect</h1>
+        <p>Connecting People, Empowering Lives</p>
         <div class="welcome-features" aria-label="Platform highlights">
           <span>Appointment Management</span>
           <span>Scheme Tracking</span>
-          <span>AI Insights</span>
-          <span>AI Notes</span>
+          <span>Citizen Services</span>
+          <span>Public Darbar</span>
           <span>Visitor Management</span>
         </div>
         <div *ngIf="welcomeLoading" class="welcome-spinner" aria-label="Loading"></div>
@@ -189,7 +189,7 @@ export class AppComponent implements OnInit {
   }
 
   ngOnInit() {
-    setTimeout(() => this.welcomeLoading = true, 3600);
-    setTimeout(() => this.showWelcome = false, 4600);
+    setTimeout(() => this.welcomeLoading = true, 900);
+    setTimeout(() => this.showWelcome = false, 3000);
   }
 }

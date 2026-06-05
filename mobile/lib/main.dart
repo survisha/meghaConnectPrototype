@@ -42,7 +42,7 @@ class MeghaConnectApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'MeghaConnect AI',
+      title: 'MeghaConnect',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
@@ -126,7 +126,7 @@ class _WelcomeGateState extends State<_WelcomeGate> {
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(milliseconds: 5800), () {
+    Future.delayed(const Duration(seconds: 3), () {
       if (mounted) setState(() => _showWelcome = false);
     });
   }
@@ -161,7 +161,7 @@ class _WelcomeScreenState extends State<_WelcomeScreen>
     _pulse = Tween<double>(begin: 0.96, end: 1.06).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
-    Future.delayed(const Duration(seconds: 5), () {
+    Future.delayed(const Duration(milliseconds: 900), () {
       if (mounted) setState(() => _loading = true);
     });
   }
@@ -184,7 +184,7 @@ class _WelcomeScreenState extends State<_WelcomeScreen>
               mainAxisSize: MainAxisSize.min,
               children: [
                 Image.asset(
-                  'assets/logo.png',
+                  'assets/logo-small.png',
                   width: 76,
                   height: 76,
                   fit: BoxFit.contain,
@@ -192,9 +192,9 @@ class _WelcomeScreenState extends State<_WelcomeScreen>
                 const SizedBox(height: 16),
                 Container(
                   width: double.infinity,
-                  constraints: const BoxConstraints(maxWidth: 380),
+                  constraints: const BoxConstraints(maxWidth: 360),
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 26),
                   decoration: BoxDecoration(
                     color: const Color(0xCC0B1F5C),
                     borderRadius: BorderRadius.circular(22),
@@ -215,20 +215,25 @@ class _WelcomeScreenState extends State<_WelcomeScreen>
                         children: [
                           ScaleTransition(
                             scale: _pulse,
-                            child: const _AiNetworkPulse(),
+                            child: Image.asset(
+                              'assets/logo-white.png',
+                              width: 260,
+                              height: 124,
+                              fit: BoxFit.contain,
+                            ),
                           ),
                           const SizedBox(height: 18),
                           const Text(
-                            'MeghaConnect AI',
+                            'MeghaConnect',
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 32,
+                              fontSize: 30,
                               fontWeight: FontWeight.w900,
                             ),
                           ),
                           const SizedBox(height: 6),
                           const Text(
-                            'AI Powered Appointment & Scheme Management Platform',
+                            'Connecting People, Empowering Lives',
                             textAlign: TextAlign.center,
                             style: TextStyle(color: Color(0xFFC7D2FE)),
                           ),
@@ -286,63 +291,3 @@ class _WelcomeScreenState extends State<_WelcomeScreen>
     );
   }
 }
-
-class _AiNetworkPulse extends StatelessWidget {
-  const _AiNetworkPulse();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 150,
-      height: 150,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Container(
-            width: 150,
-            height: 150,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [
-                  const Color(0xFF22D3EE).withAlpha(72),
-                  const Color(0xFF8B5CF6).withAlpha(28),
-                  Colors.transparent,
-                ],
-              ),
-            ),
-          ),
-          const Icon(Icons.event_available, size: 52, color: Colors.white),
-          for (final item in _networkNodes)
-            Positioned(
-              left: item.dx,
-              top: item.dy,
-              child: Container(
-                width: 16,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF22D3EE).withAlpha(130),
-                      blurRadius: 16,
-                      spreadRadius: 4,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-const _networkNodes = [
-  Offset(30, 32),
-  Offset(104, 32),
-  Offset(67, 67),
-  Offset(30, 102),
-  Offset(104, 102),
-];

@@ -227,36 +227,40 @@ public class VisitorPassService {
 
     private void drawBrandHeader(PDPageContentStream content, float x, float y, String documentTitle) throws IOException {
         content.setNonStrokingColor(new Color(11, 31, 92));
-        drawText(content, PDType1Font.HELVETICA_BOLD, 20, x, y, "MeghaConnect AI");
-        content.setNonStrokingColor(new Color(30, 64, 175));
+        drawText(content, PDType1Font.HELVETICA_BOLD, 20, x, y, "MeghaConnect");
+        content.setNonStrokingColor(new Color(10, 196, 184));
         drawText(content, PDType1Font.HELVETICA_BOLD, 13, x, y - 20, documentTitle);
         content.setNonStrokingColor(new Color(71, 85, 105));
-        drawText(content, PDType1Font.HELVETICA, 8, x, y - 34, "AI Powered Appointment & Scheme Management Platform");
-        drawMiniAiMark(content, x + 430, y - 28);
+        drawText(content, PDType1Font.HELVETICA, 8, x, y - 34, "Connecting People, Empowering Lives");
+        drawMiniLogoMark(content, x + 430, y - 30);
         content.setNonStrokingColor(Color.BLACK);
     }
 
-    private void drawMiniAiMark(PDPageContentStream content, float x, float y) throws IOException {
-        content.setStrokingColor(new Color(34, 211, 238));
-        content.setLineWidth(1.4f);
-        content.moveTo(x, y + 20);
-        content.lineTo(x + 24, y + 8);
-        content.lineTo(x + 48, y + 20);
-        content.moveTo(x, y - 4);
-        content.lineTo(x + 24, y + 8);
-        content.lineTo(x + 48, y - 4);
+    private void drawMiniLogoMark(PDPageContentStream content, float x, float y) throws IOException {
+        content.setStrokingColor(new Color(10, 150, 205));
+        content.setLineWidth(6.5f);
+        content.moveTo(x + 7, y);
+        content.lineTo(x + 7, y + 24);
+        content.moveTo(x + 7, y + 24);
+        content.curveTo(x + 17, y + 35, x + 25, y + 8, x + 34, y + 14);
+        content.curveTo(x + 41, y + 8, x + 49, y + 35, x + 59, y + 24);
+        content.moveTo(x + 59, y + 24);
+        content.lineTo(x + 59, y);
         content.stroke();
-        content.setNonStrokingColor(new Color(139, 92, 246));
-        fillCircle(content, x, y + 20, 3.2f);
-        fillCircle(content, x + 48, y + 20, 3.2f);
-        fillCircle(content, x + 24, y + 8, 3.2f);
-        fillCircle(content, x, y - 4, 3.2f);
-        fillCircle(content, x + 48, y - 4, 3.2f);
+        content.setNonStrokingColor(new Color(4, 92, 219));
+        fillCircle(content, x + 7, y + 36, 5.4f);
+        content.setNonStrokingColor(new Color(10, 196, 184));
+        fillCircle(content, x + 59, y + 36, 5.4f);
         content.setStrokingColor(Color.BLACK);
     }
 
     private void fillCircle(PDPageContentStream content, float cx, float cy, float radius) throws IOException {
-        content.addRect(cx - radius, cy - radius, radius * 2, radius * 2);
+        float c = radius * 0.55228475f;
+        content.moveTo(cx + radius, cy);
+        content.curveTo(cx + radius, cy + c, cx + c, cy + radius, cx, cy + radius);
+        content.curveTo(cx - c, cy + radius, cx - radius, cy + c, cx - radius, cy);
+        content.curveTo(cx - radius, cy - c, cx - c, cy - radius, cx, cy - radius);
+        content.curveTo(cx + c, cy - radius, cx + radius, cy - c, cx + radius, cy);
         content.fill();
     }
 

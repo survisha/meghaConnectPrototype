@@ -6,6 +6,7 @@ import com.survisha.meghaconnect.dto.ScheduleEventDto;
 import com.survisha.meghaconnect.entity.Appointment;
 import com.survisha.meghaconnect.entity.ScheduleEvent;
 import com.survisha.meghaconnect.exception.ErrorCodeConstants;
+import com.survisha.meghaconnect.exception.MeetingConflictException;
 import com.survisha.meghaconnect.exception.MeghaConnectException;
 import com.survisha.meghaconnect.repository.AppointmentRepository;
 import com.survisha.meghaconnect.repository.ScheduleEventRepository;
@@ -90,18 +91,16 @@ public class ScheduleEventService {
     @Transactional
     public ScheduleEvent create(ScheduleEvent event) {
         ensureFutureEvent(event);
-        // Check for conflicts
-        boolean conflict = scheduleEventRepository.findAll().stream()
-            .anyMatch(e -> !e.getId().equals(event.getId()) &&
-                e.getStartTime().isBefore(event.getEndTime()) &&
-                event.getStartTime().isBefore(e.getEndTime()));
-        event.setConflict(conflict);
+        ensureNoScheduleEventConflict(event);
+        event.setConflict(false);
         return scheduleEventRepository.save(event);
     }
 
     @Transactional
     public ScheduleEvent update(ScheduleEvent event) {
         ensureFutureEvent(event);
+        ensureNoScheduleEventConflict(event);
+        event.setConflict(false);
         return scheduleEventRepository.save(event);
     }
 
@@ -158,6 +157,7 @@ public class ScheduleEventService {
             }
 
             Appointment.AppointmentStatus oldStatus = appointment.getStatus();
+            appointmentService.assertNoMeetingConflict(appointment.getId(), event.getStartTime(), durationMinutes);
             appointment.setScheduleEvent(event);
             appointment.setScheduledDateTime(event.getStartTime());
             appointment.setScheduledDurationMinutes(durationMinutes);
@@ -344,5 +344,37 @@ public class ScheduleEventService {
                 HttpStatus.BAD_REQUEST
             );
         }
+    }
+
+    private void ensureNoScheduleEventConflict(ScheduleEvent event) {
+        if (event == null || event.getStartTime() == null || event.getEndTime() == null) {
+            return;
+        }
+        Set<Long> assignedAppointmentIds = assignedAppointmentIds(event.getId());
+        int durationMinutes = Math.max(1, (int) ChronoUnit.MINUTES.between(event.getStartTime(), event.getEndTime()));
+        appointmentService.assertNoMeetingConflict(assignedAppointmentIds, event.getStartTime(), durationMinutes);
+        scheduleEventRepository.findAll().stream()
+            .filter(existing -> existing.getStartTime() != null && existing.getEndTime() != null)
+            .filter(existing -> event.getId() == null || !event.getId().equals(existing.getId()))
+            .filter(existing -> existing.getStartTime().isBefore(event.getEndTime())
+                && existing.getEndTime().isAfter(event.getStartTime()))
+            .findFirst()
+            .ifPresent(conflict -> {
+                throw new MeetingConflictException(event.getStartTime(), event.getEndTime(), conflict);
+            });
+    }
+
+    private Set<Long> assignedAppointmentIds(Long eventId) {
+        if (eventId == null) {
+            return Set.of();
+        }
+        return scheduleEventRepository.findByIdWithAppointments(eventId, KNOWN_APPOINTMENT_STATUSES)
+            .map(event -> event.getAppointments() == null
+                ? Set.<Long>of()
+                : event.getAppointments().stream()
+                    .map(Appointment::getId)
+                    .filter(id -> id != null)
+                    .collect(java.util.stream.Collectors.toSet()))
+            .orElseGet(Set::of);
     }
 }

@@ -70,6 +70,8 @@ public class ErrorCodeConstants {
 
     public static final String SCHEDULING_CONFLICT = "ERR_021";
     public static final String SCHEDULING_CONFLICT_MSG = "Scheduling conflict detected. A schedule event already exists at: %s";
+    public static final String MEETING_CONFLICT = "MEETING_CONFLICT";
+    public static final String MEETING_CONFLICT_MSG = "Meeting Conflict Detected.";
 
     public static final String INVALID_APPOINTMENT_STATUS = "ERR_022";
     public static final String INVALID_APPOINTMENT_STATUS_MSG = "Invalid appointment status: %s";

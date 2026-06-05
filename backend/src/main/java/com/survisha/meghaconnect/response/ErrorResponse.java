@@ -50,6 +50,10 @@ public class ErrorResponse {
         return errorCode;
     }
 
+    public String getCode() {
+        return errorCode;
+    }
+
     public void setErrorCode(String errorCode) {
         this.errorCode = errorCode;
     }

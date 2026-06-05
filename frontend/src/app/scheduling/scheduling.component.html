@@ -27,6 +27,34 @@
     <span>{{ errorMsg }}</span>
   </div>
 
+  <div class="dialog-overlay" *ngIf="showConflictDialog" (click)="closeConflictDialog()"></div>
+  <div class="dialog-container conflict-dialog" *ngIf="showConflictDialog">
+    <div class="dialog-header conflict-dialog-header">
+      <h2><mat-icon>event_busy</mat-icon> Meeting Conflict Detected</h2>
+      <button mat-icon-button (click)="closeConflictDialog()" aria-label="Close conflict dialog">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+    <div class="dialog-content conflict-dialog-content">
+      <p>{{ conflictDialog.message }}</p>
+      <div class="conflict-detail" *ngIf="conflictDialog.requested">
+        <span>Requested</span>
+        <strong>{{ conflictDialog.requested }}</strong>
+      </div>
+      <div class="conflict-detail" *ngIf="conflictDialog.conflicting">
+        <span>Existing meeting</span>
+        <strong>{{ conflictDialog.conflicting }}</strong>
+      </div>
+      <div class="dialog-footer">
+        <button mat-stroked-button (click)="closeConflictDialog()">Close</button>
+        <button mat-raised-button color="primary" (click)="closeConflictDialog()">
+          <mat-icon>schedule</mat-icon>
+          Select Another Time
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Calendar and Day View Layout -->
   <div style="display: grid; grid-template-columns: 320px 1fr; gap: 1rem; margin-bottom: 1rem;" *ngIf="viewMode==='day'">
     

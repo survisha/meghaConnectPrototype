@@ -49,8 +49,14 @@ export class SchedulingComponent implements OnInit {
   selectedDate: Date = new Date();
   showDialog = false;
   showAddDialog = false;
+  showConflictDialog = false;
   loading = false;
   errorMsg = '';
+  conflictDialog = {
+    message: '',
+    requested: '',
+    conflicting: '',
+  };
 
   newEvent: Partial<ScheduleEvent> = {};
   editingEvent: ScheduleEvent | null = null;
@@ -291,7 +297,14 @@ export class SchedulingComponent implements OnInit {
           this.showAddDialog = false;
           this.snackBar.open(wasEdit ? 'Event updated successfully.' : 'Event created successfully.', 'Close', { duration: 4000 });
         },
-        error: error => this.errorMsg = apiErrorMessage(error, this.editingEvent ? 'Failed to update event.' : 'Failed to create event.')
+        error: error => {
+          if (this.isMeetingConflict(error)) {
+            this.showMeetingConflict(error);
+            this.loadEvents();
+            return;
+          }
+          this.errorMsg = apiErrorMessage(error, this.editingEvent ? 'Failed to update event.' : 'Failed to create event.');
+        }
       });
     }
   }
@@ -369,7 +382,13 @@ export class SchedulingComponent implements OnInit {
         this.snackBar.open('Application added to event.', 'Close', { duration: 4000 });
       },
       error: error => {
-        this.publicDarbarAssignmentError = apiErrorMessage(error, 'Unable to assign follow-up applications to this event.');
+        if (this.isMeetingConflict(error)) {
+          this.showMeetingConflict(error);
+          this.loadEvents();
+          this.publicDarbarAssignmentError = this.conflictDialog.message;
+        } else {
+          this.publicDarbarAssignmentError = apiErrorMessage(error, 'Unable to assign follow-up applications to this event.');
+        }
         this.publicDarbarAssignmentLoading = false;
       }
     });
@@ -456,9 +475,24 @@ export class SchedulingComponent implements OnInit {
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
   }
 
-  private toDateParam(date: Date): string {
+  private formatLocalDate(date: Date): string {
     const pad = (value: number) => value.toString().padStart(2, '0');
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  }
+
+  private formatLocalTime(date: Date): string {
+    const pad = (value: number) => value.toString().padStart(2, '0');
+    return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  }
+
+  private parseClockValue(value: string): { hours: number; minutes: number } | null {
+    const [hoursRaw, minutesRaw = '0'] = value.split(':');
+    const hours = Number(hoursRaw);
+    const minutes = Number(minutesRaw);
+    if (!Number.isInteger(hours) || !Number.isInteger(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+      return null;
+    }
+    return { hours, minutes };
   }
 
   // Drag and drop handler
@@ -468,19 +502,26 @@ export class SchedulingComponent implements OnInit {
       return;
     }
 
-    const targetHourNum = parseInt(targetHour, 10);
+    const targetClock = this.parseClockValue(targetHour);
+    if (!targetClock) {
+      this.snackBar.open('Invalid drop time.', 'Close', { duration: 4000 });
+      this.loadEvents();
+      return;
+    }
     
     // Calculate new start and end times
     const duration = new Date(droppedEvent.endTime).getTime() - new Date(droppedEvent.startTime).getTime();
     
     // Create new date with selected date and target hour
     const newStart = new Date(this.selectedDate);
-    newStart.setHours(targetHourNum, 0, 0, 0);
+    newStart.setHours(targetClock.hours, targetClock.minutes, 0, 0);
     if (this.isPastDateTime(newStart)) {
       this.snackBar.open('Cannot schedule or drag appointments to past dates.', 'Close', { duration: 5000 });
+      this.loadEvents();
       return;
     }
     if (!window.confirm('Reschedule this appointment/event to the selected date and time?')) {
+      this.loadEvents();
       return;
     }
     
@@ -489,16 +530,32 @@ export class SchedulingComponent implements OnInit {
     const payloadEnd = this.toLocalDateTime(newEnd);
 
     if (droppedEvent.sourceType === 'APPOINTMENT' && droppedEvent.appointmentId) {
+      const scheduledDate = this.formatLocalDate(newStart);
+      const scheduledTime = this.formatLocalTime(newStart);
       this.appointmentService.rescheduleAppointmentDate(droppedEvent.appointmentId, {
-        scheduledDate: this.toDateParam(newStart),
-        scheduledTime: `${String(newStart.getHours()).padStart(2, '0')}:00`,
+        scheduledDate,
+        scheduledTime,
       }).subscribe({
-        next: () => {
+        next: saved => {
+          this.events = this.events
+            .map(item => item === droppedEvent || item.appointmentId === droppedEvent.appointmentId
+              ? {
+                  ...item,
+                  startTime: payloadStart,
+                  endTime: payloadEnd,
+                  appointment: item.appointment ? { ...item.appointment, ...saved } : item.appointment,
+                }
+              : item)
+            .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
           this.snackBar.open('Appointment rescheduled successfully.', 'Close', { duration: 5000 });
           this.loadEvents();
         },
         error: error => {
-          this.errorMsg = apiErrorMessage(error, 'Unable to reschedule appointment.');
+          if (this.isMeetingConflict(error)) {
+            this.showMeetingConflict(error);
+          } else {
+            this.errorMsg = apiErrorMessage(error, 'Unable to reschedule appointment.');
+          }
           this.loadEvents();
         }
       });
@@ -536,10 +593,52 @@ export class SchedulingComponent implements OnInit {
         this.snackBar.open('Appointment rescheduled successfully.', 'Close', { duration: 5000 });
       },
       error: error => {
-        this.errorMsg = apiErrorMessage(error, 'Unable to update schedule event.');
+        if (this.isMeetingConflict(error)) {
+          this.showMeetingConflict(error);
+        } else {
+          this.errorMsg = apiErrorMessage(error, 'Unable to update schedule event.');
+        }
         this.loadEvents();
       }
     });
+  }
+
+  closeConflictDialog() {
+    this.showConflictDialog = false;
+  }
+
+  private isMeetingConflict(error: any): boolean {
+    const body = error?.error ?? {};
+    return error?.status === 409 && (body.code === 'MEETING_CONFLICT' || body.errorCode === 'MEETING_CONFLICT');
+  }
+
+  private showMeetingConflict(error: any) {
+    const body = error?.error ?? {};
+    const details = body.details ?? {};
+    this.conflictDialog = {
+      message: body.message || 'Meeting Conflict Detected.',
+      requested: this.formatConflictRange(details.requestedStart, details.requestedEnd),
+      conflicting: this.formatConflictRange(details.conflictingStart, details.conflictingEnd),
+    };
+    this.errorMsg = this.conflictDialog.message;
+    this.showConflictDialog = true;
+    this.snackBar.open('Meeting conflict detected. Please choose another time.', 'Close', { duration: 5000 });
+  }
+
+  private formatConflictRange(start?: string, end?: string): string {
+    if (!start) {
+      return '';
+    }
+    const startDate = new Date(start);
+    const endDate = end ? new Date(end) : null;
+    if (Number.isNaN(startDate.getTime())) {
+      return '';
+    }
+    const startText = startDate.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+    if (!endDate || Number.isNaN(endDate.getTime())) {
+      return startText;
+    }
+    return `${startText} - ${endDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}`;
   }
 
   // Check if a date has events (for calendar highlighting)

@@ -99,6 +99,12 @@ public class AppointmentService {
         Appointment.AppointmentStatus.SCHEDULED
     );
 
+    private static final List<Appointment.AppointmentStatus> MEETING_CONFLICT_STATUSES = List.of(
+        Appointment.AppointmentStatus.APPROVED_WITH_DATE_TIME,
+        Appointment.AppointmentStatus.SCHEDULED,
+        Appointment.AppointmentStatus.SCHEDULED_FOR_PUBLIC_DARBAR
+    );
+
     private final AppointmentRepository appointmentRepository;
     private final AssociateMappingRepository associateMappingRepository;
     private final VisitorRepository visitorRepository;
@@ -316,9 +322,13 @@ public class AppointmentService {
         if (eventId != null) {
             scheduleEventRepository.findById(eventId).ifPresent(appt::setScheduleEvent);
         }
+        int durationMinutes = appt.getScheduledDurationMinutes() != null
+            ? appt.getScheduledDurationMinutes()
+            : 30;
+        assertNoMeetingConflict(appt.getId(), scheduledDateTime, durationMinutes);
         appt.setScheduledDateTime(scheduledDateTime);
         if (appt.getScheduledDurationMinutes() == null) {
-            appt.setScheduledDurationMinutes(30);
+            appt.setScheduledDurationMinutes(durationMinutes);
         }
         appt.setStatus(Appointment.AppointmentStatus.SCHEDULED);
         appt.setUpdatedBy(updatedBy);
@@ -749,20 +759,7 @@ public class AppointmentService {
             invalidTransition("Only APPROVED, FOLLOWUP, or SCHEDULED applications can be scheduled.");
         }
 
-        // Conflict check
-        List<Appointment> conflicts = appointmentRepository.findByStatus(
-            Appointment.AppointmentStatus.SCHEDULED
-        );
-        boolean hasConflict = conflicts.stream().anyMatch(a ->
-            a.getScheduledDateTime() != null && !a.getId().equals(id) &&
-            a.getScheduledDateTime().isBefore(dateTime.plusMinutes(durationMinutes)) &&
-            dateTime.isBefore(a.getScheduledDateTime().plusMinutes(
-                a.getScheduledDurationMinutes() != null ? a.getScheduledDurationMinutes() : 30
-            ))
-        );
-        if (hasConflict) {
-            throw new SchedulingConflictException(dateTime);
-        }
+        assertNoMeetingConflict(id, dateTime, durationMinutes);
 
         appt.setScheduledDateTime(dateTime);
         appt.setScheduledDurationMinutes(durationMinutes);
@@ -773,6 +770,41 @@ public class AppointmentService {
         auditLogService.log("Appointment", saved.getId(), "SCHEDULED",
             "Scheduled for: " + dateTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME), updatedBy);
         return saved;
+    }
+
+    public void assertNoMeetingConflict(Long excludeAppointmentId, LocalDateTime start, int durationMinutes) {
+        Set<Long> excludedIds = excludeAppointmentId != null ? Set.of(excludeAppointmentId) : Set.of();
+        assertNoMeetingConflict(excludedIds, start, durationMinutes);
+    }
+
+    public void assertNoMeetingConflict(Set<Long> excludeAppointmentIds, LocalDateTime start, int durationMinutes) {
+        if (start == null) {
+            return;
+        }
+        Set<Long> safeExcludedIds = excludeAppointmentIds != null ? excludeAppointmentIds : Set.of();
+        int safeDuration = Math.max(1, durationMinutes);
+        LocalDateTime end = start.plusMinutes(safeDuration);
+        appointmentRepository.findScheduledWithApplicant(MEETING_CONFLICT_STATUSES).stream()
+            .filter(existing -> existing.getScheduledDateTime() != null)
+            .filter(existing -> existing.getId() == null || !safeExcludedIds.contains(existing.getId()))
+            .filter(existing -> overlaps(
+                existing.getScheduledDateTime(),
+                existing.getScheduledDateTime().plusMinutes(existing.getScheduledDurationMinutes() != null
+                    ? existing.getScheduledDurationMinutes()
+                    : 30),
+                start,
+                end))
+            .findFirst()
+            .ifPresent(conflict -> {
+                throw new MeetingConflictException(start, end, conflict);
+            });
+    }
+
+    private boolean overlaps(LocalDateTime existingStart,
+                             LocalDateTime existingEnd,
+                             LocalDateTime requestedStart,
+                             LocalDateTime requestedEnd) {
+        return existingStart.isBefore(requestedEnd) && existingEnd.isAfter(requestedStart);
     }
 
     private void generateQrIfApproved(Appointment appointment, String actor) {

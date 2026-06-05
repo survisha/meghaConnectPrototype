@@ -523,6 +523,44 @@
   border-top: 1px solid #e5e7eb;
 }
 
+.conflict-dialog {
+  max-width: 460px;
+}
+
+.conflict-dialog-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #991b1b;
+}
+
+.conflict-dialog-content p {
+  margin: 0 0 1rem;
+  color: #374151;
+}
+
+.conflict-detail {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+}
+
+.conflict-detail span {
+  color: #6b7280;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.conflict-detail strong {
+  color: #111827;
+  font-weight: 600;
+}
+
 @media (max-width: 768px) {
   .detail-grid,
   .appointment-list div {

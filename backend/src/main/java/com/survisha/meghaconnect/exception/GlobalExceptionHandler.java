@@ -65,6 +65,20 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(ex.getHttpStatus()).body(error);
     }
 
+    @ExceptionHandler(MeetingConflictException.class)
+    public ResponseEntity<ErrorResponse> handleMeetingConflict(MeetingConflictException ex, WebRequest request) {
+        ErrorResponse error = buildError(
+                ex.getErrorCode(),
+                ex.getMessage(),
+                ex.getErrorId(),
+                ex.getHttpStatus(),
+                request
+        );
+        error.setDetails(ex.getDetails());
+        logHandledException(error, ex);
+        return ResponseEntity.status(ex.getHttpStatus()).body(error);
+    }
+
     @ExceptionHandler(OtpMaxAttemptsExceededException.class)
     public ResponseEntity<ErrorResponse> handleOtpMaxAttemptsExceeded(OtpMaxAttemptsExceededException ex, WebRequest request) {
         ErrorResponse error = buildError(

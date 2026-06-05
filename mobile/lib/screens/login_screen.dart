@@ -386,26 +386,39 @@ class _LoginScreenState extends State<LoginScreen>
       children: [
         Center(
           child: Container(
-            width: 76,
-            height: 76,
-            padding: const EdgeInsets.all(12),
+            width: 164,
+            height: 164,
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white,
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF03142F),
+                  Color(0xFF061F46),
+                  Color(0xFF00525E),
+                ],
+              ),
               borderRadius: BorderRadius.circular(18),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withAlpha(18),
-                  blurRadius: 18,
-                  offset: const Offset(0, 8),
+                  color: const Color(0xFF00C8D7).withAlpha(42),
+                  blurRadius: 22,
+                  offset: const Offset(0, 10),
                 ),
               ],
             ),
-            child: Image.asset('assets/logo-small.png', fit: BoxFit.contain),
+            child: Image.asset(
+              'assets/branding/meghaconnect-ai-logo-transparent.png',
+              width: 148,
+              height: 148,
+              fit: BoxFit.contain,
+            ),
           ),
         ),
         const SizedBox(height: 18),
         const Text(
-          'MeghaConnect',
+          'MEGHACONNECT AI',
           textAlign: TextAlign.center,
           style: TextStyle(
             color: _primaryBlue,
@@ -415,7 +428,7 @@ class _LoginScreenState extends State<LoginScreen>
         ),
         const SizedBox(height: 4),
         Text(
-          'Connecting People, Empowering Lives',
+          'Connecting Citizens Through Intelligence',
           textAlign: TextAlign.center,
           style: TextStyle(color: Colors.grey[600], fontSize: 14),
         ),
@@ -601,13 +614,13 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
                 padding: const EdgeInsets.all(12),
                 child: Image.asset(
-                  'assets/logo-small.png',
+                  'assets/branding/meghaconnect-ai-logo-transparent.png',
                   fit: BoxFit.contain,
                 ),
               ),
               const SizedBox(height: 16),
               const Text(
-                'MeghaConnect',
+                'MEGHACONNECT AI',
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w800,
@@ -644,7 +657,7 @@ class _LoginScreenState extends State<LoginScreen>
               ),
               const SizedBox(height: 8),
               Text(
-                'Connecting People, Empowering Lives',
+                'Connecting Citizens Through Intelligence',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 13,
@@ -696,7 +709,7 @@ class _LoginScreenState extends State<LoginScreen>
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Connecting People, Empowering Lives',
+                          'Connecting Citizens Through Intelligence',
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.85),
                             fontSize: 12,

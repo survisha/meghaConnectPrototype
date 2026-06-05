@@ -253,7 +253,12 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
         ),
         title: Row(
           children: [
-            Image.asset('assets/logo-small.png', width: 38, height: 38),
+            Image.asset(
+              'assets/branding/meghaconnect-ai-logo-transparent.png',
+              width: 44,
+              height: 44,
+              fit: BoxFit.contain,
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -261,7 +266,7 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Text(
-                    'MeghaConnect',
+                    'MEGHACONNECT AI',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 18,

@@ -42,9 +42,11 @@
 }
 
 .header-logo {
-  width: 46px;
-  height: 46px;
+  width: clamp(118px, 14vw, 168px);
+  height: 64px;
   object-fit: contain;
+  object-position: center;
+  flex: 0 0 auto;
 }
 
 .brand-link strong,

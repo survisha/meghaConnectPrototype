@@ -1,11 +1,11 @@
 {
-    "name": "MeghaConnect",
-    "short_name": "MeghaConnect",
+    "name": "MEGHACONNECT AI",
+    "short_name": "MEGHA AI",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#FFFFFF",
     "theme_color": "#0AC4B8",
-    "description": "Connecting People, Empowering Lives",
+    "description": "Connecting Citizens Through Intelligence",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -11,20 +11,10 @@ import { BrandLogoComponent } from './shared/brand-logo/brand-logo.component';
   template: `
     <div *ngIf="showWelcome" class="welcome-screen">
       <div class="welcome-top">
-        <app-brand-logo class="welcome-logo-lockup" label="MeghaConnect logo"></app-brand-logo>
+        <app-brand-logo class="welcome-logo-lockup" label="MEGHACONNECT AI logo"></app-brand-logo>
       </div>
-      <div class="welcome-main">
-        <h1>MeghaConnect</h1>
-        <p>Connecting People, Empowering Lives</p>
-        <div class="welcome-features" aria-label="Platform highlights">
-          <span>Appointment Management</span>
-          <span>Scheme Tracking</span>
-          <span>Citizen Services</span>
-          <span>Public Darbar</span>
-          <span>Visitor Management</span>
-        </div>
-        <div *ngIf="welcomeLoading" class="welcome-spinner" aria-label="Loading"></div>
-      </div>
+      <div *ngIf="welcomeLoading" class="welcome-spinner" aria-label="Loading"></div>
+      
     </div>
     <router-outlet *ngIf="!showWelcome"></router-outlet>
   `,
@@ -38,8 +28,9 @@ import { BrandLogoComponent } from './shared/brand-logo/brand-logo.component';
       gap: 1.5rem;
       padding: 1.25rem;
       background:
-        radial-gradient(circle at 50% 20%, rgba(23, 195, 200, 0.18), transparent 34%),
-        linear-gradient(145deg, #f8fcff 0%, #eef8fb 52%, #ffffff 100%);
+        radial-gradient(circle at 50% 42%, rgba(0, 200, 215, 0.32), transparent 36%),
+        radial-gradient(circle at 42% 38%, rgba(13, 71, 161, 0.28), transparent 28%),
+        linear-gradient(145deg, #03142f 0%, #061f46 52%, #003f4d 100%);
       color: #082b7a;
       text-align: center;
       overflow: hidden;
@@ -51,9 +42,9 @@ import { BrandLogoComponent } from './shared/brand-logo/brand-logo.component';
       gap: 0.35rem;
     }
     .welcome-logo-lockup {
-      width: min(84vw, 390px);
+      width: min(86vw, 620px);
       height: auto;
-      filter: none;
+      filter: drop-shadow(0 28px 70px rgba(0, 200, 215, 0.42));
     }
     .welcome-main {
       position: relative;

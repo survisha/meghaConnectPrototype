@@ -42,7 +42,7 @@ class MeghaConnectApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'MeghaConnect',
+      title: 'MEGHACONNECT AI',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
@@ -175,7 +175,7 @@ class _WelcomeScreenState extends State<_WelcomeScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FCFF),
+      backgroundColor: const Color(0xFF03142F),
       body: SafeArea(
         child: Center(
           child: Padding(
@@ -189,12 +189,20 @@ class _WelcomeScreenState extends State<_WelcomeScreen>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 22, vertical: 30),
                   decoration: BoxDecoration(
-                    color: Colors.white.withAlpha(242),
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(0xFF03142F),
+                        Color(0xFF061F46),
+                        Color(0xFF00525E),
+                      ],
+                    ),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0x332096E8)),
+                    border: Border.all(color: const Color(0x3300C8D7)),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF082B7A).withAlpha(24),
+                        color: const Color(0xFF00C8D7).withAlpha(42),
                         blurRadius: 36,
                         offset: const Offset(0, 16),
                       ),
@@ -209,26 +217,26 @@ class _WelcomeScreenState extends State<_WelcomeScreen>
                           ScaleTransition(
                             scale: _pulse,
                             child: Image.asset(
-                              'assets/logo.png',
+                              'assets/branding/meghaconnect-ai-logo-transparent.png',
                               width: 280,
-                              height: 134,
+                              height: 280,
                               fit: BoxFit.contain,
                             ),
                           ),
                           const SizedBox(height: 12),
                           const Text(
-                            'MeghaConnect',
+                            'MEGHACONNECT AI',
                             style: TextStyle(
-                              color: Color(0xFF082B7A),
+                              color: Colors.white,
                               fontSize: 30,
                               fontWeight: FontWeight.w900,
                             ),
                           ),
                           const SizedBox(height: 6),
                           const Text(
-                            'Connecting People, Empowering Lives',
+                            'Connecting Citizens Through Intelligence',
                             textAlign: TextAlign.center,
-                            style: TextStyle(color: Color(0xFF555555)),
+                            style: TextStyle(color: Color(0xFFC9F9FF)),
                           ),
                           const SizedBox(height: 14),
                           Wrap(

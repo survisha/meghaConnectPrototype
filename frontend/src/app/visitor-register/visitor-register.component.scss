@@ -34,16 +34,25 @@
   z-index: 2;
   width: 100%;
   max-width: 360px;
+  padding: 1.15rem;
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(3, 20, 47, 0.82), rgba(0, 82, 94, 0.7));
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.24);
 }
 
 .logo-section {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
+  display: block;
   margin-bottom: 2rem;
 }
 
-.govt-logo { width: 56px; height: 56px; }
+.govt-logo {
+  display: block;
+  width: min(100%, 320px);
+  height: auto;
+  object-fit: contain;
+  border-radius: 12px;
+  filter: drop-shadow(0 18px 40px rgba(0, 200, 215, 0.24));
+}
 
 .logo-text h1 {
   margin: 0;

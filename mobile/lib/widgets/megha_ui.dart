@@ -395,9 +395,9 @@ class MeghaBrandHeader extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Image.asset(
-                      'assets/logo-small.png',
-                      width: 54,
-                      height: 54,
+                      'assets/branding/meghaconnect-ai-logo-transparent.png',
+                      width: 64,
+                      height: 64,
                       fit: BoxFit.contain,
                     ),
                     const SizedBox(width: 12),
@@ -406,7 +406,7 @@ class MeghaBrandHeader extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            'MeghaConnect',
+                            'MEGHACONNECT AI',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 22,

@@ -25,6 +25,6 @@ import { Component, Input } from '@angular/core';
   `],
 })
 export class BrandLogoComponent {
-  @Input() label = 'MeghaConnect logo';
-  @Input() src = '/asserts/logo.svg';
+  @Input() label = 'MEGHACONNECT AI logo';
+  @Input() src = '/asserts/branding/meghaconnect-ai-logo-transparent.png';
 }

@@ -11,7 +11,7 @@
         <button [class.active]="viewMode==='week'" (click)="viewMode='week'">Week</button>
         <button [class.active]="viewMode==='month'" (click)="viewMode='month'">Month</button>
       </div>
-      <button id="scheduling_addEventBtn" mat-raised-button color="primary" (click)="openAddEvent()"><mat-icon>add</mat-icon> Add Event</button>
+      <button id="scheduling_addEventBtn" data-testid="scheduling-add-event-btn" mat-raised-button color="primary" (click)="openAddEvent()"><mat-icon>add</mat-icon> Add Event</button>
     </div>
   </div>
 
@@ -22,16 +22,16 @@
     </span>
   </div>
 
-  <div *ngIf="errorMsg" class="error-banner">
+  <div *ngIf="errorMsg" data-testid="scheduling-error-banner" class="error-banner">
     <mat-icon>error</mat-icon>
     <span>{{ errorMsg }}</span>
   </div>
 
   <div class="dialog-overlay" *ngIf="showConflictDialog" (click)="closeConflictDialog()"></div>
-  <div class="dialog-container conflict-dialog" *ngIf="showConflictDialog">
+  <div class="dialog-container conflict-dialog" data-testid="scheduling-conflict-dialog" *ngIf="showConflictDialog">
     <div class="dialog-header conflict-dialog-header">
       <h2><mat-icon>event_busy</mat-icon> Meeting Conflict Detected</h2>
-      <button mat-icon-button (click)="closeConflictDialog()" aria-label="Close conflict dialog">
+      <button data-testid="scheduling-conflict-close-btn" mat-icon-button (click)="closeConflictDialog()" aria-label="Close conflict dialog">
         <mat-icon>close</mat-icon>
       </button>
     </div>
@@ -46,8 +46,8 @@
         <strong>{{ conflictDialog.conflicting }}</strong>
       </div>
       <div class="dialog-footer">
-        <button mat-stroked-button (click)="closeConflictDialog()">Close</button>
-        <button mat-raised-button color="primary" (click)="closeConflictDialog()">
+        <button data-testid="scheduling-conflict-footer-close-btn" mat-stroked-button (click)="closeConflictDialog()">Close</button>
+        <button data-testid="scheduling-conflict-select-another-time-btn" mat-raised-button color="primary" (click)="closeConflictDialog()">
           <mat-icon>schedule</mat-icon>
           Select Another Time
         </button>

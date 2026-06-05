@@ -80,7 +80,7 @@
         </div>
 
         <!-- Status messages -->
-        <div *ngIf="errorMsg" class="status-msg error-msg">
+        <div *ngIf="errorMsg" data-testid="citizen-registration-error-message" class="status-msg error-msg">
           <mat-icon>error</mat-icon>
           <span>{{ errorMsg }}</span>
         </div>
@@ -90,7 +90,7 @@
           <span>{{ successMsg }}</span>
         </div>
 
-        <div *ngIf="kycPendingAllowed && !submitted" class="status-msg warning-msg">
+        <div *ngIf="kycPendingAllowed && !submitted" data-testid="citizen-registration-kyc-warning-message" class="status-msg warning-msg">
           <mat-icon>pending_actions</mat-icon>
           <span>KYC service is temporarily unavailable. You can continue with registration, but your KYC status will remain Pending.</span>
         </div>
@@ -116,7 +116,7 @@
 
           <mat-form-field appearance="outline" class="full-width" *ngIf="form.idType === 'NONE'">
             <mat-label>Full Name *</mat-label>
-            <input matInput type="text" [(ngModel)]="form.fullName" placeholder="Enter visitor full name" (keydown)="allowNameOnly($event)" (paste)="pasteFullName($event)" (input)="sanitizeFullName()" (blur)="trimFullName()" />
+            <input data-testid="citizen-registration-name-input" matInput type="text" [(ngModel)]="form.fullName" placeholder="Enter visitor full name" (keydown)="allowNameOnly($event)" (paste)="pasteFullName($event)" (input)="sanitizeFullName()" (blur)="trimFullName()" />
           </mat-form-field>
           <div class="field-validation-msg error" *ngIf="form.idType === 'NONE' && nameValidationMessage">
             <mat-icon>error</mat-icon>
@@ -127,6 +127,7 @@
             <mat-label>{{ 'EPIC_NUMBER' | translate }} *</mat-label>
             <input
               id="register_epicNumberInput"
+              data-testid="citizen-registration-epic-input"
               matInput
               type="text"
               [(ngModel)]="form.epicNumber"
@@ -146,6 +147,7 @@
           <mat-form-field appearance="outline" class="full-width" *ngIf="form.idType === 'EPIC'">
             <mat-label>{{ 'VISITOR_NAME_VOTER_CARD' | translate }} *</mat-label>
             <input
+              data-testid="citizen-registration-otp-input"
               matInput
               #visitorNameInput
               id="register_visitorNameInput"
@@ -170,6 +172,7 @@
           <mat-form-field appearance="outline" class="full-width" *ngIf="otpSent && form.idType === 'EPIC'">
             <mat-label>{{ 'ENTER_OTP' | translate }} *</mat-label>
             <input
+              data-testid="citizen-registration-mobile-input"
               matInput
               id="register_otpInputStep1"
               type="text"
@@ -289,6 +292,7 @@
               color="primary" 
               class="flex-1" 
               [disabled]="loading || !canSendEpicOtp" 
+              data-testid="citizen-registration-generate-otp-btn"
               (click)="validateId()">
               <span *ngIf="!loading"><mat-icon>send</mat-icon> {{ 'GENERATE_OTP' | translate }}</span>
               <span *ngIf="loading"><mat-icon class="spin-icon">sync</mat-icon> {{ 'LOADING' | translate }}</span>
@@ -327,6 +331,7 @@
               color="primary" 
               class="flex-1" 
               [disabled]="loading || otpCode.length !== 6" 
+              data-testid="citizen-registration-verify-otp-btn"
               (click)="validateOtp()">
               <span *ngIf="!loading"><mat-icon>check</mat-icon> {{ 'VERIFY_OTP' | translate }}</span>
               <span *ngIf="loading"><mat-icon class="spin-icon">sync</mat-icon> {{ 'VERIFYING' | translate }}</span>
@@ -412,6 +417,7 @@
               color="primary"
               class="flex-1"
               [disabled]="loading || otpCode.length !== 6"
+              data-testid="citizen-registration-next-after-otp-btn"
               (click)="validateOtp()">
               <span *ngIf="!loading"><mat-icon>check</mat-icon> {{ 'NEXT' | translate }}</span>
               <span *ngIf="loading"><mat-icon>autorenew</mat-icon> {{ 'VERIFYING' | translate }}</span>
@@ -658,7 +664,7 @@
 
           <mat-form-field appearance="outline" class="full-width" *ngIf="form.kycStatus === 'KYC_PENDING'">
             <mat-label>Full Name *</mat-label>
-            <input matInput type="text" [(ngModel)]="form.fullName" placeholder="Enter citizen full name" (input)="clearVisibleErrors()" />
+            <input data-testid="citizen-registration-additional-name-input" matInput type="text" [(ngModel)]="form.fullName" placeholder="Enter citizen full name" (input)="clearVisibleErrors()" />
           </mat-form-field>
 
           <!-- R009: AI KYC Confidence Indicator -->
@@ -776,7 +782,7 @@
                 (paste)="pasteDistrict($event)"
                 (input)="sanitizeDistrict()"
                 (blur)="trimDistrict()" />
-              <mat-error *ngIf="districtValidationMessage">{{ districtValidationMessage }}</mat-error>
+              <mat-error data-testid="citizen-registration-district-error" *ngIf="districtValidationMessage">{{ districtValidationMessage }}</mat-error>
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>{{ 'CONSTITUENCY' | translate }}</mat-label>
@@ -824,7 +830,7 @@
 
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Agenda Type</mat-label>
-            <mat-select [(ngModel)]="form.agendaType" placeholder="Select agenda">
+            <mat-select data-testid="citizen-registration-agenda-type-select" [(ngModel)]="form.agendaType" placeholder="Select agenda">
               <mat-option *ngFor="let agenda of agendaTypes" [value]="agenda">{{ agenda }}</mat-option>
             </mat-select>
           </mat-form-field>
@@ -838,7 +844,7 @@
             <button mat-stroked-button color="primary" (click)="goBackFromAdditionalDetails()">
               <mat-icon>arrow_back</mat-icon> {{ 'BACK' | translate }}
             </button>
-            <button mat-raised-button color="primary" class="flex-1" [disabled]="!canSubmitRegistration" (click)="submitRegistration()">
+            <button data-testid="citizen-registration-submit-btn" mat-raised-button color="primary" class="flex-1" [disabled]="!canSubmitRegistration" (click)="submitRegistration()">
               <span *ngIf="!loading"><mat-icon>check</mat-icon> {{ 'COMPLETE_REGISTRATION' | translate }}</span>
               <span *ngIf="loading"><mat-icon class="spin-icon">sync</mat-icon> {{ 'REGISTERING' | translate }}</span>
             </button>

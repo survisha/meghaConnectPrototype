@@ -35,7 +35,7 @@
       <h2 class="page-title" style="margin:0">{{ isWalkInFlow ? 'Walk-in Appointment Request' : 'New Appointment Request' }}</h2>
     </div>
 
-    <div id="appointment_errorMsg" *ngIf="errorMsg" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.9rem">
+    <div id="appointment_errorMsg" data-testid="appointment-error-message" *ngIf="errorMsg" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.9rem">
       <div style="display:flex;align-items:flex-start;gap:0.5rem">
         <mat-icon style="font-size:1.1rem;width:1.1rem;height:1.1rem">error</mat-icon>
         <span>{{ errorMsg }}</span>
@@ -170,21 +170,21 @@
         <div class="form-grid">
           <mat-form-field appearance="outline" class="form-group">
             <mat-label>Agenda Type *</mat-label>
-            <mat-select id="appointment_agendaTypeSelect" [(ngModel)]="form.agendaType" (selectionChange)="onAgendaTypeChange()" placeholder="Select agenda">
+            <mat-select id="appointment_agendaTypeSelect" data-testid="appointment-agenda-type-select" [(ngModel)]="form.agendaType" (selectionChange)="onAgendaTypeChange()" placeholder="Select agenda">
               <mat-option *ngFor="let a of agendaTypes" [value]="a">{{ a }}</mat-option>
             </mat-select>
           </mat-form-field>
           
           <mat-form-field appearance="outline" class="form-group">
             <mat-label>Requested Location *</mat-label>
-            <mat-select id="appointment_requestedLocationSelect" [(ngModel)]="form.requestedLocation" placeholder="Meeting location">
+            <mat-select id="appointment_requestedLocationSelect" data-testid="appointment-location-select" [(ngModel)]="form.requestedLocation" placeholder="Meeting location">
               <mat-option *ngFor="let l of locations" [value]="l">{{ l }}</mat-option>
             </mat-select>
           </mat-form-field>
           
           <mat-form-field appearance="outline" class="form-group" style="grid-column:1/-1">
             <mat-label>Brief Description of Agenda *</mat-label>
-            <textarea id="appointment_agendaBriefInput" matInput [(ngModel)]="form.agendaBrief" rows="4" placeholder="Describe your purpose of visit in detail..."></textarea>
+            <textarea id="appointment_agendaBriefInput" data-testid="appointment-agenda-brief-input" matInput [(ngModel)]="form.agendaBrief" rows="4" placeholder="Describe your purpose of visit in detail..."></textarea>
           </mat-form-field>
         </div>
       </div>

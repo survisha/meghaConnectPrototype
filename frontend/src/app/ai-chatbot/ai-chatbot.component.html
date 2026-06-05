@@ -1,6 +1,6 @@
 <div class="chatbot-widget">
   <!-- Floating trigger button -->
-  <button class="chatbot-trigger" (click)="toggleChat()" [attr.aria-label]="isOpen ? 'Close chat' : 'Open chat'">
+  <button class="chatbot-trigger" data-testid="ai-chatbot-trigger" (click)="toggleChat()" [attr.aria-label]="isOpen ? 'Close chat' : 'Open chat'">
     <mat-icon>{{ isOpen ? 'close' : 'chat' }}</mat-icon>
     <span *ngIf="!isOpen">Ask MeghaBot</span>
   </button>
@@ -33,6 +33,7 @@
 
     <div class="chatbot-input">
       <textarea
+        data-testid="ai-chatbot-input"
         [(ngModel)]="inputText"
         (keydown)="onKeyDown($event)"
         placeholder="Type your question..."
@@ -40,7 +41,7 @@
         class="chat-textarea"
         [disabled]="loading">
       </textarea>
-      <button class="send-btn" (click)="sendMessage()" [disabled]="!inputText.trim() || loading">
+      <button class="send-btn" data-testid="ai-chatbot-send-btn" (click)="sendMessage()" [disabled]="!inputText.trim() || loading">
         <mat-icon>send</mat-icon>
       </button>
     </div>

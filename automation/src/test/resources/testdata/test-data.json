@@ -1,0 +1,28 @@
+{
+  "citizen": {
+    "validEpic": "ABC1234567",
+    "invalidEpic": "ABC123",
+    "validMobile": "9876543210",
+    "invalidMobile": "98765ABCD",
+    "validOtp": "123456",
+    "wrongOtp": "000000",
+    "validName": "Ribait Kharsyntiew",
+    "invalidName": "Ribait@123",
+    "validDistrict": "East Khasi Hills",
+    "invalidDistrict": "East Khasi Hills 123"
+  },
+  "roles": {
+    "DEO": { "username": "DEO_USER", "passwordEnv": "MC_DEO_PASSWORD" },
+    "CMO": { "username": "CMO_USER", "passwordEnv": "MC_CMO_PASSWORD" },
+    "APPROVER": { "username": "APPROVER_USER", "passwordEnv": "MC_APPROVER_PASSWORD" },
+    "HCM": { "username": "HCM_USER", "passwordEnv": "MC_HCM_PASSWORD" },
+    "OSD": { "username": "OSD_USER", "passwordEnv": "MC_OSD_PASSWORD" },
+    "ADMIN": { "username": "ADMIN_USER", "passwordEnv": "MC_ADMIN_PASSWORD" },
+    "CITIZEN": { "username": "9876543210", "passwordEnv": "MC_CITIZEN_OTP" }
+  },
+  "files": {
+    "validPdf": "test-files/supporting-document.pdf",
+    "invalidExecutable": "test-files/malicious.exe",
+    "validImage": "test-files/photo.jpg"
+  }
+}

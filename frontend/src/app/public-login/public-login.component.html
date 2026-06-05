@@ -32,6 +32,7 @@
           </mat-label>
           <input
             id="publicLogin_mobileInput"
+            data-testid="citizen-login-mobile-input"
             matInput
             type="tel"
             [(ngModel)]="phoneNumber"
@@ -45,7 +46,7 @@
           />
         </mat-form-field>
 
-        <div id="publicLogin_warningMsg" *ngIf="warningMsg" class="warning-msg">
+        <div id="publicLogin_warningMsg" data-testid="citizen-login-warning-message" *ngIf="warningMsg" class="warning-msg">
           <div class="status-line">
             <mat-icon>warning</mat-icon>
             <span>{{ warningMsg }}</span>
@@ -75,14 +76,14 @@
           </mat-radio-group>
         </div>
 
-        <div id="publicLogin_errorMsg" *ngIf="errorMsg" class="error-msg">
+        <div id="publicLogin_errorMsg" data-testid="citizen-login-error-message" *ngIf="errorMsg" class="error-msg">
           <div class="status-line">
             <mat-icon>error</mat-icon>
             <span>{{ errorMsg }}</span>
           </div>
         </div>
 
-        <button id="publicLogin_generateOtpBtn" mat-raised-button color="primary" class="full-width" [disabled]="loading || (requiresEpic && !selectedRegistration)" (click)="checkMobile()">
+        <button id="publicLogin_generateOtpBtn" data-testid="citizen-login-generate-otp-btn" mat-raised-button color="primary" class="full-width" [disabled]="loading || (requiresEpic && !selectedRegistration)" (click)="checkMobile()">
           <mat-icon>send</mat-icon>
           <span *ngIf="!loading">{{ 'GENERATE_OTP' | translate }}</span>
           <span *ngIf="loading"><mat-icon class="spin-icon">sync</mat-icon> {{ 'CHECKING' | translate }}</span>
@@ -91,7 +92,7 @@
         <div class="divider">
           <span>{{ 'NEW_VISITOR' | translate }}</span>
         </div>
-        <button id="publicLogin_registerBtn" mat-stroked-button color="primary" class="full-width" (click)="goToRegister()">
+        <button id="publicLogin_registerBtn" data-testid="citizen-login-register-btn" mat-stroked-button color="primary" class="full-width" (click)="goToRegister()">
           <mat-icon>person_add</mat-icon>
           <span>{{ 'REGISTER_AS_NEW_VISITOR' | translate }}</span>
         </button>
@@ -114,6 +115,7 @@
             <span> {{ 'ENTER_OTP' | translate }}</span>
           </mat-label>
           <input
+            data-testid="citizen-login-otp-input"
             matInput
             type="text"
             class="otp-input"
@@ -129,25 +131,25 @@
           />
         </mat-form-field>
 
-        <div *ngIf="errorMsg" class="error-msg">
+        <div *ngIf="errorMsg" data-testid="citizen-login-otp-error-message" class="error-msg">
           <div class="status-line">
             <mat-icon>error</mat-icon>
             <span>{{ errorMsg }}</span>
           </div>
         </div>
 
-        <button mat-raised-button color="primary" class="full-width" [disabled]="loading || otpLocked" (click)="validateOtp()">
+        <button data-testid="citizen-login-verify-btn" mat-raised-button color="primary" class="full-width" [disabled]="loading || otpLocked" (click)="validateOtp()">
           <mat-icon>check</mat-icon>
           <span *ngIf="!loading">{{ 'VERIFY_LOGIN' | translate }}</span>
           <span *ngIf="loading"><mat-icon class="spin-icon">sync</mat-icon> {{ 'VERIFYING' | translate }}</span>
         </button>
 
         <div style="display:flex;gap:1rem;margin-top:0.75rem;justify-content:space-between">
-          <button mat-button color="primary" (click)="changeNumber()">
+          <button data-testid="citizen-login-change-number-btn" mat-button color="primary" (click)="changeNumber()">
             <mat-icon>arrow_back</mat-icon>
             <span>{{ 'CHANGE_NUMBER' | translate }}</span>
           </button>
-          <button mat-button color="primary" (click)="sendOtp()" [disabled]="loading">
+          <button data-testid="citizen-login-resend-otp-btn" mat-button color="primary" (click)="sendOtp()" [disabled]="loading">
             <mat-icon>refresh</mat-icon>
             <span>{{ 'RESEND_OTP' | translate }}</span>
           </button>

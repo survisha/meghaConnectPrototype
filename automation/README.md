@@ -542,3 +542,41 @@ mvn clean test
 **Framework Version**: 1.0.0  
 **Last Updated**: April 28, 2026  
 **Maintained By**: QA Automation Team
+
+
+## SRS Generated Regression Pack
+
+The SRS-derived regression pack adds module-wise Cucumber feature files under
+`src/test/resources/features` and shared glue in
+`GeneratedCoverageStepDefinition`. The scenarios are tagged with module tags
+such as `@citizen`, `@deo`, `@admin`, `@roleBased`, `@api`,
+`@validation`, `@positive`, and `@negative`.
+
+Run the generated regression catalog:
+
+```bash
+mvn clean test -Dtest=LoginTestRunner -Dcucumber.filter.tags="@generated"
+```
+
+Run smoke coverage:
+
+```bash
+mvn clean test -Dtest=LoginTestRunner -Dcucumber.filter.tags="@generated and @smoke"
+```
+
+Generate HTML/JSON/JUnit reports:
+
+```bash
+mvn clean test -Dtest=LoginTestRunner -Dcucumber.filter.tags="@generated"
+```
+
+Reports are written to `target/cucumber-reports` and
+`target/json-reports`. Failure screenshots are already captured by
+`TestHooks` through `ScreenshotUtil`; highlighted click/type actions are
+available in `WebElementUtil` when scenarios use UI page objects and
+`highlight.enabled=true`.
+
+Manual QA/UAT coverage is generated at the repository root:
+`MeghaConnect_TestCases.xlsx`. It includes module sheets, integration,
+security, role-based access, API, UAT, validation, and requirement
+traceability coverage.

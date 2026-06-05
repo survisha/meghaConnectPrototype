@@ -17,25 +17,25 @@
         <mat-form-field appearance="outline" style="width:100%">
           <mat-label>Phone Number</mat-label>
           <mat-icon matPrefix>phone</mat-icon>
-          <input matInput [(ngModel)]="searchPhone" placeholder="Mobile number"/>
+          <input matInput data-testid="public-identification-phone-search-input" [(ngModel)]="searchPhone" placeholder="Mobile number"/>
         </mat-form-field>
         
         <mat-form-field appearance="outline" style="width:100%">
           <mat-label>EPIC / Voter ID</mat-label>
           <mat-icon matPrefix>badge</mat-icon>
-          <input matInput [(ngModel)]="searchEpic" placeholder="EPIC number"/>
+          <input matInput data-testid="public-identification-epic-search-input" [(ngModel)]="searchEpic" placeholder="EPIC number"/>
         </mat-form-field>
         
         <mat-form-field appearance="outline" style="width:100%">
           <mat-label>Name</mat-label>
           <mat-icon matPrefix>person</mat-icon>
-          <input matInput [(ngModel)]="searchName" placeholder="Full or partial name"/>
+          <input matInput data-testid="public-identification-name-search-input" [(ngModel)]="searchName" placeholder="Full or partial name"/>
         </mat-form-field>
         
         <mat-form-field appearance="outline" style="width:100%">
           <mat-label>District</mat-label>
           <mat-icon matPrefix>place</mat-icon>
-          <mat-select [(ngModel)]="searchDistrict" placeholder="Select district">
+          <mat-select data-testid="public-identification-district-search-select" [(ngModel)]="searchDistrict" placeholder="Select district">
             <mat-option [value]="''">-- Clear --</mat-option>
             <mat-option *ngFor="let d of districts" [value]="d">{{ d }}</mat-option>
           </mat-select>
@@ -43,10 +43,10 @@
       </div>
       
       <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
-        <button mat-raised-button color="primary" (click)="search()" [disabled]="searching">
+        <button mat-raised-button color="primary" data-testid="public-identification-search-btn" (click)="search()" [disabled]="searching">
           <mat-icon>search</mat-icon> {{ searching ? 'Searching...' : 'Search' }}
         </button>
-        <button mat-stroked-button (click)="clearSearch()">
+        <button mat-stroked-button data-testid="public-identification-clear-search-btn" (click)="clearSearch()">
           <mat-icon>close</mat-icon> Clear
         </button>
         <button mat-stroked-button disabled>

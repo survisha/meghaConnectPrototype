@@ -17,7 +17,7 @@ import org.junit.runner.RunWith;
                 "json:target/cucumber-reports/cucumber.json",
                 "junit:target/cucumber-reports/cucumber.xml"
         },
-        tags = "@CitizenLogin and @UAT",
+        tags = "@regression and @UAT",
         monochrome = true
 )
 public class UatTestRunner {

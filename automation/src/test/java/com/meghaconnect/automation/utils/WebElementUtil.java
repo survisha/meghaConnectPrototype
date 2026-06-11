@@ -17,6 +17,7 @@ import java.util.List;
  */
 public class WebElementUtil {
     private static final Logger logger = LogManager.getLogger(WebElementUtil.class);
+    private static final String HIGHLIGHT_STYLE = "border: 3px solid red; background: yellow; box-shadow: 0 0 10px red;";
 
     /**
      * Wait for element to be visible
@@ -33,6 +34,91 @@ public class WebElementUtil {
         } catch (TimeoutException e) {
             logger.error("✗ Element not visible within timeout: " + locator);
             throw new RuntimeException("Element not visible: " + locator, e);
+        }
+    }
+
+    public static WebElement waitForVisibleWithHighlight(By locator) {
+        WebElement element = waitForElementVisible(locator);
+        prepareElementForHighlight(element);
+        highlightElement(element);
+        sleepForHighlight();
+        captureStepScreenshot("visible_" + locator);
+        removeHighlight(element);
+        return element;
+    }
+
+    public static void highlightElement(WebElement element) {
+        if (!ConfigManager.isHighlightEnabled() || element == null) {
+            return;
+        }
+        try {
+            JavascriptExecutor executor = (JavascriptExecutor) DriverManager.getDriver();
+            executor.executeScript("arguments[0].setAttribute('data-original-style', arguments[0].getAttribute('style') || '');", element);
+            executor.executeScript("arguments[0].setAttribute('style', (arguments[0].getAttribute('style') || '') + arguments[1]);", element, HIGHLIGHT_STYLE);
+        } catch (Exception e) {
+            logger.debug("Unable to highlight element: " + e.getClass().getSimpleName());
+        }
+    }
+
+    public static void removeHighlight(WebElement element) {
+        if (!ConfigManager.isHighlightEnabled() || element == null) {
+            return;
+        }
+        try {
+            JavascriptExecutor executor = (JavascriptExecutor) DriverManager.getDriver();
+            executor.executeScript("arguments[0].setAttribute('style', arguments[0].getAttribute('data-original-style') || '');", element);
+            executor.executeScript("arguments[0].removeAttribute('data-original-style');", element);
+        } catch (Exception e) {
+            logger.debug("Unable to remove element highlight: " + e.getClass().getSimpleName());
+        }
+    }
+
+    public static void clickWithHighlight(By locator) {
+        WebElement element = waitForElementClickable(locator);
+        prepareElementForHighlight(element);
+        highlightElement(element);
+        sleepForHighlight();
+        captureStepScreenshot("before_click_" + locator);
+        try {
+            element.click();
+        } catch (Exception e) {
+            logger.warn("Normal click failed, using JavaScript click fallback for: " + locator);
+            executeScript("arguments[0].click();", element);
+        }
+        captureStepScreenshot("after_click_" + locator);
+        removeHighlight(element);
+        logger.info("Clicked highlighted element: " + locator);
+    }
+
+    public static void typeWithHighlight(By locator, String value) {
+        WebElement element = waitForElementVisible(locator);
+        prepareElementForHighlight(element);
+        highlightElement(element);
+        sleepForHighlight();
+        captureStepScreenshot("before_type_" + locator);
+        element.clear();
+        element.sendKeys(value == null ? "" : value);
+        captureStepScreenshot("after_type_" + locator);
+        removeHighlight(element);
+        logger.info("Typed into highlighted element: " + locator);
+    }
+
+    public static String getTextWithHighlight(By locator) {
+        WebElement element = waitForElementVisible(locator);
+        prepareElementForHighlight(element);
+        highlightElement(element);
+        sleepForHighlight();
+        captureStepScreenshot("before_get_text_" + locator);
+        String text = element.getText();
+        captureStepScreenshot("after_get_text_" + locator);
+        removeHighlight(element);
+        logger.info("Read text from highlighted element: " + locator);
+        return text;
+    }
+
+    public static void captureStepScreenshot(String stepName) {
+        if (ConfigManager.isScreenshotEachStep()) {
+            ScreenshotUtil.captureScreenshot(stepName);
         }
     }
 
@@ -290,6 +376,21 @@ public class WebElementUtil {
         } catch (Exception e) {
             logger.error("✗ Failed to execute JavaScript", e);
             throw new RuntimeException("JavaScript execution failed: " + e.getMessage(), e);
+        }
+    }
+
+    private static void prepareElementForHighlight(WebElement element) {
+        executeScript("arguments[0].scrollIntoView({block:'center', inline:'center'});", element);
+    }
+
+    private static void sleepForHighlight() {
+        if (!ConfigManager.isHighlightEnabled()) {
+            return;
+        }
+        try {
+            Thread.sleep(ConfigManager.getHighlightDurationMs());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 

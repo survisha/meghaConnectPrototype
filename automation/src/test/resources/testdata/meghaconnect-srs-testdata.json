@@ -1,0 +1,2089 @@
+{
+  "source": "MeghaConnectAI-SRS.pdf and frontend/src/app scan prompt",
+  "modules": [
+    {
+      "key": "CIT_REG",
+      "module": "Citizen Registration",
+      "featureFile": "citizen-registration.feature",
+      "scenarios": [
+        {
+          "name": "Valid EPIC registration",
+          "test_type": "Positive",
+          "req": "CIT-001",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@positive",
+            "@smoke"
+          ],
+          "area": "EPIC registration",
+          "expected": "Citizen registers successfully using EPIC and reaches dashboard."
+        },
+        {
+          "name": "Valid Aadhaar registration",
+          "test_type": "Positive",
+          "req": "CIT-002",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@positive"
+          ],
+          "area": "Aadhaar registration",
+          "expected": "Valid Aadhaar registration is validated successfully."
+        },
+        {
+          "name": "Valid No ID registration",
+          "test_type": "Positive",
+          "req": "CIT-003",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@positive"
+          ],
+          "area": "No ID registration",
+          "expected": "Valid No ID registration is validated successfully."
+        },
+        {
+          "name": "KYC pending registration when service is down",
+          "test_type": "Positive",
+          "req": "CIT-004",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@positive",
+            "@api"
+          ],
+          "area": "KYC pending fallback",
+          "expected": "KYC pending registration when service is down is validated successfully."
+        },
+        {
+          "name": "Outside state NA checkbox flow",
+          "test_type": "Positive",
+          "req": "CIT-005",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@positive"
+          ],
+          "area": "District/Constituency/Booth",
+          "expected": "Outside state NA checkbox flow is validated successfully."
+        },
+        {
+          "name": "OTP success flow",
+          "test_type": "Positive",
+          "req": "CIT-006",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@positive",
+            "@smoke"
+          ],
+          "area": "OTP validation",
+          "expected": "OTP success flow is validated successfully."
+        },
+        {
+          "name": "Invalid EPIC format",
+          "test_type": "Validation",
+          "req": "CIT-007",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@negative",
+            "@validation"
+          ],
+          "area": "EPIC registration",
+          "expected": "Invalid EPIC format is validated successfully."
+        },
+        {
+          "name": "Empty EPIC",
+          "test_type": "Validation",
+          "req": "CIT-007",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@negative",
+            "@validation"
+          ],
+          "area": "EPIC registration",
+          "expected": "Empty EPIC is validated successfully."
+        },
+        {
+          "name": "Empty name",
+          "test_type": "Validation",
+          "req": "CIT-008",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@negative",
+            "@validation"
+          ],
+          "area": "Name validation",
+          "expected": "Empty name is validated successfully."
+        },
+        {
+          "name": "Invalid name with numbers or special characters",
+          "test_type": "Validation",
+          "req": "CIT-008",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@negative",
+            "@validation"
+          ],
+          "area": "Name validation",
+          "expected": "Invalid name with numbers or special characters is validated successfully."
+        },
+        {
+          "name": "Invalid mobile number",
+          "test_type": "Validation",
+          "req": "CIT-009",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@negative",
+            "@validation"
+          ],
+          "area": "Mobile validation",
+          "expected": "Invalid mobile number is validated successfully."
+        },
+        {
+          "name": "Wrong OTP",
+          "test_type": "Negative",
+          "req": "CIT-010",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@negative"
+          ],
+          "area": "OTP validation",
+          "expected": "Wrong OTP is validated successfully."
+        },
+        {
+          "name": "Expired OTP",
+          "test_type": "Negative",
+          "req": "CIT-010",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@negative"
+          ],
+          "area": "OTP validation",
+          "expected": "Expired OTP is validated successfully."
+        },
+        {
+          "name": "Missing required dropdowns",
+          "test_type": "Validation",
+          "req": "CIT-011",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@negative",
+            "@validation"
+          ],
+          "area": "Dropdown validation",
+          "expected": "Missing required dropdowns is validated successfully."
+        },
+        {
+          "name": "Missing photo",
+          "test_type": "Validation",
+          "req": "CIT-011",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@negative",
+            "@validation"
+          ],
+          "area": "Photo capture",
+          "expected": "Missing photo is validated successfully."
+        },
+        {
+          "name": "Service unavailable",
+          "test_type": "Negative",
+          "req": "CIT-004",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@negative",
+            "@api"
+          ],
+          "area": "KYC service unavailable",
+          "expected": "Service unavailable is validated successfully."
+        }
+      ]
+    },
+    {
+      "key": "CIT_LOGIN",
+      "module": "Citizen Login",
+      "featureFile": "citizen-login.feature",
+      "scenarios": [
+        {
+          "name": "Registered mobile login",
+          "test_type": "Positive",
+          "req": "CIT-001",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@positive",
+            "@smoke"
+          ],
+          "area": "Mobile OTP login",
+          "expected": "Registered mobile login is validated successfully."
+        },
+        {
+          "name": "Multiple citizens with same mobile",
+          "test_type": "Positive",
+          "req": "CIT-002",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@positive"
+          ],
+          "area": "Citizen selection",
+          "expected": "Multiple citizens with same mobile is validated successfully."
+        },
+        {
+          "name": "EPIC citizen selection",
+          "test_type": "Positive",
+          "req": "CIT-003",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@positive"
+          ],
+          "area": "EPIC citizen selection",
+          "expected": "EPIC citizen selection is validated successfully."
+        },
+        {
+          "name": "No ID citizen selection using visitorId",
+          "test_type": "Positive",
+          "req": "CIT-004",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@positive"
+          ],
+          "area": "visitorId citizen selection",
+          "expected": "No ID citizen selection using visitorId is validated successfully."
+        },
+        {
+          "name": "Wrong OTP attempt count decrease",
+          "test_type": "Negative",
+          "req": "CIT-005",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@negative",
+            "@validation"
+          ],
+          "area": "OTP validation",
+          "expected": "Wrong OTP attempt count decrease is validated successfully."
+        },
+        {
+          "name": "OTP lock after max attempts",
+          "test_type": "Negative",
+          "req": "CIT-006",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@negative",
+            "@validation"
+          ],
+          "area": "OTP lock",
+          "expected": "OTP lock after max attempts is validated successfully."
+        },
+        {
+          "name": "Change Number clears cache",
+          "test_type": "Positive",
+          "req": "CIT-007",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@positive"
+          ],
+          "area": "Change Number",
+          "expected": "Change Number clears cache is validated successfully."
+        },
+        {
+          "name": "Unregistered mobile shows register option",
+          "test_type": "Negative",
+          "req": "CIT-008",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@negative"
+          ],
+          "area": "Registration redirect",
+          "expected": "Unregistered mobile shows register option is validated successfully."
+        }
+      ]
+    },
+    {
+      "key": "CIT_DASH",
+      "module": "Citizen Dashboard",
+      "featureFile": "citizen-dashboard.feature",
+      "scenarios": [
+        {
+          "name": "Dashboard cards visible",
+          "test_type": "UI",
+          "req": "DASH-001",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@positive",
+            "@smoke"
+          ],
+          "area": "Dashboard cards",
+          "expected": "Dashboard cards visible is validated successfully."
+        },
+        {
+          "name": "Profile details visible",
+          "test_type": "UI",
+          "req": "DASH-001",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@positive"
+          ],
+          "area": "Profile details",
+          "expected": "Profile details visible is validated successfully."
+        },
+        {
+          "name": "Appointment history visible",
+          "test_type": "UI",
+          "req": "DASH-002",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@positive"
+          ],
+          "area": "Appointment history",
+          "expected": "Appointment history visible is validated successfully."
+        },
+        {
+          "name": "Active schemes visible",
+          "test_type": "UI",
+          "req": "DASH-003",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@positive"
+          ],
+          "area": "Active schemes",
+          "expected": "Active schemes visible is validated successfully."
+        },
+        {
+          "name": "Grievance count visible",
+          "test_type": "UI",
+          "req": "DASH-004",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@positive"
+          ],
+          "area": "Grievance count",
+          "expected": "Grievance count visible is validated successfully."
+        },
+        {
+          "name": "Download pass enabled only for eligible status",
+          "test_type": "Role-Based",
+          "req": "DASH-002",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@roleBased"
+          ],
+          "area": "Visitor pass",
+          "expected": "Download pass enabled only for eligible status is validated successfully."
+        },
+        {
+          "name": "Raise Grievance opens form",
+          "test_type": "Positive",
+          "req": "DASH-004",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@positive"
+          ],
+          "area": "Grievance form",
+          "expected": "Raise Grievance opens form is validated successfully."
+        },
+        {
+          "name": "KYC pending retry panel",
+          "test_type": "Positive",
+          "req": "CIT-004",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@positive"
+          ],
+          "area": "KYC retry",
+          "expected": "KYC pending retry panel is validated successfully."
+        },
+        {
+          "name": "Verify with EPIC updates KYC",
+          "test_type": "Positive",
+          "req": "CIT-004",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@positive",
+            "@api"
+          ],
+          "area": "KYC update",
+          "expected": "Verify with EPIC updates KYC is validated successfully."
+        }
+      ]
+    },
+    {
+      "key": "CIT_APT",
+      "module": "Citizen Appointment Creation",
+      "featureFile": "citizen-appointment.feature",
+      "scenarios": [
+        {
+          "name": "Create appointment with valid details",
+          "test_type": "Positive",
+          "req": "APT-001",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@positive",
+            "@smoke"
+          ],
+          "area": "Appointment creation",
+          "expected": "Create appointment with valid details is validated successfully."
+        },
+        {
+          "name": "Scheme agenda enables scheme form",
+          "test_type": "Positive",
+          "req": "APT-002",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@positive"
+          ],
+          "area": "Scheme agenda",
+          "expected": "Scheme agenda enables scheme form is validated successfully."
+        },
+        {
+          "name": "Add associate visitor",
+          "test_type": "Positive",
+          "req": "APT-003",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@positive"
+          ],
+          "area": "Associate visitor",
+          "expected": "Add associate visitor is validated successfully."
+        },
+        {
+          "name": "Associate visitor must be registered",
+          "test_type": "Validation",
+          "req": "APT-003",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@negative",
+            "@validation"
+          ],
+          "area": "Associate validation",
+          "expected": "Associate visitor must be registered is validated successfully."
+        },
+        {
+          "name": "Upload supporting document",
+          "test_type": "Positive",
+          "req": "APT-004",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@positive"
+          ],
+          "area": "Document upload",
+          "expected": "Upload supporting document is validated successfully."
+        },
+        {
+          "name": "Review and submit",
+          "test_type": "Positive",
+          "req": "APT-005",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@positive"
+          ],
+          "area": "Review submit",
+          "expected": "Review and submit is validated successfully."
+        },
+        {
+          "name": "Application number generated",
+          "test_type": "Positive",
+          "req": "APT-006",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@positive"
+          ],
+          "area": "Application number",
+          "expected": "Application number generated is validated successfully."
+        },
+        {
+          "name": "Missing agenda",
+          "test_type": "Validation",
+          "req": "APT-002",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@negative",
+            "@validation"
+          ],
+          "area": "Agenda validation",
+          "expected": "Missing agenda is validated successfully."
+        },
+        {
+          "name": "Invalid associate",
+          "test_type": "Validation",
+          "req": "APT-003",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@negative",
+            "@validation"
+          ],
+          "area": "Associate validation",
+          "expected": "Invalid associate is validated successfully."
+        },
+        {
+          "name": "Unsupported document",
+          "test_type": "Validation",
+          "req": "APT-004",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@negative",
+            "@validation"
+          ],
+          "area": "File upload validation",
+          "expected": "Unsupported document is validated successfully."
+        },
+        {
+          "name": "Submit without required fields",
+          "test_type": "Validation",
+          "req": "APT-005",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@negative",
+            "@validation"
+          ],
+          "area": "Required fields",
+          "expected": "Submit without required fields is validated successfully."
+        }
+      ]
+    },
+    {
+      "key": "SCH_APP",
+      "module": "Apply for Scheme",
+      "featureFile": "citizen-scheme-application.feature",
+      "scenarios": [
+        {
+          "name": "Select scheme",
+          "test_type": "Positive",
+          "req": "SCH-001",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@positive"
+          ],
+          "area": "Scheme selection",
+          "expected": "Select scheme is validated successfully."
+        },
+        {
+          "name": "Add project details",
+          "test_type": "Positive",
+          "req": "SCH-001",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@positive"
+          ],
+          "area": "Project details",
+          "expected": "Add project details is validated successfully."
+        },
+        {
+          "name": "Add financial line items",
+          "test_type": "Positive",
+          "req": "SCH-002",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@positive"
+          ],
+          "area": "Financial line items",
+          "expected": "Add financial line items is validated successfully."
+        },
+        {
+          "name": "Add community contribution",
+          "test_type": "Positive",
+          "req": "SCH-002",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@positive"
+          ],
+          "area": "Community contribution",
+          "expected": "Add community contribution is validated successfully."
+        },
+        {
+          "name": "Upload documents",
+          "test_type": "Positive",
+          "req": "SCH-003",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@positive"
+          ],
+          "area": "Document upload",
+          "expected": "Upload documents is validated successfully."
+        },
+        {
+          "name": "Review and submit",
+          "test_type": "Positive",
+          "req": "SCH-003",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@positive"
+          ],
+          "area": "Review submit",
+          "expected": "Review and submit is validated successfully."
+        },
+        {
+          "name": "Application number generated",
+          "test_type": "Positive",
+          "req": "SCH-003",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@positive"
+          ],
+          "area": "Application number",
+          "expected": "Application number generated is validated successfully."
+        },
+        {
+          "name": "Missing scheme type",
+          "test_type": "Validation",
+          "req": "SCH-001",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@negative",
+            "@validation"
+          ],
+          "area": "Scheme type",
+          "expected": "Missing scheme type is validated successfully."
+        },
+        {
+          "name": "Missing project name",
+          "test_type": "Validation",
+          "req": "SCH-001",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@negative",
+            "@validation"
+          ],
+          "area": "Project name",
+          "expected": "Missing project name is validated successfully."
+        },
+        {
+          "name": "Invalid estimated cost",
+          "test_type": "Validation",
+          "req": "SCH-002",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@negative",
+            "@validation"
+          ],
+          "area": "Estimated cost",
+          "expected": "Invalid estimated cost is validated successfully."
+        },
+        {
+          "name": "Invalid quantity or unit cost",
+          "test_type": "Validation",
+          "req": "SCH-002",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@negative",
+            "@validation"
+          ],
+          "area": "Quantity/unit cost",
+          "expected": "Invalid quantity or unit cost is validated successfully."
+        },
+        {
+          "name": "Submit without required fields",
+          "test_type": "Validation",
+          "req": "SCH-003",
+          "priority": "High",
+          "tags": [
+            "@citizen",
+            "@negative",
+            "@validation"
+          ],
+          "area": "Required fields",
+          "expected": "Submit without required fields is validated successfully."
+        }
+      ]
+    },
+    {
+      "key": "DEO",
+      "module": "DEO Module",
+      "featureFile": "deo-walkin.feature",
+      "scenarios": [
+        {
+          "name": "DEO login",
+          "test_type": "Positive",
+          "req": "DEO-001",
+          "priority": "High",
+          "tags": [
+            "@deo",
+            "@positive",
+            "@smoke"
+          ],
+          "area": "DEO login",
+          "expected": "DEO login is validated successfully."
+        },
+        {
+          "name": "Walk-in counter access",
+          "test_type": "Role-Based",
+          "req": "DEO-001",
+          "priority": "High",
+          "tags": [
+            "@deo",
+            "@roleBased"
+          ],
+          "area": "Walk-in counter",
+          "expected": "Walk-in counter access is validated successfully."
+        },
+        {
+          "name": "Search visitor by mobile",
+          "test_type": "Positive",
+          "req": "DEO-002",
+          "priority": "High",
+          "tags": [
+            "@deo",
+            "@positive"
+          ],
+          "area": "Visitor search",
+          "expected": "Search visitor by mobile is validated successfully."
+        },
+        {
+          "name": "Single visitor radio selection",
+          "test_type": "UI",
+          "req": "DEO-002",
+          "priority": "High",
+          "tags": [
+            "@deo",
+            "@positive"
+          ],
+          "area": "Single visitor selection",
+          "expected": "Single visitor radio selection is validated successfully."
+        },
+        {
+          "name": "Multiple visitor radio selection",
+          "test_type": "UI",
+          "req": "DEO-002",
+          "priority": "High",
+          "tags": [
+            "@deo",
+            "@positive"
+          ],
+          "area": "Multiple visitor selection",
+          "expected": "Multiple visitor radio selection is validated successfully."
+        },
+        {
+          "name": "Update details",
+          "test_type": "Positive",
+          "req": "DEO-003",
+          "priority": "High",
+          "tags": [
+            "@deo",
+            "@positive"
+          ],
+          "area": "Update visitor",
+          "expected": "Update details is validated successfully."
+        },
+        {
+          "name": "Perform KYC",
+          "test_type": "Positive",
+          "req": "DEO-003",
+          "priority": "High",
+          "tags": [
+            "@deo",
+            "@positive",
+            "@api"
+          ],
+          "area": "KYC",
+          "expected": "Perform KYC is validated successfully."
+        },
+        {
+          "name": "Create walk-in appointment",
+          "test_type": "Positive",
+          "req": "DEO-004",
+          "priority": "High",
+          "tags": [
+            "@deo",
+            "@positive"
+          ],
+          "area": "Walk-in appointment",
+          "expected": "Create walk-in appointment is validated successfully."
+        },
+        {
+          "name": "Upload supporting document",
+          "test_type": "Positive",
+          "req": "DEO-004",
+          "priority": "High",
+          "tags": [
+            "@deo",
+            "@positive"
+          ],
+          "area": "Document upload",
+          "expected": "Upload supporting document is validated successfully."
+        },
+        {
+          "name": "Capture meeting proof photo",
+          "test_type": "Positive",
+          "req": "DEO-004",
+          "priority": "High",
+          "tags": [
+            "@deo",
+            "@positive"
+          ],
+          "area": "Meeting proof photo",
+          "expected": "Capture meeting proof photo is validated successfully."
+        }
+      ]
+    },
+    {
+      "key": "PID",
+      "module": "Public Identification",
+      "featureFile": "public-identification.feature",
+      "scenarios": [
+        {
+          "name": "Search by phone",
+          "test_type": "Positive",
+          "req": "PID-001",
+          "priority": "High",
+          "tags": [
+            "@regression",
+            "@positive"
+          ],
+          "area": "Phone search",
+          "expected": "Search by phone is validated successfully."
+        },
+        {
+          "name": "Search by EPIC",
+          "test_type": "Positive",
+          "req": "PID-001",
+          "priority": "High",
+          "tags": [
+            "@regression",
+            "@positive"
+          ],
+          "area": "EPIC search",
+          "expected": "Search by EPIC is validated successfully."
+        },
+        {
+          "name": "Search by name",
+          "test_type": "Positive",
+          "req": "PID-001",
+          "priority": "High",
+          "tags": [
+            "@regression",
+            "@positive"
+          ],
+          "area": "Name search",
+          "expected": "Search by name is validated successfully."
+        },
+        {
+          "name": "Search by district",
+          "test_type": "Positive",
+          "req": "PID-001",
+          "priority": "High",
+          "tags": [
+            "@regression",
+            "@positive"
+          ],
+          "area": "District search",
+          "expected": "Search by district is validated successfully."
+        },
+        {
+          "name": "Show profile details",
+          "test_type": "UI",
+          "req": "PID-002",
+          "priority": "High",
+          "tags": [
+            "@regression",
+            "@positive"
+          ],
+          "area": "Profile details",
+          "expected": "Show profile details is validated successfully."
+        },
+        {
+          "name": "Show scheme history",
+          "test_type": "UI",
+          "req": "PID-002",
+          "priority": "High",
+          "tags": [
+            "@regression",
+            "@positive"
+          ],
+          "area": "Scheme history",
+          "expected": "Show scheme history is validated successfully."
+        },
+        {
+          "name": "Show appointment history",
+          "test_type": "UI",
+          "req": "PID-002",
+          "priority": "High",
+          "tags": [
+            "@regression",
+            "@positive"
+          ],
+          "area": "Appointment history",
+          "expected": "Show appointment history is validated successfully."
+        },
+        {
+          "name": "Show lastVisitedAt",
+          "test_type": "UI",
+          "req": "PID-003",
+          "priority": "High",
+          "tags": [
+            "@regression",
+            "@positive"
+          ],
+          "area": "Last visited",
+          "expected": "Show lastVisitedAt is validated successfully."
+        },
+        {
+          "name": "Show SCHEDULED appointment under Upcoming Appointment",
+          "test_type": "UI",
+          "req": "PID-003",
+          "priority": "High",
+          "tags": [
+            "@regression",
+            "@positive"
+          ],
+          "area": "Upcoming appointment",
+          "expected": "Show SCHEDULED appointment under Upcoming Appointment is validated successfully."
+        },
+        {
+          "name": "Photo loads from photoStoragePath or photoUrl",
+          "test_type": "UI",
+          "req": "PID-003",
+          "priority": "High",
+          "tags": [
+            "@regression",
+            "@positive"
+          ],
+          "area": "Photo load",
+          "expected": "Photo loads from photoStoragePath or photoUrl is validated successfully."
+        },
+        {
+          "name": "Default avatar on image failure",
+          "test_type": "Negative",
+          "req": "PID-003",
+          "priority": "High",
+          "tags": [
+            "@regression",
+            "@negative"
+          ],
+          "area": "Photo fallback",
+          "expected": "Default avatar on image failure is validated successfully."
+        }
+      ]
+    },
+    {
+      "key": "STAFF_DASH",
+      "module": "Staff Dashboard",
+      "featureFile": "staff-dashboard.feature",
+      "scenarios": [
+        {
+          "name": "Role-based dashboard cards",
+          "test_type": "Role-Based",
+          "req": "DASH-001",
+          "priority": "High",
+          "tags": [
+            "@roleBased",
+            "@positive"
+          ],
+          "area": "Dashboard cards",
+          "expected": "Role-based dashboard cards is validated successfully."
+        },
+        {
+          "name": "DEO quick actions",
+          "test_type": "Role-Based",
+          "req": "DASH-001",
+          "priority": "High",
+          "tags": [
+            "@deo",
+            "@roleBased"
+          ],
+          "area": "DEO dashboard",
+          "expected": "DEO quick actions is validated successfully."
+        },
+        {
+          "name": "CMO dashboard widgets",
+          "test_type": "Role-Based",
+          "req": "DASH-002",
+          "priority": "High",
+          "tags": [
+            "@roleBased"
+          ],
+          "area": "CMO dashboard",
+          "expected": "CMO dashboard widgets is validated successfully."
+        },
+        {
+          "name": "Approver dashboard widgets",
+          "test_type": "Role-Based",
+          "req": "DASH-002",
+          "priority": "High",
+          "tags": [
+            "@roleBased"
+          ],
+          "area": "Approver dashboard",
+          "expected": "Approver dashboard widgets is validated successfully."
+        },
+        {
+          "name": "HCM dashboard widgets",
+          "test_type": "Role-Based",
+          "req": "DASH-003",
+          "priority": "High",
+          "tags": [
+            "@roleBased"
+          ],
+          "area": "HCM dashboard",
+          "expected": "HCM dashboard widgets is validated successfully."
+        },
+        {
+          "name": "OSD dashboard widgets",
+          "test_type": "Role-Based",
+          "req": "DASH-003",
+          "priority": "High",
+          "tags": [
+            "@roleBased"
+          ],
+          "area": "OSD dashboard",
+          "expected": "OSD dashboard widgets is validated successfully."
+        },
+        {
+          "name": "Recent activity visible",
+          "test_type": "UI",
+          "req": "DASH-004",
+          "priority": "High",
+          "tags": [
+            "@positive"
+          ],
+          "area": "Recent activity",
+          "expected": "Recent activity visible is validated successfully."
+        },
+        {
+          "name": "AI insights visible for authorized roles",
+          "test_type": "Role-Based",
+          "req": "AI-006",
+          "priority": "High",
+          "tags": [
+            "@roleBased",
+            "@positive"
+          ],
+          "area": "AI insights",
+          "expected": "AI insights visible for authorized roles is validated successfully."
+        }
+      ]
+    },
+    {
+      "key": "CAL",
+      "module": "Calendar and Schedule",
+      "featureFile": "calendar-scheduling.feature",
+      "scenarios": [
+        {
+          "name": "Calendar opens current date",
+          "test_type": "UI",
+          "req": "CAL-001",
+          "priority": "High",
+          "tags": [
+            "@positive",
+            "@smoke"
+          ],
+          "area": "Calendar",
+          "expected": "Calendar opens current date is validated successfully."
+        },
+        {
+          "name": "Past dates disabled or cancelled",
+          "test_type": "Validation",
+          "req": "CAL-001",
+          "priority": "High",
+          "tags": [
+            "@negative",
+            "@validation"
+          ],
+          "area": "Past date validation",
+          "expected": "Past dates disabled or cancelled is validated successfully."
+        },
+        {
+          "name": "Add Event",
+          "test_type": "Positive",
+          "req": "CAL-002",
+          "priority": "High",
+          "tags": [
+            "@positive"
+          ],
+          "area": "Add event",
+          "expected": "Add Event is validated successfully."
+        },
+        {
+          "name": "Create Public Darbar",
+          "test_type": "Positive",
+          "req": "CAL-002",
+          "priority": "High",
+          "tags": [
+            "@positive"
+          ],
+          "area": "Public Darbar",
+          "expected": "Create Public Darbar is validated successfully."
+        },
+        {
+          "name": "Create Walk-in event",
+          "test_type": "Positive",
+          "req": "CAL-002",
+          "priority": "High",
+          "tags": [
+            "@positive"
+          ],
+          "area": "Walk-in event",
+          "expected": "Create Walk-in event is validated successfully."
+        },
+        {
+          "name": "Create Program event",
+          "test_type": "Positive",
+          "req": "CAL-002",
+          "priority": "High",
+          "tags": [
+            "@positive"
+          ],
+          "area": "Program event",
+          "expected": "Create Program event is validated successfully."
+        },
+        {
+          "name": "Assign waiting citizens",
+          "test_type": "Positive",
+          "req": "CAL-003",
+          "priority": "High",
+          "tags": [
+            "@positive"
+          ],
+          "area": "Assign waiting citizens",
+          "expected": "Assign waiting citizens is validated successfully."
+        },
+        {
+          "name": "Drag event to new time",
+          "test_type": "Positive",
+          "req": "CAL-004",
+          "priority": "High",
+          "tags": [
+            "@positive"
+          ],
+          "area": "Drag drop",
+          "expected": "Drag event to new time is validated successfully."
+        },
+        {
+          "name": "Reschedule API sends new time",
+          "test_type": "API",
+          "req": "CAL-004",
+          "priority": "High",
+          "tags": [
+            "@api",
+            "@positive"
+          ],
+          "area": "Reschedule API",
+          "expected": "Reschedule API sends new time is validated successfully."
+        },
+        {
+          "name": "Meeting conflict shows error",
+          "test_type": "Negative",
+          "req": "CAL-005",
+          "priority": "High",
+          "tags": [
+            "@negative",
+            "@validation",
+            "@api"
+          ],
+          "area": "Meeting conflict",
+          "expected": "Meeting conflict shows error is validated successfully."
+        },
+        {
+          "name": "Google Calendar sync if connected",
+          "test_type": "Positive",
+          "req": "CAL-005",
+          "priority": "High",
+          "tags": [
+            "@positive",
+            "@api"
+          ],
+          "area": "Google Calendar sync",
+          "expected": "Google Calendar sync if connected is validated successfully."
+        }
+      ]
+    },
+    {
+      "key": "APT_ALL",
+      "module": "All Appointments",
+      "featureFile": "all-appointments.feature",
+      "scenarios": [
+        {
+          "name": "Filter by name status type date",
+          "test_type": "UI",
+          "req": "APT-001",
+          "priority": "High",
+          "tags": [
+            "@positive"
+          ],
+          "area": "Filters",
+          "expected": "Filter by name status type date is validated successfully."
+        },
+        {
+          "name": "Sorting grid",
+          "test_type": "UI",
+          "req": "APT-001",
+          "priority": "High",
+          "tags": [
+            "@positive"
+          ],
+          "area": "Sorting",
+          "expected": "Sorting grid is validated successfully."
+        },
+        {
+          "name": "View appointment details",
+          "test_type": "UI",
+          "req": "APT-002",
+          "priority": "High",
+          "tags": [
+            "@positive"
+          ],
+          "area": "Details",
+          "expected": "View appointment details is validated successfully."
+        },
+        {
+          "name": "View personal info and photo",
+          "test_type": "UI",
+          "req": "APT-002",
+          "priority": "High",
+          "tags": [
+            "@positive"
+          ],
+          "area": "Personal info",
+          "expected": "View personal info and photo is validated successfully."
+        },
+        {
+          "name": "View associates",
+          "test_type": "UI",
+          "req": "APT-003",
+          "priority": "High",
+          "tags": [
+            "@positive"
+          ],
+          "area": "Associates",
+          "expected": "View associates is validated successfully."
+        },
+        {
+          "name": "View download upload documents",
+          "test_type": "UI",
+          "req": "APT-004",
+          "priority": "High",
+          "tags": [
+            "@positive"
+          ],
+          "area": "Documents",
+          "expected": "View download upload documents is validated successfully."
+        },
+        {
+          "name": "Capture meeting proof photo",
+          "test_type": "Positive",
+          "req": "APT-004",
+          "priority": "High",
+          "tags": [
+            "@positive"
+          ],
+          "area": "Meeting proof",
+          "expected": "Capture meeting proof photo is validated successfully."
+        },
+        {
+          "name": "AI Notes View",
+          "test_type": "UI",
+          "req": "AI-001",
+          "priority": "High",
+          "tags": [
+            "@positive"
+          ],
+          "area": "AI notes",
+          "expected": "AI Notes View is validated successfully."
+        },
+        {
+          "name": "AI Notes Refresh",
+          "test_type": "API",
+          "req": "AI-001",
+          "priority": "High",
+          "tags": [
+            "@api",
+            "@positive"
+          ],
+          "area": "AI notes refresh",
+          "expected": "AI Notes Refresh is validated successfully."
+        },
+        {
+          "name": "CMO request missing info",
+          "test_type": "Role-Based",
+          "req": "APT-005",
+          "priority": "High",
+          "tags": [
+            "@roleBased"
+          ],
+          "area": "CMO workflow",
+          "expected": "CMO request missing info is validated successfully."
+        },
+        {
+          "name": "CMO edit category",
+          "test_type": "Role-Based",
+          "req": "APT-005",
+          "priority": "High",
+          "tags": [
+            "@roleBased"
+          ],
+          "area": "CMO category",
+          "expected": "CMO edit category is validated successfully."
+        },
+        {
+          "name": "CMO add remarks",
+          "test_type": "Role-Based",
+          "req": "APT-005",
+          "priority": "High",
+          "tags": [
+            "@roleBased"
+          ],
+          "area": "CMO remarks",
+          "expected": "CMO add remarks is validated successfully."
+        },
+        {
+          "name": "CMO forward to Approver",
+          "test_type": "Role-Based",
+          "req": "APT-005",
+          "priority": "High",
+          "tags": [
+            "@roleBased"
+          ],
+          "area": "Forward to approver",
+          "expected": "CMO forward to Approver is validated successfully."
+        },
+        {
+          "name": "Approver add edit remarks",
+          "test_type": "Role-Based",
+          "req": "APT-006",
+          "priority": "High",
+          "tags": [
+            "@roleBased"
+          ],
+          "area": "Approver remarks",
+          "expected": "Approver add edit remarks is validated successfully."
+        },
+        {
+          "name": "Approver approve",
+          "test_type": "Role-Based",
+          "req": "APT-006",
+          "priority": "High",
+          "tags": [
+            "@roleBased"
+          ],
+          "area": "Approve",
+          "expected": "Approver approve is validated successfully."
+        },
+        {
+          "name": "Approver reject",
+          "test_type": "Role-Based",
+          "req": "APT-006",
+          "priority": "High",
+          "tags": [
+            "@roleBased"
+          ],
+          "area": "Reject",
+          "expected": "Approver reject is validated successfully."
+        },
+        {
+          "name": "Approver schedule",
+          "test_type": "Role-Based",
+          "req": "APT-006",
+          "priority": "High",
+          "tags": [
+            "@roleBased"
+          ],
+          "area": "Schedule",
+          "expected": "Approver schedule is validated successfully."
+        },
+        {
+          "name": "Approver follow-up",
+          "test_type": "Role-Based",
+          "req": "APT-006",
+          "priority": "High",
+          "tags": [
+            "@roleBased"
+          ],
+          "area": "Follow-up",
+          "expected": "Approver follow-up is validated successfully."
+        }
+      ]
+    },
+    {
+      "key": "CM_SCH",
+      "module": "CM Scheme Applications",
+      "featureFile": "scheme-applications.feature",
+      "scenarios": [
+        {
+          "name": "Show statistics cards",
+          "test_type": "UI",
+          "req": "SCH-001",
+          "priority": "High",
+          "tags": [
+            "@positive"
+          ],
+          "area": "Statistics",
+          "expected": "Show statistics cards is validated successfully."
+        },
+        {
+          "name": "Filter scheme application list",
+          "test_type": "UI",
+          "req": "SCH-002",
+          "priority": "High",
+          "tags": [
+            "@positive"
+          ],
+          "area": "Filters",
+          "expected": "Filter scheme application list is validated successfully."
+        },
+        {
+          "name": "Sort scheme application list",
+          "test_type": "UI",
+          "req": "SCH-002",
+          "priority": "High",
+          "tags": [
+            "@positive"
+          ],
+          "area": "Sorting",
+          "expected": "Sort scheme application list is validated successfully."
+        },
+        {
+          "name": "View scheme application details",
+          "test_type": "UI",
+          "req": "SCH-003",
+          "priority": "High",
+          "tags": [
+            "@positive"
+          ],
+          "area": "Details",
+          "expected": "View scheme application details is validated successfully."
+        },
+        {
+          "name": "Validate approved rejected pending counts",
+          "test_type": "Validation",
+          "req": "SCH-003",
+          "priority": "High",
+          "tags": [
+            "@validation"
+          ],
+          "area": "Counts",
+          "expected": "Validate approved rejected pending counts is validated successfully."
+        }
+      ]
+    },
+    {
+      "key": "RPT",
+      "module": "Reports Module",
+      "featureFile": "reports.feature",
+      "scenarios": [
+        {
+          "name": "Scheme heatmap loads",
+          "test_type": "UI",
+          "req": "RPT-001",
+          "priority": "High",
+          "tags": [
+            "@positive",
+            "@smoke"
+          ],
+          "area": "Heatmap",
+          "expected": "Scheme heatmap loads is validated successfully."
+        },
+        {
+          "name": "District marker click shows stats",
+          "test_type": "UI",
+          "req": "RPT-001",
+          "priority": "High",
+          "tags": [
+            "@positive"
+          ],
+          "area": "District marker",
+          "expected": "District marker click shows stats is validated successfully."
+        },
+        {
+          "name": "Bubble chart visible",
+          "test_type": "UI",
+          "req": "RPT-002",
+          "priority": "High",
+          "tags": [
+            "@positive"
+          ],
+          "area": "Bubble chart",
+          "expected": "Bubble chart visible is validated successfully."
+        },
+        {
+          "name": "Meetings per day chart",
+          "test_type": "UI",
+          "req": "RPT-002",
+          "priority": "High",
+          "tags": [
+            "@positive"
+          ],
+          "area": "Meetings chart",
+          "expected": "Meetings per day chart is validated successfully."
+        },
+        {
+          "name": "Approval vs rejection pie chart",
+          "test_type": "UI",
+          "req": "RPT-003",
+          "priority": "High",
+          "tags": [
+            "@positive"
+          ],
+          "area": "Approval chart",
+          "expected": "Approval vs rejection pie chart is validated successfully."
+        },
+        {
+          "name": "Scheme-wise status chart",
+          "test_type": "UI",
+          "req": "RPT-003",
+          "priority": "High",
+          "tags": [
+            "@positive"
+          ],
+          "area": "Scheme chart",
+          "expected": "Scheme-wise status chart is validated successfully."
+        },
+        {
+          "name": "Top constituencies chart",
+          "test_type": "UI",
+          "req": "RPT-004",
+          "priority": "High",
+          "tags": [
+            "@positive"
+          ],
+          "area": "Top constituencies",
+          "expected": "Top constituencies chart is validated successfully."
+        },
+        {
+          "name": "Audit trail for Admin",
+          "test_type": "Role-Based",
+          "req": "RPT-004",
+          "priority": "High",
+          "tags": [
+            "@admin",
+            "@roleBased"
+          ],
+          "area": "Audit trail",
+          "expected": "Audit trail for Admin is validated successfully."
+        },
+        {
+          "name": "Export audit report",
+          "test_type": "Positive",
+          "req": "RPT-004",
+          "priority": "High",
+          "tags": [
+            "@admin",
+            "@positive"
+          ],
+          "area": "Audit export",
+          "expected": "Export audit report is validated successfully."
+        }
+      ]
+    },
+    {
+      "key": "HCM",
+      "module": "HCM Actions",
+      "featureFile": "hcm-actions.feature",
+      "scenarios": [
+        {
+          "name": "HCM dashboard shows approved scheduled appointments",
+          "test_type": "UI",
+          "req": "HCM-001",
+          "priority": "High",
+          "tags": [
+            "@positive",
+            "@smoke"
+          ],
+          "area": "HCM dashboard",
+          "expected": "HCM dashboard shows approved scheduled appointments is validated successfully."
+        },
+        {
+          "name": "Date filter",
+          "test_type": "UI",
+          "req": "HCM-001",
+          "priority": "High",
+          "tags": [
+            "@positive"
+          ],
+          "area": "Date filter",
+          "expected": "Date filter is validated successfully."
+        },
+        {
+          "name": "Swipe right accept modify",
+          "test_type": "Positive",
+          "req": "HCM-002",
+          "priority": "High",
+          "tags": [
+            "@positive"
+          ],
+          "area": "Right swipe",
+          "expected": "Swipe right accept modify is validated successfully."
+        },
+        {
+          "name": "Swipe left reject delay",
+          "test_type": "Negative",
+          "req": "HCM-002",
+          "priority": "High",
+          "tags": [
+            "@negative"
+          ],
+          "area": "Left swipe",
+          "expected": "Swipe left reject delay is validated successfully."
+        },
+        {
+          "name": "Add decision",
+          "test_type": "Positive",
+          "req": "HCM-003",
+          "priority": "High",
+          "tags": [
+            "@positive"
+          ],
+          "area": "Decision",
+          "expected": "Add decision is validated successfully."
+        },
+        {
+          "name": "Forward to department",
+          "test_type": "Positive",
+          "req": "HCM-003",
+          "priority": "High",
+          "tags": [
+            "@positive"
+          ],
+          "area": "Forwarding",
+          "expected": "Forward to department is validated successfully."
+        },
+        {
+          "name": "Save multiple remarks",
+          "test_type": "Positive",
+          "req": "HCM-004",
+          "priority": "High",
+          "tags": [
+            "@positive"
+          ],
+          "area": "Remarks",
+          "expected": "Save multiple remarks is validated successfully."
+        },
+        {
+          "name": "Edit saved remarks",
+          "test_type": "Positive",
+          "req": "HCM-004",
+          "priority": "High",
+          "tags": [
+            "@positive"
+          ],
+          "area": "Edit remarks",
+          "expected": "Edit saved remarks is validated successfully."
+        }
+      ]
+    },
+    {
+      "key": "ADM",
+      "module": "Admin Module",
+      "featureFile": "admin.feature",
+      "scenarios": [
+        {
+          "name": "Admin login",
+          "test_type": "Positive",
+          "req": "ADM-001",
+          "priority": "High",
+          "tags": [
+            "@admin",
+            "@positive",
+            "@smoke"
+          ],
+          "area": "Admin login",
+          "expected": "Admin login is validated successfully."
+        },
+        {
+          "name": "User management create",
+          "test_type": "Positive",
+          "req": "ADM-001",
+          "priority": "High",
+          "tags": [
+            "@admin",
+            "@positive"
+          ],
+          "area": "Create user",
+          "expected": "User management create is validated successfully."
+        },
+        {
+          "name": "User management edit",
+          "test_type": "Positive",
+          "req": "ADM-001",
+          "priority": "High",
+          "tags": [
+            "@admin",
+            "@positive"
+          ],
+          "area": "Edit user",
+          "expected": "User management edit is validated successfully."
+        },
+        {
+          "name": "User management delete",
+          "test_type": "Negative",
+          "req": "ADM-001",
+          "priority": "High",
+          "tags": [
+            "@admin",
+            "@negative"
+          ],
+          "area": "Delete user",
+          "expected": "User management delete is validated successfully."
+        },
+        {
+          "name": "Duplicate username validation",
+          "test_type": "Validation",
+          "req": "ADM-002",
+          "priority": "High",
+          "tags": [
+            "@admin",
+            "@negative",
+            "@validation"
+          ],
+          "area": "Duplicate username",
+          "expected": "Duplicate username validation is validated successfully."
+        },
+        {
+          "name": "Activate deactivate user",
+          "test_type": "Positive",
+          "req": "ADM-002",
+          "priority": "High",
+          "tags": [
+            "@admin",
+            "@positive"
+          ],
+          "area": "User status",
+          "expected": "Activate deactivate user is validated successfully."
+        },
+        {
+          "name": "Unlock user",
+          "test_type": "Positive",
+          "req": "ADM-003",
+          "priority": "High",
+          "tags": [
+            "@admin",
+            "@positive"
+          ],
+          "area": "Unlock user",
+          "expected": "Unlock user is validated successfully."
+        },
+        {
+          "name": "Scheme management add edit activate inactivate",
+          "test_type": "Positive",
+          "req": "ADM-004",
+          "priority": "High",
+          "tags": [
+            "@admin",
+            "@positive"
+          ],
+          "area": "Scheme management",
+          "expected": "Scheme management add edit activate inactivate is validated successfully."
+        },
+        {
+          "name": "Configure required documents",
+          "test_type": "Positive",
+          "req": "ADM-004",
+          "priority": "High",
+          "tags": [
+            "@admin",
+            "@positive"
+          ],
+          "area": "Documents configuration",
+          "expected": "Configure required documents is validated successfully."
+        },
+        {
+          "name": "Appointment type configuration",
+          "test_type": "Positive",
+          "req": "ADM-005",
+          "priority": "High",
+          "tags": [
+            "@admin",
+            "@positive"
+          ],
+          "area": "Appointment type configuration",
+          "expected": "Appointment type configuration is validated successfully."
+        }
+      ]
+    },
+    {
+      "key": "AI",
+      "module": "AI Module",
+      "featureFile": "ai-module.feature",
+      "scenarios": [
+        {
+          "name": "MeghaBot opens",
+          "test_type": "UI",
+          "req": "AI-001",
+          "priority": "High",
+          "tags": [
+            "@positive",
+            "@smoke"
+          ],
+          "area": "MeghaBot",
+          "expected": "MeghaBot opens is validated successfully."
+        },
+        {
+          "name": "MeghaBot responds during appointment journey",
+          "test_type": "Positive",
+          "req": "AI-001",
+          "priority": "High",
+          "tags": [
+            "@positive"
+          ],
+          "area": "Chat response",
+          "expected": "MeghaBot responds during appointment journey is validated successfully."
+        },
+        {
+          "name": "AI Notes generated from PDF DOC DOCX image",
+          "test_type": "API",
+          "req": "AI-002",
+          "priority": "High",
+          "tags": [
+            "@api",
+            "@positive"
+          ],
+          "area": "AI notes generation",
+          "expected": "AI Notes generated from PDF DOC DOCX image is validated successfully."
+        },
+        {
+          "name": "OCR fallback for scanned image",
+          "test_type": "Positive",
+          "req": "AI-003",
+          "priority": "High",
+          "tags": [
+            "@positive"
+          ],
+          "area": "OCR fallback",
+          "expected": "OCR fallback for scanned image is validated successfully."
+        },
+        {
+          "name": "AI Notes View shows all generated sections",
+          "test_type": "UI",
+          "req": "AI-004",
+          "priority": "High",
+          "tags": [
+            "@positive"
+          ],
+          "area": "AI notes view",
+          "expected": "AI Notes View shows all generated sections is validated successfully."
+        },
+        {
+          "name": "AI Dashboard insights visible for authorized roles",
+          "test_type": "Role-Based",
+          "req": "AI-006",
+          "priority": "High",
+          "tags": [
+            "@roleBased",
+            "@positive"
+          ],
+          "area": "AI dashboard",
+          "expected": "AI Dashboard insights visible for authorized roles is validated successfully."
+        }
+      ]
+    }
+  ],
+  "validationFields": [
+    {
+      "field": "EPIC",
+      "scenario": "Less than 10 characters",
+      "type": "Validation"
+    },
+    {
+      "field": "EPIC",
+      "scenario": "More than 10 characters",
+      "type": "Boundary"
+    },
+    {
+      "field": "EPIC",
+      "scenario": "Invalid pattern",
+      "type": "Validation"
+    },
+    {
+      "field": "EPIC",
+      "scenario": "Special characters",
+      "type": "Security"
+    },
+    {
+      "field": "EPIC",
+      "scenario": "Numeric only",
+      "type": "Validation"
+    },
+    {
+      "field": "EPIC",
+      "scenario": "Character only",
+      "type": "Validation"
+    },
+    {
+      "field": "Mobile",
+      "scenario": "Less than 10 digits",
+      "type": "Boundary"
+    },
+    {
+      "field": "Mobile",
+      "scenario": "More than 10 digits",
+      "type": "Boundary"
+    },
+    {
+      "field": "Mobile",
+      "scenario": "Alphabets",
+      "type": "Validation"
+    },
+    {
+      "field": "Mobile",
+      "scenario": "Special characters",
+      "type": "Security"
+    },
+    {
+      "field": "OTP",
+      "scenario": "Empty OTP",
+      "type": "Validation"
+    },
+    {
+      "field": "OTP",
+      "scenario": "Invalid OTP",
+      "type": "Negative"
+    },
+    {
+      "field": "OTP",
+      "scenario": "Expired OTP",
+      "type": "Negative"
+    },
+    {
+      "field": "OTP",
+      "scenario": "Locked OTP",
+      "type": "Negative"
+    },
+    {
+      "field": "Name",
+      "scenario": "Numbers entered",
+      "type": "Validation"
+    },
+    {
+      "field": "Name",
+      "scenario": "Special characters entered",
+      "type": "Validation"
+    },
+    {
+      "field": "Name",
+      "scenario": "Blank value",
+      "type": "Validation"
+    },
+    {
+      "field": "Dropdown",
+      "scenario": "Mandatory dropdown not selected",
+      "type": "Validation"
+    },
+    {
+      "field": "File Upload",
+      "scenario": "Unsupported file type",
+      "type": "Security"
+    },
+    {
+      "field": "Date",
+      "scenario": "Past date selection",
+      "type": "Validation"
+    }
+  ],
+  "roles": {
+    "Citizen": [
+      "Visitor Dashboard",
+      "Own Appointments",
+      "Own Scheme Applications",
+      "Grievances"
+    ],
+    "DEO": [
+      "Walk-in Counter",
+      "All Appointments",
+      "Visitor Search"
+    ],
+    "CMO": [
+      "Staff Dashboard",
+      "All Appointments",
+      "Reports"
+    ],
+    "Approver": [
+      "Staff Dashboard",
+      "All Appointments",
+      "Calendar"
+    ],
+    "HCM": [
+      "HCM Actions",
+      "Calendar",
+      "Reports"
+    ],
+    "OSD": [
+      "Calendar",
+      "Walk-in Counter",
+      "Reports"
+    ],
+    "Admin": [
+      "User Management",
+      "Scheme Management",
+      "Appointment Type Configuration",
+      "Audit Trail"
+    ]
+  },
+  "apiSuites": [
+    "EPIC API",
+    "Aadhaar API",
+    "OTP API",
+    "Appointment API",
+    "Scheme API",
+    "Public Identification API",
+    "AI Notes API",
+    "Reports API"
+  ],
+  "securitySuites": [
+    "JWT validation",
+    "Invalid token",
+    "Expired token",
+    "Direct URL access",
+    "Role bypass attempts",
+    "SQL Injection checks",
+    "XSS validation",
+    "File upload validation",
+    "Unauthorized API access"
+  ],
+  "uatScenarios": [
+    "Citizen registers with EPIC and gets appointment",
+    "Citizen applies for scheme",
+    "DEO creates walk-in appointment",
+    "Approver schedules public darbar",
+    "HCM accepts appointment",
+    "Citizen downloads QR pass",
+    "Security verifies QR pass",
+    "Public Identification searches citizen history"
+  ]
+}

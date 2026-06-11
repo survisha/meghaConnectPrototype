@@ -1,0 +1,30 @@
+{
+  "citizenRegistration": {
+    "epicRequired": "EPIC number is required.",
+    "epicInvalid": "EPIC number must be 3 letters followed by 7 digits.",
+    "nameRequired": "Name is required.",
+    "nameInvalid": "Name should contain only letters and spaces.",
+    "mobileRequired": "Mobile number is required.",
+    "mobileInvalid": "Mobile number must be 10 digits.",
+    "otpInvalid": "Please enter a valid 6-digit OTP.",
+    "districtRequired": "District is required.",
+    "districtInvalid": "District should contain only letters and spaces.",
+    "photoRequired": "Please capture live photo before continuing.",
+    "kycUnavailable": "KYC service is temporarily unavailable. You can continue with registration, but your KYC status will remain Pending."
+  },
+  "citizenLogin": {
+    "mobileInvalid": "Mobile number must be 10 digits.",
+    "otpInvalid": "Invalid OTP.",
+    "otpLocked": "Too many failed OTP attempts."
+  },
+  "appointment": {
+    "agendaRequired": "Please complete the appointment agenda, location, and purpose before submitting.",
+    "associateMustBeRegistered": "Citizen must register in the portal before being added as an associate visitor.",
+    "duplicateAssociate": "Duplicate associate visitors are not allowed."
+  },
+  "scheduling": {
+    "pastDate": "Cannot schedule or drag appointments to past dates.",
+    "meetingConflict": "Meeting Conflict Detected.",
+    "invalidDropTime": "Invalid drop time."
+  }
+}

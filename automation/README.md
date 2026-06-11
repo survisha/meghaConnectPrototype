@@ -154,6 +154,44 @@ mvn test -Dcucumber.filter.tags="@Login and not @Ignore"
 mvn test -Dheadless=true
 ```
 
+### Run Citizen Login UAT Flow
+```bash
+mvn clean test -Dtest=UatTestRunner -Dcucumber.filter.tags="@CitizenLogin and @UAT" -Dheadless=false
+```
+
+### Run Directly by Runner Class
+```bash
+mvn clean test -Dtest=UatTestRunner
+```
+
+### Run All UAT UI Tests
+```bash
+mvn clean test -Dtest=UatTestRunner -Dcucumber.filter.tags="@UAT and @UITest"
+```
+
+### Run Headless
+```bash
+mvn clean test -Dtest=UatTestRunner -Dheadless=true
+```
+
+### Run With Visual Highlighting
+```bash
+mvn clean test -Dtest=UatTestRunner -Dcucumber.filter.tags="@CitizenLogin and @UAT" -Dheadless=false -Dhighlight.enabled=true -Dscreenshot.each.step=true
+```
+
+Visual execution highlights active elements with a red border, yellow background, and red shadow before Selenium clicks, types, or verifies them. Step screenshots are saved and attached to the Cucumber report when `screenshot.each.step=true`; set it to `false` to keep only failure screenshots.
+
+Expected output:
+- Chrome opens `https://www.meghaconnect.cloud`
+- Citizen login flow executes from Excel data at `src/test/resources/testdata/citizen-login-testdata.xlsx`
+- OTP, EPIC, and register branching is validated
+- Reports are generated at `target/cucumber-reports/cucumber.html`, `target/cucumber-reports/cucumber.json`, and `target/cucumber-reports/cucumber.xml`
+- Failure screenshots are saved and attached to the Cucumber report
+
+For current testing, using the webpage demo OTP is correct. For production or dynamic SMS OTP, automation should not read SMS directly unless a test device or SMS API is available. Recommended future options are: expose OTP in UI only for automation test environments, provide a secure test-only backend OTP fetch API, use a fixed OTP for whitelisted UAT mobile numbers, or use manual OTP mode for production smoke testing. Never expose demo OTP in production UI.
+
+Current absolute XPath locators will work but are fragile. Add stable IDs or `data-testid` attributes in Angular for all automation elements: `home_loginBtn`, `login_citizenOtpBtn`, `publicLogin_mobileInput`, `publicLogin_generateOtpBtn`, `publicLogin_otpMessage`, `publicLogin_otpInput`, `publicLogin_verifyBtn`, `visitorDashboard_profileHeader`, and `shell_logoutBtn`. Prefer `By.id()` over XPath wherever stable IDs are available.
+
 ### Parallel Execution
 ```bash
 mvn test -Pparallel
@@ -504,3 +542,41 @@ mvn clean test
 **Framework Version**: 1.0.0  
 **Last Updated**: April 28, 2026  
 **Maintained By**: QA Automation Team
+
+
+## SRS Generated Regression Pack
+
+The SRS-derived regression pack adds module-wise Cucumber feature files under
+`src/test/resources/features` and shared glue in
+`GeneratedCoverageStepDefinition`. The scenarios are tagged with module tags
+such as `@citizen`, `@deo`, `@admin`, `@roleBased`, `@api`,
+`@validation`, `@positive`, and `@negative`.
+
+Run the generated regression catalog:
+
+```bash
+mvn clean test -Dtest=LoginTestRunner -Dcucumber.filter.tags="@generated"
+```
+
+Run smoke coverage:
+
+```bash
+mvn clean test -Dtest=LoginTestRunner -Dcucumber.filter.tags="@generated and @smoke"
+```
+
+Generate HTML/JSON/JUnit reports:
+
+```bash
+mvn clean test -Dtest=LoginTestRunner -Dcucumber.filter.tags="@generated"
+```
+
+Reports are written to `target/cucumber-reports` and
+`target/json-reports`. Failure screenshots are already captured by
+`TestHooks` through `ScreenshotUtil`; highlighted click/type actions are
+available in `WebElementUtil` when scenarios use UI page objects and
+`highlight.enabled=true`.
+
+Manual QA/UAT coverage is generated at the repository root:
+`MeghaConnect_TestCases.xlsx`. It includes module sheets, integration,
+security, role-based access, API, UAT, validation, and requirement
+traceability coverage.

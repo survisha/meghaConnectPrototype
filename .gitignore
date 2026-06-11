@@ -1,3 +1,8 @@
 target/
+*.log
+*.class
 logs/
+*.log
+*.class
 test-output/
+*.png

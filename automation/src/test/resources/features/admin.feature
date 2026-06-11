@@ -2,12 +2,14 @@
 Feature: Admin Module
   SRS-derived coverage for Admin Module.
 
-  @admin @positive @smoke @generated
+  @admin @admin-login @positive @smoke @generated @UITest
   Scenario: Admin login
-    Given QA prepares "Admin Module" scenario "Admin login" from SRS requirement "ADM-001"
-    When QA executes the "Positive" validation checklist for "Admin login"
-    Then the automation catalog should record expected result "Admin login is validated successfully."
-    And the scenario should capture screenshots on failure
+    Given Admin opens the MeghaConnect home page
+    When Admin clicks the home Login button
+    And Admin selects the Staff Login tab
+    And Admin signs in using admin credentials from test data
+    Then Admin dashboard header should display System Admin
+    And Admin logs out
 
   @admin @positive @generated
   Scenario: User management create

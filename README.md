@@ -1,3 +1,6 @@
+this branch we are locking, as we are more functional changes which the application should be an lite weight. so creating phase2-newrelease branch for code changes.
+
+
 # meghaConnectPrototype
 I want to create the proto type for Meghalaya Entry-Exit and handling cm schemes UI and backend structure and DB schemas to show a demo for approval of the design
 

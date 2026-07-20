@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { VisitorSearchService } from '../../services/visitor-search.service';
-import { AppointmentService, PilotImportResult } from '../../services/appointment.service';
+import { AppointmentService } from '../../services/appointment.service';
 import { VisitorKycService } from '../../services/visitor-kyc.service';
 import { Visitor } from '../../models';
 import { apiErrorMessage } from '../../shared/api-error.util';
@@ -47,10 +47,6 @@ export class WalkinComponent implements OnDestroy {
   associates: Visitor[] = [];
   searching = false;
   creating = false;
-  pilotFile: File | null = null;
-  pilotImporting = false;
-  pilotImportResult: PilotImportResult | null = null;
-  pilotImportError = '';
   visitorUpdateForm = this.emptyVisitorUpdateForm();
   visitorUpdatePhoto = '';
   visitorUpdateMsg = '';
@@ -435,43 +431,6 @@ export class WalkinComponent implements OnDestroy {
         this.savingVisitorUpdate = false;
       }
     });
-  }
-
-  onPilotFileSelected(event: Event) {
-    const input = event.target as HTMLInputElement;
-    this.pilotImportError = '';
-    this.pilotImportResult = null;
-    this.pilotFile = input.files?.[0] ?? null;
-  }
-
-  uploadPilotSheet(fileInput: HTMLInputElement) {
-    this.pilotImportError = '';
-    this.pilotImportResult = null;
-    if (!this.pilotFile) {
-      this.pilotImportError = 'Select an Excel file before importing.';
-      return;
-    }
-
-    this.pilotImporting = true;
-    this.appointmentService.importPilotAppointments(this.pilotFile).subscribe({
-      next: result => {
-        this.pilotImportResult = result;
-        this.pilotImporting = false;
-        this.pilotFile = null;
-        fileInput.value = '';
-      },
-      error: err => {
-        this.pilotImportError = apiErrorMessage(err, 'Unable to import the pilot Excel sheet.');
-        this.pilotImporting = false;
-      }
-    });
-  }
-
-  resetPilotImport(fileInput: HTMLInputElement) {
-    this.pilotFile = null;
-    this.pilotImportResult = null;
-    this.pilotImportError = '';
-    fileInput.value = '';
   }
 
   private initVisitorUpdateForm(visitor: Visitor) {

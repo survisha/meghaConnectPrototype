@@ -483,25 +483,6 @@ public class AppointmentService {
     }
 
     @Transactional
-    public Appointment createPilotImportedAppointment(Visitor applicant, String agendaBrief, String createdBy) {
-        if (applicant == null || applicant.getId() == null) {
-            throw new IllegalArgumentException("Imported visitor must be saved before creating an appointment.");
-        }
-
-        String actor = firstNonBlank(createdBy, "pilot-import");
-        AppointmentDto dto = AppointmentDto.builder()
-                .applicantId(applicant.getId())
-                .eventType(Appointment.EventType.B1)
-                .agendaType("Public Darbar")
-                .agendaBrief(trimToNull(agendaBrief))
-                .requestedLocation(Appointment.MeetingLocation.OTHERS)
-                .mlaMdcApproved(false)
-                .isWalkIn(true)
-                .build();
-        return create(dto, actor);
-    }
-
-    @Transactional
     public Map<String, Object> createMultipart(
             AppointmentMultipartRequest form,
             HttpServletRequest request,

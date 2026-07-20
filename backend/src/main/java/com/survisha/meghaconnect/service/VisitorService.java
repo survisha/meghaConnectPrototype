@@ -200,35 +200,6 @@ public class VisitorService {
         return toDto(visitorRepository.save(visitor));
     }
 
-    @Transactional
-    public Visitor registerPilotImportedVisitor(String fullName, String phoneNumber,
-                                                String addressLocation, String briefProfile,
-                                                String actor) {
-        String name = firstNonBlank(fullName, "Pilot Visitor");
-        String phone = trimToNull(phoneNumber);
-        String address = trimToNull(addressLocation);
-        String profile = trimToNull(briefProfile);
-        String importedBy = firstNonBlank(actor, "pilot-import");
-
-        Visitor visitor = Visitor.builder()
-                .fullName(name)
-                .phoneNumber(phone)
-                .address(address)
-                .fullAddress(address)
-                .address1(address)
-                .addressLine(address)
-                .location(address)
-                .briefProfile(profile)
-                .kycType("NONE")
-                .kycVerified(false)
-                .kycStatus("PENDING")
-                .outsideMeghalaya(false)
-                .build();
-        visitor.setCreatedBy(importedBy);
-        visitor.setUpdatedBy(importedBy);
-        return visitorRepository.save(visitor);
-    }
-
     public Optional<Visitor> findById(Long id) {
         return visitorRepository.findById(id);
     }

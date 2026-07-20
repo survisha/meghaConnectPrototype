@@ -51,121 +51,6 @@
   padding: 1.25rem;
 }
 
-.import-header {
-  background: linear-gradient(135deg, #0f766e, #0d9488);
-}
-
-.import-actions {
-  display: grid;
-  grid-template-columns: auto minmax(180px, 1fr) auto auto;
-  gap: 0.75rem;
-  align-items: center;
-}
-
-.selected-file {
-  min-width: 0;
-  color: #111827;
-  background: #f8fafc;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  padding: 0.68rem 0.85rem;
-  font-size: 0.88rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.empty-file {
-  color: #94a3b8;
-}
-
-.import-summary {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.75rem;
-  margin-top: 1rem;
-  padding: 0.85rem;
-  background: #ecfdf5;
-  border: 1px solid #a7f3d0;
-  border-radius: 8px;
-}
-
-.import-summary-warning {
-  background: #fffbeb;
-  border-color: #fcd34d;
-}
-
-.summary-item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-
-  span {
-    color: #64748b;
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-
-  strong {
-    color: #111827;
-    font-size: 1.2rem;
-    font-weight: 800;
-  }
-}
-
-.import-results {
-  display: grid;
-  gap: 0.55rem;
-  margin-top: 1rem;
-}
-
-.import-row {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) minmax(120px, auto);
-  gap: 0.75rem;
-  align-items: center;
-  padding: 0.7rem 0.85rem;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-}
-
-.success-icon-small {
-  color: #16a34a;
-}
-
-.error-icon-small {
-  color: #dc2626;
-}
-
-.import-row-main {
-  min-width: 0;
-
-  span {
-    color: #64748b;
-    font-size: 0.78rem;
-  }
-}
-
-.import-row-title {
-  color: #111827;
-  font-size: 0.88rem;
-  font-weight: 700;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.import-row-ref {
-  color: #1a237e;
-  font-size: 0.8rem;
-  font-weight: 700;
-  overflow-wrap: anywhere;
-  text-align: right;
-}
-
 .warning-header {
   background: linear-gradient(135deg, #b45309, #d97706);
 }
@@ -672,20 +557,10 @@
 @media (max-width: 900px) {
   .found-layout,
   .detail-pairs,
-  .import-summary,
   .visitor-update-grid,
   .kyc-retry-grid,
   .photo-update-area {
     grid-template-columns: 1fr;
-  }
-
-  .import-actions,
-  .import-row {
-    grid-template-columns: 1fr;
-  }
-
-  .import-row-ref {
-    text-align: left;
   }
 }
 

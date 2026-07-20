@@ -74,16 +74,6 @@
           <mat-datepicker #toPicker></mat-datepicker>
         </mat-form-field>
 
-        <button mat-raised-button
-                color="primary"
-                type="button"
-                *ngIf="auth.hasRole('APPROVER') || auth.hasRole('ADMIN') || auth.hasRole('OSD')"
-                (click)="markSelectedFollowUp()"
-                [disabled]="!canMarkSelectedFollowUp || bulkUpdating">
-          <mat-icon>follow_the_signs</mat-icon>
-          Mark Follow-up
-        </button>
-
         <mat-form-field appearance="outline" style="min-width:240px" *ngIf="canAssignSelectedToEvent">
           <mat-label>Assign to Event</mat-label>
           <mat-select [(ngModel)]="selectedEventId" [disabled]="eventsLoading || eventAssigning">
@@ -876,15 +866,6 @@
           <mat-icon>event</mat-icon>
         </button>
 
-        <button mat-icon-button
-                type="button"
-                class="followup-action"
-                [disabled]="!canMarkFollowUp(appointment) || followUpUpdatingId === appointment.id"
-                (click)="markFollowUp(appointment)"
-                matTooltip="Mark Follow-up"
-                matTooltipPosition="above">
-          <mat-icon>follow_the_signs</mat-icon>
-        </button>
       </div>
 
       <div class="details-action-buttons cmo-action-buttons" *ngIf="canUseCmoActions(appointment)">

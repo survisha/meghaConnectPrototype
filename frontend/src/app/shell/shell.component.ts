@@ -23,19 +23,21 @@ export class ShellComponent implements OnInit {
 
   private ALL_MENU: MenuItem[] = [
     { labelKey: 'DASHBOARD', icon: 'dashboard', route: '/dashboard',
-      roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER','DATA_ENTRY_OPERATOR'] },
+      roles: ['SUPER_ADMIN','DEPARTMENT_ADMIN','DEPARTMENT_PA','HCM','ADMIN','OSD','APPROVER','CMO_OFFICER','DATA_ENTRY_OPERATOR'] },
+    { labelKey: 'DEPARTMENTS', icon: 'apartment', route: '/admin/departments',
+      roles: ['SUPER_ADMIN'] },
     { labelKey: 'MY_PORTAL', icon: 'person', route: '/visitor',
       roles: ['PUBLIC'] },
     { labelKey: 'CALENDAR_SCHEDULE', icon: 'event', route: '/scheduling',
-      roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER'] },
+      roles: ['DEPARTMENT_ADMIN','DEPARTMENT_PA','HCM','ADMIN','OSD','APPROVER','CMO_OFFICER'] },
     { labelKey: 'HCM_ACTIONS', icon: 'task_alt', route: '/hcm/appointments',
       roles: ['HCM','OSD','ADMIN'] },
     {
       labelKey: 'APPOINTMENTS', icon: 'groups', expanded: false,
-      roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER','DATA_ENTRY_OPERATOR','PUBLIC'],
+      roles: ['DEPARTMENT_ADMIN','DEPARTMENT_PA','HCM','ADMIN','OSD','APPROVER','CMO_OFFICER','DATA_ENTRY_OPERATOR','PUBLIC'],
       children: [
         { labelKey: 'ALL_APPOINTMENTS', icon: 'list', route: '/appointments',
-          roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER','DATA_ENTRY_OPERATOR'] },
+          roles: ['DEPARTMENT_ADMIN','DEPARTMENT_PA','HCM','ADMIN','OSD','APPROVER','CMO_OFFICER','DATA_ENTRY_OPERATOR'] },
         { labelKey: 'NEW_APPOINTMENT', icon: 'add_circle', route: '/appointments/new',
           roles: ['ADMIN','OSD','PUBLIC'] },
         { labelKey: 'WALKIN_COUNTER', icon: 'login', route: '/appointments/walkin',
@@ -66,14 +68,12 @@ export class ShellComponent implements OnInit {
           roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER'] },
         { labelKey: 'SCHEME_HEATMAP', icon: 'map', route: '/reports/heatmap',
           roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER'] },
-        { labelKey: 'PENDING_FOLLOWUPS', icon: 'schedule', route: '/reports/followups',
-          roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER'] },
         { labelKey: 'AUDIT_TRAIL', icon: 'history', route: '/reports/audit',
           roles: ['ADMIN'] },
       ]
     },
     { labelKey: 'USER_MANAGEMENT', icon: 'shield', route: '/admin/users',
-      roles: ['HCM','ADMIN','OSD'] },
+      roles: ['SUPER_ADMIN','DEPARTMENT_ADMIN','HCM','ADMIN','OSD'] },
     { labelKey: 'SCHEME_MANAGEMENT', icon: 'tune', route: '/admin/schemes',
       roles: ['ADMIN'] },
     { labelKey: 'APPOINTMENT_TYPES', icon: 'event', route: '/admin/appointment-types',
@@ -141,7 +141,8 @@ export class ShellComponent implements OnInit {
     const map: Record<string,string> = {
       HCM:'HCM', ADMIN:'Admin', OSD:'OSD',
       APPROVER:'Approver', CMO_OFFICER:'CMO Officer',
-      DATA_ENTRY_OPERATOR:'DEO', PUBLIC:'Public'
+      SUPER_ADMIN:'Super Admin', DEPARTMENT_ADMIN:'Department Admin',
+      DEPARTMENT_PA:'Department PA', DATA_ENTRY_OPERATOR:'DEO', PUBLIC:'Public'
     };
     return map[r] ?? r;
   }

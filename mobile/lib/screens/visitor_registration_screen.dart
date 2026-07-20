@@ -65,7 +65,6 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
   String? _error;
   String? _warning;
   String? _success;
-  String? _qrDataUri;
   String? _aadhaarTxnId;
   String? _verifiedMobileNumber;
   String? _livePhotoDataUri;
@@ -176,7 +175,6 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
   void _switchIdType(String value) {
     setState(() {
       _idType = value;
-      _qrDataUri = null;
       _aadhaarTxnId = null;
       _otpCtrl.clear();
       _otpVerified = false;
@@ -336,30 +334,6 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
     });
   }
 
-  Future<void> _generateAadhaarQr() async {
-    final i18n = context.read<AppI18n>();
-    setState(() {
-      _loading = true;
-      _clearMessages();
-    });
-
-    final result = await ApiService.generateAadhaarQr();
-    if (!mounted) return;
-
-    final success = result['success'] == true && result['qrDataUri'] is String;
-    setState(() {
-      _loading = false;
-      if (success) {
-        _qrDataUri = result['qrDataUri'] as String;
-        _aadhaarTxnId = result['txnId']?.toString();
-        _success = i18n.t('QR_CODE_GENERATED');
-      } else {
-        _error = (result['errorMessage'] as String?) ??
-            i18n.t('ERROR_QR_GENERATION_FAILED');
-      }
-    });
-  }
-
   Future<void> _verifyOtp() async {
     final i18n = context.read<AppI18n>();
     if (!_otpFormKey.currentState!.validate()) return;
@@ -424,17 +398,6 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
         _error = result['message']?.toString() ??
             i18n.t('ERROR_FAILED_GENERATE_OTP_TRY');
       }
-    });
-  }
-
-  void _continueAfterAadhaar() {
-    final i18n = context.read<AppI18n>();
-    setState(() {
-      _step = 2;
-      _success = i18n.t('AADHAAR_KYC_VERIFIED_PREFILLED');
-      _error = null;
-      _warning = null;
-      _kycConfidence = 92;
     });
   }
 
@@ -866,11 +829,6 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
                   icon: const Icon(Icons.badge_outlined),
                   label: Text(i18n.t('EPIC_VOTER_ID')),
                 ),
-                ButtonSegment(
-                  value: 'AADHAAR',
-                  icon: const Icon(Icons.fingerprint),
-                  label: Text(i18n.t('AADHAAR_CARD')),
-                ),
                 const ButtonSegment(
                   value: 'NONE',
                   icon: Icon(Icons.edit_note_outlined),
@@ -983,39 +941,6 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
                       _canGenerateRegistrationOtp ? _startEpicFlow : null,
                 ),
               ),
-            ] else if (_idType == 'AADHAAR') ...[
-              TextFormField(
-                controller: _aadhaarCtrl,
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(12),
-                ],
-                decoration: const InputDecoration(
-                  labelText: 'Aadhaar Number',
-                  prefixIcon: Icon(Icons.fingerprint),
-                  helperText: 'Optional if Aadhaar QR flow returns reference.',
-                ),
-              ),
-              const SizedBox(height: 12),
-              MeghaStatusBanner.success(i18n.t('CLICK_GENERATE_QR_AADHAAR')),
-              const SizedBox(height: 14),
-              if (_qrDataUri != null) _buildQrPreview(i18n),
-              const SizedBox(height: 12),
-              if (_qrDataUri == null)
-                _PrimaryProgressButton(
-                  loading: _loading,
-                  icon: Icons.qr_code_2,
-                  label: i18n.t('GENERATE_QR'),
-                  onPressed: _generateAadhaarQr,
-                )
-              else
-                _PrimaryProgressButton(
-                  loading: false,
-                  icon: Icons.arrow_forward,
-                  label: i18n.t('CONTINUE_TO_DETAILS'),
-                  onPressed: _continueAfterAadhaar,
-                ),
             ] else ...[
               TextFormField(
                 controller: _visitorNameCtrl,
@@ -1073,7 +998,7 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
               ),
               const SizedBox(height: 12),
               MeghaStatusBanner.warning(
-                'No ID registration skips EPIC/Aadhaar verification and keeps KYC status as Pending.',
+                'No ID registration skips EPIC verification and keeps KYC status as Pending.',
               ),
               const SizedBox(height: 18),
               Focus(
@@ -1089,51 +1014,6 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
             ],
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildQrPreview(AppI18n i18n) {
-    Widget qr =
-        const Icon(Icons.qr_code_2, size: 160, color: MeghaColors.primary);
-    try {
-      final raw =
-          _qrDataUri!.contains(',') ? _qrDataUri!.split(',').last : _qrDataUri!;
-      qr = Image.memory(base64Decode(raw), height: 180, fit: BoxFit.contain);
-    } catch (_) {
-      // Keep the generated QR area usable even if the backend returns a plain token.
-    }
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: MeghaColors.panelBg,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: MeghaColors.border),
-      ),
-      child: Column(
-        children: [
-          Text(
-            i18n.t('SCAN_QR_CODE_AADHAAR'),
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: MeghaColors.primary,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 12),
-          qr,
-          const SizedBox(height: 12),
-          Text(
-            [
-              i18n.t('AADHAAR_APP_SCAN_STEP_1'),
-              i18n.t('AADHAAR_APP_SCAN_STEP_2'),
-              i18n.t('AADHAAR_APP_SCAN_STEP_3'),
-              i18n.t('AADHAAR_APP_SCAN_STEP_4'),
-            ].join('\n'),
-            style: const TextStyle(
-                color: MeghaColors.muted, fontSize: 12, height: 1.45),
-          ),
-        ],
       ),
     );
   }
@@ -1587,7 +1467,7 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
           ),
           const SizedBox(height: 6),
           const Text(
-            'MeghaConnect will collect and process your name, mobile number, EPIC/Aadhaar reference, photo, address, appointment details, and uploaded documents only for citizen service, appointment, KYC, security, audit, and governance workflow purposes. Data may be shared with authorized government staff and approved service providers such as SMS, KYC, OCR, and notification services.',
+            'MeghaConnect will collect and process your name, mobile number, EPIC reference, photo, address, appointment details, and uploaded documents only for citizen service, appointment, KYC, security, audit, and governance workflow purposes. Data may be shared with authorized government staff and approved service providers such as SMS, KYC, OCR, and notification services.',
             style: TextStyle(fontSize: 12, height: 1.35),
           ),
           const SizedBox(height: 8),

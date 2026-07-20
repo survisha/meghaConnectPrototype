@@ -15,6 +15,10 @@ public class ScheduleEvent extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "department_id")
+    private Department tenantDepartment;
+
     @Column(nullable = false, length = 300)
     private String title;
 

@@ -10,6 +10,7 @@ import com.survisha.meghaconnect.entity.AssociateMapping;
 import com.survisha.meghaconnect.entity.Appointment;
 import com.survisha.meghaconnect.entity.DocumentUpload;
 import com.survisha.meghaconnect.entity.SchemeApplication;
+import com.survisha.meghaconnect.entity.User;
 import com.survisha.meghaconnect.entity.Visitor;
 import com.survisha.meghaconnect.entity.WalkIn;
 import com.survisha.meghaconnect.repository.AppointmentRepository;
@@ -19,6 +20,7 @@ import com.survisha.meghaconnect.repository.ScheduleEventRepository;
 import com.survisha.meghaconnect.repository.SchemeApplicationRepository;
 import com.survisha.meghaconnect.repository.VisitorRepository;
 import com.survisha.meghaconnect.repository.WalkInRepository;
+import com.survisha.meghaconnect.repository.UserRepository;
 import com.survisha.meghaconnect.exception.*;
 import com.survisha.meghaconnect.util.DateTimeUtil;
 import com.survisha.meghaconnect.util.ValidationConstants;
@@ -118,6 +120,7 @@ public class AppointmentService {
     private final QrTokenService qrTokenService;
     private final WalkInRepository walkInRepository;
     private final WalkInTokenService walkInTokenService;
+    private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
 
     public Page<Appointment> findAll(Pageable pageable) {
@@ -126,6 +129,35 @@ public class AppointmentService {
 
     public Page<AppointmentDto> findAllDtos(Pageable pageable) {
         return appointmentRepository.findByStatusIn(KNOWN_APPOINTMENT_STATUSES, pageable).map(this::toDto);
+    }
+
+    public Page<AppointmentDto> findAllDtosForActor(String actor, Pageable pageable) {
+        return findAllDtosForActor(actor, null, null, null, pageable);
+    }
+
+    public Page<AppointmentDto> findAllDtosForActor(String actor, String status, String source, String referredOffice, Pageable pageable) {
+        Long departmentId = scopedDepartmentId(actor);
+        if (departmentId == null) {
+            return findAllDtos(status, source, referredOffice, pageable);
+        }
+        List<Appointment.AppointmentStatus> statuses = parseStatuses(status);
+        String sourceValue = normalizeSource(source);
+        String referredOfficeValue = trimToNull(referredOffice);
+        Specification<Appointment> spec = (root, query, cb) -> {
+            javax.persistence.criteria.Predicate predicate = cb.equal(root.get("tenantDepartment").get("id"), departmentId);
+            predicate = cb.and(predicate, root.get("status").in(KNOWN_APPOINTMENT_STATUSES));
+            if (!statuses.isEmpty()) {
+                predicate = cb.and(predicate, root.get("status").in(statuses));
+            }
+            if (sourceValue != null) {
+                predicate = cb.and(predicate, cb.equal(cb.upper(root.get("appointmentSource")), sourceValue));
+            }
+            if (referredOfficeValue != null) {
+                predicate = cb.and(predicate, cb.equal(cb.upper(root.get("referredOffice")), referredOfficeValue.toUpperCase()));
+            }
+            return predicate;
+        };
+        return appointmentRepository.findAll(spec, pageable).map(this::toDto);
     }
 
     public Page<AppointmentDto> findAllDtos(String status, Pageable pageable) {
@@ -167,6 +199,14 @@ public class AppointmentService {
         return appointmentRepository.findById(id);
     }
 
+    public Optional<Appointment> findByIdForActor(Long id, String actor) {
+        Long departmentId = scopedDepartmentId(actor);
+        if (departmentId == null) {
+            return findById(id);
+        }
+        return appointmentRepository.findByIdAndTenantDepartment_Id(id, departmentId);
+    }
+
     public Optional<Appointment> findByApplicationId(String appId) {
         return appointmentRepository.findByApplicationId(appId);
     }
@@ -185,8 +225,26 @@ public class AppointmentService {
         return appointmentRepository.findByStatusIn(DEO_VISIBLE_STATUSES, pageable).map(this::toDto);
     }
 
+    public Page<AppointmentDto> findForDeo(String actor, Pageable pageable) {
+        Long departmentId = scopedDepartmentId(actor);
+        if (departmentId == null) {
+            return findForDeo(pageable);
+        }
+        return appointmentRepository.findByStatusInAndTenantDepartment_Id(DEO_VISIBLE_STATUSES, departmentId, pageable)
+            .map(this::toDto);
+    }
+
     public Page<AppointmentDto> findForApprover(Pageable pageable) {
         return appointmentRepository.findByStatusIn(APPROVER_VISIBLE_STATUSES, pageable).map(this::toDto);
+    }
+
+    public Page<AppointmentDto> findForApprover(String actor, Pageable pageable) {
+        Long departmentId = scopedDepartmentId(actor);
+        if (departmentId == null) {
+            return findForApprover(pageable);
+        }
+        return appointmentRepository.findByStatusInAndTenantDepartment_Id(APPROVER_VISIBLE_STATUSES, departmentId, pageable)
+            .map(this::toDto);
     }
 
     @Transactional
@@ -394,6 +452,7 @@ public class AppointmentService {
         Appointment appt = Appointment.builder()
             .applicationId(appId)
             .applicant(applicant)
+            .tenantDepartment(applicant.getTenantDepartment())
             .eventType(dto.getEventType())
             .subject(dto.getSubject())
             .department(dto.getDepartment())
@@ -571,6 +630,9 @@ public class AppointmentService {
             .applicant(applicantDto)
             .applicantName(applicant != null ? applicant.getFullName() : null)
             .applicantPhone(applicant != null ? applicant.getPhoneNumber() : null)
+            .departmentId(appointment.getTenantDepartment() != null ? appointment.getTenantDepartment().getId() : null)
+            .departmentCode(appointment.getTenantDepartment() != null ? appointment.getTenantDepartment().getDepartmentCode() : null)
+            .departmentName(appointment.getTenantDepartment() != null ? appointment.getTenantDepartment().getDepartmentName() : null)
             .eventType(appointment.getEventType())
             .subject(appointment.getSubject())
             .department(appointment.getDepartment())
@@ -1234,6 +1296,18 @@ public class AppointmentService {
 
     private String trimToNull(String value) {
         return value == null || value.trim().isEmpty() ? null : value.trim();
+    }
+
+    private Long scopedDepartmentId(String actor) {
+        if (actor == null || actor.trim().isEmpty()) {
+            return null;
+        }
+        return userRepository.findByUsername(actor)
+                .filter(user -> user.getRole() == User.UserRole.DEPARTMENT_ADMIN
+                        || user.getRole() == User.UserRole.DEPARTMENT_PA)
+                .map(User::getDepartment)
+                .map(department -> department.getId())
+                .orElse(null);
     }
 
     private void validateGuestConsent(GuestAppointmentRequest request) {

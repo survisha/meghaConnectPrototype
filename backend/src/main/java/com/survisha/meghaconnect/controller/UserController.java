@@ -36,9 +36,9 @@ public class UserController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','HCM','OSD')")
-    public ResponseEntity<List<UserResponse>> getAll() {
-        return ResponseEntity.ok(userService.getAllUserResponses());
+    @PreAuthorize("hasAnyRole('ADMIN','HCM','OSD','SUPER_ADMIN','DEPARTMENT_ADMIN')")
+    public ResponseEntity<List<UserResponse>> getAll(Authentication authentication) {
+        return ResponseEntity.ok(userService.getUserResponsesForActor(actor(authentication)));
     }
 
     @Operation(summary = "Get user by ID", description = "Retrieve a specific user by their ID (admin, HCM, OSD only)")
@@ -50,7 +50,7 @@ public class UserController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','HCM','OSD')")
+    @PreAuthorize("hasAnyRole('ADMIN','HCM','OSD','SUPER_ADMIN','DEPARTMENT_ADMIN')")
     public ResponseEntity<UserResponse> getById(@PathVariable Long id) {
         return userService.getUserById(id)
                 .map(userService::toResponse)
@@ -60,7 +60,7 @@ public class UserController {
 
     @Operation(summary = "Create user", description = "Create an application user, including ROLE_SECURITY scanner users (admin only)")
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','DEPARTMENT_ADMIN')")
     public com.survisha.meghaconnect.response.ApiResponse<UserResponse> create(
             @Valid @RequestBody CreateUserRequest request,
             Authentication authentication) {
@@ -72,7 +72,7 @@ public class UserController {
 
     @Operation(summary = "Update user", description = "Update a user without changing their password")
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','HCM','OSD')")
+    @PreAuthorize("hasAnyRole('ADMIN','HCM','OSD','SUPER_ADMIN','DEPARTMENT_ADMIN')")
     public com.survisha.meghaconnect.response.ApiResponse<UserResponse> update(
             @PathVariable Long id,
             @Valid @RequestBody UpdateUserRequest request,
@@ -84,7 +84,7 @@ public class UserController {
     }
 
     @PatchMapping("/{id}/unlock")
-    @PreAuthorize("hasAnyRole('ADMIN','HCM','OSD')")
+    @PreAuthorize("hasAnyRole('ADMIN','HCM','OSD','SUPER_ADMIN','DEPARTMENT_ADMIN')")
     public com.survisha.meghaconnect.response.ApiResponse<UserResponse> unlock(
             @PathVariable Long id,
             Authentication authentication) {
@@ -95,7 +95,7 @@ public class UserController {
     }
 
     @PatchMapping("/{id}/activate")
-    @PreAuthorize("hasAnyRole('ADMIN','HCM','OSD')")
+    @PreAuthorize("hasAnyRole('ADMIN','HCM','OSD','SUPER_ADMIN','DEPARTMENT_ADMIN')")
     public com.survisha.meghaconnect.response.ApiResponse<UserResponse> activate(
             @PathVariable Long id,
             Authentication authentication) {
@@ -106,7 +106,7 @@ public class UserController {
     }
 
     @PatchMapping("/{id}/deactivate")
-    @PreAuthorize("hasAnyRole('ADMIN','HCM','OSD')")
+    @PreAuthorize("hasAnyRole('ADMIN','HCM','OSD','SUPER_ADMIN','DEPARTMENT_ADMIN')")
     public com.survisha.meghaconnect.response.ApiResponse<UserResponse> deactivate(
             @PathVariable Long id,
             Authentication authentication) {

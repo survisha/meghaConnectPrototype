@@ -1,6 +1,7 @@
 package com.survisha.meghaconnect.config;
 
 import com.survisha.meghaconnect.entity.User;
+import com.survisha.meghaconnect.entity.Department;
 import com.survisha.meghaconnect.repository.UserRepository;
 import com.survisha.meghaconnect.repository.VisitorRepository;
 import com.survisha.meghaconnect.security.ApiRateLimitFilter;
@@ -96,12 +97,7 @@ public class SecurityConfig {
                     "/api/v1/visitor/auth/validate-otp",
                     "/api/v1/visitor/auth/register"
                 ).permitAll()
-                .antMatchers(
-                    "/api/v1/kyc/verify/epic",
-                    "/api/v1/kyc/aadhaar/generate-qr",
-                    "/api/v1/kyc/aadhaar/result/**",
-                    "/api/v1/kyc/aadhaar/kycResults"
-                ).permitAll()
+                .antMatchers("/api/v1/kyc/verify/epic").permitAll()
                 .antMatchers("/api/v1/reference/**").permitAll() // Public reference data dropdowns
                 .antMatchers("/api/ai/chatbot", "/api/v1/ai/chatbot").permitAll()
                 // All other API requests require authentication
@@ -143,11 +139,15 @@ public class SecurityConfig {
             
             log.debug("[SECURITY] User found - Username: {}, Role: {}, Active: {}, Locked: {}",
                 u.getUsername(), u.getRole(), u.isActive(), u.isLocked());
+
+            boolean inactiveDepartment = u.getRole() != User.UserRole.SUPER_ADMIN
+                && u.getDepartment() != null
+                && u.getDepartment().getStatus() != Department.DepartmentStatus.ACTIVE;
             
             UserDetails userDetails = org.springframework.security.core.userdetails.User.builder()
                 .username(u.getUsername())
                 .password(u.getPasswordHash())
-                .disabled(!u.isActive())
+                .disabled(!u.isActive() || inactiveDepartment)
                 .accountLocked(u.isLocked())
                 .authorities(Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + u.getRole().name())))
                 .build();

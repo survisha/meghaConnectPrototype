@@ -26,6 +26,9 @@ public class QrScanAuditLog {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "department_id")
+    private Long departmentId;
+
     @Column(name = "token_hash", nullable = false, length = 64)
     private String tokenHash;
 

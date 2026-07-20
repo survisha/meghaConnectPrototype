@@ -297,20 +297,6 @@ export class AppointmentService {
       .pipe(map(res => this.normalizeAppointment(this.unwrapData(res))));
   }
 
-  markFollowUp(id: number, remarks = 'Follow-up'): Observable<unknown> {
-    return this.markFollowUpBulk([id], remarks);
-  }
-
-  markFollowUpBulk(appointmentIds: number[], remarks = 'Follow-up'): Observable<Appointment[]> {
-    return this.http.post<unknown>(`${this.baseUrl}/mark-followup`, { appointmentIds, remarks }).pipe(
-      map(res => {
-        const data = this.unwrapData<unknown>(res);
-        const rows = Array.isArray(data) ? data : [];
-        return rows.map(row => this.normalizeAppointment(row));
-      })
-    );
-  }
-
   assignAppointmentsToEvent(eventId: number, appointmentIds: number[], remarks = 'Scheduled'): Observable<ScheduleEvent> {
     return this.http.post<ScheduleEvent>(`${this.baseUrl}/assign-event`, { eventId, appointmentIds, remarks });
   }

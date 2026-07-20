@@ -22,9 +22,16 @@ public class User extends BaseEntity {
     @Column(nullable = false, length = 100)
     private String fullName;
 
+    @Column(length = 150)
+    private String email;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private UserRole role;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "department_id")
+    private Department department;
 
     @Column(length = 20)
     private String phoneNumber;
@@ -32,6 +39,7 @@ public class User extends BaseEntity {
     private boolean active = true;
     private boolean offlineAccess = false;
     private boolean locked = false;
+    private boolean passwordChangeRequired = false;
 
     private LocalDateTime lastLogin;
 
@@ -40,6 +48,7 @@ public class User extends BaseEntity {
     private LocalDateTime delegationExpiresAt;
 
     public enum UserRole {
+        SUPER_ADMIN, DEPARTMENT_ADMIN, DEPARTMENT_PA,
         HCM, ADMIN, OSD, APPROVER, CMO_OFFICER, CMO, DATA_ENTRY_OPERATOR, SECURITY, PUBLIC, CITIZEN
     }
 }

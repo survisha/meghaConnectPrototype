@@ -14,6 +14,9 @@ public class AppointmentDto {
     private VisitorDto applicant;
     private String applicantName;
     private String applicantPhone;
+    private Long departmentId;
+    private String departmentCode;
+    private String departmentName;
     private Appointment.EventType eventType;
     private String subject;
     private String department;

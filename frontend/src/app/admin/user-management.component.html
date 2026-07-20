@@ -195,6 +195,21 @@
           </mat-select>
         </mat-form-field>
 
+        <mat-form-field appearance="outline" style="width:100%" *ngIf="auth.hasRole('SUPER_ADMIN')">
+          <mat-label>Department *</mat-label>
+          <mat-select id="userMgmt_departmentSelect" [(ngModel)]="form.departmentId">
+            <mat-option *ngIf="!departmentOptions.length" disabled>No active departments loaded</mat-option>
+            <mat-option *ngFor="let department of departmentOptions" [value]="department.id">
+              {{ department.departmentName }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" style="width:100%">
+          <mat-label>Email</mat-label>
+          <input id="userMgmt_emailInput" matInput [(ngModel)]="form.email" placeholder="Email address" />
+        </mat-form-field>
+
         <mat-form-field appearance="outline" style="width:100%">
           <mat-label>Mobile</mat-label>
           <input id="userMgmt_phoneInput" matInput [(ngModel)]="form.phoneNumber" placeholder="10-digit mobile number" maxlength="10" />

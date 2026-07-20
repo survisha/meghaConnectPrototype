@@ -14,7 +14,6 @@ class AppRoutes {
   static const identify = 'identify';
   static const reports = 'reports';
   static const heatmap = 'heatmap';
-  static const followups = 'followups';
   static const audit = 'audit';
   static const users = 'users';
   static const pendingSync = 'pending_sync';
@@ -33,7 +32,6 @@ class AppRoutes {
     identify,
     reports,
     heatmap,
-    followups,
     audit,
     users,
     pendingSync,

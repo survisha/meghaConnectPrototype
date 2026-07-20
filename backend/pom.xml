@@ -187,24 +187,6 @@
             </exclusions>
         </dependency>
 
-        <!-- ── Aadhaar OVSE SDK (Online Verification of Self-Employed) ── -->
-        <!-- UIDAI SDK for generating QR codes and processing KYC responses -->
-        <!-- JAR must be placed at: backend/libs/OvseClientSDK20260422a.jar -->
-        <dependency>
-            <groupId>com.ecs.ovse</groupId>
-            <artifactId>aadhaar-ovse-sdk</artifactId>
-            <version>1.0.0</version>
-            <scope>system</scope>
-            <systemPath>${project.basedir}/libs/OvseClientSDK20260422a.jar</systemPath>
-        </dependency>
-
-        <!-- GSON Library for JSON parsing (used by OVSE SDK) -->
-        <dependency>
-            <groupId>com.google.code.gson</groupId>
-            <artifactId>gson</artifactId>
-            <version>2.10.1</version>
-        </dependency>
-
         <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

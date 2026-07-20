@@ -150,7 +150,6 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   cmoModifyLocation: Location = 'SHILLONG';
   cmoModifyRemarks = '';
   cmoMissingInfoNote = '';
-  followUpUpdatingId: number | null = null;
   aiNotesByAppointmentId = new Map<number, AppointmentDocumentAiNotes[]>();
   aiNotesLoadingAppointmentIds = new Set<number>();
   aiNotesFailedAppointmentIds = new Set<number>();
@@ -613,31 +612,10 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     return this.auth.hasRole('CMO_OFFICER', 'CMO', 'APPROVER', 'APPROVER_JT_SECY');
   }
 
-  get canMarkSelectedFollowUp() {
-    return this.auth.hasRole('APPROVER', 'ADMIN', 'OSD') &&
-      this.selectedAppointments.length > 0 &&
-      this.selectedAppointments.every(appointment => this.canAppointmentBeMarkedFollowUp(appointment));
-  }
-
   get canAssignSelectedToEvent() {
     return this.auth.hasRole('APPROVER', 'ADMIN', 'OSD') &&
       this.selectedAppointments.length > 0 &&
       this.selectedAppointments.every(appointment => appointment.status === 'APPROVED' || this.isFollowUpStatus(appointment.status));
-  }
-
-  markSelectedFollowUp() {
-    if (!this.canMarkSelectedFollowUp || this.bulkUpdating) return;
-    this.bulkUpdating = true;
-    this.appointmentService.markFollowUpBulk(this.selectedAppointments.map(appointment => appointment.id), 'Follow-up')
-      .pipe(finalize(() => this.bulkUpdating = false))
-      .subscribe({
-        next: () => {
-          this.selectedAppointmentIds.clear();
-          this.snackBar.open('Selected applications marked as follow-up.', 'Close', { duration: 5000, panelClass: ['success-snackbar'] });
-          this.loadAppointments();
-        },
-        error: error => this.errorMsg = apiErrorMessage(error, 'Unable to mark selected appointments as follow-up.')
-      });
   }
 
   assignSelectedToEvent() {
@@ -831,10 +809,6 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     return normalized.length > maxLength ? `${normalized.substring(0, maxLength)}...` : normalized;
   }
 
-  private canAppointmentBeMarkedFollowUp(appointment: Appointment) {
-    return appointment.status === 'APPROVED';
-  }
-
   canUseApproverActions(appointment: Appointment | null) {
     return !!appointment && this.auth.hasRole('HCM', 'ADMIN', 'OSD', 'APPROVER');
   }
@@ -868,10 +842,6 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     return this.canUseApproverActions(appointment) && !!appointment &&
       (['APPROVED', 'FOLLOWUP', 'SCHEDULED'].includes(appointment.status)
         || (appointment.appointmentSource === 'GUEST' && appointment.status === 'SUBMITTED'));
-  }
-
-  canMarkFollowUp(appointment: Appointment | null) {
-    return !!appointment && this.canUseApproverActions(appointment) && this.canAppointmentBeMarkedFollowUp(appointment);
   }
 
   canUseCmoActions(appointment: Appointment | null) {
@@ -1052,20 +1022,6 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
 
   closeAppointmentRescheduleDialog() {
     this.appointmentRescheduleDialogRef?.close();
-  }
-
-  markFollowUp(appointment: Appointment) {
-    if (!this.canMarkFollowUp(appointment) || this.followUpUpdatingId) return;
-    this.followUpUpdatingId = appointment.id;
-    this.appointmentService.markFollowUp(appointment.id, 'Follow-up')
-      .pipe(finalize(() => this.followUpUpdatingId = null))
-      .subscribe({
-        next: () => {
-          this.snackBar.open(`${appointment.applicationId} marked as follow-up.`, 'Close', { duration: 5000, panelClass: ['success-snackbar'] });
-          this.loadAppointments();
-        },
-        error: error => this.snackBar.open(apiErrorMessage(error, 'Failed to mark appointment as follow-up.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] })
-      });
   }
 
   confirmAction() {

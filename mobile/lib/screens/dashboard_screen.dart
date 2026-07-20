@@ -56,13 +56,6 @@ final _allKpis = <_Kpi>[
   const _Kpi('Active Scheme Apps', 12, Icons.workspace_premium_outlined,
       Color(0xFF065F46), Color(0xFFD1FAE5), _seniorStaff),
   const _Kpi(
-      'Pending Follow-ups',
-      5,
-      Icons.warning_amber_outlined,
-      Color(0xFF991B1B),
-      Color(0xFFFEE2E2),
-      [UserRole.HCM, UserRole.ADMIN, UserRole.OSD]),
-  const _Kpi(
       'Walk-ins Today',
       4,
       Icons.login_outlined,

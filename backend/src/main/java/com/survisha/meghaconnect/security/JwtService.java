@@ -1,5 +1,6 @@
 package com.survisha.meghaconnect.security;
 
+import com.survisha.meghaconnect.entity.User;
 import com.survisha.meghaconnect.util.DateTimeUtil;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
@@ -24,6 +25,10 @@ public class JwtService {
     private long jwtExpirationMs;
 
     public String generateToken(UserDetails userDetails) {
+        return generateToken(userDetails, null);
+    }
+
+    public String generateToken(UserDetails userDetails, User user) {
         Map<String, Object> claims = new HashMap<>();
         
         // Extract the primary role/authority as a string
@@ -38,6 +43,14 @@ public class JwtService {
         
         // Also store the full authority for backward compatibility
         claims.put("authority", role);
+
+        if (user != null) {
+            claims.put("userId", user.getId());
+            if (user.getDepartment() != null) {
+                claims.put("departmentId", user.getDepartment().getId());
+                claims.put("departmentCode", user.getDepartment().getDepartmentCode());
+            }
+        }
         
         LocalDateTime issuedAtIst = DateTimeUtil.nowIST();
         Date issuedAt = toJwtDate(issuedAtIst);

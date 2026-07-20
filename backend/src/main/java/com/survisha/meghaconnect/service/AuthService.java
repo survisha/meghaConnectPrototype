@@ -2,8 +2,10 @@ package com.survisha.meghaconnect.service;
 
 import com.survisha.meghaconnect.dto.AuthRequest;
 import com.survisha.meghaconnect.dto.AuthResponse;
+import com.survisha.meghaconnect.entity.User;
 import com.survisha.meghaconnect.security.JwtService;
 import com.survisha.meghaconnect.exception.*;
+import com.survisha.meghaconnect.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -25,6 +27,7 @@ public class AuthService {
     private final UserDetailsService userDetailsService;
     private final JwtService jwtService;
     private final UserService userService;
+    private final UserRepository userRepository;
 
     /**
      * Authenticate user and generate JWT token
@@ -40,10 +43,25 @@ public class AuthService {
             log.info("[AUTH] Authentication successful for user: {}", request.getUsername());
             
             UserDetails user = userDetailsService.loadUserByUsername(request.getUsername());
+            User appUser = userRepository.findByUsername(request.getUsername())
+                .orElseThrow(() -> new MeghaConnectException(
+                    ErrorCodeConstants.USER_NOT_FOUND,
+                    ErrorCodeConstants.format(ErrorCodeConstants.USER_NOT_FOUND_MSG, request.getUsername()),
+                    404
+                ));
+            if (appUser.getRole() != User.UserRole.SUPER_ADMIN
+                    && appUser.getDepartment() != null
+                    && appUser.getDepartment().getStatus() != com.survisha.meghaconnect.entity.Department.DepartmentStatus.ACTIVE) {
+                throw new MeghaConnectException(
+                    ErrorCodeConstants.USER_ACCOUNT_INACTIVE,
+                    "User department is inactive",
+                    403
+                );
+            }
             log.debug("[AUTH] UserDetails loaded - Username: {}, Authorities: {}", 
                 user.getUsername(), user.getAuthorities());
             
-            String token = jwtService.generateToken(user);
+            String token = jwtService.generateToken(user, appUser);
             log.debug("[AUTH] JWT token generated for user: {}", request.getUsername());
             
             String fullName = userService.getFullNameByUsername(request.getUsername());
@@ -55,6 +73,11 @@ public class AuthService {
                 .username(user.getUsername())
                 .fullName(fullName)
                 .role(role)
+                .userId(appUser.getId())
+                .departmentId(appUser.getDepartment() != null ? appUser.getDepartment().getId() : null)
+                .departmentCode(appUser.getDepartment() != null ? appUser.getDepartment().getDepartmentCode() : null)
+                .departmentName(appUser.getDepartment() != null ? appUser.getDepartment().getDepartmentName() : null)
+                .passwordChangeRequired(appUser.isPasswordChangeRequired())
                 .expiresIn(86400L)
                 .build();
             

@@ -67,13 +67,14 @@ public class AppointmentController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO','CMO_OFFICER','APPROVER','HCM')")
+    @PreAuthorize("hasAnyRole('ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO','CMO_OFFICER','APPROVER','HCM','SUPER_ADMIN','DEPARTMENT_ADMIN','DEPARTMENT_PA')")
     public ResponseEntity<Page<AppointmentDto>> getAll(@RequestParam(required = false) String status,
                                                        @RequestParam(required = false) String source,
                                                        @RequestParam(required = false) String referredOffice,
+                                                       Authentication authentication,
                                                        Pageable pageable) {
         logEndpoint("/api/v1/appointments");
-        return ResponseEntity.ok(appointmentService.findAllDtos(status, source, referredOffice, pageable));
+        return ResponseEntity.ok(appointmentService.findAllDtosForActor(actor(authentication), status, source, referredOffice, pageable));
     }
 
     @Operation(summary = "Get appointment by ID", description = "Retrieve a specific appointment by its ID")
@@ -84,10 +85,10 @@ public class AppointmentController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO','CMO_OFFICER','APPROVER','HCM')")
-    public ResponseEntity<AppointmentDto> getById(@PathVariable Long id) {
+    @PreAuthorize("hasAnyRole('ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO','CMO_OFFICER','APPROVER','HCM','SUPER_ADMIN','DEPARTMENT_ADMIN','DEPARTMENT_PA')")
+    public ResponseEntity<AppointmentDto> getById(@PathVariable Long id, Authentication authentication) {
         logEndpoint("/api/v1/appointments/{id}");
-        return appointmentService.findById(id)
+        return appointmentService.findByIdForActor(id, actor(authentication))
             .map(appointmentService::toDto)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
@@ -174,30 +175,18 @@ public class AppointmentController {
 
     @Operation(summary = "Get appointments for DEO", description = "Retrieve appointments visible to DEO review queues")
     @GetMapping("/deo")
-    @PreAuthorize("hasAnyRole('ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO','CMO_OFFICER')")
-    public ResponseEntity<Page<AppointmentDto>> getForDeo(Pageable pageable) {
+    @PreAuthorize("hasAnyRole('ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO','CMO_OFFICER','DEPARTMENT_ADMIN','DEPARTMENT_PA')")
+    public ResponseEntity<Page<AppointmentDto>> getForDeo(Pageable pageable, Authentication authentication) {
         logEndpoint("/api/v1/appointments/deo");
-        return ResponseEntity.ok(appointmentService.findForDeo(pageable));
+        return ResponseEntity.ok(appointmentService.findForDeo(actor(authentication), pageable));
     }
 
     @Operation(summary = "Get appointments for approver", description = "Retrieve appointments visible to approver review queues")
     @GetMapping("/approver")
-    @PreAuthorize("hasAnyRole('HCM','ADMIN','OSD','APPROVER','CMO','CMO_OFFICER')")
-    public ResponseEntity<Page<AppointmentDto>> getForApprover(Pageable pageable) {
+    @PreAuthorize("hasAnyRole('HCM','ADMIN','OSD','APPROVER','CMO','CMO_OFFICER','DEPARTMENT_ADMIN','DEPARTMENT_PA')")
+    public ResponseEntity<Page<AppointmentDto>> getForApprover(Pageable pageable, Authentication authentication) {
         logEndpoint("/api/v1/appointments/approver");
-        return ResponseEntity.ok(appointmentService.findForApprover(pageable));
-    }
-
-    @Operation(summary = "Bulk mark appointments as follow-up", description = "Move approved applications into the follow-up scheduling queue")
-    @PostMapping("/mark-followup")
-    @PreAuthorize("hasAnyRole('APPROVER','ADMIN','OSD')")
-    public ResponseEntity<List<AppointmentDto>> markFollowup(@RequestBody Map<String, Object> body,
-                                                             @AuthenticationPrincipal UserDetails user) {
-        logEndpoint("/api/v1/appointments/mark-followup");
-        String actor = user != null ? user.getUsername() : "system";
-        Map<String, Object> safeBody = body != null ? body : Map.of();
-        return ResponseEntity.ok(appointmentService.markFollowup(longList(safeBody.get("appointmentIds")),
-            stringValue(safeBody.get("remarks")), actor));
+        return ResponseEntity.ok(appointmentService.findForApprover(actor(authentication), pageable));
     }
 
     @Operation(summary = "Assign follow-up appointments to a schedule event", description = "Link selected follow-up applications to an existing calendar event")
@@ -416,6 +405,9 @@ public class AppointmentController {
                 || authority.equals("ROLE_CMO")
                 || authority.equals("ROLE_CMO_OFFICER")
                 || authority.equals("ROLE_HCM")
+                || authority.equals("ROLE_SUPER_ADMIN")
+                || authority.equals("ROLE_DEPARTMENT_ADMIN")
+                || authority.equals("ROLE_DEPARTMENT_PA")
                 || authority.equals("ROLE_DATA_ENTRY_OPERATOR"));
     }
 

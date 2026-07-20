@@ -3,7 +3,9 @@ package com.survisha.meghaconnect.service;
 import com.survisha.meghaconnect.dto.CreateUserRequest;
 import com.survisha.meghaconnect.dto.UpdateUserRequest;
 import com.survisha.meghaconnect.dto.UserResponse;
+import com.survisha.meghaconnect.entity.Department;
 import com.survisha.meghaconnect.entity.User;
+import com.survisha.meghaconnect.repository.DepartmentRepository;
 import com.survisha.meghaconnect.repository.UserRepository;
 import com.survisha.meghaconnect.exception.*;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +24,7 @@ import java.util.Optional;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final DepartmentRepository departmentRepository;
     private final RoleService roleService;
     private final PasswordEncoder passwordEncoder;
 
@@ -37,6 +40,17 @@ public class UserService {
         return userRepository.findAll().stream()
                 .map(this::toResponse)
                 .toList();
+    }
+
+    public List<UserResponse> getUserResponsesForActor(String actor) {
+        User currentUser = userRepository.findByUsername(actor).orElse(null);
+        if (currentUser != null && currentUser.getRole() == User.UserRole.DEPARTMENT_ADMIN
+                && currentUser.getDepartment() != null) {
+            return userRepository.findByDepartment_Id(currentUser.getDepartment().getId()).stream()
+                    .map(this::toResponse)
+                    .toList();
+        }
+        return getAllUserResponses();
     }
 
     /**
@@ -77,7 +91,9 @@ public class UserService {
         String username = trimToNull(request.getUsername());
         String fullName = trimToNull(request.getFullName());
         String password = trimToNull(request.getPassword());
+        String email = trimToNull(request.getEmail());
         String phoneNumber = trimToNull(request.getPhoneNumber());
+        User actorUser = userRepository.findByUsername(actor).orElse(null);
         if (username == null) {
             throw new MeghaConnectException(
                     ErrorCodeConstants.MISSING_REQUIRED_FIELD,
@@ -113,6 +129,13 @@ public class UserService {
                     409
             );
         }
+        if (email != null && userRepository.existsByEmailIgnoreCase(email)) {
+            throw new MeghaConnectException(
+                    ErrorCodeConstants.DUPLICATE_ENTRY,
+                    ErrorCodeConstants.format(ErrorCodeConstants.DUPLICATE_ENTRY_MSG, "email"),
+                    409
+            );
+        }
         if (request.getRole() == null) {
             throw new MeghaConnectException(
                     ErrorCodeConstants.INVALID_ROLE,
@@ -128,15 +151,20 @@ public class UserService {
                     400
             );
         }
+        validateCreatorCanAssignRole(actorUser, request.getRole());
+        Department department = resolveDepartmentForCreate(request.getDepartmentId(), request.getRole(), actorUser);
 
         User user = User.builder()
                 .username(username)
                 .passwordHash(passwordEncoder.encode(password))
                 .fullName(fullName)
+                .email(email)
                 .role(request.getRole())
+                .department(department)
                 .phoneNumber(phoneNumber)
                 .active(request.getActive() == null || Boolean.TRUE.equals(request.getActive()))
                 .offlineAccess(Boolean.TRUE.equals(request.getOfflineAccess()))
+                .passwordChangeRequired(true)
                 .build();
         user.setCreatedBy(actor);
         user.setUpdatedBy(actor);
@@ -153,11 +181,16 @@ public class UserService {
                 .id(user.getId())
                 .username(user.getUsername())
                 .fullName(user.getFullName())
+                .email(user.getEmail())
                 .role(user.getRole())
+                .departmentId(user.getDepartment() != null ? user.getDepartment().getId() : null)
+                .departmentCode(user.getDepartment() != null ? user.getDepartment().getDepartmentCode() : null)
+                .departmentName(user.getDepartment() != null ? user.getDepartment().getDepartmentName() : null)
                 .phoneNumber(user.getPhoneNumber())
                 .active(user.isActive())
                 .locked(user.isLocked())
                 .offlineAccess(user.isOfflineAccess())
+                .passwordChangeRequired(user.isPasswordChangeRequired())
                 .lastLogin(user.getLastLogin())
                 .createdAt(user.getCreatedAt())
                 .build();
@@ -171,7 +204,9 @@ public class UserService {
                         ErrorCodeConstants.format(ErrorCodeConstants.USER_NOT_FOUND_MSG, id),
                         404));
         String fullName = trimToNull(request.getFullName());
+        String email = trimToNull(request.getEmail());
         String phoneNumber = trimToNull(request.getPhoneNumber());
+        User actorUser = userRepository.findByUsername(actor).orElse(null);
         if (fullName == null) {
             throw new MeghaConnectException(
                     ErrorCodeConstants.MISSING_REQUIRED_FIELD,
@@ -191,8 +226,19 @@ public class UserService {
                     ErrorCodeConstants.format(ErrorCodeConstants.DUPLICATE_ENTRY_MSG, "mobile"),
                     409);
         }
+        if (email != null && userRepository.existsByEmailIgnoreCase(email)
+                && !email.equalsIgnoreCase(String.valueOf(user.getEmail()))) {
+            throw new MeghaConnectException(
+                    ErrorCodeConstants.DUPLICATE_ENTRY,
+                    ErrorCodeConstants.format(ErrorCodeConstants.DUPLICATE_ENTRY_MSG, "email"),
+                    409);
+        }
+        validateCreatorCanAssignRole(actorUser, request.getRole());
+        Department department = resolveDepartmentForUpdate(request.getDepartmentId(), request.getRole(), actorUser, user);
         user.setFullName(fullName);
+        user.setEmail(email);
         user.setRole(request.getRole());
+        user.setDepartment(department);
         user.setPhoneNumber(phoneNumber);
         user.setActive(request.getActive() == null || Boolean.TRUE.equals(request.getActive()));
         user.setLocked(Boolean.TRUE.equals(request.getLocked()));
@@ -238,5 +284,100 @@ public class UserService {
 
     private String trimToNull(String value) {
         return value == null || value.trim().isEmpty() ? null : value.trim();
+    }
+
+    private void validateCreatorCanAssignRole(User actorUser, User.UserRole role) {
+        if (actorUser == null) {
+            return;
+        }
+        if (actorUser.getRole() == User.UserRole.SUPER_ADMIN && role == User.UserRole.DEPARTMENT_ADMIN) {
+            return;
+        }
+        if (actorUser.getRole() == User.UserRole.DEPARTMENT_ADMIN && role == User.UserRole.DEPARTMENT_PA) {
+            return;
+        }
+        if (actorUser.getRole() == User.UserRole.ADMIN) {
+            return;
+        }
+        throw new MeghaConnectException(
+                ErrorCodeConstants.INVALID_ROLE,
+                "User role " + role + " cannot be assigned by " + actorUser.getRole(),
+                403);
+    }
+
+    private Department resolveDepartmentForCreate(Long departmentId, User.UserRole role, User actorUser) {
+        if (role == User.UserRole.SUPER_ADMIN) {
+            return null;
+        }
+        if (role != User.UserRole.DEPARTMENT_ADMIN && role != User.UserRole.DEPARTMENT_PA
+                && actorUser == null && departmentId == null) {
+            return null;
+        }
+        if (actorUser != null && actorUser.getRole() == User.UserRole.DEPARTMENT_ADMIN) {
+            Department actorDepartment = requireActorDepartment(actorUser);
+            if (departmentId != null && !departmentId.equals(actorDepartment.getId())) {
+                throw new MeghaConnectException(ErrorCodeConstants.UNAUTHORIZED_ACCESS,
+                        "Department Admin cannot create users outside their department", 403);
+            }
+            ensureActiveDepartment(actorDepartment);
+            return actorDepartment;
+        }
+        if (departmentId == null) {
+            throw new MeghaConnectException(
+                    ErrorCodeConstants.MISSING_REQUIRED_FIELD,
+                    ErrorCodeConstants.format(ErrorCodeConstants.MISSING_REQUIRED_FIELD_MSG, "departmentId"),
+                    400);
+        }
+        Department department = departmentRepository.findById(departmentId)
+                .orElseThrow(() -> new MeghaConnectException(ErrorCodeConstants.CONTENT_NOT_FOUND,
+                        "Department not found: " + departmentId, 404));
+        ensureActiveDepartment(department);
+        return department;
+    }
+
+    private Department resolveDepartmentForUpdate(Long departmentId, User.UserRole role, User actorUser, User targetUser) {
+        if (role == User.UserRole.SUPER_ADMIN) {
+            return null;
+        }
+        if (role != User.UserRole.DEPARTMENT_ADMIN && role != User.UserRole.DEPARTMENT_PA
+                && actorUser == null && departmentId == null) {
+            return targetUser.getDepartment();
+        }
+        if (actorUser != null && actorUser.getRole() == User.UserRole.DEPARTMENT_ADMIN) {
+            Department actorDepartment = requireActorDepartment(actorUser);
+            if (targetUser.getDepartment() == null || !actorDepartment.getId().equals(targetUser.getDepartment().getId())) {
+                throw new MeghaConnectException(ErrorCodeConstants.UNAUTHORIZED_ACCESS,
+                        "Department Admin cannot modify users outside their department", 403);
+            }
+            if (departmentId != null && !departmentId.equals(actorDepartment.getId())) {
+                throw new MeghaConnectException(ErrorCodeConstants.UNAUTHORIZED_ACCESS,
+                        "Department Admin cannot change department assignment", 403);
+            }
+            ensureActiveDepartment(actorDepartment);
+            return actorDepartment;
+        }
+        if (departmentId == null) {
+            return targetUser.getDepartment();
+        }
+        Department department = departmentRepository.findById(departmentId)
+                .orElseThrow(() -> new MeghaConnectException(ErrorCodeConstants.CONTENT_NOT_FOUND,
+                        "Department not found: " + departmentId, 404));
+        ensureActiveDepartment(department);
+        return department;
+    }
+
+    private Department requireActorDepartment(User actorUser) {
+        if (actorUser.getDepartment() == null) {
+            throw new MeghaConnectException(ErrorCodeConstants.UNAUTHORIZED_ACCESS,
+                    "Authenticated user has no department assignment", 403);
+        }
+        return actorUser.getDepartment();
+    }
+
+    private void ensureActiveDepartment(Department department) {
+        if (department.getStatus() != Department.DepartmentStatus.ACTIVE) {
+            throw new MeghaConnectException(ErrorCodeConstants.UNAUTHORIZED_ACCESS,
+                    "Department is inactive", 403);
+        }
     }
 }

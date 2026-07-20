@@ -19,6 +19,10 @@ public class Visitor extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "department_id")
+    private Department tenantDepartment;
+
     @Column(nullable = false, length = 200)
     private String fullName;
 

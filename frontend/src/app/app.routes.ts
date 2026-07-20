@@ -15,9 +15,9 @@ import { SchemeFormComponent } from './schemes/scheme-form/scheme-form.component
 import { PublicIdentificationComponent } from './public-identification/public-identification.component';
 import { ReportsComponent } from './reports/reports.component';
 import { HeatmapComponent } from './reports/heatmap/heatmap.component';
-import { PendingFollowupsComponent } from './reports/pending-followups/pending-followups.component';
 import { AuditTrailComponent } from './reports/audit-trail/audit-trail.component';
 import { UserManagementComponent } from './admin/user-management.component';
+import { DepartmentManagementComponent } from './admin/departments/department-management.component';
 import { SchemeManagementComponent } from './admin/scheme-management/scheme-management.component';
 import { AppointmentTypeManagementComponent } from './admin/appointment-type-management/appointment-type-management.component';
 import { HcmDashboardComponent } from './admin/hcm-dashboard/hcm-dashboard.component';
@@ -30,9 +30,9 @@ import { roleGuard } from './guards/role.guard';
 
 import { UserRole } from './models';
 
-const FULL_CONTROL: UserRole[] = ['HCM', 'ADMIN', 'OSD'];
-const STAFF_ROLES: UserRole[] = ['HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER', 'DATA_ENTRY_OPERATOR'];
-const REPORTS_ROLES: UserRole[] = ['HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER'];
+const FULL_CONTROL: UserRole[] = ['SUPER_ADMIN', 'DEPARTMENT_ADMIN', 'HCM', 'ADMIN', 'OSD'];
+const STAFF_ROLES: UserRole[] = ['DEPARTMENT_ADMIN', 'DEPARTMENT_PA', 'HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER', 'DATA_ENTRY_OPERATOR'];
+const REPORTS_ROLES: UserRole[] = ['DEPARTMENT_ADMIN', 'DEPARTMENT_PA', 'HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER'];
 
 export const routes: Routes = [
   { path: '', component: HomeComponent, pathMatch: 'full' },
@@ -62,8 +62,8 @@ export const routes: Routes = [
       { path: 'identify', component: PublicIdentificationComponent, canActivate: [roleGuard('HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER', 'DATA_ENTRY_OPERATOR')] },
       { path: 'reports', component: ReportsComponent, canActivate: [roleGuard(...REPORTS_ROLES)] },
       { path: 'reports/heatmap', component: HeatmapComponent, canActivate: [roleGuard(...REPORTS_ROLES)] },
-      { path: 'reports/followups', component: PendingFollowupsComponent, canActivate: [roleGuard(...REPORTS_ROLES)] },
       { path: 'reports/audit', component: AuditTrailComponent, canActivate: [roleGuard('ADMIN')] },
+      { path: 'admin/departments', component: DepartmentManagementComponent, canActivate: [roleGuard('SUPER_ADMIN')] },
       { path: 'admin/users', component: UserManagementComponent, canActivate: [roleGuard(...FULL_CONTROL)] },
       { path: 'admin/schemes', component: SchemeManagementComponent, canActivate: [roleGuard('ADMIN')] },
       { path: 'admin/appointment-types', component: AppointmentTypeManagementComponent, canActivate: [roleGuard('ADMIN')] },

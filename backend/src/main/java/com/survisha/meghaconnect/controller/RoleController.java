@@ -21,7 +21,7 @@ public class RoleController {
 
     @Operation(summary = "Get all roles", description = "Retrieve role_name values from roles table")
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','DEPARTMENT_ADMIN')")
     public List<String> getAllRoles() {
         return roleService.getAllRoleNames();
     }

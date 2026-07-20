@@ -322,7 +322,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   // ── STEP 1: ID VALIDATION ───────────────────────────────────────────────
 
   get idNumber(): string {
-    return this.form.idType === 'EPIC' ? this.form.epicNumber : this.form.aadhaarNumber;
+    return this.form.idType === 'EPIC' ? this.form.epicNumber : '';
   }
 
   get canValidateId(): boolean {
@@ -330,9 +330,6 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       const hasValidEpic = this.epicPattern.test(this.form.epicNumber);
       const hasValidName = this.isValidName(this.form.visitorName);
       return hasValidEpic && !!hasValidName;
-    }
-    if (this.form.idType === 'AADHAAR') {
-      return /^\d{12}$/.test(this.form.aadhaarNumber);
     }
     if (this.form.idType === 'NONE') {
       return this.isValidName(this.form.fullName) && this.isManualPhoneValid && !this.duplicateRegistrationBlocked;
@@ -400,15 +397,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.errorMsg = '';
     this.loading = true;
 
-    // Check if Aadhaar OVSE flow should be used
     if (this.form.idType === 'NONE') {
       this.checkRegistrationStatus(true);
-      return;
-    }
-
-    // Check if Aadhaar OVSE flow should be used
-    if (this.form.idType === 'AADHAAR') {
-      this.generateAadhaarQr();
       return;
     }
 
@@ -537,97 +527,6 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
         this.errorMsg = apiErrorMessage(err, this.t('ERROR_FAILED_GENERATE_OTP_TRY'));
       }
     });
-  }
-
-  // ── OVSE AADHAAR QR FLOW ────────────────────────────────────────────────
-
-  /**
-   * Generate OVSE QR code for Aadhaar verification.
-   * QR is generic and can be scanned by any user with the Aadhaar app.
-   * No Aadhaar or mobile number required for QR generation.
-   */
-  generateAadhaarQr() {
-    this.errorMsg = '';
-    this.successMsg = '';
-    this.loading = true;
-
-    // Generate QR code (backend will use OVSE SDK with appId + txnId configuration)
-    this.kycService.generateAadhaarQr().subscribe({
-      next: res => {
-        this.loading = false;
-        if (res.success && res.qrDataUri) {
-          this.qrDataUri = res.qrDataUri;
-          this.currentTxnId = res.txnId;
-          this.maskedPhone = res.maskedMobile || '';
-          this.showQrCode = true;
-          this.idValidated = true;
-          this.successMsg = this.t('QR_CODE_GENERATED');
-          
-          // Start polling for KYC result
-          this.startPollingKycResult();
-        } else {
-          this.offerKycPendingFallback('AADHAAR', res.errorMessage || this.t('ERROR_FAILED_GENERATE_QR'), res.requestId);
-        }
-      },
-      error: err => {
-        this.loading = false;
-        if (this.isKycServiceUnavailable(err)) {
-          this.offerKycPendingFallback('AADHAAR', apiErrorMessage(err, this.t('ERROR_QR_GENERATION_FAILED')), err?.error?.requestId);
-          return;
-        }
-        this.errorMsg = apiErrorMessage(err, this.t('ERROR_QR_GENERATION_FAILED'));
-      },
-    });
-  }
-
-  /**
-   * Poll for Aadhaar KYC verification result.
-   * Called repeatedly until result is available or max attempts reached.
-   * Waits for user to scan QR with Aadhaar app and complete verification.
-   */
-  startPollingKycResult() {
-    this.pollingAttempts = 0;
-    this.successMsg = this.t('QR_CODE_READY_SCAN');
-    this.errorMsg = '';
-
-    this.pollingInterval = setInterval(() => {
-      this.pollingAttempts++;
-      this.pollingCountdown = (this.maxPollingAttempts - this.pollingAttempts) * 2;  // Remaining seconds
-
-      if (this.pollingAttempts > this.maxPollingAttempts) {
-        clearInterval(this.pollingInterval);
-        this.errorMsg = this.t('QR_SCAN_TIMEOUT');
-        this.showQrCode = false;
-        return;
-      }
-
-      // Poll for result from OVSE callback
-      this.kycService.getAadhaarKycResult(this.currentTxnId).subscribe({
-        next: res => {
-          if (this.hasAadhaarKycPayload(res)) {
-            // KYC verification successful.
-            clearInterval(this.pollingInterval);
-            this.successMsg = this.t('AADHAAR_VERIFICATION_SUCCESS_LOADING');
-            this.handleAadhaarKycSuccess(res);
-          } else if (res && res.error) {
-            // User rejected or error occurred.
-            clearInterval(this.pollingInterval);
-            this.errorMsg = this.t('ERROR_KYC_FAILED', { reason: res.errorMessage || res.errorCode });
-            this.showQrCode = false;
-          }
-          // If no result yet (404 or null), keep polling
-        },
-        error: () => {
-          // Continue polling on 404 (result not yet available)
-          // Only stop on max attempts
-          if (this.pollingAttempts >= this.maxPollingAttempts) {
-            clearInterval(this.pollingInterval);
-            this.errorMsg = this.t('ERROR_VERIFICATION_TIMEOUT');
-            this.showQrCode = false;
-          }
-        },
-      });
-    }, 2000);  // Poll every 2 seconds for faster feedback
   }
 
   /**

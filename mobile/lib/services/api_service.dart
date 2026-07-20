@@ -552,33 +552,6 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> generateAadhaarQr() async {
-    try {
-      final resp = await http
-          .post(
-            _u('/kyc/aadhaar/generate-qr'),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({}),
-          )
-          .timeout(const Duration(seconds: 30));
-
-      if (resp.statusCode >= 200 && resp.statusCode < 300) {
-        return jsonDecode(resp.body) as Map<String, dynamic>;
-      }
-
-      return {
-        'success': false,
-        'errorMessage': 'Failed to generate Aadhaar QR.',
-      };
-    } catch (error, stackTrace) {
-      _logError('generateAadhaarQr', error, stackTrace);
-      return {
-        'success': false,
-        'errorMessage': 'Network error. Please try again.',
-      };
-    }
-  }
-
   static Future<Map<String, dynamic>> registerVisitor(
       Map<String, dynamic> payload) async {
     try {
@@ -1301,33 +1274,6 @@ class ApiService {
       {'remarks': remarks},
       'rejectAppointment',
     );
-  }
-
-  static Future<Map<String, dynamic>?> markFollowUp(
-    int id, {
-    String remarks = 'Follow-up',
-  }) async {
-    try {
-      final headers = await _headers();
-      final resp = await http
-          .post(
-            _u('/appointments/mark-followup'),
-            headers: headers,
-            body: jsonEncode({
-              'appointmentIds': [id],
-              'remarks': remarks,
-            }),
-          )
-          .timeout(const Duration(seconds: 20));
-      if (resp.statusCode >= 200 && resp.statusCode < 300) {
-        final decoded = jsonDecode(resp.body);
-        final rows = _normalizeList(decoded);
-        return rows.isNotEmpty ? rows.first : _unwrapObject(decoded);
-      }
-    } catch (error, stackTrace) {
-      _logError('markFollowUp', error, stackTrace);
-    }
-    return null;
   }
 
   static Future<Map<String, dynamic>?> submitCmoReview({

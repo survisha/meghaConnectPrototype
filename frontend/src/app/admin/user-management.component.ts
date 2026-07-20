@@ -26,6 +26,9 @@ interface ManagedUser {
   password?: string;
   phoneNumber?: string;
   email?: string;
+  departmentId?: number;
+  departmentCode?: string;
+  departmentName?: string;
   department?: string;
   designation?: string;
   active?: boolean;
@@ -39,6 +42,13 @@ interface ApiResponse<T> {
   success: boolean;
   message: string;
   data: T;
+}
+
+interface DepartmentOption {
+  id: number;
+  departmentCode: string;
+  departmentName: string;
+  status: 'ACTIVE' | 'INACTIVE';
 }
 
 @Component({
@@ -64,6 +74,7 @@ export class UserManagementComponent implements OnInit {
   showPassword = false;
 
   roleOptions: { label: string; value: UserRole }[] = [];
+  departmentOptions: DepartmentOption[] = [];
   form: ManagedUser = this.emptyForm();
   displayedColumns: string[] = ['sno', 'fullName', 'username', 'phoneNumber', 'role', 'active', 'locked', 'createdAt', 'actions'];
   sortActive: keyof ManagedUser = 'fullName';
@@ -87,6 +98,7 @@ export class UserManagementComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadRoles();
+    this.loadDepartments();
     this.loadUsers();
   }
 
@@ -100,6 +112,9 @@ export class UserManagementComponent implements OnInit {
       CMO: { 'background': '#dbeafe', 'color': '#1e40af' },
       DATA_ENTRY_OPERATOR: { 'background': '#f3f4f6', 'color': '#374151' },
       SECURITY: { 'background': '#ecfdf5', 'color': '#047857' },
+      SUPER_ADMIN: { 'background': '#f5f3ff', 'color': '#5b21b6' },
+      DEPARTMENT_ADMIN: { 'background': '#e0f2fe', 'color': '#075985' },
+      DEPARTMENT_PA: { 'background': '#ecfdf5', 'color': '#047857' },
       CITIZEN: { 'background': '#eef2ff', 'color': '#3730a3' },
       PUBLIC: { 'background': '#eef2ff', 'color': '#3730a3' },
     };
@@ -112,7 +127,7 @@ export class UserManagementComponent implements OnInit {
   }
 
   departments(): string[] {
-    return Array.from(new Set(this.users.map(u => (u.department || u.designation || '').trim()).filter(Boolean))).sort();
+    return Array.from(new Set(this.users.map(u => (u.departmentName || u.department || u.designation || '').trim()).filter(Boolean))).sort();
   }
 
   openNew() {
@@ -147,6 +162,7 @@ export class UserManagementComponent implements OnInit {
     const fullName = this.form.fullName.trim();
     const password = (this.form.password ?? '').trim();
     const phoneNumber = (this.form.phoneNumber ?? '').trim();
+    const email = (this.form.email ?? '').trim();
 
     if (!fullName || !this.form.role || (!this.isEdit && !username)) {
       this.errorMsg = 'Full name, username, and role are required.';
@@ -164,12 +180,18 @@ export class UserManagementComponent implements OnInit {
       this.errorMsg = 'Mobile number must be exactly 10 digits.';
       return;
     }
+    if (this.auth.hasRole('SUPER_ADMIN') && this.form.role === 'DEPARTMENT_ADMIN' && !this.form.departmentId) {
+      this.errorMsg = 'Department is required for Department Admin.';
+      return;
+    }
 
     this.isSaving = true;
     if (this.isEdit && this.form.id) {
       const payload = {
         fullName,
+        email: email || null,
         role: this.form.role,
+        departmentId: this.form.departmentId ?? null,
         phoneNumber: phoneNumber || null,
         active: this.form.active !== false,
         locked: this.form.locked === true,
@@ -186,7 +208,9 @@ export class UserManagementComponent implements OnInit {
     const payload = {
       username,
       fullName,
+      email: email || null,
       role: this.form.role,
+      departmentId: this.form.departmentId ?? null,
       password,
       phoneNumber: phoneNumber || null,
       active: true,
@@ -243,7 +267,7 @@ export class UserManagementComponent implements OnInit {
       ].join(' ').toLowerCase();
       const active = user.active !== false;
       const locked = user.locked === true;
-      const dept = (user.department || user.designation || '').trim();
+      const dept = (user.departmentName || user.department || user.designation || '').trim();
       return (!search || haystack.includes(search))
         && (!this.filters.role || user.role === this.filters.role)
         && (!this.filters.active || String(active) === this.filters.active)
@@ -291,9 +315,10 @@ export class UserManagementComponent implements OnInit {
   private loadRoles() {
     this.http.get<string[]>(`${environment.apiUrl}/roles`).subscribe({
       next: roles => {
+        const allowed = this.creatableRoles();
         this.roleOptions = (roles ?? [])
           .map(role => this.normalizeRoleName(role))
-          .filter(role => role && role !== 'PUBLIC' && role !== 'CITIZEN')
+          .filter(role => role && allowed.includes(role as UserRole))
           .map(role => ({ label: this.toRoleLabel(role), value: role as UserRole }));
         if (!this.roleOptions.some(option => option.value === this.form.role)) {
           this.form.role = this.defaultRole();
@@ -303,6 +328,17 @@ export class UserManagementComponent implements OnInit {
         this.errorMsg = this.extractApiErrorMessage(error, 'Unable to load roles.');
         this.roleOptions = [];
       },
+    });
+  }
+
+  private loadDepartments() {
+    if (!this.auth.hasRole('SUPER_ADMIN')) {
+      this.departmentOptions = [];
+      return;
+    }
+    this.http.get<ApiResponse<DepartmentOption[]>>(`${environment.apiUrl}/departments`).subscribe({
+      next: res => this.departmentOptions = (res.data ?? []).filter(department => department.status === 'ACTIVE'),
+      error: () => this.departmentOptions = [],
     });
   }
 
@@ -407,9 +443,19 @@ export class UserManagementComponent implements OnInit {
 
   private defaultRole(): UserRole {
     const options = this.roleOptions ?? [];
-    return options.find(option => option.value === 'DATA_ENTRY_OPERATOR')?.value
+    return options.find(option => option.value === 'DEPARTMENT_PA')?.value
       ?? options[0]?.value
-      ?? 'DATA_ENTRY_OPERATOR';
+      ?? 'DEPARTMENT_PA';
+  }
+
+  private creatableRoles(): UserRole[] {
+    if (this.auth.hasRole('SUPER_ADMIN')) {
+      return ['DEPARTMENT_ADMIN'];
+    }
+    if (this.auth.hasRole('DEPARTMENT_ADMIN')) {
+      return ['DEPARTMENT_PA'];
+    }
+    return ['DEPARTMENT_ADMIN', 'DEPARTMENT_PA'];
   }
 
   private toRoleLabel(role: string): string {

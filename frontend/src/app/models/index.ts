@@ -1,4 +1,5 @@
 export type UserRole =
+  | 'SUPER_ADMIN' | 'DEPARTMENT_ADMIN' | 'DEPARTMENT_PA'
   | 'HCM' | 'ADMIN' | 'OSD'
   | 'APPROVER' | 'APPROVER_JT_SECY' | 'CMO_OFFICER'
   | 'CMO' | 'DATA_ENTRY_OPERATOR'

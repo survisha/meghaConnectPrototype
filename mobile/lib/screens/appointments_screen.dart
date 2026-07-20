@@ -1416,13 +1416,6 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
         onPressed: _schedule,
       ));
     }
-    if (_canMarkFollowUp(role)) {
-      actions.add(_ActionButton(
-        label: 'Follow-up',
-        icon: Icons.follow_the_signs,
-        onPressed: _markFollowUp,
-      ));
-    }
     if (_canUseCmoActions(role)) {
       actions.add(_ActionButton(
         label: 'Missing Info',
@@ -1553,19 +1546,6 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
       return;
     }
     _showMessage('Appointment scheduled.');
-    await _load();
-  }
-
-  Future<void> _markFollowUp() async {
-    setState(() => _saving = true);
-    final result = await ApiService.markFollowUp(widget.appointment.backendId!);
-    if (!mounted) return;
-    setState(() => _saving = false);
-    if (result == null) {
-      _showMessage('Failed to mark follow-up.');
-      return;
-    }
-    _showMessage('Appointment marked for follow-up.');
     await _load();
   }
 
@@ -1924,9 +1904,6 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
               .contains(widget.appointment.status) ||
           (widget.appointment.source == 'GUEST' &&
               widget.appointment.status == 'SUBMITTED'));
-
-  bool _canMarkFollowUp(UserRole role) =>
-      _canUseApproverActions(role) && widget.appointment.status == 'APPROVED';
 
   bool _canUseCmoActions(UserRole role) =>
       [UserRole.HCM, UserRole.ADMIN, UserRole.OSD, UserRole.CMO_OFFICER]

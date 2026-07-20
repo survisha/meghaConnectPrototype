@@ -10,6 +10,11 @@ public class AuthResponse {
     private String username;
     private String fullName;
     private String role;
+    private Long userId;
+    private Long departmentId;
+    private String departmentCode;
+    private String departmentName;
+    private boolean passwordChangeRequired;
     private Long expiresIn;
     @Builder.Default
     private String requestId = RequestContextUtil.getRequestId();

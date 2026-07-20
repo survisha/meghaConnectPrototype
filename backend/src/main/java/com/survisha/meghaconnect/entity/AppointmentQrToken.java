@@ -23,6 +23,9 @@ public class AppointmentQrToken {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "department_id")
+    private Long departmentId;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "appointment_id", nullable = false)
     private Appointment appointment;

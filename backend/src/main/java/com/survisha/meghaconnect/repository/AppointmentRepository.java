@@ -39,6 +39,10 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long>,
     
     Page<Appointment> findByStatusIn(List<Appointment.AppointmentStatus> statuses, Pageable pageable);
 
+    Page<Appointment> findByStatusInAndTenantDepartment_Id(List<Appointment.AppointmentStatus> statuses, Long departmentId, Pageable pageable);
+
+    Optional<Appointment> findByIdAndTenantDepartment_Id(Long id, Long departmentId);
+
     @Query("SELECT COUNT(a) FROM Appointment a WHERE a.applicant.id = :personId AND a.scheduledDateTime >= :sixMonthsAgo AND a.status = 'COMPLETED'")
     int countMeetingsLast6Months(@Param("personId") Long personId, @Param("sixMonthsAgo") java.time.LocalDateTime sixMonthsAgo);
 

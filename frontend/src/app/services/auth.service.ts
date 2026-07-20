@@ -10,6 +10,11 @@ export interface AuthUser {
   username: string;
   fullName: string;
   role: UserRole;
+  userId?: number;
+  departmentId?: number;
+  departmentCode?: string;
+  departmentName?: string;
+  passwordChangeRequired?: boolean;
   visitorId?: number;
 }
 
@@ -18,6 +23,11 @@ interface LoginResponse {
   username: string;
   fullName: string;
   role: string;
+  userId?: number;
+  departmentId?: number;
+  departmentCode?: string;
+  departmentName?: string;
+  passwordChangeRequired?: boolean;
   expiresIn: number;
 }
 
@@ -74,7 +84,16 @@ export class AuthService {
       tap(res => {
         // Strip Spring Security "ROLE_" prefix to match frontend UserRole type
         const role = this.normalizeRole((res.role ?? '').replace(/^ROLE_/, ''));
-        const auth: AuthUser = { username: res.username, fullName: res.fullName ?? username, role };
+        const auth: AuthUser = {
+          username: res.username,
+          fullName: res.fullName ?? username,
+          role,
+          userId: res.userId,
+          departmentId: res.departmentId,
+          departmentCode: res.departmentCode,
+          departmentName: res.departmentName,
+          passwordChangeRequired: res.passwordChangeRequired,
+        };
         this._user.set(auth);
         sessionStorage.setItem('megha_user', JSON.stringify(auth));
         sessionStorage.setItem('megha_token', res.token);

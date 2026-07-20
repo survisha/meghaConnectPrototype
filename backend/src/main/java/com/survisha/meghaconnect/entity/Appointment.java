@@ -26,6 +26,10 @@ public class Appointment extends BaseEntity {
     @JoinColumn(name = "applicant_id", nullable = false)
     private Visitor applicant;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "department_id")
+    private Department tenantDepartment;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private EventType eventType;

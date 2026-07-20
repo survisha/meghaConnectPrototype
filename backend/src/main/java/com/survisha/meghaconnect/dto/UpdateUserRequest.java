@@ -19,8 +19,14 @@ public class UpdateUserRequest {
     @Size(max = 100)
     private String fullName;
 
+    @Size(max = 150)
+    @javax.validation.constraints.Email
+    private String email;
+
     @NotNull
     private User.UserRole role;
+
+    private Long departmentId;
 
     @Size(max = 20)
     @Pattern(regexp = "^$|^[0-9]{10}$", message = "Phone number must be exactly 10 digits")

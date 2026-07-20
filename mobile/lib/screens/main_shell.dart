@@ -17,7 +17,6 @@ import 'scheme_form_screen.dart';
 import 'public_identification_screen.dart';
 import 'reports_screen.dart';
 import 'heatmap_screen.dart';
-import 'pending_followups_screen.dart';
 import 'audit_trail_screen.dart';
 import 'grievance_screen.dart';
 import 'visitor_dashboard_screen.dart';
@@ -209,18 +208,6 @@ final _navTree = <_NavItem>[
         ],
       ),
       _NavItem(
-        label: 'Pending Follow-ups',
-        icon: Icons.access_time_outlined,
-        route: 'followups',
-        roles: [
-          UserRole.HCM,
-          UserRole.ADMIN,
-          UserRole.OSD,
-          UserRole.APPROVER,
-          UserRole.CMO_OFFICER,
-        ],
-      ),
-      _NavItem(
         label: 'Audit Trail',
         icon: Icons.history,
         route: 'audit',
@@ -287,8 +274,6 @@ class _MainShellState extends State<MainShell> {
           debugPrint('MainShell destination=HeatmapScreen route=$route');
         }
         return const HeatmapScreen();
-      case 'followups':
-        return const PendingFollowupsScreen();
       case 'audit':
         return const AuditTrailScreen();
       case 'users':
@@ -782,11 +767,6 @@ class _PlaceholderScreen extends StatelessWidget {
         'Reports & Analytics',
         Icons.bar_chart_outlined,
         'Appointment analytics, district heatmaps, and trend reports.'
-      ),
-      'followups': (
-        'Pending Follow-ups',
-        Icons.access_time_outlined,
-        'Track pending directions and follow-up actions.'
       ),
       'audit': (
         'Audit Trail',

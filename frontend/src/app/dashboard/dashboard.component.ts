@@ -6,7 +6,6 @@ import { ScheduleEventService } from '../services/schedule-event.service';
 import { AuditLogService } from '../services/audit-log.service';
 import { AppointmentService } from '../services/appointment.service';
 import { SchemeService } from '../services/scheme.service';
-import { GrievanceService } from '../services/grievance.service';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { UIChart } from 'primeng/chart';
@@ -76,7 +75,6 @@ export class DashboardComponent implements OnInit {
   private readonly schemeTypeColors = ['#1a237e', '#1565c0', '#0288d1', '#00838f', '#2e7d32', '#558b2f'];
   private readonly pendingApprovalStatuses = new Set(['PENDING_APPROVER_REVIEW', 'APPROVER_REVIEW', 'HCM_PENDING']);
   private readonly inactiveSchemeStatuses = new Set(['REJECTED', 'HCM_REJECTED', 'CANCELLED', 'CANCELED', 'COMPLETED', 'CLOSED']);
-  private readonly resolvedGrievanceStatuses = new Set(['RESOLVED', 'CLOSED']);
 
   constructor(
     public auth: AuthService,
@@ -84,7 +82,6 @@ export class DashboardComponent implements OnInit {
     private auditLogService: AuditLogService,
     private appointmentService: AppointmentService,
     private schemeService: SchemeService,
-    private grievanceService: GrievanceService,
   ) {}
 
   ngOnInit() {
@@ -107,10 +104,6 @@ export class DashboardComponent implements OnInit {
 
     if (this.showCharts || this.hasVisibleKpi('Active Scheme Apps')) {
       this.loadSchemeMetrics();
-    }
-
-    if (this.hasVisibleKpi('Pending Follow-ups')) {
-      this.loadPendingFollowUps();
     }
 
     if (this.auth.hasRole('ADMIN')) {
@@ -160,16 +153,6 @@ export class DashboardComponent implements OnInit {
         this.updateSchemeChart(applications);
       },
       error: err => this.addError(err, 'Unable to load scheme application dashboard metrics.'),
-    });
-  }
-
-  private loadPendingFollowUps(): void {
-    this.grievanceService.getAll(0, 1000).subscribe({
-      next: page => {
-        const grievances = page.content ?? [];
-        this.setKpiValue('Pending Follow-ups', grievances.filter(g => !this.resolvedGrievanceStatuses.has(g.status)).length);
-      },
-      error: err => this.addError(err, 'Unable to load pending follow-up metrics.'),
     });
   }
 
@@ -426,8 +409,6 @@ export class DashboardComponent implements OnInit {
         roles: ['HCM', 'ADMIN', 'OSD', 'APPROVER'] },
       { label: 'Active Scheme Apps', value: '-', matIcon: 'work', color: '#065f46', bg: '#d1fae5',
         roles: ['HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER'] },
-      { label: 'Pending Follow-ups', value: '-', matIcon: 'warning', color: '#991b1b', bg: '#fee2e2',
-        roles: ['HCM', 'ADMIN', 'OSD'] },
       { label: 'Walk-ins Today', value: '-', matIcon: 'directions_walk', color: '#0369a1', bg: '#e0f2fe',
         roles: ['DATA_ENTRY_OPERATOR', 'ADMIN', 'OSD'] },
       { label: 'CMO Reviews Due', value: '-', matIcon: 'rate_review', color: '#7c3aed', bg: '#ede9fe',

@@ -10,18 +10,6 @@ export interface ReferenceDataDto {
 
 
 
-export interface AadhaarQrResponse {
-  success: boolean;
-  txnId: string;
-  qrDataUri: string;
-  maskedMobile?: string;
-  errorMessage?: string;
-  canProceed?: boolean;
-  kycStatus?: string;
-  kycProvider?: string;
-  requestId?: string;
-}
-
 export interface EpicVerificationRequest {
   epicNumber: string;           // EPIC voter ID (e.g., BCV0259184)
   visitorName: string;          // Name as on voter card (for matching)
@@ -158,24 +146,6 @@ export class VisitorKycService {
    */
   verifyEpic(request: EpicVerificationRequest): Observable<EpicVerificationResponse> {
     return this.http.post<EpicVerificationResponse>(`${environment.apiUrl}/kyc/verify/epic`, request);
-  }
-
-  /**
-   * Generate OVSE QR code for Aadhaar verification.
-   * User scans the QR with their Aadhaar app on mobile.
-   * Returns transaction ID and QR image (base64 data URI).
-   */
-  generateAadhaarQr(): Observable<AadhaarQrResponse> {
-    return this.http.post<AadhaarQrResponse>(`${environment.apiUrl}/kyc/aadhaar/generate-qr`, {});
-  }
-
-  /**
-   * Poll for Aadhaar KYC verification result.
-   * Called after QR generation to wait for user to scan and verify.
-   * Returns null/404 while waiting, returns KycData when ready.
-   */
-  getAadhaarKycResult(txnId: string): Observable<KycDataResponse> {
-    return this.http.get<KycDataResponse>(`${environment.apiUrl}/kyc/aadhaar/result/${txnId}`);
   }
 
   retryKyc(visitorId: number, payload: { name: string; epicNumber: string }): Observable<{

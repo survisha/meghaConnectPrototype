@@ -23,7 +23,6 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTabsModule } from '@angular/material/tabs';
-import { MatBadgeModule } from '@angular/material/badge';
 import { apiErrorMessage } from '../../shared/api-error.util';
 
 interface HcmAppointmentCard {
@@ -36,29 +35,6 @@ interface HcmAppointmentCard {
   category: string;
   description?: string;
   appointment: Appointment;
-}
-
-interface HcmActionDto {
-  id?: number;
-  appointmentId?: number;
-  actionType?: string;
-  actionStatus?: string;
-  acceptedDateTime?: string;
-  requestedEarlierDateTime?: string;
-  snoozeType?: string;
-  snoozeDurationDays?: number;
-  snoozedUntil?: string;
-  clarificationRequested?: string;
-  hcmRemarks?: string;
-  decision?: string;
-  departmentCode?: string;
-  departmentName?: string;
-  createdBy?: string;
-  createdByRole?: string;
-  gestureType?: string;
-  originalDateTime?: string;
-  originalLocation?: string;
-  appointmentSubject?: string;
 }
 
 /**
@@ -84,8 +60,7 @@ interface HcmActionDto {
     MatDatepickerModule,
     MatNativeDateModule,
     MatProgressSpinnerModule,
-    MatTabsModule,
-    MatBadgeModule
+    MatTabsModule
   ],
   templateUrl: './hcm-dashboard.component.html',
   styleUrls: ['./hcm-dashboard.component.scss']
@@ -101,11 +76,8 @@ export class HcmDashboardComponent implements OnInit {
   loadingRemarks = false;
   loadingCitizenHistory = false;
   citizenHistoryError = '';
-  pendingWorkItems: HcmActionDto[] = [];
   loadingAppointments = false;
-  loadingPendingWork = false;
   submittingAction = false;
-  pendingWorkCount = 0;
   errorMsg = '';
   private apiErrors = new Map<string, string>();
   
@@ -145,8 +117,6 @@ export class HcmDashboardComponent implements OnInit {
   ngOnInit() {
     this.loadDepartments();
     this.loadAppointments();
-    this.loadPendingWorkItems();
-    this.getPendingWorkCount();
   }
   
   /**
@@ -182,42 +152,6 @@ export class HcmDashboardComponent implements OnInit {
       next: departments => this.departments = departments ?? [],
       error: err => this.setApiError('departments', err, 'Unable to load departments.'),
     });
-  }
-  
-  /**
-   * Load pending work items
-   */
-  loadPendingWorkItems() {
-    this.loadingPendingWork = true;
-    this.http.get<unknown>(`${environment.apiUrl}/hcm/actions/pending-work`)
-      .subscribe({
-        next: data => {
-          this.pendingWorkItems = this.normalizeActionList(data);
-          this.pendingWorkCount = this.pendingWorkItems.length;
-          this.clearApiError('pendingWork');
-          this.loadingPendingWork = false;
-        },
-        error: err => {
-          this.pendingWorkItems = [];
-          this.pendingWorkCount = 0;
-          this.setApiError('pendingWork', err, 'Unable to load pending work items.');
-          this.loadingPendingWork = false;
-        },
-      });
-  }
-  
-  /**
-   * Get pending work count for badge
-   */
-  getPendingWorkCount() {
-    this.http.get<unknown>(`${environment.apiUrl}/hcm/actions/pending-work/count`)
-      .subscribe({
-        next: count => {
-          this.pendingWorkCount = this.normalizeCount(count);
-          this.clearApiError('pendingWorkCount');
-        },
-        error: err => this.setApiError('pendingWorkCount', err, 'Unable to load pending work count.'),
-      });
   }
   
   /**
@@ -486,8 +420,6 @@ export class HcmDashboardComponent implements OnInit {
           this.showActionMenu = false;
           this.selectedAppointment = null;
           this.loadAppointments();
-          this.loadPendingWorkItems();
-          this.getPendingWorkCount();
           this.submittingAction = false;
         },
         error: err => {
@@ -523,19 +455,6 @@ export class HcmDashboardComponent implements OnInit {
   }
   
   /**
-   * Get status badge color
-   */
-  getStatusColor(status?: string): string {
-    switch (status) {
-      case 'PENDING': return '#ff9800';
-      case 'CONFIRMED': return '#4caf50';
-      case 'COMPLETED': return '#2196f3';
-      case 'REJECTED': return '#f44336';
-      default: return '#9e9e9e';
-    }
-  }
-  
-  /**
    * Format date/time for display
    */
   formatDateTime(date: any): string {
@@ -559,51 +478,6 @@ export class HcmDashboardComponent implements OnInit {
       description: appointment.agendaBrief || appointment.shortNotes || appointment.cmoRemarks || appointment.approverRemarks,
       appointment,
     };
-  }
-
-  private normalizeActionList(response: unknown): HcmActionDto[] {
-    const data = this.unwrapData<unknown>(response);
-    return Array.isArray(data) ? data.map(item => this.mapHcmAction(item)) : [];
-  }
-
-  private mapHcmAction(item: unknown): HcmActionDto {
-    const raw: any = item ?? {};
-    return {
-      id: raw.id,
-      appointmentId: raw.appointmentId,
-      actionType: raw.actionType || 'PENDING',
-      actionStatus: raw.actionStatus || 'PENDING',
-      acceptedDateTime: raw.acceptedDateTime,
-      requestedEarlierDateTime: raw.requestedEarlierDateTime,
-      snoozeType: raw.snoozeType,
-      snoozeDurationDays: raw.snoozeDurationDays,
-      snoozedUntil: raw.snoozedUntil,
-      clarificationRequested: raw.clarificationRequested,
-      hcmRemarks: raw.hcmRemarks,
-      decision: raw.decision,
-      departmentCode: raw.departmentCode,
-      departmentName: raw.departmentName,
-      createdBy: raw.createdBy,
-      createdByRole: raw.createdByRole,
-      gestureType: raw.gestureType,
-      originalDateTime: raw.originalDateTime,
-      originalLocation: raw.originalLocation || 'Not specified',
-      appointmentSubject: raw.appointmentSubject || (raw.appointmentId ? `Appointment #${raw.appointmentId}` : 'Appointment'),
-    };
-  }
-
-  private normalizeCount(response: unknown): number {
-    const data = this.unwrapData<unknown>(response);
-    const count = Number(data);
-    return Number.isFinite(count) ? count : this.pendingWorkItems.length;
-  }
-
-  private unwrapData<T = unknown>(response: unknown): T {
-    const raw: any = response;
-    if (raw && typeof raw === 'object' && 'data' in raw && 'success' in raw) {
-      return raw.data as T;
-    }
-    return response as T;
   }
 
   private setApiError(key: string, error: unknown, fallbackMessage: string): void {

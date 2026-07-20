@@ -821,44 +821,6 @@ class ApiService {
     return [];
   }
 
-  static Future<List<Map<String, dynamic>>> getHcmPendingWork() async {
-    try {
-      final headers = await _headers();
-      final resp = await http
-          .get(_u('/hcm/actions/pending-work'), headers: headers)
-          .timeout(const Duration(seconds: 20));
-      if (resp.statusCode >= 200 && resp.statusCode < 300) {
-        return _normalizeList(jsonDecode(resp.body));
-      }
-    } catch (error, stackTrace) {
-      _logError('getHcmPendingWork', error, stackTrace);
-    }
-    return [];
-  }
-
-  static Future<int> getHcmPendingWorkCount() async {
-    try {
-      final headers = await _headers();
-      final resp = await http
-          .get(_u('/hcm/actions/pending-work/count'), headers: headers)
-          .timeout(const Duration(seconds: 20));
-      if (resp.statusCode >= 200 && resp.statusCode < 300) {
-        final decoded = jsonDecode(resp.body);
-        final raw = decoded is Map<String, dynamic> &&
-                decoded.containsKey('data') &&
-                decoded.containsKey('success')
-            ? decoded['data']
-            : decoded;
-        if (raw is num) return raw.toInt();
-        final count = int.tryParse(raw?.toString() ?? '');
-        if (count != null) return count;
-      }
-    } catch (error, stackTrace) {
-      _logError('getHcmPendingWorkCount', error, stackTrace);
-    }
-    return 0;
-  }
-
   static Future<bool> submitHcmAction(
     int appointmentId,
     String action, {

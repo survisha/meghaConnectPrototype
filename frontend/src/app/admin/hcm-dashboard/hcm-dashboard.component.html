@@ -1,8 +1,8 @@
 <div class="hcm-dashboard-container">
-  <!-- Header with pending work badge -->
+  <!-- Header -->
   <div class="dashboard-header">
     <h1>HCM Dashboard</h1>
-    <button mat-icon-button [matBadge]="pendingWorkCount" matBadgeColor="warn">
+    <button mat-icon-button>
       <mat-icon>notifications</mat-icon>
     </button>
   </div>
@@ -20,7 +20,7 @@
     </mat-form-field>
   </div>
 
-  <!-- Tabs: Appointments and Pending Work -->
+  <!-- Appointments -->
   <mat-tab-group class="dashboard-tabs">
     
     <!-- Tab 1: Appointments with Gesture Support -->
@@ -146,79 +146,6 @@
       </div>
     </mat-tab>
 
-    <!-- Tab 2: Pending Work -->
-    <mat-tab>
-      <ng-template mat-tab-label>
-        <span>Pending Work</span>
-        <span *ngIf="pendingWorkCount > 0" class="tab-badge">{{ pendingWorkCount }}</span>
-      </ng-template>
-      <div class="tab-content">
-
-        <mat-spinner *ngIf="loadingPendingWork" diameter="40" class="spinner"></mat-spinner>
-        
-        <div class="pending-work-list" *ngIf="!loadingPendingWork && pendingWorkItems.length > 0; else noPending">
-          <mat-card *ngFor="let item of pendingWorkItems" class="pending-item-card">
-            <mat-card-header>
-              <mat-card-title>{{ item.appointmentSubject }}</mat-card-title>
-              <mat-card-subtitle>
-                <span class="action-badge" [style.background-color]="getStatusColor(item.actionStatus)">
-                  {{ item.actionType }}
-                </span>
-              </mat-card-subtitle>
-            </mat-card-header>
-
-            <mat-card-content>
-              <div class="pending-details">
-                <div class="detail-row">
-                  <strong>Original Date:</strong> {{ formatDateTime(item.originalDateTime) }}
-                </div>
-                <div class="detail-row">
-                  <strong>Location:</strong> {{ item.originalLocation }}
-                </div>
-
-                <!-- Action-specific details -->
-                <div class="detail-row" *ngIf="item.actionType === 'MARK_IMPORTANT'">
-                  <strong>Requested Earlier:</strong> {{ formatDateTime(item.requestedEarlierDateTime) }}
-                </div>
-
-                <div class="detail-row" *ngIf="item.actionType === 'ACCEPT_WITH_CHANGES'">
-                  <strong>Modified Date:</strong> {{ formatDateTime(item.acceptedDateTime) }}
-                </div>
-
-                <div class="detail-row" *ngIf="item.actionType === 'SNOOZE'">
-                  <strong>Snoozed Until:</strong> {{ formatDateTime(item.snoozedUntil) }}
-                </div>
-
-                <div class="detail-row" *ngIf="item.actionType === 'REJECT'">
-                  <strong>Clarification Requested:</strong> 
-                  <p class="remarks">{{ item.clarificationRequested }}</p>
-                </div>
-
-                <div class="detail-row" *ngIf="item.hcmRemarks">
-                  <strong>HCM Remarks:</strong>
-                  <p class="remarks">{{ item.hcmRemarks }}</p>
-                </div>
-                <div class="detail-row" *ngIf="item.departmentName || item.departmentCode">
-                  <strong>Department:</strong>
-                  {{ item.departmentName || item.departmentCode }}
-                </div>
-                <div class="detail-row" *ngIf="item.createdBy || item.createdByRole">
-                  <strong>Updated By:</strong>
-                  {{ item.createdByRole || '-' }} / {{ item.createdBy || '-' }}
-                </div>
-              </div>
-            </mat-card-content>
-          </mat-card>
-        </div>
-
-        <ng-template #noPending>
-          <div *ngIf="!loadingPendingWork" class="empty-state">
-            <mat-icon>checklist</mat-icon>
-            <p>No pending work items</p>
-          </div>
-        </ng-template>
-      </div>
-    </mat-tab>
   </mat-tab-group>
 
   <!-- Action Modal (shown after swipe or button click) -->

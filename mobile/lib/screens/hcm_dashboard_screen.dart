@@ -22,9 +22,7 @@ class _HcmDashboardScreenState extends State<HcmDashboardScreen> {
 
   DateTime _selectedDate = DateTime.now();
   List<Map<String, dynamic>> _appointments = [];
-  List<Map<String, dynamic>> _pendingWork = [];
   List<Map<String, String>> _departments = [];
-  int _pendingCount = 0;
   int _pageIndex = 0;
   bool _loading = true;
   bool _submitting = false;
@@ -56,15 +54,11 @@ class _HcmDashboardScreenState extends State<HcmDashboardScreen> {
     final date = _dateParam(_selectedDate);
     final results = await Future.wait([
       ApiService.getHcmActionAppointments(date),
-      ApiService.getHcmPendingWork(),
-      ApiService.getHcmPendingWorkCount(),
       ApiService.getReferenceData('DEPARTMENT'),
     ]);
     if (!mounted) return;
 
-    var appointments = (results[0] as List<Map<String, dynamic>>)
-        .where(_isPendingHcmActionAppointment)
-        .toList();
+    var appointments = results[0].where(_isPendingHcmActionAppointment).toList();
     if (appointments.isEmpty && context.read<ConnectivityService>().isOffline) {
       final cached = await OfflineRepository().cachedAppointments();
       appointments = cached.where(_isPendingHcmActionAppointment).toList();
@@ -73,10 +67,7 @@ class _HcmDashboardScreenState extends State<HcmDashboardScreen> {
 
     setState(() {
       _appointments = appointments;
-      _pendingWork = results[1] as List<Map<String, dynamic>>;
-      _pendingCount = results[2] as int;
-      _departments = results[3] as List<Map<String, String>>;
-      if (_pendingCount == 0) _pendingCount = _pendingWork.length;
+      _departments = results[1] as List<Map<String, String>>;
       _loading = false;
       _error = null;
     });
@@ -103,7 +94,6 @@ class _HcmDashboardScreenState extends State<HcmDashboardScreen> {
                     children: [
                       _scrollPage(_overviewPage()),
                       _scrollPage(_appointmentsPage()),
-                      _scrollPage(_pendingWorkPage()),
                       _scrollPage(_recentPage()),
                     ],
                   ),
@@ -139,34 +129,8 @@ class _HcmDashboardScreenState extends State<HcmDashboardScreen> {
               ],
             ),
           ),
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              const Icon(Icons.notifications_outlined,
-                  color: Color(0xFF1A237E), size: 28),
-              if (_pendingCount > 0)
-                Positioned(
-                  right: -8,
-                  top: -8,
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFDC2626),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      '$_pendingCount',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
+          const Icon(Icons.notifications_outlined,
+              color: Color(0xFF1A237E), size: 28),
         ],
       ),
     );
@@ -240,26 +204,16 @@ class _HcmDashboardScreenState extends State<HcmDashboardScreen> {
               color: const Color(0xFFB45309),
             ),
             _SummaryCard(
-              label: 'Pending Work',
-              value: _pendingCount,
-              icon: Icons.checklist_outlined,
-              color: const Color(0xFFDC2626),
-            ),
-            _SummaryCard(
               label: 'Accepted',
-              value: _pendingWork.where((e) {
-                return _text(e['actionType']) == 'ACCEPT' ||
-                    _text(e['actionStatus']) == 'CONFIRMED';
-              }).length,
+              value: _appointments
+                  .where((e) => _text(e['status']).contains('ACCEPT'))
+                  .length,
               icon: Icons.done_all_outlined,
               color: const Color(0xFF15803D),
             ),
             _SummaryCard(
               label: 'Need Review',
-              value: _pendingWork.where((e) {
-                final type = _text(e['actionType']);
-                return type == 'REJECT' || type == 'SNOOZE';
-              }).length,
+              value: _appointments.length,
               icon: Icons.assignment_late_outlined,
               color: const Color(0xFF7C3AED),
             ),
@@ -291,36 +245,17 @@ class _HcmDashboardScreenState extends State<HcmDashboardScreen> {
     );
   }
 
-  Widget _pendingWorkPage() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _sectionTitle('Pending Work'),
-        const SizedBox(height: 10),
-        if (_pendingWork.isEmpty)
-          _emptyState('No pending work items.')
-        else
-          for (final item in _pendingWork) _pendingWorkCard(item),
-      ],
-    );
-  }
-
   Widget _recentPage() {
-    final combined = [
-      ..._pendingWork.take(5).map((e) => {'type': 'work', 'data': e}),
-      ..._appointments.take(5).map((e) => {'type': 'appointment', 'data': e}),
-    ];
+    final recent = _appointments.take(5).toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _sectionTitle('Recent Updates'),
         const SizedBox(height: 10),
-        if (combined.isEmpty)
+        if (recent.isEmpty)
           _emptyState('No dashboard data found.')
         else
-          for (final row in combined)
-            _recentRow(
-                row['type'] as String, row['data'] as Map<String, dynamic>),
+          for (final appointment in recent) _recentRow(appointment),
       ],
     );
   }
@@ -346,78 +281,19 @@ class _HcmDashboardScreenState extends State<HcmDashboardScreen> {
     );
   }
 
-  Widget _pendingWorkCard(Map<String, dynamic> item) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    _firstText([
-                      item['appointmentSubject'],
-                      item['appointmentId'] == null
-                          ? null
-                          : 'Appointment #${item['appointmentId']}'
-                    ], 'Appointment'),
-                    style: const TextStyle(fontWeight: FontWeight.w800),
-                  ),
-                ),
-                _Chip(
-                  label: _label(_text(item['actionType'], 'PENDING')),
-                  color: _statusColor(_text(item['actionStatus'], 'PENDING')),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            _InfoLine('Original Date', _fmtDateTime(item['originalDateTime'])),
-            _InfoLine('Location', _text(item['originalLocation'], '-')),
-            if (_text(item['acceptedDateTime']).isNotEmpty)
-              _InfoLine(
-                  'Modified Date', _fmtDateTime(item['acceptedDateTime'])),
-            if (_text(item['requestedEarlierDateTime']).isNotEmpty)
-              _InfoLine('Requested Earlier',
-                  _fmtDateTime(item['requestedEarlierDateTime'])),
-            if (_text(item['snoozedUntil']).isNotEmpty)
-              _InfoLine('Snoozed Until', _fmtDateTime(item['snoozedUntil'])),
-            if (_text(item['clarificationRequested']).isNotEmpty)
-              _InfoLine('Clarification', _text(item['clarificationRequested'])),
-            if (_text(item['hcmRemarks']).isNotEmpty)
-              _InfoLine('HCM Remarks', _text(item['hcmRemarks'])),
-            if (_text(item['departmentName'] ?? item['departmentCode'])
-                .isNotEmpty)
-              _InfoLine('Department',
-                  _text(item['departmentName'] ?? item['departmentCode'])),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _recentRow(String type, Map<String, dynamic> data) {
-    final isWork = type == 'work';
+  Widget _recentRow(Map<String, dynamic> data) {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       child: ListTile(
-        leading: Icon(
-          isWork ? Icons.task_alt_outlined : Icons.event_note_outlined,
-          color: const Color(0xFF1A237E),
-        ),
+        leading:
+            const Icon(Icons.event_note_outlined, color: Color(0xFF1A237E)),
         title: Text(
-          isWork
-              ? _firstText([data['appointmentSubject']], 'Pending work')
-              : _appointmentSubject(data),
+          _appointmentSubject(data),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
         ),
         subtitle: Text(
-          isWork
-              ? _label(_text(data['actionType'], 'PENDING'))
-              : _appointmentApplicant(data),
+          _appointmentApplicant(data),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
@@ -466,7 +342,7 @@ class _HcmDashboardScreenState extends State<HcmDashboardScreen> {
       padding: const EdgeInsets.only(bottom: 10, top: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(4, (index) {
+        children: List.generate(3, (index) {
           final active = index == _pageIndex;
           return AnimatedContainer(
             duration: const Duration(milliseconds: 180),
@@ -1043,29 +919,6 @@ class _ActionChipButton extends StatelessWidget {
   }
 }
 
-class _Chip extends StatelessWidget {
-  final String label;
-  final Color color;
-
-  const _Chip({required this.label, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withAlpha(24),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        label,
-        style:
-            TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w800),
-      ),
-    );
-  }
-}
-
 class _InfoLine extends StatelessWidget {
   final String label;
   final String value;
@@ -1187,18 +1040,4 @@ String _label(String value) {
           ? word
           : '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}')
       .join(' ');
-}
-
-Color _statusColor(String status) {
-  final normalized = status.toUpperCase();
-  if (normalized == 'CONFIRMED' ||
-      normalized == 'COMPLETED' ||
-      normalized.contains('ACCEPT')) {
-    return const Color(0xFF15803D);
-  }
-  if (normalized == 'REJECTED' || normalized.contains('REJECT')) {
-    return const Color(0xFF991B1B);
-  }
-  if (normalized.contains('PENDING')) return const Color(0xFFB45309);
-  return const Color(0xFF64748B);
 }

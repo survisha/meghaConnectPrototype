@@ -4,8 +4,6 @@ import com.survisha.meghaconnect.dto.HcmActionDto;
 import com.survisha.meghaconnect.service.HcmActionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -33,59 +31,6 @@ import java.util.Optional;
 public class HcmActionController {
     
     private final HcmActionService hcmActionService;
-    
-    /**
-     * Get all pending work items for HCM dashboard
-     */
-    @Operation(summary = "Get pending work items", description = "Retrieve all pending appointments for HCM with action options")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Successfully retrieved pending work items",
-            content = @Content(mediaType = "application/json", schema = @Schema(implementation = HcmActionDto.class))),
-        @ApiResponse(responseCode = "403", description = "Access denied - HCM role required"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
-    @GetMapping("/pending-work")
-    public ResponseEntity<?> getPendingWorkItems(HttpServletRequest request) {
-        try {
-            if (!hcmActionService.isHcmUser(request)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body("Access denied. HCM role required.");
-            }
-            
-            List<HcmActionDto> pendingWork = hcmActionService.getPendingWorkItems();
-            return ResponseEntity.ok(pendingWork);
-        } catch (Exception e) {
-            log.error("Error fetching pending work items", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body("Error fetching pending work items");
-        }
-    }
-    
-    /**
-     * Get pending work count for badge
-     */
-    @Operation(summary = "Get pending work count", description = "Get count of pending appointments for badge display")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Successfully retrieved pending work count"),
-        @ApiResponse(responseCode = "403", description = "Access denied - HCM role required"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
-    @GetMapping("/pending-work/count")
-    public ResponseEntity<?> getPendingWorkCount(HttpServletRequest request) {
-        try {
-            if (!hcmActionService.isHcmUser(request)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body("Access denied. HCM role required.");
-            }
-            
-            Long count = hcmActionService.getPendingWorkItemCount();
-            return ResponseEntity.ok(count);
-        } catch (Exception e) {
-            log.error("Error fetching pending work count", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body("Error fetching pending work count");
-        }
-    }
     
     /**
      * Get pending actions for specific appointment
@@ -286,29 +231,4 @@ public class HcmActionController {
         }
     }
     
-    /**
-     * Get recent pending actions
-     */
-    @Operation(summary = "Get recent actions", description = "Retrieve HCM actions from the last N days")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Successfully retrieved recent actions"),
-        @ApiResponse(responseCode = "403", description = "Access denied - HCM role required"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
-    @GetMapping("/recent/{days}")
-    public ResponseEntity<?> getRecentPendingActions(@Parameter(description = "Number of days to look back") @PathVariable int days, HttpServletRequest request) {
-        try {
-            if (!hcmActionService.isHcmUser(request)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body("Access denied. HCM role required.");
-            }
-            
-            List<HcmActionDto> recentActions = hcmActionService.getRecentPendingActions(days);
-            return ResponseEntity.ok(recentActions);
-        } catch (Exception e) {
-            log.error("Error fetching recent pending actions", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body("Error fetching recent pending actions");
-        }
-    }
 }

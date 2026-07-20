@@ -38,17 +38,6 @@ public class HcmActionService {
     private final JwtUtils jwtUtils;
     
     /**
-     * Get all pending work items for HCM dashboard
-     */
-    public List<HcmActionDto> getPendingWorkItems() {
-        log.debug("Fetching all pending work items");
-        return hcmActionRepository.findAllPendingActions()
-            .stream()
-            .map(this::convertToDto)
-            .collect(Collectors.toList());
-    }
-    
-    /**
      * Get pending actions for a specific appointment
      */
     public List<HcmActionDto> getPendingActionsForAppointment(Long appointmentId) {
@@ -324,25 +313,6 @@ public class HcmActionService {
         log.debug("Fetching action details: {}", actionId);
         return hcmActionRepository.findById(actionId)
             .map(this::convertToDto);
-    }
-    
-    /**
-     * Get recent pending actions (for dashboard)
-     */
-    public List<HcmActionDto> getRecentPendingActions(int days) {
-        log.debug("Fetching pending actions from last {} days", days);
-        LocalDateTime since = DateTimeUtil.nowIST().minusDays(days);
-        return hcmActionRepository.findRecentPendingActions(since)
-            .stream()
-            .map(this::convertToDto)
-            .collect(Collectors.toList());
-    }
-    
-    /**
-     * Count pending work items
-     */
-    public Long getPendingWorkItemCount() {
-        return hcmActionRepository.countPendingActions();
     }
     
     /**

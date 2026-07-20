@@ -6,6 +6,8 @@ import com.survisha.meghaconnect.repository.UserRepository;
 import com.survisha.meghaconnect.repository.VisitorRepository;
 import com.survisha.meghaconnect.security.ApiRateLimitFilter;
 import com.survisha.meghaconnect.security.JwtAuthenticationFilter;
+import com.survisha.meghaconnect.security.RestAccessDeniedHandler;
+import com.survisha.meghaconnect.security.RestAuthenticationEntryPoint;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -50,6 +52,8 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http,
                                            JwtAuthenticationFilter jwtAuthFilter,
                                            ApiRateLimitFilter apiRateLimitFilter,
+                                           RestAuthenticationEntryPoint authenticationEntryPoint,
+                                           RestAccessDeniedHandler accessDeniedHandler,
                                            CorsConfigurationSource corsConfigurationSource) throws Exception {
         if (requireHttps) {
             http.requiresChannel(channel -> channel.anyRequest().requiresSecure());
@@ -107,6 +111,10 @@ public class SecurityConfig {
                 .anyRequest().permitAll()
             )
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint(authenticationEntryPoint)
+                .accessDeniedHandler(accessDeniedHandler)
+            )
             .authenticationProvider(authenticationProvider())
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(apiRateLimitFilter, JwtAuthenticationFilter.class)
@@ -131,10 +139,11 @@ public class SecurityConfig {
                 throw new UsernameNotFoundException("Visitor not found: " + username);
             }
             
-            User u = userRepository.findByUsername(username)
+            String normalizedUsername = username == null ? null : username.trim();
+            User u = userRepository.findByNormalizedUsername(normalizedUsername)
                 .orElseThrow(() -> {
-                    log.warn("[SECURITY] User not found in database: {}", username);
-                    return new UsernameNotFoundException("User not found: " + username);
+                    log.warn("[SECURITY] User not found in database: {}", normalizedUsername);
+                    return new UsernameNotFoundException("User not found: " + normalizedUsername);
                 });
             
             log.debug("[SECURITY] User found - Username: {}, Role: {}, Active: {}, Locked: {}",

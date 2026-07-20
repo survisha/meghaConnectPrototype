@@ -33,20 +33,21 @@ public class AuthService {
      * Authenticate user and generate JWT token
      */
     public AuthResponse login(AuthRequest request) {
-        log.info("[AUTH] Login attempt - Username: {}", request.getUsername());
+        String username = normalizeUsername(request.getUsername());
+        log.info("[AUTH] Login attempt - Username: {}", username);
         
         try {
-            log.debug("[AUTH] Starting authentication for user: {}", request.getUsername());
+            log.debug("[AUTH] Starting authentication for user: {}", username);
             authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
+                new UsernamePasswordAuthenticationToken(username, request.getPassword())
             );
-            log.info("[AUTH] Authentication successful for user: {}", request.getUsername());
+            log.info("[AUTH] Authentication successful for user: {}", username);
             
-            UserDetails user = userDetailsService.loadUserByUsername(request.getUsername());
-            User appUser = userRepository.findByUsername(request.getUsername())
+            UserDetails user = userDetailsService.loadUserByUsername(username);
+            User appUser = userRepository.findByNormalizedUsername(username)
                 .orElseThrow(() -> new MeghaConnectException(
                     ErrorCodeConstants.USER_NOT_FOUND,
-                    ErrorCodeConstants.format(ErrorCodeConstants.USER_NOT_FOUND_MSG, request.getUsername()),
+                    ErrorCodeConstants.format(ErrorCodeConstants.USER_NOT_FOUND_MSG, username),
                     404
                 ));
             if (appUser.getRole() != User.UserRole.SUPER_ADMIN
@@ -62,14 +63,16 @@ public class AuthService {
                 user.getUsername(), user.getAuthorities());
             
             String token = jwtService.generateToken(user, appUser);
-            log.debug("[AUTH] JWT token generated for user: {}", request.getUsername());
+            log.debug("[AUTH] JWT token generated for user: {}", username);
             
-            String fullName = userService.getFullNameByUsername(request.getUsername());
+            String fullName = userService.getFullNameByUsername(username);
             
             String role = user.getAuthorities().iterator().next().getAuthority();
             
             AuthResponse response = AuthResponse.builder()
                 .token(token)
+                .accessToken(token)
+                .tokenType("Bearer")
                 .username(user.getUsername())
                 .fullName(fullName)
                 .role(role)
@@ -82,25 +85,25 @@ public class AuthService {
                 .build();
             
             log.info("[AUTH] Login successful - Username: {}, Role: {}, FullName: {}", 
-                request.getUsername(), response.getRole(), fullName);
+                username, response.getRole(), fullName);
             
             return response;
         } catch (BadCredentialsException e) {
-            log.warn("[AUTH] Failed login username={} reason=invalid_credentials", request.getUsername());
+            log.warn("[AUTH] Failed login username={} reason=invalid_credentials", username);
             throw new MeghaConnectException(
                 ErrorCodeConstants.INVALID_CREDENTIALS,
                 ErrorCodeConstants.INVALID_CREDENTIALS_MSG,
                 401
             );
         } catch (LockedException e) {
-            log.warn("[AUTH] Failed login username={} reason=account_locked", request.getUsername());
+            log.warn("[AUTH] Failed login username={} reason=account_locked", username);
             throw new MeghaConnectException(
                 ErrorCodeConstants.USER_ACCOUNT_LOCKED,
                 ErrorCodeConstants.USER_ACCOUNT_LOCKED_MSG,
                 423
             );
         } catch (DisabledException e) {
-            log.warn("[AUTH] Failed login username={} reason=account_inactive", request.getUsername());
+            log.warn("[AUTH] Failed login username={} reason=account_inactive", username);
             throw new MeghaConnectException(
                 ErrorCodeConstants.USER_ACCOUNT_INACTIVE,
                 ErrorCodeConstants.USER_ACCOUNT_INACTIVE_MSG,
@@ -108,7 +111,7 @@ public class AuthService {
             );
         } catch (AuthenticationException e) {
             log.warn("[AUTH] Failed login username={} reason=authentication_failed type={}",
-                request.getUsername(), e.getClass().getSimpleName());
+                username, e.getClass().getSimpleName());
             throw new MeghaConnectException(
                 ErrorCodeConstants.INVALID_CREDENTIALS,
                 ErrorCodeConstants.INVALID_CREDENTIALS_MSG,
@@ -116,12 +119,16 @@ public class AuthService {
             );
         } catch (RuntimeException e) {
             log.error("[AUTH] Login failed for user: {} - Error: {} - Message: {}",
-                request.getUsername(), e.getClass().getSimpleName(), e.getMessage());
+                username, e.getClass().getSimpleName(), e.getMessage());
             throw new MeghaConnectException(
                 ErrorCodeConstants.UNEXPECTED_ERROR,
                 ErrorCodeConstants.UNEXPECTED_ERROR_MSG,
                 500
             );
         }
+    }
+
+    private String normalizeUsername(String username) {
+        return username == null ? null : username.trim();
     }
 }

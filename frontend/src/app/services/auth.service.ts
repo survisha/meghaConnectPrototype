@@ -19,7 +19,9 @@ export interface AuthUser {
 }
 
 interface LoginResponse {
-  token: string;
+  token?: string;
+  accessToken?: string;
+  tokenType?: string;
   username: string;
   fullName: string;
   role: string;
@@ -80,13 +82,19 @@ export class AuthService {
   }
 
   login(username: string, password: string): Observable<boolean> {
-    return this.http.post<LoginResponse>(`${environment.apiUrl}/auth/login`, { username, password }).pipe(
-      tap(res => {
+    const normalizedUsername = username.trim();
+    return this.http.post<LoginResponse | { data: LoginResponse }>(`${environment.apiUrl}/auth/login`, { username: normalizedUsername, password }).pipe(
+      tap(response => {
+        const res = this.unwrapLoginResponse(response);
+        const token = this.extractAccessToken(res);
+        if (!token) {
+          throw new Error('Login response did not include an access token.');
+        }
         // Strip Spring Security "ROLE_" prefix to match frontend UserRole type
         const role = this.normalizeRole((res.role ?? '').replace(/^ROLE_/, ''));
         const auth: AuthUser = {
-          username: res.username,
-          fullName: res.fullName ?? username,
+          username: res.username ?? normalizedUsername,
+          fullName: res.fullName ?? normalizedUsername,
           role,
           userId: res.userId,
           departmentId: res.departmentId,
@@ -96,7 +104,7 @@ export class AuthService {
         };
         this._user.set(auth);
         sessionStorage.setItem('megha_user', JSON.stringify(auth));
-        sessionStorage.setItem('megha_token', res.token);
+        sessionStorage.setItem('megha_token', token);
       }),
       map(() => true),
       catchError(err => throwError(() => err))
@@ -128,5 +136,14 @@ export class AuthService {
   private normalizeRole(role: string): UserRole {
     const normalized = (role || '').replace(/^ROLE_/, '').trim().toUpperCase();
     return (normalized === 'CMO' ? 'CMO_OFFICER' : normalized) as UserRole;
+  }
+
+  private unwrapLoginResponse(response: LoginResponse | { data: LoginResponse }): LoginResponse {
+    return response && 'data' in response ? response.data : response;
+  }
+
+  private extractAccessToken(response: LoginResponse): string {
+    const raw = response.accessToken || response.token || '';
+    return raw.replace(/^Bearer\s+/i, '').trim();
   }
 }

@@ -163,7 +163,7 @@ public class AppointmentTypeService {
             String token = jwtUtils.extractTokenFromRequest(request);
             if (token == null) return false;
             String role = jwtUtils.getRoleFromToken(token);
-            return "ADMIN".equals(role);
+            return "ADMIN".equals(role) || "SUPER_ADMIN".equals(role);
         } catch (Exception e) {
             log.error("Error checking admin role", e);
             return false;

@@ -21,7 +21,7 @@ public class SuperAdminBootstrap implements ApplicationRunner {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    @Value("${meghaconnect.bootstrap.super-admin-password:${MEGHACONNECT_SUPER_ADMIN_INITIAL_PASSWORD:}}")
+    @Value("${meghaconnect.bootstrap.super-admin-password:${MEGHACONNECT_SUPER_ADMIN_PASSWORD:${MEGHACONNECT_SUPER_ADMIN_INITIAL_PASSWORD:Megha@TW26}}}")
     private String configuredInitialPassword;
 
     @Override
@@ -33,7 +33,7 @@ public class SuperAdminBootstrap implements ApplicationRunner {
             return;
         }
 
-        User user = userRepository.findByUsername(SUPER_ADMIN_USERNAME)
+        User user = userRepository.findByNormalizedUsername(SUPER_ADMIN_USERNAME)
                 .orElseGet(() -> User.builder()
                         .username(SUPER_ADMIN_USERNAME)
                         .fullName("Super Admin")
@@ -43,7 +43,14 @@ public class SuperAdminBootstrap implements ApplicationRunner {
                         .locked(false)
                         .build());
 
-        user.setPasswordHash(passwordEncoder.encode(initialPassword));
+        if (!SUPER_ADMIN_USERNAME.equals(user.getUsername())) {
+            user.setUsername(SUPER_ADMIN_USERNAME);
+        }
+        String currentHash = user.getPasswordHash();
+        if (currentHash == null || !passwordEncoder.matches(initialPassword, currentHash)) {
+            user.setPasswordHash(passwordEncoder.encode(initialPassword));
+            log.info("Super Admin bootstrap repaired password hash for username={}", SUPER_ADMIN_USERNAME);
+        }
         user.setRole(User.UserRole.SUPER_ADMIN);
         user.setDepartment(null);
         user.setActive(true);

@@ -51,7 +51,7 @@ public class AppointmentApprovalController {
      * R003: Get list of appointments awaiting approval
      */
     @GetMapping("/pending")
-    @PreAuthorize("hasAnyRole('CMO_OFFICER', 'APPROVER', 'APPROVER_JT_SECY', 'ADMIN', 'HCM')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CMO_OFFICER', 'APPROVER', 'APPROVER_JT_SECY', 'ADMIN', 'HCM')")
     @Operation(
         summary = "Get pending appointments for approval",
         description = "Returns list of appointments awaiting CMO or Joint Secretary review based on user role"
@@ -85,7 +85,7 @@ public class AppointmentApprovalController {
      * R003: Returns all appointment information for detailed review
      */
     @GetMapping("/{id}/approval-details")
-    @PreAuthorize("hasAnyRole('CMO_OFFICER', 'APPROVER', 'ADMIN', 'HCM', 'PUBLIC')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CMO_OFFICER', 'APPROVER', 'ADMIN', 'HCM', 'PUBLIC')")
     @Operation(summary = "Get appointment details for approval review")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Successfully retrieved appointment"),
@@ -214,7 +214,7 @@ public class AppointmentApprovalController {
      * R003: Updates status to SCHEDULED with date/time/location
      */
     @PutMapping("/{id}/schedule")
-    @PreAuthorize("hasAnyRole('HCM', 'ADMIN', 'OSD')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'HCM', 'ADMIN', 'OSD')")
     @Operation(summary = "Schedule appointment in calendar")
     public ResponseEntity<AppointmentDto> scheduleAppointment(
             @PathVariable Long id,
@@ -255,7 +255,7 @@ public class AppointmentApprovalController {
      * R015: Allows rescheduling of already scheduled appointments
      */
     @PutMapping("/{id}/reschedule")
-    @PreAuthorize("hasAnyRole('HCM', 'ADMIN', 'OSD')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'HCM', 'ADMIN', 'OSD')")
     @Operation(summary = "Reschedule appointment")
     public ResponseEntity<AppointmentDto> rescheduleAppointment(
             @PathVariable Long id,
@@ -287,7 +287,7 @@ public class AppointmentApprovalController {
      * R015: Returns list of available time slots for given date & location
      */
     @GetMapping("/available-slots")
-    @PreAuthorize("hasAnyRole('HCM', 'ADMIN', 'OSD', 'CMO_OFFICER', 'APPROVER', 'APPROVER_JT_SECY')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'HCM', 'ADMIN', 'OSD', 'CMO_OFFICER', 'APPROVER', 'APPROVER_JT_SECY')")
     @Operation(summary = "Get available slots for scheduling")
     public ResponseEntity<List<Map<String, Object>>> getAvailableSlots(
             @RequestParam String date,
@@ -306,7 +306,7 @@ public class AppointmentApprovalController {
      * R015: Validates if proposed time slot has conflicts
      */
     @PostMapping("/check-conflicts")
-    @PreAuthorize("hasAnyRole('HCM', 'ADMIN', 'OSD', 'CMO_OFFICER')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'HCM', 'ADMIN', 'OSD', 'CMO_OFFICER')")
     @Operation(summary = "Check for scheduling conflicts")
     public ResponseEntity<Map<String, Object>> checkConflicts(
             @RequestBody ConflictCheckRequest request) {

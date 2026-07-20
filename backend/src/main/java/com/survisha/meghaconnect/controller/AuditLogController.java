@@ -34,7 +34,7 @@ public class AuditLogController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     public ResponseEntity<Page<AuditLogDto>> getAll(
             Pageable pageable,
             @ModelAttribute AuditLogFilterRequest filter) {

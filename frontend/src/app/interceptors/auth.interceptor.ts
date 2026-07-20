@@ -15,7 +15,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const isPublicAuthRequest = isPublicAuthUrl(req.url);
 
   // Retrieve token from sessionStorage (set by AuthService on login)
-  const token = sessionStorage.getItem('megha_token');
+  const token = cleanToken(sessionStorage.getItem('megha_token'));
 
   // Clone request with Authorization header if token exists
   const authReq = token && !isPublicAuthRequest
@@ -91,4 +91,8 @@ function isPublicAuthUrl(url: string): boolean {
     url.includes('/visitor/auth/search-registrations') ||
     url.includes('/visitor/auth/generate-otp') ||
     url.includes('/visitor/auth/register');
+}
+
+function cleanToken(token: string | null): string {
+  return (token || '').replace(/^Bearer\s+/i, '').trim();
 }

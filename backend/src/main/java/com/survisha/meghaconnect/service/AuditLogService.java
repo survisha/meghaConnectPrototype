@@ -128,7 +128,7 @@ public class AuditLogService {
         if (performedBy.startsWith("visitor_")) {
             return "PUBLIC";
         }
-        return userRepository.findByUsername(performedBy)
+        return userRepository.findByNormalizedUsername(performedBy)
                 .map(User::getRole)
                 .map(Enum::name)
                 .orElse("");

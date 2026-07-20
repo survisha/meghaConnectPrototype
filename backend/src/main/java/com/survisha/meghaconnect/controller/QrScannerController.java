@@ -29,7 +29,7 @@ public class QrScannerController {
     private final QrReportService qrReportService;
 
     @PostMapping("/validate")
-    @PreAuthorize("hasAnyRole('SECURITY','ADMIN')")
+    @PreAuthorize("hasAnyRole('SECURITY','ADMIN','SUPER_ADMIN')")
     public ApiResponse<QrValidationResponse> validate(@RequestBody QrScanRequest request,
                                                        Authentication authentication,
                                                        HttpServletRequest httpRequest) {
@@ -47,7 +47,7 @@ public class QrScannerController {
     }
 
     @PostMapping("/check-in")
-    @PreAuthorize("hasAnyRole('SECURITY','ADMIN')")
+    @PreAuthorize("hasAnyRole('SECURITY','ADMIN','SUPER_ADMIN')")
     public ApiResponse<QrActionResponse> checkIn(@RequestBody QrScanRequest request,
                                                  Authentication authentication,
                                                  HttpServletRequest httpRequest) {
@@ -65,7 +65,7 @@ public class QrScannerController {
     }
 
     @PostMapping("/check-out")
-    @PreAuthorize("hasAnyRole('SECURITY','ADMIN')")
+    @PreAuthorize("hasAnyRole('SECURITY','ADMIN','SUPER_ADMIN')")
     public ApiResponse<QrActionResponse> checkOut(@RequestBody QrScanRequest request,
                                                   Authentication authentication,
                                                   HttpServletRequest httpRequest) {
@@ -83,13 +83,13 @@ public class QrScannerController {
     }
 
     @GetMapping("/recent-scans")
-    @PreAuthorize("hasAnyRole('SECURITY','ADMIN')")
+    @PreAuthorize("hasAnyRole('SECURITY','ADMIN','SUPER_ADMIN')")
     public ApiResponse<List<RecentQrScanDto>> recentScans(Authentication authentication) {
         return ApiResponse.success("Recent scans fetched", qrReportService.getRecentScans(actor(authentication)));
     }
 
     @GetMapping("/audit-logs")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
     public ApiResponse<Page<QrScanAuditLogDto>> auditLogs(
             Pageable pageable,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
@@ -106,7 +106,7 @@ public class QrScannerController {
     }
 
     @GetMapping("/movements")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
     public ApiResponse<Page<VisitorMovementLogDto>> movementReport(
             Pageable pageable,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,

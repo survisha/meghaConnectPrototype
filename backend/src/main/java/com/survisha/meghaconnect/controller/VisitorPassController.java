@@ -21,7 +21,7 @@ public class VisitorPassController {
     private final QrScannerService qrScannerService;
 
     @PostMapping("/validate")
-    @PreAuthorize("hasAnyRole('SECURITY','ADMIN')")
+    @PreAuthorize("hasAnyRole('SECURITY','ADMIN','SUPER_ADMIN')")
     public ApiResponse<QrValidationResponse> validate(@RequestBody QrScanRequest request,
                                                        Authentication authentication,
                                                        HttpServletRequest httpRequest) {
@@ -33,7 +33,7 @@ public class VisitorPassController {
     }
 
     @PostMapping("/check-in")
-    @PreAuthorize("hasAnyRole('SECURITY','ADMIN')")
+    @PreAuthorize("hasAnyRole('SECURITY','ADMIN','SUPER_ADMIN')")
     public ApiResponse<QrActionResponse> checkIn(@RequestBody QrScanRequest request,
                                                  Authentication authentication,
                                                  HttpServletRequest httpRequest) {

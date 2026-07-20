@@ -43,7 +43,7 @@ public class UserService {
     }
 
     public List<UserResponse> getUserResponsesForActor(String actor) {
-        User currentUser = userRepository.findByUsername(actor).orElse(null);
+        User currentUser = userRepository.findByNormalizedUsername(actor).orElse(null);
         if (currentUser != null && currentUser.getRole() == User.UserRole.DEPARTMENT_ADMIN
                 && currentUser.getDepartment() != null) {
             return userRepository.findByDepartment_Id(currentUser.getDepartment().getId()).stream()
@@ -66,7 +66,7 @@ public class UserService {
      */
     public Optional<User> getUserByUsername(String username) {
         log.debug("Fetching user by username: {}", username);
-        return userRepository.findByUsername(username);
+        return userRepository.findByNormalizedUsername(username);
     }
 
     /**
@@ -74,7 +74,7 @@ public class UserService {
      */
     public String getFullNameByUsername(String username) {
         log.debug("Fetching full name for username: {}", username);
-        return userRepository.findByUsername(username)
+        return userRepository.findByNormalizedUsername(username)
             .map(User::getFullName)
             .orElse(username);
     }
@@ -88,12 +88,12 @@ public class UserService {
                     400
             );
         }
-        String username = trimToNull(request.getUsername());
+        String username = normalizeUsername(request.getUsername());
         String fullName = trimToNull(request.getFullName());
         String password = trimToNull(request.getPassword());
         String email = trimToNull(request.getEmail());
         String phoneNumber = trimToNull(request.getPhoneNumber());
-        User actorUser = userRepository.findByUsername(actor).orElse(null);
+        User actorUser = userRepository.findByNormalizedUsername(actor).orElse(null);
         if (username == null) {
             throw new MeghaConnectException(
                     ErrorCodeConstants.MISSING_REQUIRED_FIELD,
@@ -115,7 +115,7 @@ public class UserService {
                     400
             );
         }
-        if (userRepository.existsByUsername(username)) {
+        if (userRepository.existsByNormalizedUsername(username)) {
             throw new MeghaConnectException(
                     ErrorCodeConstants.DUPLICATE_ENTRY,
                     ErrorCodeConstants.format(ErrorCodeConstants.DUPLICATE_ENTRY_MSG, "username"),
@@ -206,7 +206,7 @@ public class UserService {
         String fullName = trimToNull(request.getFullName());
         String email = trimToNull(request.getEmail());
         String phoneNumber = trimToNull(request.getPhoneNumber());
-        User actorUser = userRepository.findByUsername(actor).orElse(null);
+        User actorUser = userRepository.findByNormalizedUsername(actor).orElse(null);
         if (fullName == null) {
             throw new MeghaConnectException(
                     ErrorCodeConstants.MISSING_REQUIRED_FIELD,
@@ -284,6 +284,11 @@ public class UserService {
 
     private String trimToNull(String value) {
         return value == null || value.trim().isEmpty() ? null : value.trim();
+    }
+
+    private String normalizeUsername(String value) {
+        String trimmed = trimToNull(value);
+        return trimmed == null ? null : trimmed.toLowerCase();
     }
 
     private void validateCreatorCanAssignRole(User actorUser, User.UserRole role) {

@@ -338,7 +338,7 @@ public class HcmActionService {
             String token = jwtUtils.extractTokenFromRequest(request);
             if (token == null) return false;
             String role = jwtUtils.getRoleFromToken(token);
-            return "HCM".equals(role) || "OSD".equals(role) || "ADMIN".equals(role);
+            return "HCM".equals(role) || "OSD".equals(role) || "ADMIN".equals(role) || "SUPER_ADMIN".equals(role);
         } catch (Exception e) {
             log.error("Error checking HCM role", e);
             return false;
@@ -431,7 +431,7 @@ public class HcmActionService {
 
     private boolean isHcmOrOsd(String actorRole) {
         String role = trimToNull(actorRole);
-        return "HCM".equals(role) || "OSD".equals(role) || "ADMIN".equals(role);
+        return "HCM".equals(role) || "OSD".equals(role) || "ADMIN".equals(role) || "SUPER_ADMIN".equals(role);
     }
 
     private boolean isApproverRole(String actorRole) {

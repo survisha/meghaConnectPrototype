@@ -73,7 +73,7 @@ class UserServiceTest {
                 .role(User.UserRole.ADMIN)
                 .build();
 
-        when(userRepository.existsByUsername("admin")).thenReturn(true);
+        when(userRepository.existsByNormalizedUsername("admin")).thenReturn(true);
 
         MeghaConnectException ex = assertThrows(MeghaConnectException.class,
                 () -> userService.createUser(request, "admin"));

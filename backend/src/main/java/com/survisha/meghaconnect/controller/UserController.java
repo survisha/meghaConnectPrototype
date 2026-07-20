@@ -117,7 +117,7 @@ public class UserController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','HCM','OSD')")
+    @PreAuthorize("hasAnyRole('ADMIN','HCM','OSD','SUPER_ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();

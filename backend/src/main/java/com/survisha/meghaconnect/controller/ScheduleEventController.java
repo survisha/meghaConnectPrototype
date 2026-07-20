@@ -10,12 +10,13 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -43,20 +44,20 @@ public class ScheduleEventController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('CMO_OFFICER','APPROVER','HCM','OSD','ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','CMO_OFFICER','APPROVER','HCM','OSD','ADMIN')")
     public ScheduleEventDto create(@RequestBody ScheduleEvent event) {
         return scheduleEventService.toDto(scheduleEventService.create(event));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('CMO_OFFICER','APPROVER','HCM','OSD','ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','CMO_OFFICER','APPROVER','HCM','OSD','ADMIN')")
     public ScheduleEventDto update(@PathVariable Long id, @RequestBody ScheduleEvent event) {
         event.setId(id);
         return scheduleEventService.toDto(scheduleEventService.update(event));
     }
 
     @PostMapping("/{id}/appointments")
-    @PreAuthorize("hasAnyRole('CMO_OFFICER','APPROVER','HCM','OSD','ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','CMO_OFFICER','APPROVER','HCM','OSD','ADMIN')")
     public ScheduleEventDto assignAppointments(@PathVariable Long id,
                                                @RequestBody ScheduleEventAppointmentAssignmentRequest request,
                                                Authentication authentication) {
@@ -69,7 +70,7 @@ public class ScheduleEventController {
     }
 
     @DeleteMapping("/{id}/appointments/{appointmentId}")
-    @PreAuthorize("hasAnyRole('CMO_OFFICER','APPROVER','HCM','OSD','ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','CMO_OFFICER','APPROVER','HCM','OSD','ADMIN')")
     public ScheduleEventDto removeAppointment(@PathVariable Long id,
                                               @PathVariable Long appointmentId,
                                               Authentication authentication) {
@@ -82,7 +83,7 @@ public class ScheduleEventController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('CMO_OFFICER','APPROVER','HCM','OSD','ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','CMO_OFFICER','APPROVER','HCM','OSD','ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         scheduleEventService.delete(id);
         return ResponseEntity.noContent().build();

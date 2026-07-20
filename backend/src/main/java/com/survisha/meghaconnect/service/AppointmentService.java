@@ -1283,7 +1283,7 @@ public class AppointmentService {
         if (actor == null || actor.trim().isEmpty()) {
             return null;
         }
-        return userRepository.findByUsername(actor)
+        return userRepository.findByNormalizedUsername(actor)
                 .filter(user -> user.getRole() == User.UserRole.DEPARTMENT_ADMIN
                         || user.getRole() == User.UserRole.DEPARTMENT_PA)
                 .map(User::getDepartment)

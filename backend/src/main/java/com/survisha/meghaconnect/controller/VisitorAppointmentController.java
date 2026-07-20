@@ -85,7 +85,7 @@ public class VisitorAppointmentController {
      * - aiSummary, aiPriorityLevel: AI-generated fields
      */
     @PostMapping("/appointments")
-    @PreAuthorize("hasAnyRole('PUBLIC','CITIZEN','ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO','CMO_OFFICER','APPROVER','HCM')")
+    @PreAuthorize("hasAnyRole('PUBLIC','CITIZEN','SUPER_ADMIN','ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO','CMO_OFFICER','APPROVER','HCM')")
     public ResponseEntity<Map<String, Object>> submitAppointment(
             @RequestParam(required = false) Long applicantId,
             @RequestParam(required = false) String applicantName,

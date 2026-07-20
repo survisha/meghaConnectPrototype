@@ -53,7 +53,7 @@ public class VisitorController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/search")
-    @PreAuthorize("hasAnyRole('ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO_OFFICER','APPROVER')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO_OFFICER','APPROVER')")
     public ResponseEntity<List<VisitorDto>> search(
             @RequestParam(required = false) String mobile,
             @RequestParam(required = false) String epic,
@@ -114,7 +114,7 @@ public class VisitorController {
     }
 
     @GetMapping("/associate-search")
-    @PreAuthorize("hasAnyRole('PUBLIC','HCM','ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO_OFFICER','APPROVER')")
+    @PreAuthorize("hasAnyRole('PUBLIC','SUPER_ADMIN','HCM','ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO_OFFICER','APPROVER')")
     public ResponseEntity<List<AssociateVisitorDto>> searchAssociateCitizens(@RequestParam String query,
                                                                              @AuthenticationPrincipal UserDetails user) {
         logEndpoint("/api/v1/visitors/associate-search");
@@ -137,7 +137,7 @@ public class VisitorController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO_OFFICER','APPROVER')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO_OFFICER','APPROVER')")
     public ResponseEntity<VisitorDto> update(@PathVariable Long id,
                                              @RequestBody VisitorDto dto,
                                              @AuthenticationPrincipal UserDetails user) {

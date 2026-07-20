@@ -5,6 +5,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -17,6 +18,7 @@ import java.io.IOException;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
@@ -44,10 +46,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
+                    log.debug("[SECURITY] JWT authenticated username={} authorities={}",
+                        username, userDetails.getAuthorities());
                 }
             }
-        } catch (Exception ignored) {
-            // Invalid token – let Spring Security handle as unauthenticated
+        } catch (Exception ex) {
+            SecurityContextHolder.clearContext();
+            log.debug("[SECURITY] JWT validation failed path={} reason={}",
+                request.getRequestURI(), ex.getClass().getSimpleName());
         }
         filterChain.doFilter(request, response);
     }

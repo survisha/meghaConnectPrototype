@@ -203,7 +203,7 @@ public class SchemeService {
             }
 
             String role = jwtUtils.getRoleFromToken(token);
-            return "ADMIN".equals(role);
+            return "ADMIN".equals(role) || "SUPER_ADMIN".equals(role);
         } catch (Exception e) {
             log.error("Error checking admin role", e);
             return false;

@@ -28,7 +28,7 @@ import org.junit.runner.RunWith;
         },
         
         // Tags to run (can be overridden with -Dcucumber.filter.tags)
-        tags = "not @Ignore",
+        tags = "@LoginUI",
         
         // Execution options
         dryRun = false,                    // Set to true to validate features without execution

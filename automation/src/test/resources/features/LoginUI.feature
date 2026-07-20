@@ -1,13 +1,13 @@
-@Login @UITest @UI
+@LoginUI @UITest @UI
 Feature: User Login - UI Automation Tests
   Testing user login functionality through the UI (Selenium WebDriver)
   Focus: Page object interactions, element visibility, form validation
 
   Background:
-    Given User navigates to the application
+    Given User is on the login page
     And Login page is displayed
 
-  @Smoke @UITest
+  @Smoke @Narsingh @UITest
   Scenario: User login with valid credentials via UI
     Given User has valid credentials
     When User enters username in the text field

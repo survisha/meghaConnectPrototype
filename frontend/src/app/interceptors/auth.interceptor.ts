@@ -3,6 +3,7 @@ import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, from, mergeMap, throwError } from 'rxjs';
 import { apiErrorBodyMessage } from '../shared/api-error.util';
+import { AuthSessionService } from '../services/auth-session.service';
 
 /**
  * HTTP Interceptor:
@@ -12,10 +13,11 @@ import { apiErrorBodyMessage } from '../shared/api-error.util';
  */
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
+  const authSession = inject(AuthSessionService);
   const isPublicAuthRequest = isPublicAuthUrl(req.url);
 
-  // Retrieve token from sessionStorage (set by AuthService on login)
-  const token = cleanToken(sessionStorage.getItem('megha_token'));
+  const token = authSession.getAccessToken();
+  console.debug('Auth interceptor:', req.method, req.url, 'tokenPresent=', !!token);
 
   // Clone request with Authorization header if token exists
   const authReq = token && !isPublicAuthRequest
@@ -42,8 +44,10 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         }
 
         const handleUnauthorized = () => {
-          sessionStorage.removeItem('megha_user');
-          sessionStorage.removeItem('megha_token');
+          if (!authSession.beginUnauthorizedHandling()) {
+            return;
+          }
+          authSession.clear();
           if (!req.url.includes('/auth/login')) {
             router.navigate(['/login']);
           }
@@ -91,8 +95,4 @@ function isPublicAuthUrl(url: string): boolean {
     url.includes('/visitor/auth/search-registrations') ||
     url.includes('/visitor/auth/generate-otp') ||
     url.includes('/visitor/auth/register');
-}
-
-function cleanToken(token: string | null): string {
-  return (token || '').replace(/^Bearer\s+/i, '').trim();
 }

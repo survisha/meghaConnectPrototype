@@ -41,6 +41,10 @@ file:
     crypto-key-path: ${FILE_UPLOAD_CRYPTO_KEY_PATH:/opt/meghaconnect/secure/crypto.key}
 
 meghaconnect:
+  bootstrap:
+    super-admin-username: ${MEGHACONNECT_SUPER_ADMIN_USERNAME:superadmin}
+    super-admin-password: ${MEGHACONNECT_SUPER_ADMIN_PASSWORD:}
+    super-admin-password-repair-enabled: ${MEGHACONNECT_SUPER_ADMIN_PASSWORD_REPAIR_ENABLED:false}
   security:
     require-https: true
   storage:

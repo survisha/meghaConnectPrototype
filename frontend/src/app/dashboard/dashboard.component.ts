@@ -404,15 +404,15 @@ export class DashboardComponent implements OnInit {
     const role = this.auth.user()?.role;
     const all: DashboardKpi[] = [
       { label: "Today's Appointments", value: '-', matIcon: 'event_available', color: '#1a237e', bg: '#e8eaf6',
-        roles: ['HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER', 'DATA_ENTRY_OPERATOR'] },
+        roles: ['SUPER_ADMIN', 'HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER', 'DATA_ENTRY_OPERATOR'] },
       { label: 'Pending Approvals', value: '-', matIcon: 'schedule', color: '#b45309', bg: '#fef3c7',
-        roles: ['HCM', 'ADMIN', 'OSD', 'APPROVER'] },
+        roles: ['SUPER_ADMIN', 'HCM', 'ADMIN', 'OSD', 'APPROVER'] },
       { label: 'Active Scheme Apps', value: '-', matIcon: 'work', color: '#065f46', bg: '#d1fae5',
-        roles: ['HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER'] },
+        roles: ['SUPER_ADMIN', 'HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER'] },
       { label: 'Walk-ins Today', value: '-', matIcon: 'directions_walk', color: '#0369a1', bg: '#e0f2fe',
-        roles: ['DATA_ENTRY_OPERATOR', 'ADMIN', 'OSD'] },
+        roles: ['SUPER_ADMIN', 'DATA_ENTRY_OPERATOR', 'ADMIN', 'OSD'] },
       { label: 'CMO Reviews Due', value: '-', matIcon: 'rate_review', color: '#7c3aed', bg: '#ede9fe',
-        roles: ['CMO_OFFICER'] },
+        roles: ['SUPER_ADMIN', 'CMO_OFFICER'] },
     ];
     this.kpis = all.filter(k => !role || k.roles.includes(role));
   }
@@ -421,23 +421,23 @@ export class DashboardComponent implements OnInit {
     const role = this.auth.user()?.role;
     const all: (QuickAction & { roles: string[] })[] = [
       { label: 'New Appointment', matIcon: 'add', route: '/appointments/new', severity: '',
-        roles: ['ADMIN', 'OSD'] },
+        roles: ['SUPER_ADMIN', 'ADMIN', 'OSD'] },
       { label: 'Walk-in Counter', matIcon: 'login', route: '/appointments/walkin', severity: 'success',
-        roles: ['ADMIN', 'OSD', 'DATA_ENTRY_OPERATOR'] },
+        roles: ['SUPER_ADMIN', 'ADMIN', 'OSD', 'DATA_ENTRY_OPERATOR'] },
       { label: 'Register Visitor', matIcon: 'person_add', route: '/deo/register-visitor', severity: 'success',
-        roles: ['DATA_ENTRY_OPERATOR', 'ADMIN', 'OSD'] },
+        roles: ['SUPER_ADMIN', 'DATA_ENTRY_OPERATOR', 'ADMIN', 'OSD'] },
       { label: 'Apply for Scheme', matIcon: 'work', route: '/schemes/apply', severity: 'warning',
-        roles: ['ADMIN', 'OSD'] },
+        roles: ['SUPER_ADMIN', 'ADMIN', 'OSD'] },
       { label: 'Identify Person', matIcon: 'badge', route: '/identify', severity: 'info',
-        roles: ['HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER', 'DATA_ENTRY_OPERATOR'] },
+        roles: ['SUPER_ADMIN', 'HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER', 'DATA_ENTRY_OPERATOR'] },
       { label: 'Scheme Heatmap', matIcon: 'map', route: '/reports/heatmap', severity: 'secondary',
-        roles: ['HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER'] },
+        roles: ['SUPER_ADMIN', 'HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER'] },
       { label: 'View Reports', matIcon: 'bar_chart', route: '/reports', severity: 'info',
-        roles: ['HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER'] },
+        roles: ['SUPER_ADMIN', 'HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER'] },
       { label: 'Manage Users', matIcon: 'admin_panel_settings', route: '/admin/users', severity: 'secondary',
-        roles: ['HCM', 'ADMIN', 'OSD'] },
+        roles: ['SUPER_ADMIN', 'HCM', 'ADMIN', 'OSD'] },
       { label: 'Audit Trail', matIcon: 'history', route: '/reports/audit', severity: 'secondary',
-        roles: ['ADMIN'] },
+        roles: ['SUPER_ADMIN', 'ADMIN'] },
     ];
     this.quickActions = all.filter(a => !role || a.roles.includes(role));
   }
@@ -448,10 +448,10 @@ export class DashboardComponent implements OnInit {
   }
 
   get showSchedule() {
-    return this.auth.hasRole('HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER');
+    return this.auth.hasRole('SUPER_ADMIN', 'HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER');
   }
 
   get showCharts() {
-    return this.auth.hasRole('HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER');
+    return this.auth.hasRole('SUPER_ADMIN', 'HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER');
   }
 }

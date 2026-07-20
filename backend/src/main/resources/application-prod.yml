@@ -72,6 +72,10 @@ file:
     crypto-key-path: ${FILE_UPLOAD_CRYPTO_KEY_PATH:/opt/meghaconnect/prod/secure/crypto.key}
 
 meghaconnect:
+  bootstrap:
+    super-admin-username: ${MEGHACONNECT_SUPER_ADMIN_USERNAME:superadmin}
+    super-admin-password: ${MEGHACONNECT_SUPER_ADMIN_PASSWORD:}
+    super-admin-password-repair-enabled: ${MEGHACONNECT_SUPER_ADMIN_PASSWORD_REPAIR_ENABLED:false}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:https://www.meghaconnect.com,https://meghaconnect.com}
   security:

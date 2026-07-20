@@ -5,6 +5,7 @@ import { Observable, throwError } from 'rxjs';
 import { tap, map, catchError } from 'rxjs/operators';
 import { UserRole } from '../models';
 import { environment } from '../../environments/environment';
+import { AuthSessionService } from './auth-session.service';
 
 export interface AuthUser {
   username: string;
@@ -21,6 +22,9 @@ export interface AuthUser {
 interface LoginResponse {
   token?: string;
   accessToken?: string;
+  access_token?: string;
+  jwt?: string;
+  jwtToken?: string;
   tokenType?: string;
   username: string;
   fullName: string;
@@ -71,13 +75,16 @@ export class AuthService {
     { username: 'public1', password: 'public123', fullName: 'Public User', role: 'PUBLIC' as UserRole },
   ];
 
-  constructor(private router: Router, private http: HttpClient) {
-    const stored = sessionStorage.getItem('megha_user');
-    if (stored) {
-      const parsed = JSON.parse(stored) as AuthUser;
+  constructor(
+    private router: Router,
+    private http: HttpClient,
+    private authSession: AuthSessionService,
+  ) {
+    const parsed = this.authSession.getUser();
+    if (parsed) {
       parsed.role = this.normalizeRole(parsed.role);
       this._user.set(parsed);
-      sessionStorage.setItem('megha_user', JSON.stringify(parsed));
+      this.authSession.updateUser(parsed);
     }
   }
 
@@ -85,6 +92,7 @@ export class AuthService {
     const normalizedUsername = username.trim();
     return this.http.post<LoginResponse | { data: LoginResponse }>(`${environment.apiUrl}/auth/login`, { username: normalizedUsername, password }).pipe(
       tap(response => {
+        this.debugLoginResponse(response);
         const res = this.unwrapLoginResponse(response);
         const token = this.extractAccessToken(res);
         if (!token) {
@@ -103,8 +111,7 @@ export class AuthService {
           passwordChangeRequired: res.passwordChangeRequired,
         };
         this._user.set(auth);
-        sessionStorage.setItem('megha_user', JSON.stringify(auth));
-        sessionStorage.setItem('megha_token', token);
+        this.authSession.setSession(auth, token);
       }),
       map(() => true),
       catchError(err => throwError(() => err))
@@ -117,16 +124,14 @@ export class AuthService {
 
   logout() {
     this._user.set(null);
-    sessionStorage.removeItem('megha_user');
-    sessionStorage.removeItem('megha_token');
+    this.authSession.clear();
     this.router.navigate(['/login']);
   }
 
   setVisitorSession(username: string, fullName: string, token: string, visitorId?: number) {
     const auth: AuthUser = { username, fullName, role: 'PUBLIC', visitorId };
     this._user.set(auth);
-    sessionStorage.setItem('megha_user', JSON.stringify(auth));
-    sessionStorage.setItem('megha_token', token);
+    this.authSession.setSession(auth, token);
     if (visitorId) sessionStorage.setItem('megha_visitor_id', String(visitorId));
   }
 
@@ -143,7 +148,20 @@ export class AuthService {
   }
 
   private extractAccessToken(response: LoginResponse): string {
-    const raw = response.accessToken || response.token || '';
+    const raw = response.accessToken || response.access_token || response.jwt || response.jwtToken || response.token || '';
     return raw.replace(/^Bearer\s+/i, '').trim();
+  }
+
+  private debugLoginResponse(response: LoginResponse | { data: LoginResponse }): void {
+    const res = this.unwrapLoginResponse(response);
+    const token = this.extractAccessToken(res);
+    console.debug('Login response keys:', Object.keys(response ?? {}));
+    console.debug('Login response data keys:', Object.keys(res ?? {}));
+    console.debug('Access token exists:', !!token);
+    console.debug('Access token length:', token.length);
+    console.debug('Access token prefix:', token.substring(0, 10));
+    console.debug('Logged-in username:', res.username);
+    console.debug('Logged-in role:', res.role);
+    console.debug('Logged-in departmentId:', res.departmentId);
   }
 }

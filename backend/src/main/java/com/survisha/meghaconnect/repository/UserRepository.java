@@ -1,6 +1,7 @@
 package com.survisha.meghaconnect.repository;
 
 import com.survisha.meghaconnect.entity.User;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -12,8 +13,12 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByUsername(String username);
     boolean existsByUsername(String username);
+    @EntityGraph(attributePaths = "department")
     @Query("select u from User u where lower(trim(u.username)) = lower(trim(:username))")
     Optional<User> findByNormalizedUsername(@Param("username") String username);
+    @EntityGraph(attributePaths = "department")
+    @Query("select u from User u where lower(trim(u.username)) = lower(trim(:username)) order by u.id asc")
+    List<User> findAllByNormalizedUsername(@Param("username") String username);
     @Query("select count(u) > 0 from User u where lower(trim(u.username)) = lower(trim(:username))")
     boolean existsByNormalizedUsername(@Param("username") String username);
     boolean existsByEmailIgnoreCase(String email);

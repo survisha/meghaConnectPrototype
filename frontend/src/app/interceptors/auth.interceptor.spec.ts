@@ -81,4 +81,29 @@ describe('authInterceptor', () => {
     const req = httpMock.expectOne('/api/v1/users');
     req.flush({ message: 'Unauthorized' }, { status: 401, statusText: 'Unauthorized' });
   });
+
+  it('handles concurrent 401 responses with a single logout navigation', done => {
+    sessionStorage.setItem('megha_token', 'jwt-token');
+    sessionStorage.setItem('megha_user', JSON.stringify({ username: 'admin', role: 'ADMIN', fullName: 'Admin' }));
+    let errors = 0;
+
+    const onError = () => {
+      errors += 1;
+      if (errors === 2) {
+        expect(sessionStorage.getItem('megha_token')).toBeNull();
+        expect(sessionStorage.getItem('megha_user')).toBeNull();
+        expect(router.navigate).toHaveBeenCalledTimes(1);
+        expect(router.navigate).toHaveBeenCalledWith(['/login']);
+        done();
+      }
+    };
+
+    http.get('/api/v1/appointments').subscribe({ error: onError });
+    http.get('/api/v1/schedule').subscribe({ error: onError });
+
+    const requests = httpMock.match(req => req.url === '/api/v1/appointments' || req.url === '/api/v1/schedule');
+    expect(requests.length).toBe(2);
+    requests[0].flush({ message: 'Unauthorized' }, { status: 401, statusText: 'Unauthorized' });
+    requests[1].flush({ message: 'Unauthorized' }, { status: 401, statusText: 'Unauthorized' });
+  });
 });

@@ -107,8 +107,41 @@ public class SecurityConfig {
                 // All other API requests require authentication
                 .antMatchers("/api/**").authenticated()
                 
-                // Allow frontend routes (Angular handles routing)
-                .anyRequest().permitAll()
+                // Allow the Angular shell and static assets without weakening API authentication.
+                .antMatchers(
+                    "/",
+                    "/index.html",
+                    "/favicon.ico",
+                    "/*.js",
+                    "/*.css",
+                    "/*.ico",
+                    "/*.png",
+                    "/*.jpg",
+                    "/*.jpeg",
+                    "/*.svg",
+                    "/*.webp",
+                    "/*.woff",
+                    "/*.woff2",
+                    "/assets/**",
+                    "/login",
+                    "/public-login",
+                    "/register-visitor",
+                    "/register",
+                    "/guest-appointment",
+                    "/visitor/**",
+                    "/dashboard",
+                    "/appointments/**",
+                    "/schemes/**",
+                    "/grievances",
+                    "/reports/**",
+                    "/admin/**",
+                    "/deo/**",
+                    "/approver",
+                    "/hcm/**",
+                    "/identify",
+                    "/scheduling"
+                ).permitAll()
+                .anyRequest().authenticated()
             )
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .exceptionHandling(ex -> ex

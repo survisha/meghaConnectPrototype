@@ -23,21 +23,21 @@ class JwtServiceTest {
         ReflectionTestUtils.setField(jwtUtils, "jwtSecret", RAW_SECRET);
 
         User appUser = User.builder()
-            .username("superaadmin")
+            .username("superadmin")
             .role(User.UserRole.SUPER_ADMIN)
             .fullName("Super Admin")
             .passwordHash("$2a$10$encoded")
             .build();
         appUser.setId(1L);
         UserDetails details = new org.springframework.security.core.userdetails.User(
-            "superaadmin",
+            "superadmin",
             appUser.getPasswordHash(),
             List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"))
         );
 
         String token = jwtService.generateToken(details, appUser);
 
-        assertEquals("superaadmin", jwtService.extractUsername(token));
+        assertEquals("superadmin", jwtService.extractUsername(token));
         assertTrue(jwtService.isTokenValid(token, details));
         assertEquals("SUPER_ADMIN", jwtUtils.getRoleFromToken(token));
     }

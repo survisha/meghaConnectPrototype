@@ -31,14 +31,14 @@ describe('AuthService', () => {
   it('stores a clean accessToken and Super Admin profile after login', () => {
     let result = false;
 
-    service.login('  superaadmin  ', 'Megha@TW26').subscribe(success => result = success);
+    service.login('  superadmin  ', 'Megha@TW26').subscribe(success => result = success);
 
     const req = http.expectOne(`${environment.apiUrl}/auth/login`);
-    expect(req.request.body.username).toBe('superaadmin');
+    expect(req.request.body.username).toBe('superadmin');
     req.flush({
       accessToken: 'Bearer jwt-token',
       tokenType: 'Bearer',
-      username: 'superaadmin',
+      username: 'superadmin',
       fullName: 'Super Admin',
       role: 'ROLE_SUPER_ADMIN',
       userId: 1,
@@ -66,5 +66,20 @@ describe('AuthService', () => {
     });
 
     expect(sessionStorage.getItem('megha_token')).toBe('legacy-token');
+  });
+
+  it('accepts snake-case and jwt token aliases from login response', () => {
+    service.login('admin', 'admin123').subscribe();
+
+    const req = http.expectOne(`${environment.apiUrl}/auth/login`);
+    req.flush({
+      access_token: 'Bearer alias-token',
+      username: 'admin',
+      fullName: 'Admin',
+      role: 'ADMIN',
+      expiresIn: 86400,
+    });
+
+    expect(sessionStorage.getItem('megha_token')).toBe('alias-token');
   });
 });

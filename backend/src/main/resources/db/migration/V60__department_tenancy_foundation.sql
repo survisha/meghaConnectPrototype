@@ -138,7 +138,7 @@ INSERT INTO users (
     created_by
 )
 VALUES (
-    'superaadmin',
+    'superadmin',
     '$2a$10$b8dqFMAbhW6wj8ZKezLew.o8RVRfn2PcOACVjQb4UxsOOmoKSbyVS',
     'Super Admin',
     'SUPER_ADMIN',

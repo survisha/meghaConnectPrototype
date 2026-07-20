@@ -46,7 +46,7 @@ class AuthServiceTest {
     @Test
     void superAdminLoginReturnsBearerAccessTokenWithoutDepartment() {
         User appUser = User.builder()
-            .username("superaadmin")
+            .username("superadmin")
             .fullName("Super Admin")
             .role(User.UserRole.SUPER_ADMIN)
             .active(true)
@@ -55,17 +55,17 @@ class AuthServiceTest {
             .build();
         appUser.setId(1L);
         UserDetails userDetails = new org.springframework.security.core.userdetails.User(
-            "superaadmin",
+            "superadmin",
             appUser.getPasswordHash(),
             List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"))
         );
 
-        when(userDetailsService.loadUserByUsername("superaadmin")).thenReturn(userDetails);
-        when(userRepository.findByNormalizedUsername("superaadmin")).thenReturn(Optional.of(appUser));
+        when(userDetailsService.loadUserByUsername("superadmin")).thenReturn(userDetails);
+        when(userRepository.findByNormalizedUsername("superadmin")).thenReturn(Optional.of(appUser));
         when(jwtService.generateToken(userDetails, appUser)).thenReturn("jwt-token");
-        when(userService.getFullNameByUsername("superaadmin")).thenReturn("Super Admin");
+        when(userService.getFullNameByUsername("superadmin")).thenReturn("Super Admin");
 
-        AuthResponse response = authService.login(new AuthRequest("  superaadmin  ", "Megha@TW26"));
+        AuthResponse response = authService.login(new AuthRequest("  superadmin  ", "Megha@TW26"));
 
         assertEquals("jwt-token", response.getToken());
         assertEquals("jwt-token", response.getAccessToken());
@@ -81,7 +81,7 @@ class AuthServiceTest {
             .when(authenticationManager).authenticate(any());
 
         MeghaConnectException ex = assertThrows(MeghaConnectException.class,
-            () -> authService.login(new AuthRequest("superaadmin", "wrong")));
+            () -> authService.login(new AuthRequest("superadmin", "wrong")));
 
         assertEquals(401, ex.getHttpStatus());
     }
@@ -92,7 +92,7 @@ class AuthServiceTest {
             .when(authenticationManager).authenticate(any());
 
         MeghaConnectException ex = assertThrows(MeghaConnectException.class,
-            () -> authService.login(new AuthRequest("superaadmin", "Megha@TW26")));
+            () -> authService.login(new AuthRequest("superadmin", "Megha@TW26")));
 
         assertEquals(403, ex.getHttpStatus());
     }
@@ -103,7 +103,7 @@ class AuthServiceTest {
             .when(authenticationManager).authenticate(any());
 
         MeghaConnectException ex = assertThrows(MeghaConnectException.class,
-            () -> authService.login(new AuthRequest("superaadmin", "Megha@TW26")));
+            () -> authService.login(new AuthRequest("superadmin", "Megha@TW26")));
 
         assertEquals(423, ex.getHttpStatus());
     }

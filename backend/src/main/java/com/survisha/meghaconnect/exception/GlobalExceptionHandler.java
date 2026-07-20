@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.LockedException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
@@ -173,6 +174,19 @@ public class GlobalExceptionHandler {
         );
         logHandledException(error, ex);
         return ResponseEntity.status(status).body(error);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex, WebRequest request) {
+        ErrorResponse error = buildError(
+                ErrorCodeConstants.UNAUTHORIZED_ACCESS,
+                ErrorCodeConstants.UNAUTHORIZED_ACCESS_MSG,
+                "DENIED-" + System.nanoTime(),
+                HttpStatus.FORBIDDEN.value(),
+                request
+        );
+        logHandledException(error, ex);
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

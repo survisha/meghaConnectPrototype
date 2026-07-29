@@ -472,3 +472,37 @@ curl "https://meghaconnect.cloud/api/v1/appointments/$APPOINTMENT_ID/ai-notes" \
   -H "Authorization: Bearer $OFFICER_TOKEN" \
   -H "X-Request-Id: ai-notes-list-001"
 ```
+# Local handwritten-form extraction with Ollama
+
+The visitor form extraction endpoint is provider-independent. Local development defaults to Ollama and does not require an API key.
+
+1. Install Ollama from its approved distribution.
+2. Pull the configured vision model:
+
+   ```powershell
+   ollama pull qwen2.5vl:7b
+   ```
+
+3. Verify the installation and service:
+
+   ```powershell
+   ollama list
+   ollama serve
+   curl http://localhost:11434/api/tags
+   ```
+
+4. Start the backend with `FORM_EXTRACTION_ENABLED=true` and `FORM_EXTRACTION_PROVIDER=ollama`.
+5. Upload only synthetic handwritten forms during initial testing.
+
+The configured model must support image input. Ollama port `11434` must remain bound to localhost or a private backend network and must never be exposed directly to Angular/mobile clients. For Docker, set `OLLAMA_BASE_URL` to an approved service name such as `http://ollama:11434` or a host-gateway address. Model files require substantial disk and RAM; GPU acceleration is optional but should be capacity-tested. Run Ollama under a dedicated service account with restricted model storage, firewall rules, startup supervision, and a restart policy. The application never downloads models automatically.
+
+To switch to OpenAI, configure:
+
+```text
+FORM_EXTRACTION_PROVIDER=openai
+OPENAI_FORM_EXTRACTION_ENABLED=true
+OPENAI_API_KEY=<secret>
+OPENAI_FORM_EXTRACTION_MODEL=<approved vision-capable model>
+```
+
+No automatic fallback from Ollama to a cloud provider is enabled.

@@ -16,6 +16,33 @@ ai:
     endpoint: ${AZURE_OPENAI_ENDPOINT:}
     api-key: ${AZURE_OPENAI_API_KEY:}
     deployment: ${AZURE_OPENAI_DEPLOYMENT:}
+  form-extraction: &form-extraction
+    enabled: ${FORM_EXTRACTION_ENABLED:false}
+    provider: ${FORM_EXTRACTION_PROVIDER:ollama}
+    max-image-size-bytes: ${FORM_EXTRACTION_MAX_IMAGE_SIZE_BYTES:5242880}
+    connect-timeout-seconds: ${FORM_EXTRACTION_CONNECT_TIMEOUT_SECONDS:10}
+    read-timeout-seconds: ${FORM_EXTRACTION_READ_TIMEOUT_SECONDS:120}
+    form-version: ${VISITOR_FORM_VERSION:V1}
+    language-hint: ${FORM_EXTRACTION_LANGUAGE_HINT:en}
+    ollama:
+      enabled: ${OLLAMA_FORM_EXTRACTION_ENABLED:true}
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+      model: ${OLLAMA_VISION_MODEL:qwen2.5vl:7b}
+      chat-path: ${OLLAMA_CHAT_PATH:/api/chat}
+      stream: false
+      temperature: 0
+      timeout-seconds: ${OLLAMA_FORM_EXTRACTION_TIMEOUT_SECONDS:120}
+      keep-alive: ${OLLAMA_KEEP_ALIVE:5m}
+    openai:
+      enabled: ${OPENAI_FORM_EXTRACTION_ENABLED:false}
+      base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
+      api-key: ${OPENAI_API_KEY:}
+      model: ${OPENAI_FORM_EXTRACTION_MODEL:}
+      responses-path: ${OPENAI_RESPONSES_PATH:/responses}
+      timeout-seconds: ${OPENAI_FORM_EXTRACTION_TIMEOUT_SECONDS:60}
+      store-response: false
+      image-detail: ${OPENAI_IMAGE_DETAIL:high}
+      max-output-tokens: ${OPENAI_MAX_OUTPUT_TOKENS:1000}
 
 document:
   preview:
@@ -36,6 +63,25 @@ sms:
   sender-id: ${SMS_SENDER_ID:DEUPL}
 
 integration:
+  openai:
+    form-extraction:
+      enabled: ${OPENAI_FORM_EXTRACTION_ENABLED:false}
+      api-key: ${OPENAI_API_KEY:}
+      base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
+      model: ${OPENAI_FORM_EXTRACTION_MODEL:}
+      connect-timeout-seconds: ${OPENAI_CONNECT_TIMEOUT_SECONDS:10}
+      read-timeout-seconds: ${OPENAI_READ_TIMEOUT_SECONDS:60}
+      max-image-size-bytes: ${OPENAI_MAX_IMAGE_SIZE_BYTES:5242880}
+      image-detail: ${OPENAI_IMAGE_DETAIL:high}
+      max-output-tokens: ${OPENAI_MAX_OUTPUT_TOKENS:1000}
+      store-response: ${OPENAI_STORE_RESPONSE:false}
+      form-version: ${VISITOR_FORM_VERSION:V1}
+      min-image-width: ${OPENAI_MIN_IMAGE_WIDTH:640}
+      min-image-height: ${OPENAI_MIN_IMAGE_HEIGHT:480}
+      max-name-length: ${OPENAI_MAX_NAME_LENGTH:150}
+      max-address-length: ${OPENAI_MAX_ADDRESS_LENGTH:500}
+      min-age: ${OPENAI_MIN_AGE:1}
+      max-age: ${OPENAI_MAX_AGE:120}
   face-recognition:
     enabled: ${FACE_RECOGNITION_ENABLED:false}
     base-url: ${FACE_RECOGNITION_BASE_URL:https://prdev.onlineipv.com/DeepFaceService}

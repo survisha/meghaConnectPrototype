@@ -26,6 +26,10 @@ import {
   FaceLivenessResult,
 } from '../shared/face-liveness-result.model';
 import { ReferenceDataService } from '../services/reference-data.service';
+import {
+  VisitorFormExtractionResponse,
+  VisitorFormExtractionService
+} from '../services/visitor-form-extraction.service';
 
 type KycStep = 'id-entry' | 'otp-verification' | 'photo-capture' | 'additional-details' | 'kyc-complete';
 type MobileValidationType = 'warning' | 'error' | 'success' | '';
@@ -152,6 +156,13 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   private readonly epicPattern = /^[A-Z]{3}[0-9]{7}$/;
   private readonly namePattern = /^[A-Za-z]+(?: [A-Za-z]+)*$/;
   private readonly districtPattern = /^[A-Za-z]+(?: [A-Za-z]+)*$/;
+
+  formImagePreview = '';
+  formExtractionLoading = false;
+  formExtractionResult: VisitorFormExtractionResponse | null = null;
+  formExtractionError = '';
+  formExtractionReviewed = false;
+  extractedAge: number | null = null;
 
   // Multi-step KYC flow
   currentStep: KycStep = 'id-entry';
@@ -280,7 +291,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     private translate: TranslateService,
     private cameraCapture: CameraCaptureService,
     private cameraLiveness: CameraLivenessService,
-    private referenceDataService: ReferenceDataService
+    private referenceDataService: ReferenceDataService,
+    private formExtractionService: VisitorFormExtractionService
   ) {
     // Detect DEO mode from route snapshot URL segments
     this.isDeoMode = this.route.snapshot.url.some(segment => segment.path === 'register-visitor');
@@ -302,6 +314,56 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     navigator.mediaDevices?.removeEventListener?.('devicechange', this.handleCameraDeviceChange);
     this.stopCamera();
+    if (this.formImagePreview) URL.revokeObjectURL(this.formImagePreview);
+  }
+
+  onFormImageSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file || this.formExtractionLoading) return;
+    if (this.formImagePreview) URL.revokeObjectURL(this.formImagePreview);
+    this.formImagePreview = URL.createObjectURL(file);
+    this.formExtractionError = '';
+    this.formExtractionResult = null;
+    this.formExtractionReviewed = false;
+    this.formExtractionLoading = true;
+    this.formExtractionService.extract(file).subscribe({
+      next: result => {
+        this.formExtractionLoading = false;
+        this.formExtractionResult = result;
+        if (!result.success) {
+          this.formExtractionError = result.message;
+          return;
+        }
+        if (result.name?.valid && result.name.value) {
+          this.form.fullName = result.name.value;
+          this.form.visitorName = result.name.value;
+        }
+        if (result.mobileNumber?.valid && result.mobileNumber.value) {
+          this.manualPhone = result.mobileNumber.value;
+          this.form.phoneNumber = result.mobileNumber.value;
+        }
+        if (result.address?.valid && result.address.value) {
+          this.form.address = result.address.value;
+          this.form.fullAddress = result.address.value;
+        }
+        this.extractedAge = result.age?.valid ? result.age.value : null;
+      },
+      error: error => {
+        this.formExtractionLoading = false;
+        this.formExtractionError = apiErrorMessage(error, 'Unable to extract the handwritten form. Please try again.');
+      }
+    });
+    input.value = '';
+  }
+
+  clearFormExtraction(): void {
+    if (this.formImagePreview) URL.revokeObjectURL(this.formImagePreview);
+    this.formImagePreview = '';
+    this.formExtractionResult = null;
+    this.formExtractionError = '';
+    this.formExtractionReviewed = false;
+    this.extractedAge = null;
   }
 
   private t(key: string, params?: Record<string, unknown>): string {

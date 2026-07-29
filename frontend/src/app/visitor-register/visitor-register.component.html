@@ -97,6 +97,40 @@
 
         <!-- STEP 1: ID Entry -->
         <ng-container *ngIf="currentStep === 'id-entry'">
+          <section *ngIf="isDeoMode" class="form-extraction-panel">
+            <div class="form-extraction-header">
+              <div>
+                <strong>Handwritten form assistance</strong>
+                <p>Upload or capture the paper form to pre-fill editable suggestions.</p>
+              </div>
+              <label class="btn-outline" [class.disabled]="formExtractionLoading">
+                <mat-icon>document_scanner</mat-icon>
+                {{ formExtractionLoading ? 'Extracting…' : 'Capture / Upload Form' }}
+                <input type="file" hidden accept="image/jpeg,image/png" capture="environment"
+                       [disabled]="formExtractionLoading" (change)="onFormImageSelected($event)" />
+              </label>
+            </div>
+            <div *ngIf="formExtractionLoading" class="extraction-progress">
+              <mat-spinner diameter="24"></mat-spinner>
+              <span>Reading handwriting securely…</span>
+            </div>
+            <img *ngIf="formImagePreview" class="form-image-preview" [src]="formImagePreview"
+                 alt="Selected handwritten visitor form preview" />
+            <div *ngIf="formExtractionError" class="error-msg">{{ formExtractionError }}</div>
+            <div *ngIf="formExtractionResult?.success" class="extraction-review">
+              <strong>Manual review required</strong>
+              <p>{{ formExtractionResult?.message }}</p>
+              <p *ngIf="extractedAge !== null">Suggested age: <strong>{{ extractedAge }}</strong>
+                — confirm it manually in the registration details.</p>
+              <ul *ngIf="formExtractionResult?.warnings?.length">
+                <li *ngFor="let warning of formExtractionResult?.warnings">{{ warning }}</li>
+              </ul>
+              <mat-checkbox [(ngModel)]="formExtractionReviewed">
+                I reviewed and corrected all AI-extracted suggestions.
+              </mat-checkbox>
+              <button type="button" class="btn-link" (click)="clearFormExtraction()">Retake or remove form</button>
+            </div>
+          </section>
           <div class="section-title">{{ 'STEP_1_ENTER_ID_DETAILS' | translate }}</div>
 
           <div class="form-group">

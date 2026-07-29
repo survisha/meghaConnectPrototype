@@ -47,3 +47,18 @@ document:
     libreoffice:
       path: ${LIBREOFFICE_PATH:soffice}
     cache-dir: ${DOCUMENT_PREVIEW_CACHE_DIR:${java.io.tmpdir}/meghaconnect-preview-cache}
+
+integration:
+  face-recognition:
+    enabled: ${FACE_RECOGNITION_ENABLED:false}
+    base-url: ${FACE_RECOGNITION_BASE_URL:https://prdev.onlineipv.com/DeepFaceService}
+    api-key: ${FACE_RECOGNITION_API_KEY:}
+    client-id: ${FACE_RECOGNITION_CLIENT_ID:MEGHALAYA_CMD}
+    app-id: ${FACE_RECOGNITION_APP_ID:CMD}
+    connect-timeout-seconds: ${FACE_RECOGNITION_CONNECT_TIMEOUT_SECONDS:10}
+    read-timeout-seconds: ${FACE_RECOGNITION_READ_TIMEOUT_SECONDS:60}
+    write-timeout-seconds: ${FACE_RECOGNITION_WRITE_TIMEOUT_SECONDS:60}
+    max-photo-size-bytes: ${FACE_RECOGNITION_MAX_PHOTO_SIZE_BYTES:5242880}
+    allowed-photo-formats:
+      - image/jpeg
+      - image/png

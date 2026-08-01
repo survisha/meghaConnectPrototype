@@ -42,6 +42,22 @@
             </button>
           </div>
 
+          <div class="visitor-result-actions">
+            <button mat-stroked-button type="button" (click)="startFaceCamera()" [disabled]="faceSearching">
+              <mat-icon>face</mat-icon> Identify by Face
+            </button>
+            <button mat-button type="button" *ngIf="facePhoto" (click)="clearFaceSearch()">Clear / Retake</button>
+          </div>
+          <div *ngIf="faceCameraActive" class="camera-panel">
+            <video id="walkinFaceVideo" autoplay muted playsinline></video>
+            <button mat-raised-button color="primary" type="button" (click)="captureFace()">Capture & Search</button>
+          </div>
+          <div *ngIf="facePhoto && !faceCameraActive" class="camera-panel">
+            <img [src]="facePhoto" alt="Face search capture" />
+            <span *ngIf="faceSearching">Searching securely…</span>
+          </div>
+          <div *ngIf="identifiedByFace" class="success-banner"><mat-icon>verified</mat-icon> Visitor identified by face.</div>
+
           <div *ngIf="errorMsg" class="error-banner">
             <mat-icon>error</mat-icon>
             {{ errorMsg }}
@@ -57,7 +73,7 @@
           </div>
           <div class="section-card-body">
             <p class="helper-text">No existing record found. Please register as a new applicant.</p>
-            <button mat-raised-button color="primary" routerLink="/deo/register-visitor" class="full-width">
+            <button mat-raised-button color="primary" (click)="continueNewRegistration()" class="full-width">
               <mat-icon>add</mat-icon>
               Register New Applicant
             </button>

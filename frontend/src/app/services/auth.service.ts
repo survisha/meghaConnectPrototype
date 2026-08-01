@@ -97,7 +97,6 @@ export class AuthService {
       captchaValue,
     }).pipe(
       tap(response => {
-        this.debugLoginResponse(response);
         const res = this.unwrapLoginResponse(response);
         const token = this.extractAccessToken(res);
         if (!token) {
@@ -125,6 +124,16 @@ export class AuthService {
 
   validateOtp(request: ValidateOtpRequest): Observable<ValidateOtpResponse> {
     return this.http.post<ValidateOtpResponse>(`${environment.apiUrl}/auth/validate-otp`, request);
+  }
+
+  changeTemporaryPassword(currentPassword: string, newPassword: string): Observable<void> {
+    return this.http.post<void>(`${environment.apiUrl}/auth/change-temporary-password`, {
+      currentPassword,
+      newPassword,
+    }).pipe(tap(() => {
+      this._user.set(null);
+      this.authSession.clear();
+    }));
   }
 
   logout() {
@@ -157,16 +166,4 @@ export class AuthService {
     return raw.replace(/^Bearer\s+/i, '').trim();
   }
 
-  private debugLoginResponse(response: LoginResponse | { data: LoginResponse }): void {
-    const res = this.unwrapLoginResponse(response);
-    const token = this.extractAccessToken(res);
-    console.debug('Login response keys:', Object.keys(response ?? {}));
-    console.debug('Login response data keys:', Object.keys(res ?? {}));
-    console.debug('Access token exists:', !!token);
-    console.debug('Access token length:', token.length);
-    console.debug('Access token prefix:', token.substring(0, 10));
-    console.debug('Logged-in username:', res.username);
-    console.debug('Logged-in role:', res.role);
-    console.debug('Logged-in departmentId:', res.departmentId);
-  }
 }

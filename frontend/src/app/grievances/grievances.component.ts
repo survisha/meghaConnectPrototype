@@ -167,7 +167,7 @@ export class GrievancesComponent implements OnInit {
   }
 
   applyFilter() {
-    let data = this.grievances;
+    const data = this.grievances;
 
     // Apply search and filter criteria
     const q = this.search.trim().toLowerCase();

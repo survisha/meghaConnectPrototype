@@ -2,10 +2,12 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 
 import '../core/security/secure_app_storage.dart';
 import '../models/user.dart';
 import '../services/api_service.dart';
+import '../services/auth_service.dart';
 
 class _UserEntry {
   final int id;
@@ -42,7 +44,8 @@ class _UserEntry {
       role: _parseRole(_text(m['role'], 'PUBLIC')),
       phoneNumber: _text(m['phoneNumber']),
       email: _text(m['email']),
-      department: _firstText([m['department'], m['designation']]),
+      department:
+          _firstText([m['departmentName'], m['department'], m['designation']]),
       active: m['active'] != false,
       locked: m['locked'] == true,
       createdAt: _formatDateTime(m['createdAt']),
@@ -306,7 +309,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     final userCtrl = TextEditingController(text: existing?.username ?? '');
     final phoneCtrl = TextEditingController(text: existing?.phoneNumber ?? '');
     final passwordCtrl = TextEditingController();
-    UserRole selectedRole = existing?.role ?? UserRole.DATA_ENTRY_OPERATOR;
+    final actorRole = context.read<AuthService>().user?.role;
+    final allowedRoles = actorRole == UserRole.SUPER_ADMIN
+        ? [UserRole.DEPARTMENT_ADMIN]
+        : actorRole == UserRole.DEPARTMENT_ADMIN
+            ? [UserRole.DEO, UserRole.DEPARTMENT_PA, UserRole.HEAD_DEPARTMENT]
+            : UserRole.values.where((role) => role != UserRole.PUBLIC).toList();
+    UserRole selectedRole = existing?.role ?? allowedRoles.first;
     bool active = existing?.active ?? true;
     bool locked = existing?.locked ?? false;
     bool saving = false;
@@ -357,8 +366,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                     labelText: 'Role *',
                     prefixIcon: Icon(Icons.shield_outlined),
                   ),
-                  items: UserRole.values
-                      .where((r) => r != UserRole.PUBLIC)
+                  items: allowedRoles
                       .map((r) => DropdownMenuItem(
                           value: r, child: Text(r.displayName)))
                       .toList(),
@@ -535,6 +543,23 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   }
 
   Future<void> _unlockUser(_UserEntry user) async {
+    final confirmed = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+                  title: const Text('Unlock account?'),
+                  content: Text(
+                      'Unlock ${user.username} and reset failed login attempts?'),
+                  actions: [
+                    TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('Cancel')),
+                    FilledButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text('Unlock'))
+                  ],
+                )) ??
+        false;
+    if (!confirmed) return;
     final result = await ApiService.unlockUser(user.id);
     if (result == null) {
       _showSnack('Failed to unlock user.', success: false);
@@ -767,6 +792,16 @@ String _roleForApi(UserRole role) {
 
 Color _roleColor(UserRole role) {
   switch (role) {
+    case UserRole.SUPER_ADMIN:
+      return const Color(0xFF7C2D12);
+    case UserRole.DEPARTMENT_ADMIN:
+      return const Color(0xFF4338CA);
+    case UserRole.DEO:
+      return const Color(0xFF558B2F);
+    case UserRole.DEPARTMENT_PA:
+      return const Color(0xFF0369A1);
+    case UserRole.HEAD_DEPARTMENT:
+      return const Color(0xFF0F766E);
     case UserRole.HCM:
       return const Color(0xFF1A237E);
     case UserRole.ADMIN:

@@ -91,8 +91,9 @@ class _LoginScreenState extends State<LoginScreen>
     if (!ok) {
       setState(() =>
           _staffError = auth.lastError ?? 'Invalid username or password.');
-      if (!offline && (ApiService.lastLoginErrorCode == 'INVALID_CAPTCHA' ||
-          ApiService.lastLoginErrorCode == 'CAPTCHA_EXPIRED')) {
+      if (!offline &&
+          (ApiService.lastLoginErrorCode == 'INVALID_CAPTCHA' ||
+              ApiService.lastLoginErrorCode == 'CAPTCHA_EXPIRED')) {
         await _refreshCaptcha();
       }
     } else {
@@ -581,10 +582,11 @@ class _LoginScreenState extends State<LoginScreen>
                 labelText: 'Captcha',
                 prefixIcon: Icon(Icons.verified_user_outlined),
               ),
-              validator: (value) => !context.read<ConnectivityService>().isOffline &&
-                      (value == null || value.trim().isEmpty)
-                  ? 'Captcha is required'
-                  : null,
+              validator: (value) =>
+                  !context.read<ConnectivityService>().isOffline &&
+                          (value == null || value.trim().isEmpty)
+                      ? 'Captcha is required'
+                      : null,
               textInputAction: TextInputAction.done,
               onFieldSubmitted: (_) => _staffLogin(),
             ),
@@ -603,7 +605,8 @@ class _LoginScreenState extends State<LoginScreen>
             SizedBox(
               height: 50,
               child: ElevatedButton(
-                onPressed: _staffLoading || _captchaLoading ? null : _staffLogin,
+                onPressed:
+                    _staffLoading || _captchaLoading ? null : _staffLogin,
                 child: _staffLoading
                     ? const SizedBox(
                         height: 20,

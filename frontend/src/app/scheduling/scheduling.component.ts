@@ -578,15 +578,6 @@ export class SchedulingComponent implements OnInit {
       isConflict: droppedEvent.isConflict
     };
 
-    console.info('Schedule event drag/drop update', {
-      eventId: droppedEvent.id,
-      oldStart: droppedEvent.startTime,
-      oldEnd: droppedEvent.endTime,
-      newStart: payloadStart,
-      newEnd: payloadEnd,
-      payload: updatedEvent,
-    });
-
     this.scheduleEventService.update(droppedEvent.id, updatedEvent).subscribe({
       next: saved => {
         this.events = this.events.map(item => item.id === saved.id ? saved : item);

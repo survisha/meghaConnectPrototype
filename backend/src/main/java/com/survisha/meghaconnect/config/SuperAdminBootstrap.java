@@ -46,6 +46,7 @@ public class SuperAdminBootstrap implements ApplicationRunner {
                 ? java.util.List.of()
                 : userRepository.findAllByNormalizedUsername(LEGACY_SUPER_ADMIN_USERNAME);
 
+        boolean newAccount = canonicalUsers.isEmpty() && legacyUsers.isEmpty();
         User user = !canonicalUsers.isEmpty()
                 ? canonicalUsers.get(0)
                 : !legacyUsers.isEmpty()
@@ -77,13 +78,16 @@ public class SuperAdminBootstrap implements ApplicationRunner {
                 .forEach(duplicate -> deactivateDuplicate(duplicate, "legacy-duplicate"));
 
         String currentHash = trimToNull(user.getPasswordHash());
+        boolean credentialsInitialized = false;
         if (currentHash == null && initialPassword == null) {
             log.warn("Super Admin bootstrap cannot create or repair password because no initial password is configured.");
         } else if (currentHash == null) {
             user.setPasswordHash(passwordEncoder.encode(initialPassword));
+            credentialsInitialized = true;
             log.info("Super Admin bootstrap initialized password hash for username={}", superAdminUsername);
         } else if (initialPassword != null && passwordRepairEnabled && !passwordMatches(initialPassword, currentHash)) {
             user.setPasswordHash(passwordEncoder.encode(initialPassword));
+            credentialsInitialized = true;
             log.warn("Super Admin bootstrap repaired password hash for username={} because controlled repair is enabled.", superAdminUsername);
         } else if (initialPassword != null && !passwordMatches(initialPassword, currentHash)) {
             log.warn("Super Admin password did not match configured initial password; leaving existing hash unchanged because repair is disabled.");
@@ -94,8 +98,11 @@ public class SuperAdminBootstrap implements ApplicationRunner {
         }
         user.setDepartment(null);
         user.setActive(true);
-        user.setLocked(false);
-        user.setPasswordChangeRequired(true);
+        if (newAccount || credentialsInitialized) {
+            user.setLocked(false);
+            user.setPasswordChangeRequired(true);
+            user.setTemporaryPasswordCreatedAt(com.survisha.meghaconnect.util.DateTimeUtil.nowIST());
+        }
         user.setUpdatedBy("super-admin-bootstrap");
         if (user.getCreatedBy() == null) {
             user.setCreatedBy("super-admin-bootstrap");

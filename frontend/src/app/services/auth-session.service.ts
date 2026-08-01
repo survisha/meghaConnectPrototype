@@ -43,7 +43,6 @@ export class AuthSessionService {
       throw new Error('Refusing to store an empty access token.');
     }
     sessionStorage.setItem(TOKEN_STORAGE_KEY, clean);
-    this.debugTokenState('saveToken', clean);
   }
 
   updateUser(user: AuthUser): void {
@@ -78,12 +77,4 @@ export class AuthSessionService {
     return clean;
   }
 
-  private debugTokenState(source: string, token: string): void {
-    console.debug('Auth storage:', source, {
-      key: TOKEN_STORAGE_KEY,
-      tokenPresent: !!token,
-      tokenLength: token.length,
-      tokenPrefix: token.substring(0, 10),
-    });
-  }
 }

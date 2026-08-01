@@ -9,6 +9,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 @Service
@@ -27,6 +28,20 @@ public class ReferenceDataService {
         return data.stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
+    }
+
+    @Cacheable(value = "referenceData", key = "#typeCode + ':' + #parentCode")
+    public List<ReferenceDataDto> getReferenceDataByType(String typeCode, String parentCode) {
+        String normalizedType = typeCode.toUpperCase(Locale.ROOT);
+        if (parentCode == null || parentCode.isBlank()) {
+            return getReferenceDataByType(normalizedType);
+        }
+        ReferenceData parent = referenceDataRepository
+                .findByTypeCodeAndCodeAndIsActive("MEGHALAYA_DISTRICT", parentCode.toUpperCase(Locale.ROOT), true)
+                .orElseThrow(() -> new IllegalArgumentException("Active Meghalaya district not found"));
+        return referenceDataRepository
+                .findByTypeCodeAndParentAndIsActiveOrderByDisplayOrder(normalizedType, parent, true)
+                .stream().map(this::convertToDto).collect(Collectors.toList());
     }
 
     private ReferenceDataDto convertToDto(ReferenceData data) {

@@ -41,6 +41,18 @@ public class User extends BaseEntity {
     private boolean locked = false;
     private boolean passwordChangeRequired = false;
 
+    private int failedLoginAttempts;
+    private LocalDateTime lastFailedLoginAt;
+    private LocalDateTime lockedAt;
+    @Column(length = 200)
+    private String lockReason;
+    private LocalDateTime passwordChangedAt;
+    private LocalDateTime temporaryPasswordCreatedAt;
+    private long credentialsVersion;
+    @Column(length = 100)
+    private String unlockedBy;
+    private LocalDateTime unlockedAt;
+
     private LocalDateTime lastLogin;
 
     // Delegate authority (for Jt Secy)
@@ -48,7 +60,7 @@ public class User extends BaseEntity {
     private LocalDateTime delegationExpiresAt;
 
     public enum UserRole {
-        SUPER_ADMIN, DEPARTMENT_ADMIN, DEPARTMENT_PA,
+        SUPER_ADMIN, DEPARTMENT_ADMIN, DEO, DEPARTMENT_PA, HEAD_DEPARTMENT,
         HCM, ADMIN, OSD, APPROVER, CMO_OFFICER, CMO, DATA_ENTRY_OPERATOR, SECURITY, PUBLIC, CITIZEN
     }
 }

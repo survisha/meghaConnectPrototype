@@ -58,7 +58,8 @@ class _HcmDashboardScreenState extends State<HcmDashboardScreen> {
     ]);
     if (!mounted) return;
 
-    var appointments = results[0].where(_isPendingHcmActionAppointment).toList();
+    var appointments =
+        results[0].where(_isPendingHcmActionAppointment).toList();
     if (appointments.isEmpty && context.read<ConnectivityService>().isOffline) {
       final cached = await OfflineRepository().cachedAppointments();
       appointments = cached.where(_isPendingHcmActionAppointment).toList();

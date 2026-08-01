@@ -20,8 +20,10 @@ public class ReferenceDataController {
 
     @GetMapping("/{type}")
     @Operation(summary = "Get reference data by type", description = "Retrieve dropdown values for a specific reference type")
-    public ResponseEntity<List<ReferenceDataDto>> getReferenceData(@PathVariable String type) {
-        List<ReferenceDataDto> data = referenceDataService.getReferenceDataByType(type.toUpperCase());
+    public ResponseEntity<List<ReferenceDataDto>> getReferenceData(
+            @PathVariable String type,
+            @RequestParam(required = false) String parentCode) {
+        List<ReferenceDataDto> data = referenceDataService.getReferenceDataByType(type.toUpperCase(), parentCode);
         return ResponseEntity.ok(data);
     }
 }

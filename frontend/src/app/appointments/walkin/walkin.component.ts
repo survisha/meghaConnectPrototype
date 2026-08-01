@@ -17,6 +17,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatRadioModule } from '@angular/material/radio';
 import { CameraCaptureService, CameraFacingMode } from '../../shared/camera-capture.service';
+import { FaceRecognitionService } from '../../services/face-recognition.service';
 
 @Component({
   selector: 'app-walkin',
@@ -46,6 +47,11 @@ export class WalkinComponent implements OnDestroy {
   errorMsg = '';
   associates: Visitor[] = [];
   searching = false;
+  faceCameraStream: MediaStream | null = null;
+  faceCameraActive = false;
+  facePhoto = '';
+  faceSearching = false;
+  identifiedByFace = false;
   creating = false;
   visitorUpdateForm = this.emptyVisitorUpdateForm();
   visitorUpdatePhoto = '';
@@ -76,11 +82,82 @@ export class WalkinComponent implements OnDestroy {
     private appointmentService: AppointmentService,
     private visitorKycService: VisitorKycService,
     private router: Router,
-    private cameraCapture: CameraCaptureService
+    private cameraCapture: CameraCaptureService,
+    private faceRecognition: FaceRecognitionService
   ) {}
 
   ngOnDestroy() {
     this.stopVisitorCamera();
+    this.stopFaceCamera();
+  }
+
+  async startFaceCamera(): Promise<void> {
+    this.errorMsg = '';
+    try {
+      this.faceCameraStream = await this.cameraCapture.open('user');
+      this.faceCameraActive = true;
+      setTimeout(() => {
+        const video = document.getElementById('walkinFaceVideo') as HTMLVideoElement | null;
+        if (video && this.faceCameraStream) this.cameraCapture.attach(video, this.faceCameraStream);
+      });
+    } catch {
+      this.errorMsg = 'Camera access was blocked. Please allow camera permission.';
+    }
+  }
+
+  captureFace(): void {
+    const video = document.getElementById('walkinFaceVideo') as HTMLVideoElement | null;
+    if (!video) return;
+    try {
+      this.facePhoto = this.cameraCapture.capture(video);
+      this.stopFaceCamera();
+      this.searchByFace();
+    } catch {
+      this.errorMsg = 'Unable to capture a clear face photo. Please retake it.';
+    }
+  }
+
+  searchByFace(): void {
+    if (!this.facePhoto || this.faceSearching) return;
+    this.faceSearching = true;
+    this.errorMsg = '';
+    this.faceRecognition.search(this.facePhoto).subscribe({
+      next: result => {
+        this.faceSearching = false;
+        if (result.matched && result.visitor) {
+          this.matchingVisitors = [result.visitor];
+          this.showSearchResults = true;
+          this.notFound = false;
+          this.identifiedByFace = true;
+          this.selectVisitor(result.visitor.id ?? null);
+        } else {
+          this.notFound = true;
+          this.showSearchResults = false;
+          this.identifiedByFace = false;
+        }
+      },
+      error: err => {
+        this.faceSearching = false;
+        this.errorMsg = apiErrorMessage(err, 'Face search is unavailable. Please retry or use manual lookup.');
+      }
+    });
+  }
+
+  clearFaceSearch(): void {
+    this.stopFaceCamera();
+    this.facePhoto = '';
+    this.faceSearching = false;
+    this.identifiedByFace = false;
+  }
+
+  stopFaceCamera(): void {
+    this.cameraCapture.stop(this.faceCameraStream);
+    this.faceCameraStream = null;
+    this.faceCameraActive = false;
+  }
+
+  continueNewRegistration(): void {
+    this.router.navigate(['/deo/register-visitor'], { state: { faceSearchPhoto: this.facePhoto } });
   }
 
   search() {

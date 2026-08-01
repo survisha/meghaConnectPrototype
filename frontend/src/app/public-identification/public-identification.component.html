@@ -49,10 +49,24 @@
         <button mat-stroked-button data-testid="public-identification-clear-search-btn" (click)="clearSearch()">
           <mat-icon>close</mat-icon> Clear
         </button>
-        <button mat-stroked-button disabled>
-          <mat-icon>camera_alt</mat-icon> Identify by Face (API)
+        <button mat-stroked-button (click)="startFaceIdentification()" [disabled]="faceSearching">
+          <mat-icon>camera_alt</mat-icon> Identify by Face
         </button>
+        <label mat-stroked-button>
+          <mat-icon>groups</mat-icon> Identify Face Crops
+          <input type="file" accept="image/jpeg,image/png" multiple hidden (change)="identifyFaceCrops($event)" />
+        </label>
       </div>
+
+      <div *ngIf="faceCameraActive" class="camera-panel">
+        <video id="publicFaceVideo" autoplay muted playsinline></video>
+        <button mat-raised-button color="primary" (click)="captureAndIdentify()">Capture & Identify</button>
+      </div>
+      <div *ngIf="facePhoto && !faceCameraActive" class="camera-panel">
+        <img [src]="facePhoto" alt="Identification capture" />
+        <button mat-button (click)="clearFaceIdentification()">Retake</button>
+      </div>
+      <div *ngIf="faceSearching" class="inline-alert"><mat-icon>hourglass_empty</mat-icon> Identifying securely…</div>
 
       <div *ngIf="errorMessage" class="inline-alert inline-alert-error">
         <mat-icon>error_outline</mat-icon>

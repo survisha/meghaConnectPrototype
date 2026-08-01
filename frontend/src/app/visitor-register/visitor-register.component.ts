@@ -176,7 +176,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     address1: '',
     addressLine: '',
     city: '',
-    state: '',
+    state: 'Meghalaya',
     pincode: '',
     district: '',
     constituency: '',
@@ -202,6 +202,13 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   // Reference data
   designations: { code: string; value: string }[] = [];
   agendaTypes: string[] = [];
+  meghalayaDistricts: { code: string; value: string }[] = [];
+  meghalayaMandals: { code: string; value: string }[] = [];
+  selectedDistrictCode = '';
+  selectedMandalCode = '';
+  referenceDataLoading = false;
+  mandalsLoading = false;
+  locationReferenceError = '';
 
   // UI state
   errorMsg = '';
@@ -305,8 +312,15 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    const faceSearchPhoto = history.state?.faceSearchPhoto;
+    if (typeof faceSearchPhoto === 'string' && faceSearchPhoto.startsWith('data:image/')) {
+      this.form.livePhoto = faceSearchPhoto;
+      this.capturedPhotoUrl = faceSearchPhoto;
+      this.photoCaptured = true;
+    }
     this.loadDesignations();
     this.loadAgendaTypes();
+    this.loadMeghalayaDistricts();
     this.loadCameraDevices();
     navigator.mediaDevices?.addEventListener?.('devicechange', this.handleCameraDeviceChange);
   }
@@ -413,6 +427,54 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
   get isManualPhoneValid(): boolean {
     return /^\d{10}$/.test(this.manualPhone);
+  }
+
+  loadMeghalayaDistricts(): void {
+    this.referenceDataLoading = true;
+    this.referenceDataService.getByType('MEGHALAYA_DISTRICT').subscribe({
+      next: data => {
+        this.meghalayaDistricts = data || [];
+        this.referenceDataLoading = false;
+        this.syncDistrictSelection();
+      },
+      error: error => {
+        this.referenceDataLoading = false;
+        this.locationReferenceError = apiErrorMessage(error, 'Unable to load Meghalaya districts.');
+      }
+    });
+  }
+
+  onDistrictSelection(code: string): void {
+    this.selectedDistrictCode = code;
+    this.form.district = this.meghalayaDistricts.find(item => item.code === code)?.value ?? '';
+    this.form.location = this.form.district;
+    this.form.constituency = '';
+    this.selectedMandalCode = '';
+    this.meghalayaMandals = [];
+    this.locationReferenceError = '';
+    if (!code) return;
+    this.mandalsLoading = true;
+    this.referenceDataService.getByType('MEGHALAYA_DISTRICT_MANDAL', code).subscribe({
+      next: data => {
+        this.meghalayaMandals = data || [];
+        this.mandalsLoading = false;
+      },
+      error: error => {
+        this.mandalsLoading = false;
+        this.locationReferenceError = apiErrorMessage(error, 'Unable to load constituencies for this district.');
+      }
+    });
+  }
+
+  onMandalSelection(code: string): void {
+    this.selectedMandalCode = code;
+    this.form.constituency = this.meghalayaMandals.find(item => item.code === code)?.value ?? '';
+  }
+
+  private syncDistrictSelection(): void {
+    const district = this.form.district.trim().toUpperCase();
+    const match = this.meghalayaDistricts.find(item => item.value.toUpperCase() === district || item.code === district);
+    if (match && match.code !== this.selectedDistrictCode) this.onDistrictSelection(match.code);
   }
 
   get currentOtpMobileNumber(): string {
@@ -1470,8 +1532,13 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.form.outsideState = checked;
     if (checked) {
       this.form.location = 'NA';
+      this.form.state = '';
+      this.selectedDistrictCode = '';
+      this.selectedMandalCode = '';
+      this.meghalayaMandals = [];
       return;
     }
+    this.form.state = 'Meghalaya';
     if (this.form.location === 'NA') {
       this.form.location = '';
     }

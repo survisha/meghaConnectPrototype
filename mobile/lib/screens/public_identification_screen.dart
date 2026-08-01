@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../core/config/app_config.dart';
 import '../services/api_service.dart';
@@ -96,6 +97,7 @@ class _PublicIdentificationScreenState
   final _phoneCtrl = TextEditingController();
   final _epicCtrl = TextEditingController();
   final _nameCtrl = TextEditingController();
+  final _imagePicker = ImagePicker();
   String _district = '';
 
   List<_VisitorProfile> _results = [];
@@ -107,6 +109,33 @@ class _PublicIdentificationScreenState
   bool _fullHistoryOpen = false;
   String? _error;
   String? _historyError;
+
+  Future<void> _identifyByFace() async {
+    final image = await _imagePicker.pickImage(
+        source: ImageSource.camera, imageQuality: 88, maxWidth: 1600);
+    if (image == null || !mounted) return;
+    setState(() {
+      _searching = true;
+      _searched = true;
+      _error = null;
+    });
+    final bytes = await image.readAsBytes();
+    final mime =
+        image.path.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
+    final response = await ApiService.searchVisitorByFace(
+        'data:$mime;base64,${base64Encode(bytes)}');
+    if (!mounted) return;
+    final visitor = response['visitor'];
+    setState(() {
+      _searching = false;
+      _results = response['matched'] == true && visitor is Map
+          ? [_VisitorProfile.fromJson(Map<String, dynamic>.from(visitor))]
+          : [];
+      _selected = _results.isEmpty ? null : _results.first;
+      if (response['success'] != true) _error = response['message']?.toString();
+    });
+    if (_selected != null) await _selectVisitor(_selected!);
+  }
 
   static const _districts = [
     'East Khasi Hills',
@@ -434,9 +463,9 @@ class _PublicIdentificationScreenState
           ),
           const SizedBox(height: 10),
           OutlinedButton.icon(
-            onPressed: null,
+            onPressed: _searching ? null : _identifyByFace,
             icon: const Icon(Icons.camera_alt_outlined),
-            label: const Text('Identify by Face (API)'),
+            label: const Text('Identify by Face'),
           ),
         ],
       ),

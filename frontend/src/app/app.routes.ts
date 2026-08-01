@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { HomeComponent } from './home/home.component';
 import { LoginComponent } from './auth/login/login.component';
+import { ChangePasswordComponent } from './auth/change-password/change-password.component';
 import { PublicLoginComponent } from './public-login/public-login.component';
 import { GuestAppointmentComponent } from './guest-appointment/guest-appointment.component';
 import { VisitorRegisterComponent } from './visitor-register/visitor-register.component';
@@ -18,6 +19,7 @@ import { HeatmapComponent } from './reports/heatmap/heatmap.component';
 import { AuditTrailComponent } from './reports/audit-trail/audit-trail.component';
 import { UserManagementComponent } from './admin/user-management.component';
 import { DepartmentManagementComponent } from './admin/departments/department-management.component';
+import { DepartmentRequestsComponent } from './admin/department-requests/department-requests.component';
 import { SchemeManagementComponent } from './admin/scheme-management/scheme-management.component';
 import { AppointmentTypeManagementComponent } from './admin/appointment-type-management/appointment-type-management.component';
 import { HcmDashboardComponent } from './admin/hcm-dashboard/hcm-dashboard.component';
@@ -27,16 +29,18 @@ import { ApproverInboxComponent } from './approver-workflow/approver-inbox.compo
 import { AppointmentApprovalDetailsComponent } from './approver-workflow/appointment-approval-details.component';
 import { authGuard } from './guards/auth.guard';
 import { roleGuard } from './guards/role.guard';
+import { passwordChangeGuard } from './guards/password-change.guard';
 
 import { UserRole } from './models';
 
-const FULL_CONTROL: UserRole[] = ['SUPER_ADMIN', 'DEPARTMENT_ADMIN', 'HCM', 'ADMIN', 'OSD'];
+const FULL_CONTROL: UserRole[] = ['SUPER_ADMIN', 'DEPARTMENT_ADMIN'];
 const STAFF_ROLES: UserRole[] = ['SUPER_ADMIN', 'DEPARTMENT_ADMIN', 'DEPARTMENT_PA', 'HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER', 'DATA_ENTRY_OPERATOR'];
 const REPORTS_ROLES: UserRole[] = ['SUPER_ADMIN', 'DEPARTMENT_ADMIN', 'DEPARTMENT_PA', 'HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER'];
 
 export const routes: Routes = [
   { path: '', component: HomeComponent, pathMatch: 'full' },
   { path: 'login', component: LoginComponent },
+  { path: 'change-password', component: ChangePasswordComponent, canActivate: [passwordChangeGuard] },
   { path: 'public-login', component: PublicLoginComponent },
   { path: 'register-visitor', component: VisitorRegisterComponent },
   { path: 'guest-appointment', component: GuestAppointmentComponent },
@@ -64,6 +68,7 @@ export const routes: Routes = [
       { path: 'reports/heatmap', component: HeatmapComponent, canActivate: [roleGuard(...REPORTS_ROLES)] },
       { path: 'reports/audit', component: AuditTrailComponent, canActivate: [roleGuard('SUPER_ADMIN', 'ADMIN')] },
       { path: 'admin/departments', component: DepartmentManagementComponent, canActivate: [roleGuard('SUPER_ADMIN')] },
+      { path: 'admin/department-requests', component: DepartmentRequestsComponent, canActivate: [roleGuard('SUPER_ADMIN')] },
       { path: 'admin/users', component: UserManagementComponent, canActivate: [roleGuard(...FULL_CONTROL)] },
       { path: 'admin/schemes', component: SchemeManagementComponent, canActivate: [roleGuard('SUPER_ADMIN', 'ADMIN')] },
       { path: 'admin/appointment-types', component: AppointmentTypeManagementComponent, canActivate: [roleGuard('SUPER_ADMIN', 'ADMIN')] },

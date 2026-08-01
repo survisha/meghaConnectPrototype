@@ -24,6 +24,14 @@ public class UserResponse {
     private boolean locked;
     private boolean offlineAccess;
     private boolean passwordChangeRequired;
+    private int failedLoginAttempts;
+    private LocalDateTime lastFailedLoginAt;
+    private LocalDateTime lockedAt;
+    private String lockReason;
+    private LocalDateTime passwordChangedAt;
+    private LocalDateTime temporaryPasswordCreatedAt;
+    private String unlockedBy;
+    private LocalDateTime unlockedAt;
     private LocalDateTime lastLogin;
     private LocalDateTime createdAt;
 }

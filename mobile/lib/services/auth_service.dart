@@ -61,6 +61,7 @@ class AuthService extends ChangeNotifier {
     final roleStr = data['role'] as String? ?? 'PUBLIC';
     final visitorId = (data['visitorId'] as num?)?.toInt();
     final expiresIn = (data['expiresIn'] as num?)?.toInt();
+    final passwordChangeRequired = data['passwordChangeRequired'] == true;
 
     UserRole role;
     try {
@@ -77,7 +78,11 @@ class AuthService extends ChangeNotifier {
     }
 
     _user = AuthUser(
-        username: uname, fullName: fullName, role: role, visitorId: visitorId);
+        username: uname,
+        fullName: fullName,
+        role: role,
+        visitorId: visitorId,
+        passwordChangeRequired: passwordChangeRequired);
 
     await SecureAppStorage.writeUserJson(jsonEncode(_user!.toJson()));
     await _cacheOfflineSession(_user!, token: token);
@@ -86,6 +91,24 @@ class AuthService extends ChangeNotifier {
 
     notifyListeners();
     return true;
+  }
+
+  Future<bool> changeTemporaryPassword(
+      String currentPassword, String newPassword) async {
+    _lastError = null;
+    try {
+      final changed = await ApiService.changeTemporaryPassword(
+          currentPassword, newPassword);
+      if (!changed) {
+        _lastError = 'Unable to change password.';
+        return false;
+      }
+      await logout();
+      return true;
+    } catch (_) {
+      _lastError = 'Unable to change password. Please try again.';
+      return false;
+    }
   }
 
   /// Logs in a PUBLIC/Citizen user using the JWT returned from

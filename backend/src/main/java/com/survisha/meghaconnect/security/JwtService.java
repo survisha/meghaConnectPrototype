@@ -47,6 +47,8 @@ public class JwtService {
 
         if (user != null) {
             claims.put("userId", user.getId());
+            claims.put("passwordChangeRequired", user.isPasswordChangeRequired());
+            claims.put("credentialsVersion", user.getCredentialsVersion());
             if (user.getDepartment() != null) {
                 claims.put("departmentId", user.getDepartment().getId());
                 claims.put("departmentCode", user.getDepartment().getDepartmentCode());
@@ -73,6 +75,20 @@ public class JwtService {
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
         return extractUsername(token).equals(userDetails.getUsername()) && !isTokenExpired(token);
+    }
+
+    public boolean isTokenValid(String token, UserDetails userDetails, User user) {
+        if (!isTokenValid(token, userDetails)) {
+            return false;
+        }
+        Object claim = claims(token).get("credentialsVersion");
+        long tokenVersion = claim instanceof Number ? ((Number) claim).longValue() : 0L;
+        return user == null || tokenVersion == user.getCredentialsVersion();
+    }
+
+    private Claims claims(String token) {
+        return Jwts.parserBuilder().setSigningKey(getSigningKey()).build()
+                .parseClaimsJws(token).getBody();
     }
 
     private boolean isTokenExpired(String token) {

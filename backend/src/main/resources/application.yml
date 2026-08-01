@@ -103,3 +103,7 @@ captcha:
   font-size: ${CAPTCHA_FONT_SIZE:34}
   length: ${CAPTCHA_LENGTH:6}
   noise-lines: ${CAPTCHA_NOISE_LINES:8}
+
+security:
+  login:
+    max-failed-attempts: ${SECURITY_LOGIN_MAX_FAILED_ATTEMPTS:3}

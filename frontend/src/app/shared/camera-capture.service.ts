@@ -17,7 +17,7 @@ export class CameraCaptureService {
     const constraints = deviceId ? this.deviceConstraintsFor(deviceId) : this.constraintsFor(facingMode);
     try {
       return await navigator.mediaDevices.getUserMedia(constraints);
-    } catch (error) {
+    } catch (_error) {
       if (deviceId) {
         return navigator.mediaDevices.getUserMedia(this.constraintsFor(facingMode));
       }

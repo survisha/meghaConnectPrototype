@@ -6,6 +6,7 @@ import { UserRole } from '../models';
 export const roleGuard = (...roles: UserRole[]): CanActivateFn => () => {
   const auth = inject(AuthService);
   const router = inject(Router);
+  if (auth.user()?.passwordChangeRequired) return router.createUrlTree(['/change-password']);
   if (auth.hasRole(...roles)) return true;
   return router.createUrlTree(['/dashboard']);
 };

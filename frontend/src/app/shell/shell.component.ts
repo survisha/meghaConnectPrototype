@@ -26,6 +26,8 @@ export class ShellComponent implements OnInit {
       roles: ['SUPER_ADMIN','DEPARTMENT_ADMIN','DEPARTMENT_PA','HCM','ADMIN','OSD','APPROVER','CMO_OFFICER','DATA_ENTRY_OPERATOR'] },
     { labelKey: 'DEPARTMENTS', icon: 'apartment', route: '/admin/departments',
       roles: ['SUPER_ADMIN'] },
+    { labelKey: 'DEPARTMENT_REQUESTS', icon: 'domain_add', route: '/admin/department-requests',
+      roles: ['SUPER_ADMIN'] },
     { labelKey: 'MY_PORTAL', icon: 'person', route: '/visitor',
       roles: ['PUBLIC'] },
     { labelKey: 'CALENDAR_SCHEDULE', icon: 'event', route: '/scheduling',
@@ -73,7 +75,7 @@ export class ShellComponent implements OnInit {
       ]
     },
     { labelKey: 'USER_MANAGEMENT', icon: 'shield', route: '/admin/users',
-      roles: ['SUPER_ADMIN','DEPARTMENT_ADMIN','HCM','ADMIN','OSD'] },
+      roles: ['SUPER_ADMIN','DEPARTMENT_ADMIN'] },
     { labelKey: 'SCHEME_MANAGEMENT', icon: 'tune', route: '/admin/schemes',
       roles: ['ADMIN'] },
     { labelKey: 'APPOINTMENT_TYPES', icon: 'event', route: '/admin/appointment-types',
@@ -141,8 +143,8 @@ export class ShellComponent implements OnInit {
     const map: Record<string,string> = {
       HCM:'HCM', ADMIN:'Admin', OSD:'OSD',
       APPROVER:'Approver', CMO_OFFICER:'CMO Officer',
-      SUPER_ADMIN:'Super Admin', DEPARTMENT_ADMIN:'Department Admin',
-      DEPARTMENT_PA:'Department PA', DATA_ENTRY_OPERATOR:'DEO', PUBLIC:'Public'
+      SUPER_ADMIN:'Super Admin', DEPARTMENT_ADMIN:'Department Admin', DEO:'DEO',
+      DEPARTMENT_PA:'Department PA', HEAD_DEPARTMENT:'Head Department', DATA_ENTRY_OPERATOR:'DEO', PUBLIC:'Public'
     };
     return map[r] ?? r;
   }

@@ -8,6 +8,7 @@ import 'core/i18n/app_i18n.dart';
 import 'core/config/app_config.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_shell.dart';
+import 'screens/change_password_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -103,7 +104,11 @@ class MeghaConnectApp extends StatelessWidget {
       home: Consumer<AuthService>(
         builder: (context, auth, _) {
           return _WelcomeGate(
-            child: auth.isLoggedIn ? const MainShell() : const LoginScreen(),
+            child: !auth.isLoggedIn
+                ? const LoginScreen()
+                : auth.user!.passwordChangeRequired
+                    ? const ChangePasswordScreen()
+                    : const MainShell(),
           );
         },
       ),

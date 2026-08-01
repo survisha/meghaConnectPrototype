@@ -13,6 +13,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
+import com.survisha.meghaconnect.repository.UserRepository;
 import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 
@@ -23,6 +24,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
+    private final UserRepository userRepository;
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
@@ -39,14 +41,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         final String jwt = authHeader.substring(7);
-        log.debug("[SECURITY] JWT filter path={} authorizationPresent=true bearerHeader=true tokenLength={} tokenPrefix={}",
-            request.getRequestURI(), jwt.length(), jwt.substring(0, Math.min(10, jwt.length())));
+        log.debug("[SECURITY] JWT filter path={} authorizationPresent=true bearerHeader=true tokenLength={}",
+            request.getRequestURI(), jwt.length());
         try {
             final String username = jwtService.extractUsername(jwt);
             log.debug("[SECURITY] JWT extracted subject={} path={}", username, request.getRequestURI());
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-                boolean tokenValid = jwtService.isTokenValid(jwt, userDetails);
+                com.survisha.meghaconnect.entity.User appUser = username.startsWith("visitor_") ? null
+                        : userRepository.findByNormalizedUsername(username).orElse(null);
+                boolean tokenValid = jwtService.isTokenValid(jwt, userDetails, appUser);
                 log.debug("[SECURITY] JWT validation result path={} userFound=true tokenValid={} authorities={}",
                     request.getRequestURI(), tokenValid, userDetails.getAuthorities());
                 if (tokenValid) {

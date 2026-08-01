@@ -1093,7 +1093,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     this.actionUpdating = true;
     request.pipe(finalize(() => this.actionUpdating = false))
       .subscribe({
-        next: note => {
+        next: _note => {
           const wasEditing = Boolean(this.jtSecRemarkId);
           this.resetJtSecRemarkForm();
           this.loadAppointmentRemarks(appointment.id);

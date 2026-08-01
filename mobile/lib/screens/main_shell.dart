@@ -52,7 +52,7 @@ const _allRoles = [
   UserRole.SECURITY_POLICE,
 ];
 
-const _fullControl = [UserRole.HCM, UserRole.ADMIN, UserRole.OSD];
+const _fullControl = [UserRole.SUPER_ADMIN, UserRole.DEPARTMENT_ADMIN];
 
 final _navTree = <_NavItem>[
   const _NavItem(

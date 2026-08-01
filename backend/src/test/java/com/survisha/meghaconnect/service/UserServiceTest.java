@@ -3,6 +3,7 @@ package com.survisha.meghaconnect.service;
 import com.survisha.meghaconnect.dto.CreateUserRequest;
 import com.survisha.meghaconnect.dto.UserResponse;
 import com.survisha.meghaconnect.entity.User;
+import com.survisha.meghaconnect.entity.Department;
 import com.survisha.meghaconnect.exception.MeghaConnectException;
 import com.survisha.meghaconnect.repository.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -16,6 +17,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import com.survisha.meghaconnect.repository.DepartmentAccessRequestRepository;
+import com.survisha.meghaconnect.repository.DepartmentRepository;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -28,9 +31,26 @@ class UserServiceTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
+    @Mock private DepartmentRepository departmentRepository;
+    @Mock private DepartmentAccessRequestRepository departmentAccessRequestRepository;
+    @Mock private AuditLogService auditLogService;
 
     @InjectMocks
     private UserService userService;
+
+    @Test
+    void departmentAdminCannotUnlockAnotherDepartmentsUser() {
+        Department own = Department.builder().id(1L).departmentCode("HEALTH").status(Department.DepartmentStatus.ACTIVE).build();
+        Department other = Department.builder().id(2L).departmentCode("EDU").status(Department.DepartmentStatus.ACTIVE).build();
+        User actor = User.builder().id(10L).username("health.admin").role(User.UserRole.DEPARTMENT_ADMIN).department(own).build();
+        User target = User.builder().id(20L).username("edu.deo").role(User.UserRole.DEO).department(other).locked(true).build();
+        when(userRepository.findByNormalizedUsername("health.admin")).thenReturn(java.util.Optional.of(actor));
+        when(userRepository.findById(20L)).thenReturn(java.util.Optional.of(target));
+        MeghaConnectException ex = assertThrows(MeghaConnectException.class,
+                () -> userService.unlockUser(20L, "health.admin"));
+        assertEquals(403, ex.getHttpStatus());
+        verify(userRepository, never()).save(target);
+    }
 
     @Test
     void createUserEncryptsPasswordAndSavesActiveUser() {

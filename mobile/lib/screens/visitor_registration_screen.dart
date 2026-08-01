@@ -82,6 +82,12 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
 
   List<String> _designations = [];
   List<String> _agendaTypes = [];
+  List<Map<String, String>> _districts = [];
+  List<Map<String, String>> _mandals = [];
+  String? _selectedDistrictCode;
+  String? _selectedMandalCode;
+  bool _mandalsLoading = false;
+  String? _locationReferenceError;
 
   @override
   void initState() {
@@ -93,6 +99,7 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
     final results = await Future.wait([
       ApiService.getReferenceData('CITIZEN_DESIGNATION'),
       ApiService.getReferenceData('CM_AGENDA_MEETING'),
+      ApiService.getReferenceData('MEGHALAYA_DISTRICT'),
     ]);
     if (!mounted) return;
     setState(() {
@@ -104,6 +111,7 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
           .map((row) => row['value'] ?? row['code'] ?? '')
           .where((value) => value.isNotEmpty)
           .toList();
+      _districts = results[2];
       if (_agendaTypes.isNotEmpty &&
           !_agendaTypes.contains(_agendaTypeCtrl.text)) {
         _agendaTypeCtrl.text = _agendaTypes.first;
@@ -166,9 +174,50 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
       if (value) {
         _districtCtrl.clear();
         _constituencyCtrl.clear();
+        _selectedDistrictCode = null;
+        _selectedMandalCode = null;
+        _mandals = [];
         _boothCtrl.clear();
         _partNumberCtrl.clear();
       }
+    });
+  }
+
+  Future<void> _selectDistrict(String? code) async {
+    setState(() {
+      _selectedDistrictCode = code;
+      _selectedMandalCode = null;
+      _mandals = [];
+      _districtCtrl.text = _districts.firstWhere(
+            (row) => row['code'] == code,
+            orElse: () => <String, String>{},
+          )['value'] ??
+          '';
+      _constituencyCtrl.clear();
+      _mandalsLoading = code != null;
+      _locationReferenceError = null;
+    });
+    if (code == null) return;
+    final rows = await ApiService.getReferenceData('MEGHALAYA_DISTRICT_MANDAL',
+        parentCode: code);
+    if (!mounted || _selectedDistrictCode != code) return;
+    setState(() {
+      _mandals = rows;
+      _mandalsLoading = false;
+      if (rows.isEmpty) {
+        _locationReferenceError = 'No constituencies available.';
+      }
+    });
+  }
+
+  void _selectMandal(String? code) {
+    setState(() {
+      _selectedMandalCode = code;
+      _constituencyCtrl.text = _mandals.firstWhere(
+            (row) => row['code'] == code,
+            orElse: () => <String, String>{},
+          )['value'] ??
+          '';
     });
   }
 
@@ -1326,35 +1375,43 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
               const SizedBox(height: 10),
             ],
             if (!_outsideMeghalaya) ...[
-              TextFormField(
-                controller: _districtCtrl,
-                enabled: _idType == 'NONE',
-                keyboardType: TextInputType.text,
-                textCapitalization: TextCapitalization.words,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z ]')),
-                  const _LettersAndSpacesInputFormatter(),
-                ],
+              DropdownButtonFormField<String>(
+                value: _selectedDistrictCode,
+                isExpanded: true,
                 decoration:
                     InputDecoration(labelText: '${i18n.t('DISTRICT')} *'),
+                items: _districts
+                    .map((row) => DropdownMenuItem<String>(
+                          value: row['code'],
+                          child: Text(row['value'] ?? row['code'] ?? ''),
+                        ))
+                    .toList(),
                 validator: (v) {
-                  if (_outsideMeghalaya || _idType != 'NONE') return null;
-                  final district = _normalizeLettersAndSpaces(v ?? '');
-                  if (district.isEmpty) {
-                    return 'District is required.';
-                  }
-                  if (!_isValidDistrict(district)) {
-                    return 'District should contain only letters and spaces.';
-                  }
-                  return null;
+                  if (_outsideMeghalaya) return null;
+                  return v == null ? 'District is required.' : null;
                 },
-                onChanged: (_) => setState(() {}),
+                onChanged: _selectDistrict,
               ),
               const SizedBox(height: 12),
-              TextFormField(
-                controller: _constituencyCtrl,
+              DropdownButtonFormField<String>(
+                value: _selectedMandalCode,
+                isExpanded: true,
                 decoration: InputDecoration(labelText: i18n.t('CONSTITUENCY')),
+                items: _mandals
+                    .map((row) => DropdownMenuItem<String>(
+                          value: row['code'],
+                          child: Text(row['value'] ?? row['code'] ?? ''),
+                        ))
+                    .toList(),
+                onChanged: _mandalsLoading ? null : _selectMandal,
               ),
+              if (_mandalsLoading) const LinearProgressIndicator(),
+              if (_locationReferenceError != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(_locationReferenceError!,
+                      style: const TextStyle(color: Colors.red)),
+                ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _boothCtrl,
@@ -1706,11 +1763,6 @@ String _normalizeLettersAndSpaces(String value) {
       .trim();
 }
 
-bool _isValidDistrict(String value) {
-  return RegExp(r'^[A-Za-z]+(?: [A-Za-z]+)*$')
-      .hasMatch(_normalizeLettersAndSpaces(value));
-}
-
 class _EpicInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
@@ -1732,25 +1784,6 @@ class _EpicInputFormatter extends TextInputFormatter {
     }
 
     final text = buffer.toString();
-    return TextEditingValue(
-      text: text,
-      selection: TextSelection.collapsed(offset: text.length),
-    );
-  }
-}
-
-class _LettersAndSpacesInputFormatter extends TextInputFormatter {
-  const _LettersAndSpacesInputFormatter();
-
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final text = newValue.text
-        .replaceAll(RegExp(r'[^A-Za-z ]'), '')
-        .replaceFirst(RegExp(r'^\s+'), '')
-        .replaceAll(RegExp(r'\s{2,}'), ' ');
     return TextEditingValue(
       text: text,
       selection: TextSelection.collapsed(offset: text.length),

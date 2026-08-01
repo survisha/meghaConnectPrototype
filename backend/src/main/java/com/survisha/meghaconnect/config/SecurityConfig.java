@@ -8,6 +8,7 @@ import com.survisha.meghaconnect.security.ApiRateLimitFilter;
 import com.survisha.meghaconnect.security.JwtAuthenticationFilter;
 import com.survisha.meghaconnect.security.RestAccessDeniedHandler;
 import com.survisha.meghaconnect.security.RestAuthenticationEntryPoint;
+import com.survisha.meghaconnect.security.TemporaryPasswordAccessFilter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -52,6 +53,7 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http,
                                            JwtAuthenticationFilter jwtAuthFilter,
                                            ApiRateLimitFilter apiRateLimitFilter,
+                                           TemporaryPasswordAccessFilter temporaryPasswordAccessFilter,
                                            RestAuthenticationEntryPoint authenticationEntryPoint,
                                            RestAccessDeniedHandler accessDeniedHandler,
                                            CorsConfigurationSource corsConfigurationSource) throws Exception {
@@ -73,7 +75,7 @@ public class SecurityConfig {
                 
                 // Public API endpoints. Sensitive visitor, KYC, AI, QR, and file APIs are handled by JWT/RBAC.
                 .antMatchers(
-                    "/api/v1/auth/**",
+                    "/api/v1/auth/login",
                     "/api/v1/captcha/**",
                     "/error",
                     "/actuator/health/**",
@@ -94,6 +96,7 @@ public class SecurityConfig {
                     "/api/webjars/**"
                 ).permitAll()
                 .antMatchers("/api/v1/guest-appointments").permitAll() // Public guest appointment requests
+                .antMatchers(HttpMethod.POST, "/api/v1/department-access-requests").permitAll()
                 .antMatchers(
                     "/api/v1/visitor/auth/check-mobile",
                     "/api/v1/visitor/auth/check-registration",
@@ -151,6 +154,7 @@ public class SecurityConfig {
             )
             .authenticationProvider(authenticationProvider())
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterAfter(temporaryPasswordAccessFilter, JwtAuthenticationFilter.class)
             .addFilterBefore(apiRateLimitFilter, JwtAuthenticationFilter.class)
             .build();
     }

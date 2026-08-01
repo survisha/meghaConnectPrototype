@@ -14,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.Authentication;
+import com.survisha.meghaconnect.dto.ChangeTemporaryPasswordRequest;
 
 @Slf4j
 @RestController
@@ -34,5 +36,16 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody AuthRequest request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    @PostMapping("/change-temporary-password")
+    public ResponseEntity<Void> changeTemporaryPassword(
+            @Valid @RequestBody ChangeTemporaryPasswordRequest request,
+            Authentication authentication) {
+        if (authentication == null) {
+            return ResponseEntity.status(401).build();
+        }
+        authService.changeTemporaryPassword(authentication.getName(), request);
+        return ResponseEntity.noContent().build();
     }
 }

@@ -67,7 +67,7 @@ export class LoginComponent implements OnInit {
     private router: Router,
     private translate: TranslateService
   ) {
-    if (auth.isLoggedIn()) router.navigate(['/dashboard']);
+    if (auth.isLoggedIn()) router.navigate([auth.user()?.passwordChangeRequired ? '/change-password' : '/dashboard']);
   }
 
   ngOnInit(): void {
@@ -89,7 +89,7 @@ export class LoginComponent implements OnInit {
     this.auth.login(value.username, value.password, value.captchaId, value.captchaValue).subscribe({
       next: success => {
         if (success) {
-          this.router.navigate(['/dashboard']);
+          this.router.navigate([this.auth.user()?.passwordChangeRequired ? '/change-password' : '/dashboard']);
         } else {
           this.errorMsg = this.translate.instant('ERROR_INVALID_USERNAME_PASSWORD');
         }

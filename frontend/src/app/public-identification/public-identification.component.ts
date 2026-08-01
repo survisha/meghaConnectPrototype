@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -10,6 +10,9 @@ import {
 import { Visitor } from '../models';
 import { environment } from '../../environments/environment';
 import { apiErrorMessage } from '../shared/api-error.util';
+import { CameraCaptureService } from '../shared/camera-capture.service';
+import { FaceRecognitionService } from '../services/face-recognition.service';
+import { from, mergeMap, toArray } from 'rxjs';
 
 // Angular Material
 import { MatInputModule } from '@angular/material/input';
@@ -32,7 +35,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
   templateUrl: './public-identification.component.html',
   styleUrls: ['./public-identification.component.scss'],
 })
-export class PublicIdentificationComponent {
+export class PublicIdentificationComponent implements OnDestroy {
   searchPhone = '';
   searchEpic = '';
   searchName = '';
@@ -48,6 +51,11 @@ export class PublicIdentificationComponent {
   historyError = '';
   fullHistoryOpen = false;
   citizenHistory: PublicIdentificationHistory | null = null;
+  faceCameraStream: MediaStream | null = null;
+  faceCameraActive = false;
+  facePhoto = '';
+  faceSearching = false;
+  readonly maxFaces = 6;
 
   districts = ['East Khasi Hills','West Khasi Hills','Ri Bhoi','East Jaintia Hills','West Jaintia Hills','East Garo Hills','West Garo Hills','South Garo Hills','North Garo Hills'];
 
@@ -59,7 +67,90 @@ export class PublicIdentificationComponent {
   lastVisitedAtDisplay = '';
   upcomingAppointment: CitizenAppointmentHistory | null = null;
 
-  constructor(private visitorSearchService: VisitorSearchService) {}
+  constructor(
+    private visitorSearchService: VisitorSearchService,
+    private cameraCapture: CameraCaptureService,
+    private faceRecognition: FaceRecognitionService
+  ) {}
+
+  ngOnDestroy(): void { this.stopFaceCamera(); }
+
+  async startFaceIdentification(): Promise<void> {
+    this.errorMessage = '';
+    try {
+      this.faceCameraStream = await this.cameraCapture.open('user');
+      this.faceCameraActive = true;
+      setTimeout(() => {
+        const video = document.getElementById('publicFaceVideo') as HTMLVideoElement | null;
+        if (video && this.faceCameraStream) this.cameraCapture.attach(video, this.faceCameraStream);
+      });
+    } catch { this.errorMessage = 'Camera access was blocked.'; }
+  }
+
+  captureAndIdentify(): void {
+    const video = document.getElementById('publicFaceVideo') as HTMLVideoElement | null;
+    if (!video) return;
+    try {
+      this.facePhoto = this.cameraCapture.capture(video);
+      this.stopFaceCamera();
+      this.faceSearching = true;
+      this.faceRecognition.search(this.facePhoto).subscribe({
+        next: response => {
+          this.faceSearching = false;
+          this.searched = true;
+          this.results = response.matched && response.visitor ? [response.visitor] : [];
+          if (this.results[0]) this.select(this.results[0]);
+        },
+        error: error => { this.faceSearching = false; this.handleSearchError(error); }
+      });
+    } catch { this.errorMessage = 'Unable to capture a clear photo.'; }
+  }
+
+  identifyFaceCrops(event: Event): void {
+    const files = Array.from((event.target as HTMLInputElement).files || []).slice(0, this.maxFaces);
+    if (!files.length) return;
+    this.faceSearching = true;
+    this.errorMessage = '';
+    from(files.map((file, index) => ({ file, index }))).pipe(
+      mergeMap(item => from(this.readImage(item.file)).pipe(
+        mergeMap(photo => this.faceRecognition.search(photo)),
+        mergeMap(response => [{ response, index: item.index }])
+      ), 3),
+      toArray()
+    ).subscribe({
+      next: indexedResponses => {
+        const unique = new Map<number, Visitor>();
+        indexedResponses.sort((a, b) => a.index - b.index).forEach(({ response }) => {
+          if (response.matched && response.visitor?.id) unique.set(response.visitor.id, response.visitor);
+        });
+        this.results = Array.from(unique.values());
+        this.searched = true;
+        this.faceSearching = false;
+        if (this.results[0]) this.select(this.results[0]);
+      },
+      error: error => { this.faceSearching = false; this.handleSearchError(error); }
+    });
+  }
+
+  clearFaceIdentification(): void {
+    this.stopFaceCamera();
+    this.facePhoto = '';
+  }
+
+  private stopFaceCamera(): void {
+    this.cameraCapture.stop(this.faceCameraStream);
+    this.faceCameraStream = null;
+    this.faceCameraActive = false;
+  }
+
+  private readImage(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+  }
 
   populateHistory() {
     this.schemeHistory = [];

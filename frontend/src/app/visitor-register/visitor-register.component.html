@@ -699,6 +699,7 @@
                 type="text"
                 [(ngModel)]="form.state"
                 placeholder="State"
+                [readonly]="!form.outsideState"
                 (input)="clearVisibleErrors()" />
             </mat-form-field>
             <mat-form-field appearance="outline">
@@ -738,32 +739,28 @@
           <div class="form-row two-col" *ngIf="!form.outsideState">
             <mat-form-field appearance="outline">
               <mat-label>{{ 'DISTRICT' | translate }} *</mat-label>
-              <input
-                matInput
+              <mat-select
                 id="register_districtInput"
-                type="text"
-                [(ngModel)]="form.district"
-                [disabled]="isDistrictReadOnly"
-                [placeholder]="'DISTRICT_PLACEHOLDER' | translate"
-                (keydown)="allowLettersAndSpacesOnly($event)"
-                (paste)="pasteDistrict($event)"
-                (input)="sanitizeDistrict()"
-                (blur)="trimDistrict()" />
+                [ngModel]="selectedDistrictCode"
+                (ngModelChange)="onDistrictSelection($event)"
+                [disabled]="referenceDataLoading">
+                <mat-option *ngFor="let district of meghalayaDistricts" [value]="district.code">{{ district.value }}</mat-option>
+              </mat-select>
               <mat-error data-testid="citizen-registration-district-error" *ngIf="districtValidationMessage">{{ districtValidationMessage }}</mat-error>
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>{{ 'CONSTITUENCY' | translate }}</mat-label>
-              <input
-                matInput
+              <mat-select
                 id="register_constituencyInput"
-                type="text"
-                [(ngModel)]="form.constituency"
-                [disabled]="isConstituencyReadOnly"
-                [placeholder]="'CONSTITUENCY_PLACEHOLDER' | translate"
-                (input)="clearVisibleErrors()" />
-              <mat-hint *ngIf="form.idType === 'AADHAAR'">Constituency is not available from Aadhaar. Please enter it manually.</mat-hint>
+                [ngModel]="selectedMandalCode"
+                [disabled]="!selectedDistrictCode || mandalsLoading"
+                (ngModelChange)="onMandalSelection($event)">
+                <mat-option *ngFor="let mandal of meghalayaMandals" [value]="mandal.code">{{ mandal.value }}</mat-option>
+              </mat-select>
+              <mat-hint *ngIf="selectedDistrictCode && !mandalsLoading && meghalayaMandals.length === 0">No constituencies available.</mat-hint>
             </mat-form-field>
           </div>
+          <div class="form-error" *ngIf="locationReferenceError">{{ locationReferenceError }}</div>
 
           <div class="form-row two-col" *ngIf="!form.outsideState">
             <mat-form-field appearance="outline">

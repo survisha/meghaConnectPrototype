@@ -17,8 +17,6 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const isPublicAuthRequest = isPublicAuthUrl(req.url);
 
   const token = authSession.getAccessToken();
-  console.debug('Auth interceptor:', req.method, req.url, 'tokenPresent=', !!token);
-
   // Clone request with Authorization header if token exists
   const authReq = token && !isPublicAuthRequest
     ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })

@@ -235,7 +235,7 @@
           <span class="badge" [class.warn]="form.locked" [class.ok]="!form.locked">
             {{ form.locked ? 'Locked' : 'Unlocked' }}
           </span>
-          <button *ngIf="form.locked" mat-stroked-button type="button" color="primary" (click)="form.locked = false">
+          <button *ngIf="form.locked" mat-stroked-button type="button" color="primary" (click)="unlockUser(form)">
             Unlock User
           </button>
         </div>

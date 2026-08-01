@@ -6,6 +6,8 @@ import com.survisha.meghaconnect.face.config.FaceRecognitionProperties;
 import com.survisha.meghaconnect.face.dto.FaceRequests;
 import com.survisha.meghaconnect.face.dto.FaceResponses;
 import com.survisha.meghaconnect.face.validation.FacePhotoValidator;
+import com.survisha.meghaconnect.entity.Visitor;
+import com.survisha.meghaconnect.repository.VisitorRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,6 +22,7 @@ public class FaceRecognitionServiceImpl implements FaceRecognitionService {
     private final FaceRecognitionProperties properties;
     private final FacePhotoValidator photoValidator;
     private final MeterRegistry meterRegistry;
+    private final VisitorRepository visitorRepository;
 
     @Override public FaceResponses.Enroll enroll(FaceRequests.Enroll r) {
         Map<String,Object> p = credentials();
@@ -57,9 +60,13 @@ public class FaceRecognitionServiceImpl implements FaceRecognitionService {
         boolean matched = n.path("matched").asBoolean(false);
         countResult("search", matched);
         String photo = Boolean.TRUE.equals(r.getIncludeMatchedPhoto()) && mayReturnMatchedPhoto ? text(n, "enrollPhoto") : null;
-        return FaceResponses.Search.builder().success(true).matched(matched).enrollmentId(text(n, "id"))
+        String enrollmentId = text(n, "id");
+        FaceResponses.MatchedVisitor visitor = matched ? resolveVisitor(enrollmentId, mayReturnMatchedPhoto) : null;
+        boolean resolved = matched && visitor != null;
+        return FaceResponses.Search.builder().success(true).matched(resolved).enrollmentId(resolved ? enrollmentId : null)
                 .name(text(n, "name")).distance(decimal(n, "distance")).score(decimal(n, "score"))
-                .matchedPhoto(photo).message(matched ? "Matching face found." : "No matching face found.").build();
+                .matchedPhoto(photo).visitor(visitor)
+                .message(resolved ? "Matching visitor found." : "No matching visitor found.").build();
     }
 
     @Override public FaceResponses.Verify verify(FaceRequests.Verify r) {
@@ -95,4 +102,17 @@ public class FaceRecognitionServiceImpl implements FaceRecognitionService {
     }
     private String text(JsonNode n, String field) { return n.hasNonNull(field) ? n.get(field).asText() : null; }
     private Double decimal(JsonNode n, String field) { return n.hasNonNull(field) && n.get(field).isNumber() ? n.get(field).asDouble() : null; }
+
+    private FaceResponses.MatchedVisitor resolveVisitor(String enrollmentId, boolean mayReturnPhoto) {
+        if (enrollmentId == null || !enrollmentId.matches("VISITOR_[1-9][0-9]*")) return null;
+        long visitorId = Long.parseLong(enrollmentId.substring("VISITOR_".length()));
+        return visitorRepository.findById(visitorId).map(v -> toMatchedVisitor(v, mayReturnPhoto)).orElse(null);
+    }
+
+    private FaceResponses.MatchedVisitor toMatchedVisitor(Visitor v, boolean mayReturnPhoto) {
+        return FaceResponses.MatchedVisitor.builder().id(v.getId()).fullName(v.getFullName())
+                .phoneNumber(v.getPhoneNumber()).epicNumber(v.getEpicNumber()).designation(v.getDesignation())
+                .address(v.getAddress()).district(v.getDistrict()).constituency(v.getConstituency())
+                .kycStatus(v.getKycStatus()).build();
+    }
 }

@@ -7,6 +7,8 @@ import com.survisha.meghaconnect.exception.MeghaConnectException;
 import com.survisha.meghaconnect.repository.UserRepository;
 import com.survisha.meghaconnect.security.JwtService;
 import com.survisha.meghaconnect.captcha.CaptchaService;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import com.survisha.meghaconnect.dto.ChangeTemporaryPasswordRequest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -42,9 +44,31 @@ class AuthServiceTest {
     private UserRepository userRepository;
     @Mock
     private CaptchaService captchaService;
+    @Mock private LoginAttemptService loginAttemptService;
+    @Mock private PasswordEncoder passwordEncoder;
+    @Mock private AuditLogService auditLogService;
 
     @InjectMocks
     private AuthService authService;
+
+    @Test
+    void firstPasswordChangeReplacesTemporaryPasswordAndInvalidatesExistingTokens() {
+        User account = User.builder().id(11L).username("newadmin").passwordHash("old-hash")
+                .role(User.UserRole.DEPARTMENT_ADMIN).passwordChangeRequired(true).credentialsVersion(4).build();
+        when(userRepository.findForLoginUpdate("newadmin")).thenReturn(Optional.of(account));
+        when(passwordEncoder.matches("Temp@Pass1", "old-hash")).thenReturn(true);
+        when(passwordEncoder.matches("New@Secure22", "old-hash")).thenReturn(false);
+        when(passwordEncoder.encode("New@Secure22")).thenReturn("new-hash");
+        ChangeTemporaryPasswordRequest request = new ChangeTemporaryPasswordRequest();
+        request.setCurrentPassword("Temp@Pass1"); request.setNewPassword("New@Secure22");
+
+        authService.changeTemporaryPassword("newadmin", request);
+
+        assertFalse(account.isPasswordChangeRequired());
+        assertEquals("new-hash", account.getPasswordHash());
+        assertEquals(5, account.getCredentialsVersion());
+        assertNotNull(account.getPasswordChangedAt());
+    }
 
     @Test
     void superAdminLoginReturnsBearerAccessTokenWithoutDepartment() {

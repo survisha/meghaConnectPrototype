@@ -25,6 +25,10 @@ public class ReferenceData {
     @JoinColumn(name = "type_id", nullable = false)
     private ReferenceType type;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_id")
+    private ReferenceData parent;
+
     @Column(nullable = false, length = 50)
     private String code;
 

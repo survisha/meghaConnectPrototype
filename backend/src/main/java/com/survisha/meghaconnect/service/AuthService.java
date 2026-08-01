@@ -18,6 +18,10 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
+import com.survisha.meghaconnect.dto.ChangeTemporaryPasswordRequest;
+import com.survisha.meghaconnect.util.DateTimeUtil;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +34,9 @@ public class AuthService {
     private final UserService userService;
     private final UserRepository userRepository;
     private final CaptchaService captchaService;
+    private final LoginAttemptService loginAttemptService;
+    private final PasswordEncoder passwordEncoder;
+    private final AuditLogService auditLogService;
 
     /**
      * Authenticate user and generate JWT token
@@ -45,6 +52,7 @@ public class AuthService {
                 new UsernamePasswordAuthenticationToken(username, request.getPassword())
             );
             log.info("[AUTH] Authentication successful for user: {}", username);
+            loginAttemptService.recordSuccess(username);
             
             UserDetails user = userDetailsService.loadUserByUsername(username);
             User appUser = userRepository.findByNormalizedUsername(username)
@@ -93,6 +101,12 @@ public class AuthService {
             return response;
         } catch (BadCredentialsException e) {
             log.warn("[AUTH] Failed login username={} reason=invalid_credentials", username);
+            if (loginAttemptService.recordFailure(username)) {
+                throw new MeghaConnectException(
+                        ErrorCodeConstants.USER_ACCOUNT_LOCKED,
+                        ErrorCodeConstants.USER_ACCOUNT_LOCKED_MSG,
+                        423);
+            }
             throw new MeghaConnectException(
                 ErrorCodeConstants.INVALID_CREDENTIALS,
                 ErrorCodeConstants.INVALID_CREDENTIALS_MSG,
@@ -131,6 +145,33 @@ public class AuthService {
                 500
             );
         }
+    }
+
+    @Transactional
+    public void changeTemporaryPassword(String username, ChangeTemporaryPasswordRequest request) {
+        User user = userRepository.findForLoginUpdate(username)
+                .orElseThrow(() -> new MeghaConnectException(ErrorCodeConstants.USER_NOT_FOUND,
+                        ErrorCodeConstants.USER_NOT_FOUND_MSG, 404));
+        if (!user.isPasswordChangeRequired()) {
+            throw new MeghaConnectException(ErrorCodeConstants.GENERAL_ERROR,
+                    "Temporary password change is not required", 409);
+        }
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
+            throw new MeghaConnectException(ErrorCodeConstants.INVALID_CREDENTIALS,
+                    "Current password is incorrect", 400);
+        }
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPasswordHash())) {
+            throw new MeghaConnectException(ErrorCodeConstants.GENERAL_ERROR,
+                    "New password must differ from the temporary password", 400);
+        }
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        user.setPasswordChangeRequired(false);
+        user.setPasswordChangedAt(DateTimeUtil.nowIST());
+        user.setCredentialsVersion(user.getCredentialsVersion() + 1);
+        user.setUpdatedBy(username);
+        userRepository.save(user);
+        auditLogService.log("USER", user.getId(), "FIRST_PASSWORD_CHANGED",
+                "Initial temporary password changed", username);
     }
 
     private String normalizeUsername(String username) {

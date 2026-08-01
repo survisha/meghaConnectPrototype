@@ -252,6 +252,7 @@ export class UserManagementComponent implements OnInit {
 
   unlockUser(u: ManagedUser) {
     if (!u.id || !u.locked) return;
+    if (!confirm(`Unlock ${u.username} and reset failed login attempts?`)) return;
     this.http.patch<ApiResponse<ManagedUser>>(`${environment.apiUrl}/users/${u.id}/unlock`, {}).subscribe({
       next: () => this.afterMutation('User unlocked successfully.'),
       error: error => this.flashError(this.extractApiErrorMessage(error, 'Failed to unlock user.')),
@@ -453,9 +454,9 @@ export class UserManagementComponent implements OnInit {
       return ['DEPARTMENT_ADMIN'];
     }
     if (this.auth.hasRole('DEPARTMENT_ADMIN')) {
-      return ['DEPARTMENT_PA'];
+      return ['DEO', 'DEPARTMENT_PA', 'HEAD_DEPARTMENT'];
     }
-    return ['DEPARTMENT_ADMIN', 'DEPARTMENT_PA'];
+    return ['DEPARTMENT_ADMIN', 'DEO', 'DEPARTMENT_PA', 'HEAD_DEPARTMENT'];
   }
 
   private toRoleLabel(role: string): string {

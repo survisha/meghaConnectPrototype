@@ -17,7 +17,11 @@ public final class FaceResponses {
     }
     @Value @Builder @JsonInclude(JsonInclude.Include.NON_NULL) public static class Search {
         boolean success; boolean matched; String enrollmentId; String name; Double distance; Double score;
-        String matchedPhoto; String message;
+        String matchedPhoto; String message; MatchedVisitor visitor;
+    }
+    @Value @Builder @JsonInclude(JsonInclude.Include.NON_NULL) public static class MatchedVisitor {
+        Long id; String fullName; String phoneNumber; String epicNumber; String designation;
+        String address; String district; String constituency; String kycStatus; String photoBase64;
     }
     @Value @Builder @JsonInclude(JsonInclude.Include.NON_NULL) public static class Verify {
         boolean success; boolean verified; Double distance; Double score; String enrollmentId; String message;

@@ -13,7 +13,8 @@ class ApiService {
 
   static Future<Map<String, dynamic>?> generateCaptcha() async {
     try {
-      final response = await http.get(_u('/captcha/generate'))
+      final response = await http
+          .get(_u('/captcha/generate'))
           .timeout(const Duration(seconds: 20));
       if (response.statusCode == 200) {
         return jsonDecode(response.body) as Map<String, dynamic>;
@@ -245,6 +246,15 @@ class ApiService {
           'Unable to connect. Please check your network and try again.';
       return null;
     }
+  }
+
+  static Future<bool> changeTemporaryPassword(
+      String currentPassword, String newPassword) async {
+    final response = await http.post(_u('/auth/change-temporary-password'),
+        headers: await _headers(),
+        body: jsonEncode(
+            {'currentPassword': currentPassword, 'newPassword': newPassword}));
+    return response.statusCode == 204;
   }
 
   // ── Visitor (Citizen) OTP Auth ─────────────────────────────────────────────
@@ -1146,12 +1156,13 @@ class ApiService {
     return {'success': false, 'message': 'Unable to refresh QR cache.'};
   }
 
-  static Future<List<Map<String, String>>> getReferenceData(String type) async {
+  static Future<List<Map<String, String>>> getReferenceData(String type,
+      {String? parentCode}) async {
     try {
       final headers = await _authHeaders();
       final resp = await http
           .get(
-            _u('/reference/$type'),
+            _u('/reference/$type${parentCode == null ? '' : '?parentCode=${Uri.encodeQueryComponent(parentCode)}'}'),
             headers: headers,
           )
           .timeout(const Duration(seconds: 20));
@@ -1172,6 +1183,26 @@ class ApiService {
       }
     } catch (_) {}
     return [];
+  }
+
+  static Future<Map<String, dynamic>> searchVisitorByFace(String photo) async {
+    try {
+      final resp = await http
+          .post(_u('/face-recognition/search'),
+              headers: await _authHeaders(),
+              body: jsonEncode({'photo': photo, 'includeMatchedPhoto': false}))
+          .timeout(const Duration(seconds: 30));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        return Map<String, dynamic>.from(jsonDecode(resp.body) as Map);
+      }
+      return {
+        'success': false,
+        'message': _messageFromResponse(resp, 'Face search is unavailable.')
+      };
+    } catch (error, stackTrace) {
+      _logError('searchVisitorByFace', error, stackTrace);
+      return {'success': false, 'message': 'Face search is unavailable.'};
+    }
   }
 
   static Future<Map<String, dynamic>> createGuestAppointment({

@@ -16,6 +16,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import com.survisha.meghaconnect.repository.DepartmentAccessRequestRepository;
+import com.survisha.meghaconnect.entity.DepartmentAccessRequest;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +29,8 @@ public class UserService {
     private final DepartmentRepository departmentRepository;
     private final RoleService roleService;
     private final PasswordEncoder passwordEncoder;
+    private final AuditLogService auditLogService;
+    private final DepartmentAccessRequestRepository departmentAccessRequestRepository;
 
     /**
      * Get all users
@@ -43,14 +47,18 @@ public class UserService {
     }
 
     public List<UserResponse> getUserResponsesForActor(String actor) {
-        User currentUser = userRepository.findByNormalizedUsername(actor).orElse(null);
-        if (currentUser != null && currentUser.getRole() == User.UserRole.DEPARTMENT_ADMIN
+        User currentUser = requireActor(actor);
+        if (currentUser.getRole() == User.UserRole.DEPARTMENT_ADMIN
                 && currentUser.getDepartment() != null) {
             return userRepository.findByDepartment_Id(currentUser.getDepartment().getId()).stream()
                     .map(this::toResponse)
                     .toList();
         }
-        return getAllUserResponses();
+        if (currentUser.getRole() == User.UserRole.SUPER_ADMIN || currentUser.getRole() == User.UserRole.ADMIN) {
+            return getAllUserResponses();
+        }
+        throw new MeghaConnectException(ErrorCodeConstants.UNAUTHORIZED_ACCESS,
+                ErrorCodeConstants.UNAUTHORIZED_ACCESS_MSG, 403);
     }
 
     /**
@@ -77,6 +85,12 @@ public class UserService {
         return userRepository.findByNormalizedUsername(username)
             .map(User::getFullName)
             .orElse(username);
+    }
+
+    public UserResponse getUserResponseForActor(Long id, String actor) {
+        User actorUser = requireActor(actor);
+        User target = requireVisibleTarget(id, actorUser);
+        return toResponse(target);
     }
 
     @Transactional
@@ -165,11 +179,14 @@ public class UserService {
                 .active(request.getActive() == null || Boolean.TRUE.equals(request.getActive()))
                 .offlineAccess(Boolean.TRUE.equals(request.getOfflineAccess()))
                 .passwordChangeRequired(true)
+                .temporaryPasswordCreatedAt(com.survisha.meghaconnect.util.DateTimeUtil.nowIST())
                 .build();
         user.setCreatedBy(actor);
         user.setUpdatedBy(actor);
         User saved = userRepository.save(user);
         log.info("User created username={} role={} by={}", saved.getUsername(), saved.getRole(), actor);
+        auditLogService.log("USER", saved.getId(), "USER_CREATED",
+                "User created with temporary credentials", actor);
         return toResponse(saved);
     }
 
@@ -191,6 +208,14 @@ public class UserService {
                 .locked(user.isLocked())
                 .offlineAccess(user.isOfflineAccess())
                 .passwordChangeRequired(user.isPasswordChangeRequired())
+                .failedLoginAttempts(user.getFailedLoginAttempts())
+                .lastFailedLoginAt(user.getLastFailedLoginAt())
+                .lockedAt(user.getLockedAt())
+                .lockReason(user.getLockReason())
+                .passwordChangedAt(user.getPasswordChangedAt())
+                .temporaryPasswordCreatedAt(user.getTemporaryPasswordCreatedAt())
+                .unlockedBy(user.getUnlockedBy())
+                .unlockedAt(user.getUnlockedAt())
                 .lastLogin(user.getLastLogin())
                 .createdAt(user.getCreatedAt())
                 .build();
@@ -206,7 +231,9 @@ public class UserService {
         String fullName = trimToNull(request.getFullName());
         String email = trimToNull(request.getEmail());
         String phoneNumber = trimToNull(request.getPhoneNumber());
-        User actorUser = userRepository.findByNormalizedUsername(actor).orElse(null);
+        User actorUser = requireActor(actor);
+        requireVisibleTarget(user, actorUser);
+        ensureActorCanManageTarget(actorUser, user);
         if (fullName == null) {
             throw new MeghaConnectException(
                     ErrorCodeConstants.MISSING_REQUIRED_FIELD,
@@ -241,7 +268,6 @@ public class UserService {
         user.setDepartment(department);
         user.setPhoneNumber(phoneNumber);
         user.setActive(request.getActive() == null || Boolean.TRUE.equals(request.getActive()));
-        user.setLocked(Boolean.TRUE.equals(request.getLocked()));
         user.setOfflineAccess(Boolean.TRUE.equals(request.getOfflineAccess()));
         user.setUpdatedBy(actor);
         return toResponse(userRepository.save(user));
@@ -249,11 +275,9 @@ public class UserService {
 
     @Transactional
     public UserResponse setActive(Long id, boolean active, String actor) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new MeghaConnectException(
-                        ErrorCodeConstants.USER_NOT_FOUND,
-                        ErrorCodeConstants.format(ErrorCodeConstants.USER_NOT_FOUND_MSG, id),
-                        404));
+        User actorUser = requireActor(actor);
+        User user = requireVisibleTarget(id, actorUser);
+        ensureActorCanManageTarget(actorUser, user);
         user.setActive(active);
         user.setUpdatedBy(actor);
         return toResponse(userRepository.save(user));
@@ -261,14 +285,20 @@ public class UserService {
 
     @Transactional
     public UserResponse unlockUser(Long id, String actor) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new MeghaConnectException(
-                        ErrorCodeConstants.USER_NOT_FOUND,
-                        ErrorCodeConstants.format(ErrorCodeConstants.USER_NOT_FOUND_MSG, id),
-                        404));
+        User actorUser = requireActor(actor);
+        User user = requireVisibleTarget(id, actorUser);
+        ensureActorCanUnlock(actorUser, user);
         user.setLocked(false);
+        user.setFailedLoginAttempts(0);
+        user.setLastFailedLoginAt(null);
+        user.setLockedAt(null);
+        user.setLockReason(null);
+        user.setUnlockedBy(actor);
+        user.setUnlockedAt(com.survisha.meghaconnect.util.DateTimeUtil.nowIST());
         user.setUpdatedBy(actor);
-        return toResponse(userRepository.save(user));
+        User saved = userRepository.save(user);
+        auditLogService.log("USER", saved.getId(), "ACCOUNT_UNLOCKED", "Account unlocked", actor);
+        return toResponse(saved);
     }
 
     @Transactional
@@ -298,7 +328,9 @@ public class UserService {
         if (actorUser.getRole() == User.UserRole.SUPER_ADMIN && role == User.UserRole.DEPARTMENT_ADMIN) {
             return;
         }
-        if (actorUser.getRole() == User.UserRole.DEPARTMENT_ADMIN && role == User.UserRole.DEPARTMENT_PA) {
+        if (actorUser.getRole() == User.UserRole.DEPARTMENT_ADMIN
+                && (role == User.UserRole.DEO || role == User.UserRole.DEPARTMENT_PA
+                    || role == User.UserRole.HEAD_DEPARTMENT)) {
             return;
         }
         if (actorUser.getRole() == User.UserRole.ADMIN) {
@@ -337,6 +369,12 @@ public class UserService {
                 .orElseThrow(() -> new MeghaConnectException(ErrorCodeConstants.CONTENT_NOT_FOUND,
                         "Department not found: " + departmentId, 404));
         ensureActiveDepartment(department);
+        if (role == User.UserRole.DEPARTMENT_ADMIN
+                && !departmentAccessRequestRepository.existsByDepartmentCodeIgnoreCaseAndRequestStatus(
+                    department.getDepartmentCode(), DepartmentAccessRequest.Status.APPROVED)) {
+            throw new MeghaConnectException(ErrorCodeConstants.UNAUTHORIZED_ACCESS,
+                    "Department access request is not approved", 403);
+        }
         return department;
     }
 
@@ -383,6 +421,49 @@ public class UserService {
         if (department.getStatus() != Department.DepartmentStatus.ACTIVE) {
             throw new MeghaConnectException(ErrorCodeConstants.UNAUTHORIZED_ACCESS,
                     "Department is inactive", 403);
+        }
+    }
+
+    private User requireActor(String actor) {
+        return userRepository.findByNormalizedUsername(actor)
+                .orElseThrow(() -> new MeghaConnectException(ErrorCodeConstants.UNAUTHORIZED_ACCESS,
+                        ErrorCodeConstants.UNAUTHORIZED_ACCESS_MSG, 403));
+    }
+
+    private User requireVisibleTarget(Long id, User actor) {
+        User target = userRepository.findById(id)
+                .orElseThrow(() -> new MeghaConnectException(ErrorCodeConstants.USER_NOT_FOUND,
+                        ErrorCodeConstants.format(ErrorCodeConstants.USER_NOT_FOUND_MSG, id), 404));
+        return requireVisibleTarget(target, actor);
+    }
+
+    private User requireVisibleTarget(User target, User actor) {
+        if (actor.getRole() == User.UserRole.SUPER_ADMIN || actor.getRole() == User.UserRole.ADMIN) {
+            return target;
+        }
+        if (actor.getRole() == User.UserRole.DEPARTMENT_ADMIN
+                && actor.getDepartment() != null && target.getDepartment() != null
+                && actor.getDepartment().getId().equals(target.getDepartment().getId())) {
+            return target;
+        }
+        throw new MeghaConnectException(ErrorCodeConstants.UNAUTHORIZED_ACCESS,
+                ErrorCodeConstants.UNAUTHORIZED_ACCESS_MSG, 403);
+    }
+
+    private void ensureActorCanManageTarget(User actor, User target) {
+        if (target.getRole() == User.UserRole.SUPER_ADMIN && actor.getRole() != User.UserRole.SUPER_ADMIN) {
+            throw new MeghaConnectException(ErrorCodeConstants.UNAUTHORIZED_ACCESS,
+                    "Only Super Admin can manage a Super Admin account", 403);
+        }
+    }
+
+    private void ensureActorCanUnlock(User actor, User target) {
+        ensureActorCanManageTarget(actor, target);
+        if (actor.getRole() == User.UserRole.DEPARTMENT_ADMIN
+                && (target.getRole() == User.UserRole.DEPARTMENT_ADMIN
+                    || target.getRole() == User.UserRole.SUPER_ADMIN)) {
+            throw new MeghaConnectException(ErrorCodeConstants.UNAUTHORIZED_ACCESS,
+                    "Department Admin cannot unlock this account", 403);
         }
     }
 }

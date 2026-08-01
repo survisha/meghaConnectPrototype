@@ -7,4 +7,11 @@ import lombok.*;
 public class AuthRequest {
     @NotBlank private String username;
     @NotBlank private String password;
+    private String captchaId;
+    private String captchaValue;
+
+    public AuthRequest(String username, String password) {
+        this.username = username;
+        this.password = password;
+    }
 }

@@ -44,9 +44,11 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  Future<bool> login(String username, String password) async {
+  Future<bool> login(String username, String password,
+      {required String captchaId, required String captchaValue}) async {
     _lastError = null;
-    final data = await ApiService.login(username.trim(), password.trim());
+    final data = await ApiService.login(username.trim(), password.trim(),
+        captchaId: captchaId, captchaValue: captchaValue);
     if (data == null) {
       _lastError =
           ApiService.lastLoginError ?? 'Login failed. Please try again.';

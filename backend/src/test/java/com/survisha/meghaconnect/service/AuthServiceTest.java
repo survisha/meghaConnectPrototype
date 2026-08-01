@@ -6,6 +6,7 @@ import com.survisha.meghaconnect.entity.User;
 import com.survisha.meghaconnect.exception.MeghaConnectException;
 import com.survisha.meghaconnect.repository.UserRepository;
 import com.survisha.meghaconnect.security.JwtService;
+import com.survisha.meghaconnect.captcha.CaptchaService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -39,6 +40,8 @@ class AuthServiceTest {
     private UserService userService;
     @Mock
     private UserRepository userRepository;
+    @Mock
+    private CaptchaService captchaService;
 
     @InjectMocks
     private AuthService authService;

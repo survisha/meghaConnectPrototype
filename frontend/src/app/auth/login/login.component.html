@@ -16,7 +16,7 @@
       </button>
     </div>
 
-    <ng-container *ngIf="!isPublicMode">
+    <form *ngIf="!isPublicMode" [formGroup]="loginForm" (ngSubmit)="login()">
       
 
       <mat-form-field appearance="outline" class="full-width">
@@ -24,7 +24,7 @@
           <mat-icon>person</mat-icon>
           <span> {{ 'USERNAME' | translate }}</span>
         </mat-label>
-        <input matInput id="login_usernameInput" [(ngModel)]="username" [placeholder]="'ENTER_USERNAME' | translate" />
+        <input matInput id="login_usernameInput" formControlName="username" autocomplete="username" [placeholder]="'ENTER_USERNAME' | translate" />
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="full-width">
@@ -32,7 +32,26 @@
           <mat-icon>lock</mat-icon>
           <span> {{ 'PASSWORD' | translate }}</span>
         </mat-label>
-        <input matInput type="password" id="login_passwordInput" [(ngModel)]="password" [placeholder]="'ENTER_PASSWORD' | translate" (keyup.enter)="login()" />
+        <input matInput type="password" id="login_passwordInput" formControlName="password" autocomplete="current-password" [placeholder]="'ENTER_PASSWORD' | translate" />
+      </mat-form-field>
+
+      <div class="captcha-row">
+        <div class="captcha-image" aria-live="polite">
+          <img *ngIf="captchaImageSrc()" [src]="captchaImageSrc()" alt="CAPTCHA verification image" />
+          <span *ngIf="!captchaImageSrc() && captchaDisplayText()">{{ captchaDisplayText() }}</span>
+          <mat-spinner *ngIf="captchaLoading()" diameter="28" aria-label="Loading captcha"></mat-spinner>
+        </div>
+        <button mat-icon-button type="button" (click)="refreshCaptcha()" [disabled]="captchaLoading()"
+                aria-label="Refresh captcha" matTooltip="Refresh captcha">
+          <mat-icon>refresh</mat-icon>
+        </button>
+      </div>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Captcha</mat-label>
+        <input #captchaInput matInput id="login_captchaInput" formControlName="captchaValue"
+               autocomplete="off" autocapitalize="characters" aria-label="Enter the captcha shown above" />
+        <mat-error *ngIf="loginForm.controls.captchaValue.hasError('required')">Captcha is required</mat-error>
       </mat-form-field>
 
       <div id="login_errorMsg" *ngIf="errorMsg" class="login-error">
@@ -40,11 +59,11 @@
         <span>{{ errorMsg }}</span>
       </div>
 
-      <button id="login_submitBtn" mat-raised-button color="primary" class="full-width" [disabled]="loading" (click)="login()">
+      <button id="login_submitBtn" type="submit" mat-raised-button color="primary" class="full-width" [disabled]="loading || captchaLoading()">
         <span *ngIf="!loading"><mat-icon>login</mat-icon> {{ 'SIGN_IN' | translate }}</span>
         <span *ngIf="loading"><mat-icon class="spin-icon">sync</mat-icon> {{ 'SIGNING_IN' | translate }}</span>
       </button>
-    </ng-container>
+    </form>
 
     <ng-container *ngIf="isPublicMode">
       <div class="public-info">

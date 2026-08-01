@@ -88,9 +88,14 @@ export class AuthService {
     }
   }
 
-  login(username: string, password: string): Observable<boolean> {
+  login(username: string, password: string, captchaId?: string, captchaValue?: string): Observable<boolean> {
     const normalizedUsername = username.trim();
-    return this.http.post<LoginResponse | { data: LoginResponse }>(`${environment.apiUrl}/auth/login`, { username: normalizedUsername, password }).pipe(
+    return this.http.post<LoginResponse | { data: LoginResponse }>(`${environment.apiUrl}/auth/login`, {
+      username: normalizedUsername,
+      password,
+      captchaId,
+      captchaValue,
+    }).pipe(
       tap(response => {
         this.debugLoginResponse(response);
         const res = this.unwrapLoginResponse(response);

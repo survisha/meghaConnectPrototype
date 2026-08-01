@@ -6,6 +6,7 @@ import com.survisha.meghaconnect.entity.User;
 import com.survisha.meghaconnect.security.JwtService;
 import com.survisha.meghaconnect.exception.*;
 import com.survisha.meghaconnect.repository.UserRepository;
+import com.survisha.meghaconnect.captcha.CaptchaService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -28,11 +29,13 @@ public class AuthService {
     private final JwtService jwtService;
     private final UserService userService;
     private final UserRepository userRepository;
+    private final CaptchaService captchaService;
 
     /**
      * Authenticate user and generate JWT token
      */
     public AuthResponse login(AuthRequest request) {
+        captchaService.validateForLogin(request.getCaptchaId(), request.getCaptchaValue());
         String username = normalizeUsername(request.getUsername());
         log.info("[AUTH] Login attempt - Username: {}", username);
         
@@ -117,6 +120,8 @@ public class AuthService {
                 ErrorCodeConstants.INVALID_CREDENTIALS_MSG,
                 401
             );
+        } catch (MeghaConnectException e) {
+            throw e;
         } catch (RuntimeException e) {
             log.error("[AUTH] Login failed for user: {} - Error: {} - Message: {}",
                 username, e.getClass().getSimpleName(), e.getMessage());

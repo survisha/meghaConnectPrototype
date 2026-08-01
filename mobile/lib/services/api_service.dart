@@ -9,6 +9,21 @@ class ApiService {
   static Uri _u(String path) => Uri.parse('${AppConfig.apiV1BaseUrl}$path');
   static Uri _fileApi(String path) => Uri.parse('${AppConfig.apiBaseUrl}$path');
   static String? lastLoginError;
+  static String? lastLoginErrorCode;
+
+  static Future<Map<String, dynamic>?> generateCaptcha() async {
+    try {
+      final response = await http.get(_u('/captcha/generate'))
+          .timeout(const Duration(seconds: 20));
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+      return null;
+    } catch (error, stackTrace) {
+      _logError('generateCaptcha', error, stackTrace);
+      return null;
+    }
+  }
 
   static Future<String?> getToken() async {
     return SecureAppStorage.readToken();
@@ -186,15 +201,21 @@ class ApiService {
   }
 
   // Auth
-  static Future<Map<String, dynamic>?> login(
-      String username, String password) async {
+  static Future<Map<String, dynamic>?> login(String username, String password,
+      {required String captchaId, required String captchaValue}) async {
     lastLoginError = null;
+    lastLoginErrorCode = null;
     try {
       final resp = await http
           .post(
             _u('/auth/login'),
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'username': username, 'password': password}),
+            body: jsonEncode({
+              'username': username,
+              'password': password,
+              'captchaId': captchaId,
+              'captchaValue': captchaValue,
+            }),
           )
           .timeout(const Duration(seconds: 20));
       if (resp.statusCode == 200) {
@@ -205,6 +226,10 @@ class ApiService {
         }
         return data;
       }
+      try {
+        final error = jsonDecode(resp.body) as Map<String, dynamic>;
+        lastLoginErrorCode = error['errorCode']?.toString();
+      } catch (_) {}
       lastLoginError = _messageFromResponse(
         resp,
         resp.statusCode == 401 ||

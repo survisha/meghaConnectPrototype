@@ -89,6 +89,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
 function isPublicAuthUrl(url: string): boolean {
   return url.includes('/auth/login') ||
+    url.includes('/captcha/') ||
     url.includes('/auth/validate-otp') ||
     url.includes('/visitor/auth/check-mobile') ||
     url.includes('/visitor/auth/check-registration') ||

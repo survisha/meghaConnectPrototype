@@ -3,6 +3,7 @@ package com.survisha.meghaconnect.util;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Instant;
 import java.time.ZoneId;
 
 /**
@@ -26,5 +27,9 @@ public final class DateTimeUtil {
 
     public static Timestamp currentTimestampIST() {
         return Timestamp.valueOf(nowIST());
+    }
+
+    public static Instant nowISTInstant() {
+        return nowIST().atZone(IST_ZONE).toInstant();
     }
 }

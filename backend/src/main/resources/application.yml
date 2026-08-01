@@ -95,3 +95,11 @@ integration:
     allowed-photo-formats:
       - image/jpeg
       - image/png
+captcha:
+  enabled: ${CAPTCHA_ENABLED:true}
+  expiry-minutes: ${CAPTCHA_EXPIRY_MINUTES:5}
+  width: ${CAPTCHA_WIDTH:180}
+  height: ${CAPTCHA_HEIGHT:60}
+  font-size: ${CAPTCHA_FONT_SIZE:34}
+  length: ${CAPTCHA_LENGTH:6}
+  noise-lines: ${CAPTCHA_NOISE_LINES:8}

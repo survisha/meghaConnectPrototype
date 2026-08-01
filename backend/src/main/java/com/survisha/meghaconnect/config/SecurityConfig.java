@@ -74,6 +74,7 @@ public class SecurityConfig {
                 // Public API endpoints. Sensitive visitor, KYC, AI, QR, and file APIs are handled by JWT/RBAC.
                 .antMatchers(
                     "/api/v1/auth/**",
+                    "/api/v1/captcha/**",
                     "/error",
                     "/actuator/health/**",
                     "/actuator/info",

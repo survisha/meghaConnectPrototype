@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -26,6 +27,11 @@ class _LoginScreenState extends State<LoginScreen>
   final _staffFormKey = GlobalKey<FormState>();
   final _usernameCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
+  final _captchaCtrl = TextEditingController();
+  final _captchaFocus = FocusNode();
+  String? _captchaId;
+  String? _captchaImage;
+  bool _captchaLoading = false;
   bool _staffObscure = true;
   bool _staffLoading = false;
   String? _staffError;
@@ -52,6 +58,7 @@ class _LoginScreenState extends State<LoginScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _refreshCaptcha(focus: false);
   }
 
   @override
@@ -59,6 +66,8 @@ class _LoginScreenState extends State<LoginScreen>
     _tabController.dispose();
     _usernameCtrl.dispose();
     _passwordCtrl.dispose();
+    _captchaCtrl.dispose();
+    _captchaFocus.dispose();
     _phoneCtrl.dispose();
     _publicEpicCtrl.dispose();
     _otpCtrl.dispose();
@@ -75,15 +84,37 @@ class _LoginScreenState extends State<LoginScreen>
     final offline = context.read<ConnectivityService>().isOffline;
     final ok = offline
         ? await auth.loginWithCachedDeviceSession(username: _usernameCtrl.text)
-        : await auth.login(_usernameCtrl.text, _passwordCtrl.text);
+        : await auth.login(_usernameCtrl.text, _passwordCtrl.text,
+            captchaId: _captchaId ?? '', captchaValue: _captchaCtrl.text);
     if (!mounted) return;
     setState(() => _staffLoading = false);
     if (!ok) {
       setState(() =>
           _staffError = auth.lastError ?? 'Invalid username or password.');
+      if (!offline && (ApiService.lastLoginErrorCode == 'INVALID_CAPTCHA' ||
+          ApiService.lastLoginErrorCode == 'CAPTCHA_EXPIRED')) {
+        await _refreshCaptcha();
+      }
     } else {
       context.read<SyncService>().syncNow();
     }
+  }
+
+  Future<void> _refreshCaptcha({bool focus = true}) async {
+    if (_captchaLoading) return;
+    setState(() {
+      _captchaLoading = true;
+      _captchaCtrl.clear();
+    });
+    final captcha = await ApiService.generateCaptcha();
+    if (!mounted) return;
+    setState(() {
+      _captchaLoading = false;
+      _captchaId = captcha?['captchaId']?.toString();
+      _captchaImage = captcha?['captchaImage']?.toString();
+      if (captcha == null) _staffError = 'Unable to load captcha';
+    });
+    if (focus) _captchaFocus.requestFocus();
   }
 
   Future<void> _offlineSessionLogin() async {
@@ -508,6 +539,55 @@ class _LoginScreenState extends State<LoginScreen>
               textInputAction: TextInputAction.done,
               onFieldSubmitted: (_) => _staffLogin(),
             ),
+            const SizedBox(height: 14),
+            Semantics(
+              label: 'Captcha verification image',
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      height: 60,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        border: Border.all(color: const Color(0xFFCBD5E1)),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: _captchaLoading
+                          ? const CircularProgressIndicator()
+                          : (_captchaImage?.isNotEmpty ?? false)
+                              ? Image.memory(base64Decode(_captchaImage!),
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (_, __, ___) =>
+                                      const Text('Unable to load captcha'))
+                              : const Text('Unable to load captcha'),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Refresh captcha',
+                    onPressed: _captchaLoading ? null : _refreshCaptcha,
+                    icon: const Icon(Icons.refresh),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextFormField(
+              controller: _captchaCtrl,
+              focusNode: _captchaFocus,
+              textCapitalization: TextCapitalization.characters,
+              autocorrect: false,
+              decoration: const InputDecoration(
+                labelText: 'Captcha',
+                prefixIcon: Icon(Icons.verified_user_outlined),
+              ),
+              validator: (value) => !context.read<ConnectivityService>().isOffline &&
+                      (value == null || value.trim().isEmpty)
+                  ? 'Captcha is required'
+                  : null,
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) => _staffLogin(),
+            ),
             if (_staffError != null) ...[
               const SizedBox(height: 12),
               _buildError(_staffError!),
@@ -523,7 +603,7 @@ class _LoginScreenState extends State<LoginScreen>
             SizedBox(
               height: 50,
               child: ElevatedButton(
-                onPressed: _staffLoading ? null : _staffLogin,
+                onPressed: _staffLoading || _captchaLoading ? null : _staffLogin,
                 child: _staffLoading
                     ? const SizedBox(
                         height: 20,

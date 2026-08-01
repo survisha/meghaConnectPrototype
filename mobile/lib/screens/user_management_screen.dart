@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import '../services/notification_service.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
@@ -602,13 +603,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   }
 
   void _showSnack(String message, {bool success = true}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor:
-            success ? const Color(0xFF065F46) : const Color(0xFF991B1B),
-      ),
-    );
+    success
+        ? AppNotificationService.success(message)
+        : AppNotificationService.error(message);
   }
 }
 

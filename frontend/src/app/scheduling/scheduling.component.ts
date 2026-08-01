@@ -14,7 +14,7 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule, provideNativeDateAdapter } from '@angular/material/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { ToastService } from '../shared/toast/toast.service';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { DragDropModule, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { apiErrorMessage } from '../shared/api-error.util';
@@ -34,7 +34,6 @@ import { apiErrorMessage } from '../shared/api-error.util';
     MatNativeDateModule,
     MatCardModule,
     MatCheckboxModule,
-    MatSnackBarModule,
     MatTooltipModule,
     DragDropModule
   ],
@@ -89,7 +88,7 @@ export class SchedulingComponent implements OnInit {
     private scheduleEventService: ScheduleEventService,
     private appointmentService: AppointmentService,
     private referenceDataService: ReferenceDataService,
-    private snackBar: MatSnackBar
+    private snackBar: ToastService
   ) {}
 
   ngOnInit() {

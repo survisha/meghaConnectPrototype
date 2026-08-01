@@ -28,7 +28,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { ToastService } from '../../shared/toast/toast.service';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -80,7 +80,6 @@ interface AppointmentExportOptions {
     MatTooltipModule,
     MatDividerModule,
     MatProgressSpinnerModule,
-    MatSnackBarModule
   ],
   providers: [provideNativeDateAdapter()],
   templateUrl: './appointment-list.component.html',
@@ -245,7 +244,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     public auth: AuthService,
     private dialog: MatDialog,
     private sanitizer: DomSanitizer,
-    private snackBar: MatSnackBar,
+    private snackBar: ToastService,
     private cameraCapture: CameraCaptureService
   ) {}
 

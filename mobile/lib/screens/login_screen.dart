@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../services/notification_service.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -203,14 +204,8 @@ class _LoginScreenState extends State<LoginScreen>
         _publicNotice = null;
         _publicNoticeIsWarning = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message?.isNotEmpty == true
-              ? message!
-              : i18n.t('OTP_SENT_SUCCESS')),
-          backgroundColor: const Color(0xFF065F46),
-        ),
-      );
+      AppNotificationService.success(
+          message?.isNotEmpty == true ? message! : i18n.t('OTP_SENT_SUCCESS'));
     } else {
       setState(() {
         _otpSent = false;
@@ -372,9 +367,7 @@ class _LoginScreenState extends State<LoginScreen>
     final uri = Uri.parse(url);
     final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!opened && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(url)),
-      );
+      AppNotificationService.error('Unable to open the requested link.');
     }
   }
 

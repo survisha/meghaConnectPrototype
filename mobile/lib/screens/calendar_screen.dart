@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/notification_service.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
@@ -1136,13 +1137,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   void _snack(String message, {bool success = true}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor:
-            success ? const Color(0xFF065F46) : const Color(0xFF991B1B),
-      ),
-    );
+    success
+        ? AppNotificationService.success(message)
+        : AppNotificationService.error(message);
   }
 }
 

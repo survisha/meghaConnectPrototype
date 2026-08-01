@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'services/auth_service.dart';
 import 'services/connectivity_service.dart';
 import 'services/navigation_service.dart';
+import 'services/notification_service.dart';
 import 'services/sync_service.dart';
 import 'core/i18n/app_i18n.dart';
 import 'core/config/app_config.dart';
@@ -43,6 +44,7 @@ class MeghaConnectApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      scaffoldMessengerKey: AppNotificationService.messengerKey,
       title: 'MEGHACONNECT AI',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(

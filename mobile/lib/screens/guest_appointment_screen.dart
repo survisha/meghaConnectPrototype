@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../services/notification_service.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -224,9 +225,7 @@ class _GuestAppointmentScreenState extends State<GuestAppointmentScreen> {
         _submitting = false;
         _successReference = saved.referenceNumber;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Appointment saved offline.')),
-      );
+      AppNotificationService.info('Appointment saved offline.');
       return;
     }
     setState(() {

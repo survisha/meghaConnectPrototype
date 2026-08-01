@@ -8,9 +8,6 @@
     </button>
   </div>
 
-  <div *ngIf="successMsg" class="notice success">
-    <mat-icon>check_circle</mat-icon> {{ successMsg }}
-  </div>
   <div *ngIf="errorMsg && !showDialog" class="notice error">
     <mat-icon>error</mat-icon> {{ errorMsg }}
   </div>

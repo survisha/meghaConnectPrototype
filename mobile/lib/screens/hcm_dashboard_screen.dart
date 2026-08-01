@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/notification_service.dart';
 import 'package:provider/provider.dart';
 
 import '../models/user.dart';
@@ -720,8 +721,7 @@ class _HcmDashboardScreenState extends State<HcmDashboardScreen> {
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    AppNotificationService.info(message);
   }
 }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/notification_service.dart';
 import 'package:provider/provider.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
@@ -157,29 +158,18 @@ class _ApproverWorkflowScreenState extends State<ApproverWorkflowScreen> {
         appt.status = '$newStatus (Pending Sync)';
       });
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          result == null
-              ? 'No internet connection. Saved offline.'
-              : action == 'APPROVE'
-                  ? '${appt.id} approved and forwarded to HCM.'
-                  : '${appt.id} rejected.',
-        ),
-        backgroundColor: action == 'APPROVE'
-            ? const Color(0xFF2E7D32)
-            : const Color(0xFFC62828),
-      ),
-    );
+    final message = result == null
+        ? 'No internet connection. Saved offline.'
+        : action == 'APPROVE'
+            ? '${appt.id} approved and forwarded to HCM.'
+            : '${appt.id} rejected.';
+    result == null
+        ? AppNotificationService.info(message)
+        : AppNotificationService.success(message);
   }
 
   void _handleReschedule(_ApproverAppointment appt, String newDate) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${appt.id} rescheduled to $newDate.'),
-        backgroundColor: const Color(0xFF0288D1),
-      ),
-    );
+    AppNotificationService.success('${appt.id} rescheduled to $newDate.');
   }
 
   @override

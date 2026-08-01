@@ -16,6 +16,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { apiErrorMessage } from '../../shared/api-error.util';
+import { ToastService } from '../../shared/toast/toast.service';
 
 interface Scheme {
   id: number;
@@ -93,7 +94,7 @@ export class SchemeManagementComponent implements OnInit {
     { value: 'all', label: 'All formats' }
   ];
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient, private toast: ToastService) { }
 
   ngOnInit() {
     this.loadSchemes();
@@ -109,7 +110,7 @@ export class SchemeManagementComponent implements OnInit {
         },
         error: (err) => {
           console.error('Error loading schemes:', err);
-          alert('Error loading schemes: ' + apiErrorMessage(err, 'Unknown error'));
+          this.toast.error(apiErrorMessage(err, 'Error loading schemes.'));
           this.loading = false;
         }
       });
@@ -132,7 +133,7 @@ export class SchemeManagementComponent implements OnInit {
 
   createScheme() {
     if (!this.newSchemeForm.schemeCode || !this.newSchemeForm.schemeName) {
-      alert('Please enter Scheme Code and Scheme Name');
+      this.toast.warning('Please enter Scheme Code and Scheme Name');
       return;
     }
 
@@ -140,7 +141,7 @@ export class SchemeManagementComponent implements OnInit {
     this.http.post<Scheme>(`${environment.apiUrl}/admin/schemes`, this.newSchemeForm)
       .subscribe({
         next: (newScheme) => {
-          alert('Scheme created successfully');
+          this.toast.success('Scheme created successfully');
           this.schemes.push(newScheme);
           this.resetNewSchemeForm();
           this.showNewSchemeForm = false;
@@ -148,7 +149,7 @@ export class SchemeManagementComponent implements OnInit {
         },
         error: (err) => {
           console.error('Error creating scheme:', err);
-          alert('Error creating scheme: ' + apiErrorMessage(err, 'Unknown error'));
+          this.toast.error(apiErrorMessage(err, 'Error creating scheme.'));
           this.loading = false;
         }
       });
@@ -168,12 +169,12 @@ export class SchemeManagementComponent implements OnInit {
       .subscribe({
         next: (updated) => {
           scheme.isActive = updated.isActive;
-          alert(scheme.isActive ? 'Scheme activated' : 'Scheme marked as inactive');
+          this.toast.success(scheme.isActive ? 'Scheme activated' : 'Scheme marked as inactive');
           this.loading = false;
         },
         error: (err) => {
           console.error('Error updating scheme:', err);
-          alert('Error updating scheme: ' + apiErrorMessage(err, 'Unknown error'));
+          this.toast.error(apiErrorMessage(err, 'Error updating scheme.'));
           this.loading = false;
           // Revert the toggle
           event.source.checked = !newStatus;
@@ -198,7 +199,7 @@ export class SchemeManagementComponent implements OnInit {
         },
         error: (err) => {
           console.error('Error loading scheme documents:', err);
-          alert('Error loading scheme documents: ' + apiErrorMessage(err, 'Unknown error'));
+          this.toast.error(apiErrorMessage(err, 'Error loading scheme documents.'));
           this.loading = false;
         }
       });
@@ -221,14 +222,14 @@ export class SchemeManagementComponent implements OnInit {
 
   saveSchemeDocuments() {
     if (!this.selectedScheme) {
-      alert('No scheme selected');
+      this.toast.warning('No scheme selected');
       return;
     }
 
     // Validate documents
     for (const doc of this.documentForm) {
       if (!doc.documentType || !doc.documentLabel) {
-        alert('Please fill in all required document fields');
+        this.toast.warning('Please fill in all required document fields');
         return;
       }
     }
@@ -239,7 +240,7 @@ export class SchemeManagementComponent implements OnInit {
       this.documentForm
     ).subscribe({
       next: (updated) => {
-        alert('Documents configured successfully');
+        this.toast.success('Documents configured successfully');
         this.selectedScheme = updated;
         this.loadSchemes();
         this.closeDocumentConfig();
@@ -247,7 +248,7 @@ export class SchemeManagementComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error saving documents:', err);
-        alert('Error saving documents: ' + apiErrorMessage(err, 'Unknown error'));
+        this.toast.error(apiErrorMessage(err, 'Error saving documents.'));
         this.loading = false;
       }
     });

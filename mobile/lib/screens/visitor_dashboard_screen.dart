@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/notification_service.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
@@ -655,8 +656,9 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
         (ok
             ? 'KYC verification completed successfully.'
             : 'Unable to verify EPIC details.');
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    ok
+        ? AppNotificationService.success(message)
+        : AppNotificationService.error(message);
     if (ok) {
       setState(() {
         final profile = result['profile'];

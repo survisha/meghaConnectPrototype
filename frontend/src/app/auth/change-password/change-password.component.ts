@@ -7,6 +7,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { AuthService } from '../../services/auth.service';
 import { apiErrorMessage } from '../../shared/api-error.util';
+import { ToastService } from '../../shared/toast/toast.service';
 
 @Component({
   selector: 'app-change-password', standalone: true,
@@ -23,15 +24,18 @@ export class ChangePasswordComponent {
   });
   loading = false;
   errorMsg = '';
-  constructor(private readonly auth: AuthService, private readonly router: Router) {}
+  constructor(private readonly auth: AuthService, private readonly router: Router, private readonly toast: ToastService) {}
   submit(): void {
     if (this.form.invalid) { this.form.markAllAsTouched(); return; }
     const value = this.form.getRawValue();
     if (value.newPassword !== value.confirmPassword) { this.errorMsg = 'Passwords do not match'; return; }
     this.loading = true; this.errorMsg = '';
     this.auth.changeTemporaryPassword(value.currentPassword, value.newPassword).subscribe({
-      next: () => this.router.navigate(['/login'], { queryParams: { passwordChanged: true } }),
-      error: error => { this.loading = false; this.errorMsg = apiErrorMessage(error, 'Unable to change password'); },
+      next: () => {
+        this.toast.success('Password changed successfully. Please log in again.');
+        this.router.navigate(['/login'], { queryParams: { passwordChanged: true } });
+      },
+      error: error => { this.loading = false; this.toast.error(apiErrorMessage(error, 'Unable to change password')); },
     });
   }
   logout(): void { this.auth.logout(); }

@@ -1,0 +1,28 @@
+<div class="toast-container" aria-atomic="true">
+  @if (toast; as activeToast) {
+    <div
+      class="toast"
+      [class]="'toast ' + activeToast.type"
+      [attr.role]="activeToast.type === 'error' ? 'alert' : 'status'"
+      [attr.aria-live]="activeToast.type === 'error' ? 'assertive' : 'polite'">
+      <span class="toast-icon" aria-hidden="true">
+        @switch (activeToast.type) {
+          @case ('success') { &#10003; }
+          @case ('error') { ! }
+          @case ('warning') { &#9888; }
+          @default { i }
+        }
+      </span>
+      <span class="toast-content">
+        @if (activeToast.title) { <strong class="toast-title">{{ activeToast.title }}</strong> }
+        <span class="toast-message">{{ activeToast.message }}</span>
+      </span>
+      @if (activeToast.dismissible) {
+        <button class="toast-close" type="button" aria-label="Close notification" (click)="close()">&times;</button>
+      }
+      @if (activeToast.durationMs > 0) {
+        <span class="toast-progress" [style.animation-duration.ms]="activeToast.durationMs"></span>
+      }
+    </div>
+  }
+</div>

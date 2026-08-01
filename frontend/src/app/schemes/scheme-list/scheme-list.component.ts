@@ -16,7 +16,7 @@ import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
 import { AuthService } from '../../services/auth.service';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { ToastService } from '../../shared/toast/toast.service';
 import { finalize } from 'rxjs/operators';
 
 interface SchemeOption {
@@ -50,7 +50,6 @@ type SchemeSortColumn =
     MatPaginatorModule,
     MatDialogModule,
     MatDividerModule,
-    MatSnackBarModule
   ],
   templateUrl: './scheme-list.component.html',
   styleUrls: ['./scheme-list.component.scss'],
@@ -83,7 +82,7 @@ export class SchemeListComponent implements OnInit {
     private mockDataService: MockDataService,
     private visitorService: VisitorService,
     public auth: AuthService,
-    private snackBar: MatSnackBar,
+    private snackBar: ToastService,
   ) {}
 
   ngOnInit() {

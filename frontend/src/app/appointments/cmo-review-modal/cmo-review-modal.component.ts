@@ -12,6 +12,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { Appointment } from '../../models';
 import { AppointmentService } from '../../services/appointment.service';
 import { apiErrorMessage } from '../../shared/api-error.util';
+import { ToastService } from '../../shared/toast/toast.service';
 
 @Component({
   selector: 'app-cmo-review-modal',
@@ -40,7 +41,8 @@ export class CmoReviewModalComponent implements OnInit {
   constructor(
     public dialogRef: MatDialogRef<CmoReviewModalComponent>,
     @Inject(MAT_DIALOG_DATA) public data: { appointment: Appointment },
-    private appointmentService: AppointmentService
+    private appointmentService: AppointmentService,
+    private toast: ToastService
   ) {
     this.appointment = data.appointment;
   }
@@ -57,7 +59,7 @@ export class CmoReviewModalComponent implements OnInit {
    */
   submitCmoReview() {
     if (!this.pendingInformation.trim()) {
-      alert('Please add remarks about pending information or mark as complete');
+      this.toast.warning('Please add remarks about pending information or mark as complete');
       return;
     }
 
@@ -75,12 +77,12 @@ export class CmoReviewModalComponent implements OnInit {
     this.appointmentService.submitCmoReview(payload).subscribe({
       next: (response) => {
         this.isSubmitting = false;
-        alert('CMO review submitted successfully. Applicant and DEO have been notified.');
+        this.toast.success('CMO review submitted successfully. Applicant and DEO have been notified.');
         this.dialogRef.close({ submitted: true, data: response });
       },
       error: (err) => {
         this.isSubmitting = false;
-        alert('Error submitting CMO review: ' + apiErrorMessage(err, 'Unknown error'));
+        this.toast.error(apiErrorMessage(err, 'Error submitting CMO review.'));
         console.error('Error:', err);
       }
     });

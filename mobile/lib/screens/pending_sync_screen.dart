@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/notification_service.dart';
 import 'package:provider/provider.dart';
 
 import '../services/offline_repository.dart';
@@ -33,8 +34,7 @@ class _PendingSyncScreenState extends State<PendingSyncScreen> {
     setState(_reload);
     final message = context.read<SyncService>().lastMessage ??
         'Sync completed successfully.';
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    AppNotificationService.success(message);
   }
 
   @override

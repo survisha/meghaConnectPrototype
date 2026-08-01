@@ -1,9 +1,12 @@
-import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
+import { HttpContextToken, HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, from, mergeMap, throwError } from 'rxjs';
-import { apiErrorBodyMessage } from '../shared/api-error.util';
+import { apiErrorBodyMessage, statusFallback } from '../shared/api-error.util';
 import { AuthSessionService } from '../services/auth-session.service';
+import { ToastService } from '../shared/toast/toast.service';
+
+export const SKIP_GLOBAL_ERROR_TOAST = new HttpContextToken<boolean>(() => false);
 
 /**
  * HTTP Interceptor:
@@ -14,7 +17,9 @@ import { AuthSessionService } from '../services/auth-session.service';
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
   const authSession = inject(AuthSessionService);
+  const toast = inject(ToastService);
   const isPublicAuthRequest = isPublicAuthUrl(req.url);
+  const skipGlobalToast = req.context.get(SKIP_GLOBAL_ERROR_TOAST);
 
   const token = authSession.getAccessToken();
   // Clone request with Authorization header if token exists
@@ -25,6 +30,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   return next(authReq).pipe(
     catchError((error: HttpErrorResponse) => {
       if (error.status === 0) {
+        if (!skipGlobalToast) toast.error(statusFallback(0));
         return throwError(() => new Error('Unable to connect to the server. Please check your network.'));
       }
 
@@ -59,17 +65,28 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
           );
         }
         handleUnauthorized();
+        if (!skipGlobalToast) toast.error(statusFallback(401));
         return throwError(() => new Error(apiErrorBodyMessage(error.error, fallback)));
       }
 
       if (error.status === 403) {
         const fallback = 'You do not have permission to perform this action.';
+        if (!skipGlobalToast) toast.error(statusFallback(403));
         if (error.error instanceof Blob) {
           return from(error.error.text()).pipe(
             mergeMap(text => throwError(() => new Error(apiErrorBodyMessage(text, fallback))))
           );
         }
         return throwError(() => new Error(apiErrorBodyMessage(error.error, fallback)));
+      }
+
+      if (!skipGlobalToast && [429, 500, 502, 503, 504].includes(error.status)) {
+        const message = apiErrorBodyMessage(error.error, statusFallback(error.status));
+        if (error.status === 429) {
+          toast.warning(message);
+        } else {
+          toast.error(message);
+        }
       }
 
       if (error.error instanceof Blob) {

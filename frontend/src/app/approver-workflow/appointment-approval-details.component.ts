@@ -18,6 +18,7 @@ import { DocumentService } from '../services/document.service';
 import { AuthService } from '../services/auth.service';
 import { MatDialog } from '@angular/material/dialog';
 import { apiErrorMessage } from '../shared/api-error.util';
+import { ToastService } from '../shared/toast/toast.service';
 
 @Component({
   selector: 'app-appointment-approval-details',
@@ -60,7 +61,8 @@ export class AppointmentApprovalDetailsComponent implements OnInit {
     private fb: FormBuilder,
     private dialog: MatDialog,
     private auth: AuthService,
-    private documentService: DocumentService
+    private documentService: DocumentService,
+    private toast: ToastService
   ) {
     this.approvalForm = this.fb.group({
       remarks: ['', Validators.required]
@@ -87,7 +89,7 @@ export class AppointmentApprovalDetailsComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error loading appointment details:', err);
-        alert(apiErrorMessage(err, 'Error loading appointment details. Please try again.'));
+        this.toast.error(apiErrorMessage(err, 'Error loading appointment details. Please try again.'));
         this.loading = false;
       }
     });
@@ -95,7 +97,7 @@ export class AppointmentApprovalDetailsComponent implements OnInit {
 
   approveAndForward(): void {
     if (this.approvalForm.invalid) {
-      alert('Please enter remarks before approving');
+      this.toast.warning('Please enter remarks before approving');
       return;
     }
 
@@ -108,13 +110,13 @@ export class AppointmentApprovalDetailsComponent implements OnInit {
 
     this.appointmentService.approveAndForward(this.appointmentId, remarks, targetStatus).subscribe({
       next: () => {
-        alert(targetStatus === 'APPROVED' ? 'Appointment approved by Approver' : 'Appointment forwarded to Approver');
+        this.toast.success(targetStatus === 'APPROVED' ? 'Appointment approved by Approver' : 'Appointment forwarded to Approver');
         this.router.navigate(['/appointments/pending-approvals']);
         this.submitting = false;
       },
       error: (err) => {
         console.error('Error approving appointment:', err);
-        alert(apiErrorMessage(err, 'Error approving appointment. Please try again.'));
+        this.toast.error(apiErrorMessage(err, 'Error approving appointment. Please try again.'));
         this.submitting = false;
       }
     });
@@ -122,7 +124,7 @@ export class AppointmentApprovalDetailsComponent implements OnInit {
 
   rejectAppointment(): void {
     if (this.rejectForm.invalid) {
-      alert('Please enter rejection reason');
+      this.toast.warning('Please enter rejection reason');
       return;
     }
 
@@ -134,13 +136,13 @@ export class AppointmentApprovalDetailsComponent implements OnInit {
 
     this.appointmentService.rejectAppointment(this.appointmentId, rejectReason).subscribe({
       next: () => {
-        alert('Appointment rejected');
+        this.toast.success('Appointment rejected');
         this.router.navigate(['/appointments/pending-approvals']);
         this.submitting = false;
       },
       error: (err) => {
         console.error('Error rejecting appointment:', err);
-        alert(apiErrorMessage(err, 'Error rejecting appointment. Please try again.'));
+        this.toast.error(apiErrorMessage(err, 'Error rejecting appointment. Please try again.'));
         this.submitting = false;
       }
     });
@@ -152,7 +154,7 @@ export class AppointmentApprovalDetailsComponent implements OnInit {
 
   editAppointmentDetails(): void {
     // Open details edit dialog (to be implemented)
-    alert('Edit details feature coming soon');
+    this.toast.info('Edit details feature coming soon');
   }
 
   goBack(): void {
@@ -173,7 +175,7 @@ export class AppointmentApprovalDetailsComponent implements OnInit {
       },
       error: error => {
         this.downloadingDocumentId = null;
-        alert(apiErrorMessage(error, 'Unable to download document. Please try again.'));
+        this.toast.error(apiErrorMessage(error, 'Unable to download document. Please try again.'));
       },
     });
   }

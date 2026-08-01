@@ -3,12 +3,14 @@ import { Component, OnInit } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { LanguageService } from './i18n/language.service';
 import { BrandLogoComponent } from './shared/brand-logo/brand-logo.component';
+import { ToastComponent } from './shared/toast/toast.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, BrandLogoComponent],
+  imports: [CommonModule, RouterOutlet, BrandLogoComponent, ToastComponent],
   template: `
+    <app-toast></app-toast>
     <div *ngIf="showWelcome" class="welcome-screen">
       <div class="welcome-top">
         <app-brand-logo class="welcome-logo-lockup" label="MEGHACONNECT AI logo"></app-brand-logo>

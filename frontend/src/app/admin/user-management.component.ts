@@ -5,6 +5,8 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { AuthService } from '../services/auth.service';
 import { UserRole } from '../models';
 import { environment } from '../../environments/environment';
+import { ToastService } from '../shared/toast/toast.service';
+import { apiErrorMessage } from '../shared/api-error.util';
 
 import { MatButtonModule } from '@angular/material/button';
 import { MatTableModule } from '@angular/material/table';
@@ -69,7 +71,6 @@ export class UserManagementComponent implements OnInit {
   showDialog = false;
   isEdit = false;
   editTarget = '';
-  successMsg = '';
   errorMsg = '';
   showPassword = false;
 
@@ -94,7 +95,7 @@ export class UserManagementComponent implements OnInit {
     department: '',
   };
 
-  constructor(public auth: AuthService, private http: HttpClient) {}
+  constructor(public auth: AuthService, private http: HttpClient, private toast: ToastService) {}
 
   ngOnInit(): void {
     this.loadRoles();
@@ -155,7 +156,6 @@ export class UserManagementComponent implements OnInit {
   }
 
   save() {
-    this.successMsg = '';
     this.errorMsg = '';
 
     const username = this.form.username.trim();
@@ -326,7 +326,7 @@ export class UserManagementComponent implements OnInit {
         }
       },
       error: error => {
-        this.errorMsg = this.extractApiErrorMessage(error, 'Unable to load roles.');
+        this.toast.error(this.extractApiErrorMessage(error, 'Unable to load roles.'));
         this.roleOptions = [];
       },
     });
@@ -358,7 +358,7 @@ export class UserManagementComponent implements OnInit {
           }));
         this.applyFilters(false);
       },
-      error: error => this.errorMsg = this.extractApiErrorMessage(error, 'Failed to load users.'),
+      error: error => this.toast.error(this.extractApiErrorMessage(error, 'Failed to load users.')),
       complete: () => this.isLoading = false,
     });
   }
@@ -404,10 +404,9 @@ export class UserManagementComponent implements OnInit {
 
   private afterMutation(message: string) {
     this.showDialog = false;
-    this.successMsg = message;
+    this.toast.success(message);
     this.errorMsg = '';
     this.loadUsers();
-    setTimeout(() => this.successMsg = '', 3000);
   }
 
   private failMutation(message: string) {
@@ -416,17 +415,11 @@ export class UserManagementComponent implements OnInit {
   }
 
   private flashError(message: string) {
-    this.successMsg = '';
-    this.errorMsg = message;
-    setTimeout(() => this.errorMsg = '', 3000);
+    this.toast.error(message);
   }
 
   private extractApiErrorMessage(error: any, fallbackMessage: string): string {
-    return error?.error?.message
-      || error?.message
-      || error?.error?.errorMessage
-      || error?.error?.details
-      || fallbackMessage;
+    return apiErrorMessage(error, fallbackMessage);
   }
 
   private emptyForm(): ManagedUser {

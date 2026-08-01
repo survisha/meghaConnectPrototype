@@ -24,6 +24,7 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTabsModule } from '@angular/material/tabs';
 import { apiErrorMessage } from '../../shared/api-error.util';
+import { ToastService } from '../../shared/toast/toast.service';
 
 interface HcmAppointmentCard {
   id: number;
@@ -112,6 +113,7 @@ export class HcmDashboardComponent implements OnInit {
     private appointmentService: AppointmentService,
     private referenceDataService: ReferenceDataService,
     private visitorSearchService: VisitorSearchService,
+    private toast: ToastService,
   ) {}
   
   ngOnInit() {
@@ -264,7 +266,7 @@ export class HcmDashboardComponent implements OnInit {
 
   saveMeetingRemark() {
     if (!this.selectedAppointment || !this.actionFormData.remarks.trim()) {
-      alert('Please enter remarks before saving.');
+      this.toast.warning('Please enter remarks before saving.');
       return;
     }
     this.submittingAction = true;
@@ -274,7 +276,7 @@ export class HcmDashboardComponent implements OnInit {
       departmentCode: this.actionFormData.departmentCode,
     }).subscribe({
       next: () => {
-        alert('Remarks saved successfully.');
+        this.toast.success('Remarks saved successfully.');
         this.loadRemarks(this.selectedAppointment.id);
         this.loadAppointments();
         this.resetActionForm();
@@ -347,7 +349,7 @@ export class HcmDashboardComponent implements OnInit {
    */
   modifyAppointmentDateTime() {
     if (!this.selectedAppointment || !this.actionFormData.modifiedDateTime) {
-      alert('Please select a new date and time');
+      this.toast.warning('Please select a new date and time');
       return;
     }
     
@@ -412,7 +414,7 @@ export class HcmDashboardComponent implements OnInit {
       .subscribe({
         next: () => {
           this.clearApiError('submitAction');
-          alert('Action submitted successfully');
+          this.toast.success('Action submitted successfully');
           if (handledAppointmentId) {
             this.appointments = this.appointments.filter(item => item.id !== handledAppointmentId);
           }

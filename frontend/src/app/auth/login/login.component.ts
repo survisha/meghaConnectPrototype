@@ -13,6 +13,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { apiErrorMessage } from '../../shared/api-error.util';
 import { BrandLogoComponent } from '../../shared/brand-logo/brand-logo.component';
 import { CaptchaService } from '../../services/captcha.service';
+import { ToastService } from '../../shared/toast/toast.service';
 
 @Component({
   selector: 'app-login',
@@ -65,7 +66,8 @@ export class LoginComponent implements OnInit {
     private auth: AuthService,
     private captchaService: CaptchaService,
     private router: Router,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private toast: ToastService
   ) {
     if (auth.isLoggedIn()) router.navigate([auth.user()?.passwordChangeRequired ? '/change-password' : '/dashboard']);
   }
@@ -91,15 +93,20 @@ export class LoginComponent implements OnInit {
         if (success) {
           this.router.navigate([this.auth.user()?.passwordChangeRequired ? '/change-password' : '/dashboard']);
         } else {
-          this.errorMsg = this.translate.instant('ERROR_INVALID_USERNAME_PASSWORD');
+          this.toast.error(this.translate.instant('ERROR_INVALID_USERNAME_PASSWORD'));
         }
         this.loading = false;
       },
       error: err => {
         const code = err?.error?.errorCode;
-        this.errorMsg = code === 'CAPTCHA_EXPIRED' ? 'Captcha expired'
+        const message = code === 'CAPTCHA_EXPIRED' ? 'Captcha expired'
           : code === 'INVALID_CAPTCHA' ? 'Invalid captcha'
           : apiErrorMessage(err, this.translate.instant('ERROR_INVALID_USERNAME_PASSWORD'));
+        if (code === 'CAPTCHA_EXPIRED') {
+          this.toast.warning(message);
+        } else {
+          this.toast.error(message);
+        }
         this.loading = false;
         if (code === 'CAPTCHA_EXPIRED' || code === 'INVALID_CAPTCHA') this.refreshCaptcha();
       }
@@ -120,7 +127,7 @@ export class LoginComponent implements OnInit {
       },
       error: () => {
         this.captchaLoading.set(false);
-        this.errorMsg = 'Unable to load captcha';
+        this.toast.error('Unable to load captcha. Please try again.');
       },
     });
   }
@@ -132,12 +139,12 @@ export class LoginComponent implements OnInit {
         if (success) {
           this.router.navigate(['/visitor']);
         } else {
-          this.errorMsg = this.translate.instant('ERROR_OTP_VERIFICATION_FAILED');
+          this.toast.error(this.translate.instant('ERROR_OTP_VERIFICATION_FAILED'));
         }
         this.loading = false;
       },
       error: err => {
-        this.errorMsg = apiErrorMessage(err, this.translate.instant('ERROR_OTP_VERIFICATION_FAILED'));
+        this.toast.error(apiErrorMessage(err, this.translate.instant('ERROR_OTP_VERIFICATION_FAILED')));
         this.loading = false;
       }
     });

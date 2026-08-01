@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../services/notification_service.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
@@ -517,12 +518,8 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
         _submittedToken = null;
         _submitted = true;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content:
-              Text('Appointment saved offline. AI note generated offline.'),
-        ),
-      );
+      AppNotificationService.info(
+          'Appointment saved offline. AI note generated offline.');
       return;
     }
 

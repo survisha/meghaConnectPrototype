@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/notification_service.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
@@ -321,10 +322,8 @@ class _GrievanceScreenState extends State<GrievanceScreen> {
               if (!context.mounted) return;
               context.read<SyncService>().syncNow();
               setState(() => g.status = '$newStatus (Pending Sync)');
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                    content: Text('No internet connection. Saved offline.')),
-              );
+              AppNotificationService.info(
+                  'No internet connection. Saved offline.');
             }
             Navigator.pop(context);
           },
@@ -371,29 +370,17 @@ class _GrievanceScreenState extends State<GrievanceScreen> {
               );
               if (!context.mounted) return;
               context.read<SyncService>().syncNow();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                    content: Text('No internet connection. Saved offline.')),
-              );
+              AppNotificationService.info(
+                  'No internet connection. Saved offline.');
             }
             if (result != null && result['success'] == false) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(result['message']?.toString() ??
-                      'Failed to submit grievance.'),
-                  backgroundColor: const Color(0xFF991B1B),
-                ),
-              );
+              AppNotificationService.error(result['message']?.toString() ??
+                  'Failed to submit grievance.');
               return;
             }
             if (result == null && !offline) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content:
-                      Text('Failed to submit grievance. Please try again.'),
-                  backgroundColor: Color(0xFF991B1B),
-                ),
-              );
+              AppNotificationService.error(
+                  'Failed to submit grievance. Please try again.');
               return;
             }
             final created = result != null
@@ -412,16 +399,7 @@ class _GrievanceScreenState extends State<GrievanceScreen> {
                 : localGrievance;
             setState(() => _grievances.insert(0, created));
             Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  created.ticketId.isEmpty || created.ticketId == 'PENDING'
-                      ? 'Grievance submitted successfully.'
-                      : 'Grievance submitted successfully. Ticket: ${created.ticketId}',
-                ),
-                backgroundColor: const Color(0xFF065F46),
-              ),
-            );
+            AppNotificationService.success('Grievance submitted successfully.');
             if (widget.initialOpenForm) {
               Navigator.of(context).pop(true);
             }
@@ -1053,11 +1031,6 @@ class _NewGrievanceFormState extends State<_NewGrievanceForm> {
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: const Color(0xFF991B1B),
-      ),
-    );
+    AppNotificationService.error(message);
   }
 }

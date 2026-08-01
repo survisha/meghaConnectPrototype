@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../services/notification_service.dart';
+import 'department_access_request_screen.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -489,6 +490,13 @@ class _LoginScreenState extends State<LoginScreen>
               ),
             ],
           ),
+        ),
+        const SizedBox(height: 14),
+        OutlinedButton.icon(
+          onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => const DepartmentAccessRequestScreen())),
+          icon: const Icon(Icons.domain_add_outlined),
+          label: const Text('Request for Application'),
         ),
       ],
     );

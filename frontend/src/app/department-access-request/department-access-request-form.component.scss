@@ -1,0 +1,22 @@
+:host { display:block; min-height:100vh; background:#f4f8f7; color:#17212f; }
+.request-page { width:min(920px, calc(100% - 2rem)); margin:auto; padding:clamp(1rem,4vw,3rem) 0; }
+.request-header { display:grid; grid-template-columns:auto 1fr; gap:1.25rem; align-items:start; margin-bottom:1.5rem; }
+.request-header h1 { margin:.15rem 0 .4rem; font-size:clamp(1.8rem,4vw,2.7rem); color:#123c69; }
+.request-header p { margin:0; color:#526477; }
+.eyebrow { color:#0f6b52 !important; font-weight:800; text-transform:uppercase; letter-spacing:.08em; font-size:.78rem; }
+.back-link { display:inline-flex; align-items:center; gap:.3rem; color:#123c69; font-weight:700; padding:.55rem; border-radius:8px; }
+form { display:grid; gap:1rem; }
+.form-section { background:#fff; border:1px solid #d8e4e5; border-radius:14px; padding:clamp(1rem,3vw,1.5rem); box-shadow:0 8px 24px rgba(9,42,54,.06); }
+h2 { display:flex; align-items:center; gap:.5rem; margin:0 0 1.1rem; font-size:1.15rem; color:#123c69; }
+.form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
+label { display:block; margin:.8rem 0 .35rem; font-weight:750; }
+input, select, textarea { box-sizing:border-box; width:100%; border:1px solid #aebfc5; border-radius:8px; background:#fff; color:inherit; font:inherit; padding:.75rem; }
+textarea { resize:vertical; }
+input:focus, select:focus, textarea:focus { outline:3px solid rgba(15,107,82,.18); border-color:#0f6b52; }
+.field-error { display:block; color:#b42318; margin-top:.3rem; }
+.optional { color:#64748b; font-weight:400; }
+.loading-row { display:flex; align-items:center; gap:.6rem; margin:.75rem 0; }
+.form-actions { display:flex; justify-content:flex-end; align-items:center; gap:.75rem; padding-top:.5rem; }
+.form-actions button { min-width:170px; }
+.form-actions mat-spinner { display:inline-block; margin-right:.5rem; }
+@media (max-width:640px) { .request-header { grid-template-columns:1fr; } .form-grid { grid-template-columns:1fr; } .form-actions { flex-direction:column-reverse; align-items:stretch; } .form-actions a,.form-actions button { width:100%; } }

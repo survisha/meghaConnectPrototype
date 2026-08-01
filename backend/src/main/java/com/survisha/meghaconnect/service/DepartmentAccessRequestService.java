@@ -1,6 +1,7 @@
 package com.survisha.meghaconnect.service;
 
 import com.survisha.meghaconnect.dto.DepartmentAccessRequestDto;
+import com.survisha.meghaconnect.dto.CreateDepartmentAccessRequest;
 import com.survisha.meghaconnect.entity.Department;
 import com.survisha.meghaconnect.entity.DepartmentAccessRequest;
 import com.survisha.meghaconnect.exception.MeghaConnectException;
@@ -16,6 +17,11 @@ import com.survisha.meghaconnect.dto.CreateUserRequest;
 import com.survisha.meghaconnect.dto.DepartmentApprovalResult;
 import com.survisha.meghaconnect.entity.User;
 import java.security.SecureRandom;
+import com.survisha.meghaconnect.entity.ReferenceData;
+import com.survisha.meghaconnect.repository.ReferenceDataRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.dao.DataIntegrityViolationException;
 
 @Service @RequiredArgsConstructor
 public class DepartmentAccessRequestService {
@@ -23,15 +29,20 @@ public class DepartmentAccessRequestService {
     private final DepartmentRepository departmentRepository;
     private final AuditLogService auditLogService;
     private final UserService userService;
+    private final ReferenceDataRepository referenceDataRepository;
 
     @Transactional
-    public DepartmentAccessRequestDto submit(DepartmentAccessRequestDto dto) {
+    public DepartmentAccessRequestDto submit(CreateDepartmentAccessRequest dto) {
         String code = dto.getDepartmentCode().trim().toUpperCase(Locale.ROOT);
+        ReferenceData departmentReference = referenceDataRepository
+                .findByTypeCodeAndCodeAndIsActive("DEPARTMENT", code, true)
+                .orElseThrow(() -> new MeghaConnectException("INVALID_DEPARTMENT",
+                        "Please select an active department", 400));
         if (requestRepository.existsByDepartmentCodeIgnoreCaseAndRequestStatus(code, DepartmentAccessRequest.Status.PENDING)) {
             throw new MeghaConnectException("DUPLICATE_DEPARTMENT_REQUEST", "A pending request already exists", 409);
         }
         DepartmentAccessRequest entity = DepartmentAccessRequest.builder()
-                .departmentName(dto.getDepartmentName().trim()).departmentCode(code)
+                .departmentName(departmentReference.getValue()).departmentCode(code)
                 .nodalOfficerName(dto.getNodalOfficerName().trim())
                 .officialEmail(dto.getOfficialEmail().trim().toLowerCase(Locale.ROOT))
                 .officialMobile(dto.getOfficialMobile().trim())
@@ -39,17 +50,30 @@ public class DepartmentAccessRequestService {
                 .remarks(trim(dto.getRemarks())).requestStatus(DepartmentAccessRequest.Status.PENDING)
                 .submittedAt(DateTimeUtil.nowIST()).build();
         entity.setCreatedBy("public-department-request");
-        DepartmentAccessRequest saved = requestRepository.save(entity);
+        DepartmentAccessRequest saved;
+        try {
+            saved = requestRepository.saveAndFlush(entity);
+        } catch (DataIntegrityViolationException duplicate) {
+            throw new MeghaConnectException("DUPLICATE_DEPARTMENT_REQUEST",
+                    "A request for the selected department is already pending", 409);
+        }
         auditLogService.log("DEPARTMENT_REQUEST", saved.getId(), "DEPARTMENT_REQUEST_SUBMITTED",
                 "Department access request submitted for code " + code, "system");
         return toDto(saved);
     }
 
     @Transactional(readOnly = true)
-    public List<DepartmentAccessRequestDto> list(DepartmentAccessRequest.Status status) {
-        List<DepartmentAccessRequest> rows = status == null ? requestRepository.findAllByOrderBySubmittedAtDesc()
-                : requestRepository.findByRequestStatusOrderBySubmittedAtDesc(status);
-        return rows.stream().map(this::toDto).toList();
+    public Page<DepartmentAccessRequestDto> list(DepartmentAccessRequest.Status status, Pageable pageable) {
+        Page<DepartmentAccessRequest> rows = status == null ? requestRepository.findAllByOrderBySubmittedAtDesc(pageable)
+                : requestRepository.findByRequestStatusOrderBySubmittedAtDesc(status, pageable);
+        return rows.map(this::toDto);
+    }
+
+    @Transactional(readOnly = true)
+    public DepartmentAccessRequestDto get(Long id) {
+        return requestRepository.findById(id).map(this::toDto)
+                .orElseThrow(() -> new MeghaConnectException("DEPARTMENT_REQUEST_NOT_FOUND",
+                        "Department request not found", 404));
     }
 
     @Transactional

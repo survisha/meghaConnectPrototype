@@ -1185,6 +1185,32 @@ class ApiService {
     return [];
   }
 
+  static Future<Map<String, dynamic>> submitDepartmentAccessRequest(
+      Map<String, dynamic> request) async {
+    try {
+      final response = await http
+          .post(_u('/department-access-requests'),
+              headers: const {'Content-Type': 'application/json'},
+              body: jsonEncode(request))
+          .timeout(const Duration(seconds: 30));
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return {'success': true};
+      }
+      return {
+        'success': false,
+        'duplicate': response.statusCode == 409,
+        'message': _messageFromResponse(
+            response, 'Unable to submit the request. Please try again.'),
+      };
+    } catch (error, stackTrace) {
+      _logError('submitDepartmentAccessRequest', error, stackTrace);
+      return {
+        'success': false,
+        'message': 'Network unavailable. Please try again.'
+      };
+    }
+  }
+
   static Future<Map<String, dynamic>> searchVisitorByFace(String photo) async {
     try {
       final resp = await http

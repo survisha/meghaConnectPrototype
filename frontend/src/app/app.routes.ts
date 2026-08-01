@@ -20,6 +20,7 @@ import { AuditTrailComponent } from './reports/audit-trail/audit-trail.component
 import { UserManagementComponent } from './admin/user-management.component';
 import { DepartmentManagementComponent } from './admin/departments/department-management.component';
 import { DepartmentRequestsComponent } from './admin/department-requests/department-requests.component';
+import { DepartmentAccessRequestFormComponent } from './department-access-request/department-access-request-form.component';
 import { SchemeManagementComponent } from './admin/scheme-management/scheme-management.component';
 import { AppointmentTypeManagementComponent } from './admin/appointment-type-management/appointment-type-management.component';
 import { HcmDashboardComponent } from './admin/hcm-dashboard/hcm-dashboard.component';
@@ -44,6 +45,7 @@ export const routes: Routes = [
   { path: 'public-login', component: PublicLoginComponent },
   { path: 'register-visitor', component: VisitorRegisterComponent },
   { path: 'guest-appointment', component: GuestAppointmentComponent },
+  { path: 'department-access-request', component: DepartmentAccessRequestFormComponent },
   {
     path: '', component: ShellComponent,
     canActivate: [authGuard],

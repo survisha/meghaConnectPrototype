@@ -91,12 +91,12 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
       if (error.error instanceof Blob) {
         return from(error.error.text()).pipe(
-          mergeMap(text => throwError(() => new Error(apiErrorBodyMessage(text, error.message))))
+          mergeMap(text => throwError(() => new Error(apiErrorBodyMessage(text, statusFallback(error.status)))))
         );
       }
 
       // Extract error message from API response body if available
-      const message = apiErrorBodyMessage(error.error, error.message);
+      const message = apiErrorBodyMessage(error.error, statusFallback(error.status));
       return throwError(() => new Error(message));
     })
   );

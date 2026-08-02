@@ -18,6 +18,7 @@ import { MatStepperModule } from '@angular/material/stepper';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LanguageSelectorComponent } from '../shared/language-selector/language-selector.component';
 import { apiErrorMessage } from '../shared/api-error.util';
+import { finalize, Subscription } from 'rxjs';
 import { CameraCaptureService, CameraDeviceOption, CameraFacingMode } from '../shared/camera-capture.service';
 import { CameraLivenessService } from '../shared/camera-liveness.service';
 import {
@@ -162,6 +163,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   formExtractionResult: VisitorFormExtractionResponse | null = null;
   formExtractionError = '';
   formExtractionReviewed = false;
+  private formExtractionSubscription?: Subscription;
   extractedAge: number | null = null;
 
   // Multi-step KYC flow
@@ -326,6 +328,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    this.formExtractionSubscription?.unsubscribe();
     navigator.mediaDevices?.removeEventListener?.('devicechange', this.handleCameraDeviceChange);
     this.stopCamera();
     if (this.formImagePreview) URL.revokeObjectURL(this.formImagePreview);
@@ -341,9 +344,10 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.formExtractionResult = null;
     this.formExtractionReviewed = false;
     this.formExtractionLoading = true;
-    this.formExtractionService.extract(file).subscribe({
+    this.formExtractionSubscription = this.formExtractionService.extract(file).pipe(
+      finalize(() => { this.formExtractionLoading = false; })
+    ).subscribe({
       next: result => {
-        this.formExtractionLoading = false;
         this.formExtractionResult = result;
         if (!result.success) {
           this.formExtractionError = result.message;
@@ -367,7 +371,6 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
         }
       },
       error: error => {
-        this.formExtractionLoading = false;
         this.formExtractionError = apiErrorMessage(error, 'Unable to extract the handwritten form. Please try again.');
       }
     });
@@ -381,6 +384,13 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.formExtractionError = '';
     this.formExtractionReviewed = false;
     this.extractedAge = null;
+  }
+
+  continueWithManualEntry(): void {
+    this.formExtractionSubscription?.unsubscribe();
+    this.formExtractionSubscription = undefined;
+    this.formExtractionError = '';
+    this.formExtractionResult = null;
   }
 
   private t(key: string, params?: Record<string, unknown>): string {

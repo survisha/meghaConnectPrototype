@@ -5,12 +5,14 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.annotation.PostConstruct;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 @Configuration
+@Slf4j
 @EnableConfigurationProperties(FormExtractionProperties.class)
 public class OpenAiFormExtractionConfig {
     private final FormExtractionProperties properties;
@@ -43,6 +45,9 @@ public class OpenAiFormExtractionConfig {
     @Bean
     public OkHttpClient ollamaFormExtractionOkHttpClient() {
         FormExtractionProperties.Ollama ollama = properties.getOllama();
+        log.info("Ollama form extraction configured model={} connectTimeoutSeconds={} writeTimeoutSeconds={} readTimeoutSeconds={} callTimeoutSeconds={}",
+                ollama.getModel(), ollama.getConnectTimeoutSeconds(), ollama.getWriteTimeoutSeconds(),
+                ollama.getReadTimeoutSeconds(), ollama.getCallTimeoutSeconds());
         return new OkHttpClient.Builder()
                 .connectTimeout(ollama.getConnectTimeoutSeconds(), TimeUnit.SECONDS)
                 .writeTimeout(ollama.getWriteTimeoutSeconds(), TimeUnit.SECONDS)

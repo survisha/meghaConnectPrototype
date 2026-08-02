@@ -117,6 +117,8 @@
             <img *ngIf="formImagePreview" class="form-image-preview" [src]="formImagePreview"
                  alt="Selected handwritten visitor form preview" />
             <div *ngIf="formExtractionError" class="error-msg">{{ formExtractionError }}</div>
+            <button *ngIf="formExtractionLoading || formExtractionError" type="button" class="btn-link"
+                    (click)="continueWithManualEntry()">Continue with Manual Entry</button>
             <div *ngIf="formExtractionResult?.success" class="extraction-review">
               <strong>Manual review required</strong>
               <p>{{ formExtractionResult?.message }}</p>

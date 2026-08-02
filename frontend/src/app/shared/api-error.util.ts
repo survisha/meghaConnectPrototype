@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 
 export function apiErrorMessage(error: unknown, fallbackMessage = 'An unexpected error occurred.'): string {
   if (error instanceof HttpErrorResponse) {
+    if (error.status === 504) return 'Form extraction is taking longer than expected. Please try again.';
     return apiErrorBodyMessage(error.error, statusFallback(error.status, fallbackMessage));
   }
 
@@ -14,6 +15,7 @@ export function apiErrorMessage(error: unknown, fallbackMessage = 'An unexpected
 
 export function apiErrorBodyMessage(errorBody: unknown, fallbackMessage = 'An unexpected error occurred.'): string {
   if (typeof errorBody === 'string') {
+    if (looksLikeHtml(errorBody)) return fallbackMessage;
     try {
       return apiErrorBodyMessage(JSON.parse(errorBody), fallbackMessage);
     } catch {
@@ -51,9 +53,13 @@ export function statusFallback(status: number, fallbackMessage = 'An unexpected 
     429: 'Too many requests. Please try again shortly.',
     500: 'An unexpected error occurred. Please try again.',
     503: 'The service is temporarily unavailable.',
-    504: 'The request timed out. Please try again.',
+    504: 'Form extraction is taking longer than expected. Please try again.',
   };
   return messages[status] || fallbackMessage;
+}
+
+export function looksLikeHtml(value: string): boolean {
+  return /<!doctype\s+html|<html\b|<title>\s*\d{3}\s+[^<]*<\/title>|<body\b/i.test(value);
 }
 
 function safeMessage(value: string): string {

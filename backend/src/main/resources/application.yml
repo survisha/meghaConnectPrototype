@@ -35,13 +35,14 @@ ai:
       num-ctx: ${OLLAMA_NUM_CTX:4096}
       connect-timeout-seconds: ${OLLAMA_CONNECT_TIMEOUT_SECONDS:10}
       write-timeout-seconds: ${OLLAMA_WRITE_TIMEOUT_SECONDS:120}
-      read-timeout-seconds: ${OLLAMA_READ_TIMEOUT_SECONDS:300}
-      call-timeout-seconds: ${OLLAMA_CALL_TIMEOUT_SECONDS:360}
+      read-timeout-seconds: ${OLLAMA_READ_TIMEOUT_SECONDS:360}
+      call-timeout-seconds: ${OLLAMA_CALL_TIMEOUT_SECONDS:390}
       keep-alive: ${OLLAMA_KEEP_ALIVE:10m}
     image:
-      max-longest-side: ${FORM_EXTRACTION_IMAGE_MAX_LONGEST_SIDE:1600}
-      jpeg-quality: ${FORM_EXTRACTION_IMAGE_JPEG_QUALITY:0.82}
-      max-processed-size-bytes: ${FORM_EXTRACTION_IMAGE_MAX_PROCESSED_SIZE_BYTES:2097152}
+      max-longest-side: ${FORM_EXTRACTION_IMAGE_MAX_LONGEST_SIDE:1280}
+      jpeg-quality: ${FORM_EXTRACTION_IMAGE_JPEG_QUALITY:0.75}
+      max-processed-size-bytes: ${FORM_EXTRACTION_IMAGE_MAX_PROCESSED_SIZE_BYTES:1048576}
+      prevent-size-increase: ${FORM_EXTRACTION_IMAGE_PREVENT_SIZE_INCREASE:true}
       auto-rotate: ${FORM_EXTRACTION_IMAGE_AUTO_ROTATE:true}
       crop-document: ${FORM_EXTRACTION_IMAGE_CROP_DOCUMENT:true}
       perspective-correction: ${FORM_EXTRACTION_IMAGE_PERSPECTIVE_CORRECTION:true}

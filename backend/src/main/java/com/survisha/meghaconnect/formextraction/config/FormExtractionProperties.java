@@ -46,8 +46,8 @@ public class FormExtractionProperties {
         @Min(1) private int numCtx = 4096;
         @Min(1) private int connectTimeoutSeconds = 10;
         @Min(1) private int writeTimeoutSeconds = 120;
-        @Min(1) private int readTimeoutSeconds = 300;
-        @Min(1) private int callTimeoutSeconds = 360;
+        @Min(1) private int readTimeoutSeconds = 360;
+        @Min(1) private int callTimeoutSeconds = 390;
         @NotBlank private String keepAlive = "10m";
 
         @AssertTrue(message = "call timeout must be greater than or equal to read timeout")
@@ -82,10 +82,11 @@ public class FormExtractionProperties {
 
     @Data
     public static class Image {
-        @Min(1) private int maxLongestSide = 1600;
+        @Min(1) private int maxLongestSide = 1280;
         @javax.validation.constraints.DecimalMin("0.1") @javax.validation.constraints.DecimalMax("1.0")
-        private double jpegQuality = 0.82;
-        @Min(1) private long maxProcessedSizeBytes = 2_097_152;
+        private double jpegQuality = 0.75;
+        @Min(1) private long maxProcessedSizeBytes = 1_048_576;
+        private boolean preventSizeIncrease = true;
         private boolean autoRotate = true;
         private boolean cropDocument = true;
         private boolean perspectiveCorrection = true;

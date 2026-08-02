@@ -49,12 +49,16 @@ public class OllamaFormExtractionProvider implements AIFormExtractionProvider {
                 new OllamaChatRequest.OllamaMessage("user", promptBuilder.userInstruction(), List.of(base64))
         ), schema.jsonSchema(), new OllamaChatRequest.OllamaOptions(config.getTemperature(),config.getNumPredict(),config.getNumCtx()), config.getKeepAlive());
         long started=System.nanoTime();
+        log.info("Ollama form extraction request started provider=ollama model={} requestId={} imageSizeBytes={}",
+                config.getModel(), input.getRequestId(), input.getImageBytes().length);
         try {
             Request request = new Request.Builder().url(join(config.getBaseUrl(),config.getChatPath()))
                     .post(RequestBody.create(objectMapper.writeValueAsString(payload),JSON))
                     .header("Content-Type","application/json").build();
             try(Response response=client.newCall(request).execute()) {
                 String body=response.body()==null?null:response.body().string();
+                log.info("Ollama form extraction response received provider=ollama model={} requestId={} elapsedMs={} httpOutcome={}",
+                        config.getModel(), input.getRequestId(), (System.nanoTime()-started)/1_000_000, response.code());
                 if(!response.isSuccessful()) throw status(response.code(), body);
                 if(body==null||body.isBlank()) throw invalid("Ollama returned an empty response.");
                 OllamaChatResponse ollama=objectMapper.readValue(body,OllamaChatResponse.class);

@@ -19,6 +19,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import com.survisha.meghaconnect.repository.DepartmentAccessRequestRepository;
 import com.survisha.meghaconnect.repository.DepartmentRepository;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.jpa.domain.Specification;
+import java.util.List;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -50,6 +54,73 @@ class UserServiceTest {
                 () -> userService.unlockUser(20L, "health.admin"));
         assertEquals(403, ex.getHttpStatus());
         verify(userRepository, never()).save(target);
+    }
+
+    @Test
+    void departmentAdminGetsOnlyOwnDepartmentPage() {
+        Department own = Department.builder().id(1L).departmentCode("HEALTH")
+                .departmentName("Health").status(Department.DepartmentStatus.ACTIVE).build();
+        User actor = User.builder().id(10L).username("health.admin")
+                .role(User.UserRole.DEPARTMENT_ADMIN).department(own).build();
+        User deo = User.builder().id(20L).username("health.deo").fullName("Health DEO")
+                .role(User.UserRole.DEO).department(own).active(true).build();
+        var pageable = PageRequest.of(0, 10);
+        when(userRepository.findByNormalizedUsername("health.admin")).thenReturn(java.util.Optional.of(actor));
+        when(userRepository.findAll(any(Specification.class), eq(pageable)))
+                .thenReturn(new PageImpl<>(List.of(deo), pageable, 1));
+
+        var page = userService.getUserResponsesForActor(
+                "health.admin", null, null, null, null, null, pageable);
+
+        assertEquals(1, page.getTotalElements());
+        assertEquals("health.deo", page.getContent().get(0).getUsername());
+        assertEquals(1L, page.getContent().get(0).getDepartmentId());
+    }
+
+    @Test
+    void departmentAdminDepartmentTamperingIsRejected() {
+        Department own = Department.builder().id(1L).departmentCode("HEALTH")
+                .status(Department.DepartmentStatus.ACTIVE).build();
+        User actor = User.builder().username("health.admin")
+                .role(User.UserRole.DEPARTMENT_ADMIN).department(own).build();
+        when(userRepository.findByNormalizedUsername("health.admin")).thenReturn(java.util.Optional.of(actor));
+
+        MeghaConnectException ex = assertThrows(MeghaConnectException.class, () ->
+                userService.getUserResponsesForActor("health.admin", null, null, null,
+                        null, 2L, PageRequest.of(0, 10)));
+
+        assertEquals(403, ex.getHttpStatus());
+        verify(userRepository, never()).findAll(any(Specification.class), any(PageRequest.class));
+    }
+
+    @Test
+    void departmentAdminWithoutActiveDepartmentIsRejected() {
+        User missing = User.builder().username("missing.admin")
+                .role(User.UserRole.DEPARTMENT_ADMIN).build();
+        when(userRepository.findByNormalizedUsername("missing.admin")).thenReturn(java.util.Optional.of(missing));
+        assertEquals(403, assertThrows(MeghaConnectException.class, () ->
+                userService.getUserResponsesForActor("missing.admin", null, null, null,
+                        null, null, PageRequest.of(0, 10))).getHttpStatus());
+
+        Department inactive = Department.builder().id(3L)
+                .status(Department.DepartmentStatus.INACTIVE).build();
+        User inactiveActor = User.builder().username("inactive.admin")
+                .role(User.UserRole.DEPARTMENT_ADMIN).department(inactive).build();
+        when(userRepository.findByNormalizedUsername("inactive.admin")).thenReturn(java.util.Optional.of(inactiveActor));
+        assertEquals(403, assertThrows(MeghaConnectException.class, () ->
+                userService.getUserResponsesForActor("inactive.admin", null, null, null,
+                        null, null, PageRequest.of(0, 10))).getHttpStatus());
+    }
+
+    @Test
+    void superAdminCanRequestUnscopedPage() {
+        User actor = User.builder().username("superadmin").role(User.UserRole.SUPER_ADMIN).build();
+        var pageable = PageRequest.of(0, 5);
+        when(userRepository.findByNormalizedUsername("superadmin")).thenReturn(java.util.Optional.of(actor));
+        when(userRepository.findAll(any(Specification.class), eq(pageable)))
+                .thenReturn(new PageImpl<>(List.of(), pageable, 0));
+        assertTrue(userService.getUserResponsesForActor(
+                "superadmin", null, null, null, null, null, pageable).isEmpty());
     }
 
     @Test

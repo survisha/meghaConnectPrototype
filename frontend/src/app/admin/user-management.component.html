@@ -1,7 +1,7 @@
 <div class="user-management-page">
   <div class="page-header">
     <h2 class="page-title" style="margin:0;display:flex;align-items:center;gap:0.5rem">
-      <mat-icon>group</mat-icon> User Management
+      <mat-icon>group</mat-icon> User Management{{ departmentHeading }}
     </h2>
     <button id="userMgmt_addUserBtn" mat-raised-button color="primary" (click)="openNew()">
       <mat-icon>add</mat-icon> Add User
@@ -44,11 +44,11 @@
           <mat-option value="false">Unlocked</mat-option>
         </mat-select>
       </mat-form-field>
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" *ngIf="!isDepartmentAdmin">
         <mat-label>Department / Designation</mat-label>
         <mat-select [(ngModel)]="filters.department">
           <mat-option value="">All</mat-option>
-          <mat-option *ngFor="let dept of departments()" [value]="dept">{{ dept }}</mat-option>
+          <mat-option *ngFor="let dept of departmentOptions" [value]="dept.departmentName">{{ dept.departmentName }}</mat-option>
         </mat-select>
       </mat-form-field>
     </div>
@@ -135,7 +135,7 @@
                 <mat-icon>lock_open</mat-icon>
                 <span>Unlock</span>
               </button>
-              <button mat-menu-item [id]="'userMgmt_deleteBtn_' + i" (click)="deleteUser(u)" [disabled]="u.username === auth.user()?.username">
+              <button mat-menu-item *ngIf="auth.hasRole('SUPER_ADMIN')" [id]="'userMgmt_deleteBtn_' + i" (click)="deleteUser(u)" [disabled]="u.username === auth.user()?.username">
                 <mat-icon>delete</mat-icon>
                 <span>Delete</span>
               </button>
@@ -146,7 +146,9 @@
         <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
         <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
       </table>
-      <div *ngIf="!pagedUsers.length" style="padding:1.5rem;text-align:center;color:#6b7280">No users found.</div>
+      <div *ngIf="!pagedUsers.length" style="padding:1.5rem;text-align:center;color:#6b7280">
+        {{ isDepartmentAdmin ? 'No users have been created for this department.' : 'No users found.' }}
+      </div>
     </div>
 
     <div class="pagination-bar">

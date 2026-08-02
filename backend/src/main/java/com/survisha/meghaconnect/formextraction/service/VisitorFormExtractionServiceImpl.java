@@ -34,6 +34,8 @@ public class VisitorFormExtractionServiceImpl implements VisitorFormExtractionSe
 
     @Override
     public VisitorFormExtractionResponse extract(MultipartFile image, String formType, String languageHint, String actor) {
+        long lifecycleStart = System.nanoTime();
+        String requestId = RequestContextUtil.getRequestId();
         if (!properties.isEnabled()) {
             throw new FormExtractionException("FORM_EXTRACTION_DISABLED", "AI form extraction is disabled.", 503);
         }
@@ -42,12 +44,23 @@ public class VisitorFormExtractionServiceImpl implements VisitorFormExtractionSe
             return qualityFailure(validated.quality());
         }
         var processed = imagePreprocessor.process(validated);
+        log.debug("Visitor form extraction started requestId={} provider={} formType={} imageBytes={} imageWidth={} imageHeight={}",
+                requestId, properties.getProvider(), formType, processed.bytes().length,
+                processed.width(), processed.height());
         long start = System.nanoTime();
         FormExtractionInput input = FormExtractionInput.builder().imageBytes(processed.bytes())
                 .mimeType(processed.mimeType()).formType(formType).formVersion(properties.getFormVersion())
                 .languageHint(languageHint == null ? properties.getLanguageHint() : languageHint)
-                .requestId(RequestContextUtil.getRequestId()).build();
-        VisitorFormExtractionResult result = providerResolver.resolve(properties.getProvider()).extract(input);
+                .requestId(requestId).build();
+        VisitorFormExtractionResult result;
+        try {
+            result = providerResolver.resolve(properties.getProvider()).extract(input);
+        } catch (RuntimeException ex) {
+            log.debug("Visitor form extraction failed requestId={} provider={} formType={} imageBytes={} durationMs={} success=false exception={}",
+                    requestId, properties.getProvider(), formType, processed.bytes().length,
+                    (System.nanoTime()-lifecycleStart)/1_000_000, ex.getClass().getSimpleName());
+            throw ex;
+        }
         ExtractedVisitorField<String> epic = result.getExtractedEpic();
         ExtractedVisitorField<String> name = result.getExtractedName();
         ExtractedVisitorField<String> mobile = result.getExtractedMobileNumber();
@@ -68,6 +81,13 @@ public class VisitorFormExtractionServiceImpl implements VisitorFormExtractionSe
         meterRegistry.timer("form_extraction_duration", "provider", provider, "model", model)
                 .record(java.time.Duration.ofMillis(durationMs));
         if (review) meterRegistry.counter("form_extraction_manual_review_total", "provider", provider, "model", model).increment();
+        log.debug("Visitor form extraction completed requestId={} provider={} model={} formType={} imageBytes={} imageWidth={} imageHeight={} success=true epicPresent={} epicMasked={} epicStatus={} epicValid={} namePresent={} nameMasked={} nameStatus={} nameValid={} mobilePresent={} mobileLast4={} mobileStatus={} mobileValid={} addressPresent={} addressLength={} addressStatus={} addressValid={} requiresManualReview={} warningCount={} durationMs={}",
+                requestId, provider, model, formType, processed.bytes().length, processed.width(), processed.height(),
+                present(epic), maskEpic(epic.getValue()), epic.getStatus(), epic.isValid(),
+                present(name), maskName(name.getValue()), name.getStatus(), name.isValid(),
+                present(mobile), mobileLast4(mobile.getValue()), mobile.getStatus(), mobile.isValid(),
+                present(address), length(address.getValue()), address.getStatus(), address.isValid(),
+                review, warnings.size(), (System.nanoTime()-lifecycleStart)/1_000_000);
         log.info("Visitor form extraction completed provider={} fieldsFound={} manualReview={} durationMs={} model={}",
                 provider, fieldsFound, review, durationMs, model);
         return VisitorFormExtractionResponse.builder().success(true).documentType("VISITOR_REGISTRATION")
@@ -106,5 +126,18 @@ public class VisitorFormExtractionServiceImpl implements VisitorFormExtractionSe
     private String normalize(String value) { return value==null||value.isBlank()?null:value.trim().replaceAll("\\s+"," "); }
     private boolean uncertain(ExtractedVisitorField<?> f) {
         return f.getStatus()!=FieldStatus.EXTRACTED || f.getConfidence()==Confidence.LOW || f.getConfidence()==Confidence.NONE;
+    }
+    private boolean present(ExtractedVisitorField<?> field) { return field != null && field.getValue() != null; }
+    private int length(String value) { return value == null ? 0 : value.length(); }
+    static String maskEpic(String value) { return maskKeepingLast(value, 4); }
+    static String mobileLast4(String value) { return value == null || value.isBlank() ? "" : value.substring(Math.max(0,value.length()-4)); }
+    static String maskName(String value) {
+        if (value == null || value.isBlank()) return "";
+        return value.substring(0,1) + "*".repeat(Math.max(0,value.length()-1));
+    }
+    private static String maskKeepingLast(String value,int visible) {
+        if (value == null || value.isBlank()) return "";
+        int hidden=Math.max(0,value.length()-visible);
+        return "*".repeat(hidden)+value.substring(hidden);
     }
 }

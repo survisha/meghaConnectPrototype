@@ -91,11 +91,10 @@ class _LoginScreenState extends State<LoginScreen>
     if (!mounted) return;
     setState(() => _staffLoading = false);
     if (!ok) {
-      setState(() =>
-          _staffError = auth.lastError ?? 'Invalid username or password.');
-      if (!offline &&
-          (ApiService.lastLoginErrorCode == 'INVALID_CAPTCHA' ||
-              ApiService.lastLoginErrorCode == 'CAPTCHA_EXPIRED')) {
+      final message = auth.lastError ?? 'Invalid username or password.';
+      setState(() => _staffError = message);
+      AppNotificationService.error(message);
+      if (!offline && ApiService.lastLoginReachedServer) {
         await _refreshCaptcha();
       }
     } else {
@@ -115,8 +114,14 @@ class _LoginScreenState extends State<LoginScreen>
       _captchaLoading = false;
       _captchaId = captcha?['captchaId']?.toString();
       _captchaImage = captcha?['captchaImage']?.toString();
-      if (captcha == null) _staffError = 'Unable to load captcha';
+      if (captcha == null) {
+        _staffError = 'Unable to refresh CAPTCHA. Please try again.';
+      }
     });
+    if (captcha == null) {
+      AppNotificationService.error(
+          'Unable to refresh CAPTCHA. Please try again.');
+    }
     if (focus) _captchaFocus.requestFocus();
   }
 

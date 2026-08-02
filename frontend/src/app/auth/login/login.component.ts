@@ -14,6 +14,7 @@ import { apiErrorMessage } from '../../shared/api-error.util';
 import { BrandLogoComponent } from '../../shared/brand-logo/brand-logo.component';
 import { CaptchaService } from '../../services/captcha.service';
 import { ToastService } from '../../shared/toast/toast.service';
+import { finalize } from 'rxjs/operators';
 
 @Component({
   selector: 'app-login',
@@ -88,14 +89,15 @@ export class LoginComponent implements OnInit {
     }
     this.loading = true; this.errorMsg = '';
     const value = this.loginForm.getRawValue();
-    this.auth.login(value.username, value.password, value.captchaId, value.captchaValue).subscribe({
+    this.auth.login(value.username, value.password, value.captchaId, value.captchaValue).pipe(
+      finalize(() => this.loading = false)
+    ).subscribe({
       next: success => {
         if (success) {
           this.router.navigate([this.auth.user()?.passwordChangeRequired ? '/change-password' : '/dashboard']);
         } else {
           this.toast.error(this.translate.instant('ERROR_INVALID_USERNAME_PASSWORD'));
         }
-        this.loading = false;
       },
       error: err => {
         const code = err?.error?.errorCode;
@@ -107,8 +109,9 @@ export class LoginComponent implements OnInit {
         } else {
           this.toast.error(message);
         }
-        this.loading = false;
-        if (code === 'CAPTCHA_EXPIRED' || code === 'INVALID_CAPTCHA') this.refreshCaptcha();
+        // A submitted CAPTCHA is one-time-use. Refresh after every server-side
+        // authentication failure, but not when the request never reached it.
+        if (err?.status !== 0) this.refreshCaptcha();
       }
     });
   }
@@ -127,7 +130,7 @@ export class LoginComponent implements OnInit {
       },
       error: () => {
         this.captchaLoading.set(false);
-        this.toast.error('Unable to load captcha. Please try again.');
+        this.toast.error('Unable to refresh CAPTCHA. Please try again.');
       },
     });
   }

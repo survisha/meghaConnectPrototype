@@ -172,7 +172,12 @@
 .form-extraction-header .disabled { opacity: .6; pointer-events: none; }
 .extraction-progress { display: flex; align-items: center; gap: .6rem; margin-top: .8rem; color: #1a237e; }
 .form-image-preview { display: block; max-width: 100%; max-height: 220px; margin: .8rem auto; border-radius: 8px; }
-.extraction-review { margin-top: .8rem; padding: .75rem; border-radius: 8px; background: #fff7ed; border: 1px solid #fed7aa; }
+.extraction-review { margin-top: .8rem; padding: .75rem; border-radius: 8px; background: #fff7ed; border: 1px solid #c2410c; }
+.manual-review-banner { display: flex; align-items: flex-start; gap: .65rem; color: #7c2d12; }
+.manual-review-banner > mat-icon { flex: 0 0 auto; color: #9a3412; }
+.manual-review-content { min-width: 0; flex: 1; }
+.manual-review-content > strong { color: #7c2d12; font-weight: 800; }
+.manual-review-banner .manual-review-content p { color: #7c2d12; }
 .extraction-review ul { margin: .5rem 0; padding-left: 1.2rem; color: #92400e; font-size: .8rem; }
 
 .form-row.two-col {

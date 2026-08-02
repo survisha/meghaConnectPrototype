@@ -13,6 +13,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.util.List;
 import java.util.Optional;
@@ -59,6 +62,59 @@ public class UserService {
         }
         throw new MeghaConnectException(ErrorCodeConstants.UNAUTHORIZED_ACCESS,
                 ErrorCodeConstants.UNAUTHORIZED_ACCESS_MSG, 403);
+    }
+
+    public Page<UserResponse> getUserResponsesForActor(
+            String actor, String search, User.UserRole role, Boolean active, Boolean locked,
+            Long requestedDepartmentId, Pageable pageable) {
+        User currentUser = requireActor(actor);
+        Long scopedDepartmentId = requestedDepartmentId;
+        if (currentUser.getRole() == User.UserRole.DEPARTMENT_ADMIN) {
+            Department department = currentUser.getDepartment();
+            if (department == null || department.getId() == null) {
+                throw new MeghaConnectException(ErrorCodeConstants.UNAUTHORIZED_ACCESS,
+                        "Department Admin is not assigned to a department", 403);
+            }
+            if (department.getStatus() != Department.DepartmentStatus.ACTIVE) {
+                throw new MeghaConnectException(ErrorCodeConstants.UNAUTHORIZED_ACCESS,
+                        "Department is inactive", 403);
+            }
+            if (requestedDepartmentId != null && !requestedDepartmentId.equals(department.getId())) {
+                throw new MeghaConnectException(ErrorCodeConstants.UNAUTHORIZED_ACCESS,
+                        ErrorCodeConstants.UNAUTHORIZED_ACCESS_MSG, 403);
+            }
+            scopedDepartmentId = department.getId();
+        } else if (currentUser.getRole() != User.UserRole.SUPER_ADMIN
+                && currentUser.getRole() != User.UserRole.ADMIN) {
+            throw new MeghaConnectException(ErrorCodeConstants.UNAUTHORIZED_ACCESS,
+                    ErrorCodeConstants.UNAUTHORIZED_ACCESS_MSG, 403);
+        }
+
+        Specification<User> specification = Specification.where(null);
+        if (scopedDepartmentId != null) {
+            Long departmentId = scopedDepartmentId;
+            specification = specification.and((root, query, cb) ->
+                    cb.equal(root.get("department").get("id"), departmentId));
+        }
+        if (role != null) {
+            specification = specification.and((root, query, cb) -> cb.equal(root.get("role"), role));
+        }
+        if (active != null) {
+            specification = specification.and((root, query, cb) -> cb.equal(root.get("active"), active));
+        }
+        if (locked != null) {
+            specification = specification.and((root, query, cb) -> cb.equal(root.get("locked"), locked));
+        }
+        String term = trimToNull(search);
+        if (term != null) {
+            String pattern = "%" + term.toLowerCase(java.util.Locale.ROOT) + "%";
+            specification = specification.and((root, query, cb) -> cb.or(
+                    cb.like(cb.lower(root.get("fullName")), pattern),
+                    cb.like(cb.lower(root.get("username")), pattern),
+                    cb.like(cb.lower(root.get("email")), pattern),
+                    cb.like(root.get("phoneNumber"), pattern)));
+        }
+        return userRepository.findAll(specification, pageable).map(this::toResponse);
     }
 
     /**

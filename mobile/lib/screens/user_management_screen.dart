@@ -72,7 +72,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   String _currentUsername = '';
 
   static const _pageSize = 20;
-  int _visibleCount = _pageSize;
+  int _pageIndex = 0;
+  int _totalElements = 0;
 
   @override
   void initState() {
@@ -96,18 +97,36 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     } catch (_) {}
   }
 
-  Future<void> _loadUsers() async {
+  Future<void> _loadUsers({bool reset = true}) async {
+    if (_loading && !reset) return;
+    final requestedPage = reset ? 0 : _pageIndex + 1;
     setState(() => _loading = true);
-    final list = await ApiService.getUsers();
+    final page = await ApiService.getUsers(
+      page: requestedPage,
+      size: _pageSize,
+      search: _searchCtrl.text,
+      role: _roleFilter,
+      active: _activeFilter,
+      locked: _lockedFilter,
+    );
     if (!mounted) return;
+    final content = page?['content'];
+    final entries = content is List
+        ? content
+            .whereType<Map>()
+            .map((e) => _UserEntry.fromJson(Map<String, dynamic>.from(e)))
+            .where((u) => u.role != UserRole.PUBLIC)
+            .toList()
+        : <_UserEntry>[];
     setState(() {
-      _users = list
-          .whereType<Map>()
-          .map((e) => _UserEntry.fromJson(Map<String, dynamic>.from(e)))
-          .where((u) => u.role != UserRole.PUBLIC)
-          .toList();
+      _users = reset ? entries : [..._users, ...entries];
       _loading = false;
-      _visibleCount = _pageSize;
+      _pageIndex = (page?['number'] as num?)?.toInt() ?? requestedPage;
+      _totalElements =
+          (page?['totalElements'] as num?)?.toInt() ?? _users.length;
+      if (page == null) {
+        AppNotificationService.error('Unable to load department users.');
+      }
     });
   }
 
@@ -128,11 +147,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     }).toList();
   }
 
-  List<_UserEntry> get _visible => _filtered.take(_visibleCount).toList();
+  List<_UserEntry> get _visible => _filtered;
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _filtered;
     return Column(
       children: [
         _buildHeader(context),
@@ -144,14 +162,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   child: ListView.separated(
                     padding: const EdgeInsets.all(12),
                     itemCount: _visible.length +
-                        (_visible.length < filtered.length ? 1 : 0),
+                        (_users.length < _totalElements ? 1 : 0),
                     separatorBuilder: (_, __) => const SizedBox(height: 8),
                     itemBuilder: (_, i) {
                       if (i >= _visible.length) {
                         return Center(
                           child: OutlinedButton.icon(
-                            onPressed: () =>
-                                setState(() => _visibleCount += _pageSize),
+                            onPressed: () => _loadUsers(reset: false),
                             icon: const Icon(Icons.expand_more),
                             label: const Text('Load more'),
                           ),
@@ -164,7 +181,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                         onEdit: () => _showUserDialog(context, user),
                         onToggleActive: () => _toggleActive(user),
                         onUnlock: user.locked ? () => _unlockUser(user) : null,
-                        onDelete: () => _deleteUser(user),
+                        onDelete: context.read<AuthService>().user?.role ==
+                                UserRole.SUPER_ADMIN
+                            ? () => _deleteUser(user)
+                            : null,
                       );
                     },
                   ),
@@ -192,12 +212,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                             icon: const Icon(Icons.clear),
                             onPressed: () {
                               _searchCtrl.clear();
-                              setState(() => _visibleCount = _pageSize);
+                              _loadUsers();
                             },
                           )
                         : null,
                   ),
-                  onChanged: (_) => setState(() => _visibleCount = _pageSize),
+                  onSubmitted: (_) => _loadUsers(),
                 ),
               ),
               const SizedBox(width: 10),
@@ -246,7 +266,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         for (final role in roles)
           DropdownMenuItem(value: role.name, child: Text(role.badgeLabel)),
       ],
-      onChanged: (value) => setState(() => _roleFilter = value ?? ''),
+      onChanged: (value) {
+        setState(() => _roleFilter = value ?? '');
+        _loadUsers();
+      },
     );
   }
 
@@ -260,7 +283,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         DropdownMenuItem(value: 'true', child: Text('Active')),
         DropdownMenuItem(value: 'false', child: Text('Inactive')),
       ],
-      onChanged: (value) => setState(() => _activeFilter = value ?? ''),
+      onChanged: (value) {
+        setState(() => _activeFilter = value ?? '');
+        _loadUsers();
+      },
     );
   }
 
@@ -274,7 +300,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         DropdownMenuItem(value: 'true', child: Text('Locked')),
         DropdownMenuItem(value: 'false', child: Text('Unlocked')),
       ],
-      onChanged: (value) => setState(() => _lockedFilter = value ?? ''),
+      onChanged: (value) {
+        setState(() => _lockedFilter = value ?? '');
+        _loadUsers();
+      },
     );
   }
 
@@ -615,7 +644,7 @@ class _UserCard extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onToggleActive;
   final VoidCallback? onUnlock;
-  final VoidCallback onDelete;
+  final VoidCallback? onDelete;
 
   const _UserCard({
     required this.user,
@@ -668,7 +697,7 @@ class _UserCard extends StatelessWidget {
                     if (value == 'edit') onEdit();
                     if (value == 'toggle') onToggleActive();
                     if (value == 'unlock') onUnlock?.call();
-                    if (value == 'delete') onDelete();
+                    if (value == 'delete') onDelete?.call();
                   },
                   itemBuilder: (_) => [
                     const PopupMenuItem(value: 'edit', child: Text('Edit')),
@@ -680,11 +709,12 @@ class _UserCard extends StatelessWidget {
                     if (user.locked)
                       const PopupMenuItem(
                           value: 'unlock', child: Text('Unlock')),
-                    PopupMenuItem(
-                      value: 'delete',
-                      enabled: !isSelf,
-                      child: const Text('Delete'),
-                    ),
+                    if (onDelete != null)
+                      PopupMenuItem(
+                        value: 'delete',
+                        enabled: !isSelf,
+                        child: const Text('Delete'),
+                      ),
                   ],
                 ),
               ],

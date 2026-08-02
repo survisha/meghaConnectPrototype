@@ -3,6 +3,9 @@ package com.survisha.meghaconnect.repository;
 import com.survisha.meghaconnect.entity.User;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.Lock;
@@ -12,7 +15,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface UserRepository extends JpaRepository<User, Long> {
+public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificationExecutor<User> {
     Optional<User> findByUsername(String username);
     boolean existsByUsername(String username);
     @EntityGraph(attributePaths = "department")
@@ -26,6 +29,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByEmailIgnoreCase(String email);
     boolean existsByPhoneNumber(String phoneNumber);
     List<User> findByDepartment_Id(Long departmentId);
+    @EntityGraph(attributePaths = "department")
+    Page<User> findByDepartment_Id(Long departmentId, Pageable pageable);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select u from User u left join fetch u.department where lower(trim(u.username)) = lower(trim(:username))")

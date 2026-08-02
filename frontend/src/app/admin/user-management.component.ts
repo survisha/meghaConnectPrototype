@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { AuthService } from '../services/auth.service';
 import { UserRole } from '../models';
@@ -19,6 +19,7 @@ import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSortModule, Sort } from '@angular/material/sort';
+import { finalize } from 'rxjs/operators';
 
 interface ManagedUser {
   id?: number;
@@ -44,6 +45,14 @@ interface ApiResponse<T> {
   success: boolean;
   message: string;
   data: T;
+}
+
+interface PageResponse<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+  size: number;
 }
 
 interface DepartmentOption {
@@ -101,6 +110,16 @@ export class UserManagementComponent implements OnInit {
     this.loadRoles();
     this.loadDepartments();
     this.loadUsers();
+  }
+
+  get isDepartmentAdmin(): boolean {
+    return this.auth.hasRole('DEPARTMENT_ADMIN');
+  }
+
+  get departmentHeading(): string {
+    return this.isDepartmentAdmin && this.auth.user()?.departmentName
+      ? ` · ${this.auth.user()?.departmentName}`
+      : '';
   }
 
   roleBadge(role: UserRole): { [klass: string]: any } {
@@ -261,31 +280,14 @@ export class UserManagementComponent implements OnInit {
 
   applyFilters(resetPage = true) {
     if (resetPage) this.pageIndex = 0;
-    const search = this.filters.search.trim().toLowerCase();
-    this.filteredUsers = this.users.filter(user => {
-      const haystack = [
-        user.fullName, user.username, user.phoneNumber, user.email,
-      ].join(' ').toLowerCase();
-      const active = user.active !== false;
-      const locked = user.locked === true;
-      const dept = (user.departmentName || user.department || user.designation || '').trim();
-      return (!search || haystack.includes(search))
-        && (!this.filters.role || user.role === this.filters.role)
-        && (!this.filters.active || String(active) === this.filters.active)
-        && (!this.filters.locked || String(locked) === this.filters.locked)
-        && (!this.filters.department || dept === this.filters.department);
-    });
-    this.totalRecords = this.filteredUsers.length;
-    this.sortFilteredUsers();
-    this.updatePage();
+    this.loadUsers();
   }
 
   onSort(sort: Sort) {
     this.sortActive = (sort.active as keyof ManagedUser) || 'fullName';
     this.sortDirection = (sort.direction || 'asc') as 'asc' | 'desc';
     this.pageIndex = 0;
-    this.sortFilteredUsers();
-    this.updatePage();
+    this.loadUsers();
   }
 
   resetFilters() {
@@ -296,13 +298,13 @@ export class UserManagementComponent implements OnInit {
   changePage(delta: number) {
     const maxPage = Math.max(0, Math.ceil(this.totalRecords / this.pageSize) - 1);
     this.pageIndex = Math.min(maxPage, Math.max(0, this.pageIndex + delta));
-    this.updatePage();
+    this.loadUsers();
   }
 
   changePageSize(size: number | string) {
     this.pageSize = Number(size);
     this.pageIndex = 0;
-    this.updatePage();
+    this.loadUsers();
   }
 
   pageNumber(): number {
@@ -343,11 +345,26 @@ export class UserManagementComponent implements OnInit {
     });
   }
 
-  private loadUsers() {
+  loadUsers() {
+    if (this.isLoading) return;
     this.isLoading = true;
-    this.http.get<ManagedUser[]>(`${environment.apiUrl}/users`).subscribe({
-      next: users => {
-        this.users = (users ?? [])
+    let params = new HttpParams()
+      .set('page', this.pageIndex)
+      .set('size', this.pageSize)
+      .set('sort', `${this.sortActive},${this.sortDirection}`);
+    if (this.filters.search.trim()) params = params.set('search', this.filters.search.trim());
+    if (this.filters.role) params = params.set('role', this.filters.role);
+    if (this.filters.active) params = params.set('active', this.filters.active);
+    if (this.filters.locked) params = params.set('locked', this.filters.locked);
+    if (!this.isDepartmentAdmin && this.filters.department) {
+      const department = this.departmentOptions.find(item => item.departmentName === this.filters.department);
+      if (department) params = params.set('departmentId', department.id);
+    }
+    this.http.get<PageResponse<ManagedUser>>(`${environment.apiUrl}/users`, { params }).pipe(
+      finalize(() => this.isLoading = false)
+    ).subscribe({
+      next: page => {
+        this.users = (page.content ?? [])
           .filter(user => user.role !== 'PUBLIC' && user.role !== 'CITIZEN')
           .map(user => ({
             ...user,
@@ -356,10 +373,19 @@ export class UserManagementComponent implements OnInit {
             locked: user.locked === true,
             password: '',
           }));
-        this.applyFilters(false);
+        this.filteredUsers = [...this.users];
+        this.pagedUsers = [...this.users];
+        this.totalRecords = page.totalElements ?? this.users.length;
+        this.pageIndex = page.number ?? this.pageIndex;
       },
-      error: error => this.toast.error(this.extractApiErrorMessage(error, 'Failed to load users.')),
-      complete: () => this.isLoading = false,
+      error: () => {
+        this.users = [];
+        this.filteredUsers = [];
+        this.pagedUsers = [];
+        this.totalRecords = 0;
+        this.errorMsg = 'Unable to load department users.';
+        this.toast.error(this.errorMsg);
+      },
     });
   }
 

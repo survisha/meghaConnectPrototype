@@ -3,6 +3,7 @@ package com.survisha.meghaconnect.controller;
 import com.survisha.meghaconnect.dto.CreateUserRequest;
 import com.survisha.meghaconnect.dto.UpdateUserRequest;
 import com.survisha.meghaconnect.dto.UserResponse;
+import com.survisha.meghaconnect.entity.User;
 import com.survisha.meghaconnect.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -18,6 +19,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import javax.validation.Valid;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.domain.Sort;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -37,8 +42,16 @@ public class UserController {
     })
     @GetMapping
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','DEPARTMENT_ADMIN')")
-    public ResponseEntity<List<UserResponse>> getAll(Authentication authentication) {
-        return ResponseEntity.ok(userService.getUserResponsesForActor(actor(authentication)));
+    public ResponseEntity<Page<UserResponse>> getAll(
+            Authentication authentication,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) User.UserRole role,
+            @RequestParam(required = false) Boolean active,
+            @RequestParam(required = false) Boolean locked,
+            @RequestParam(required = false) Long departmentId,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(userService.getUserResponsesForActor(
+                actor(authentication), search, role, active, locked, departmentId, pageable));
     }
 
     @Operation(summary = "Get user by ID", description = "Retrieve a specific user by their ID (admin, HCM, OSD only)")

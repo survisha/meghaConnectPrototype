@@ -92,6 +92,8 @@ class AuthUser {
   final String fullName;
   final UserRole role;
   final int? visitorId;
+  final int? departmentId;
+  final String? departmentName;
   final bool passwordChangeRequired;
 
   const AuthUser({
@@ -99,6 +101,8 @@ class AuthUser {
     required this.fullName,
     required this.role,
     this.visitorId,
+    this.departmentId,
+    this.departmentName,
     this.passwordChangeRequired = false,
   });
 
@@ -107,6 +111,8 @@ class AuthUser {
         'fullName': fullName,
         'role': role.name,
         if (visitorId != null) 'visitorId': visitorId,
+        if (departmentId != null) 'departmentId': departmentId,
+        if (departmentName != null) 'departmentName': departmentName,
         'passwordChangeRequired': passwordChangeRequired,
       };
 
@@ -115,6 +121,8 @@ class AuthUser {
         fullName: json['fullName'] as String,
         role: UserRole.values.byName(json['role'] as String),
         visitorId: (json['visitorId'] as num?)?.toInt(),
+        departmentId: (json['departmentId'] as num?)?.toInt(),
+        departmentName: json['departmentName'] as String?,
         passwordChangeRequired: json['passwordChangeRequired'] == true,
       );
 }

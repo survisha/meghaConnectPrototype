@@ -18,6 +18,7 @@ import { MatStepperModule } from '@angular/material/stepper';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LanguageSelectorComponent } from '../shared/language-selector/language-selector.component';
 import { apiErrorMessage } from '../shared/api-error.util';
+import { ToastService } from '../shared/toast/toast.service';
 import { finalize, Subscription } from 'rxjs';
 import { CameraCaptureService, CameraDeviceOption, CameraFacingMode } from '../shared/camera-capture.service';
 import { CameraLivenessService } from '../shared/camera-liveness.service';
@@ -163,7 +164,10 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   formExtractionResult: VisitorFormExtractionResponse | null = null;
   formExtractionError = '';
   formExtractionReviewed = false;
+  formExtractionSelectionWarning = '';
   private formExtractionSubscription?: Subscription;
+  private extractionEpicLookupInFlight = false;
+  private lastExtractionEpicLookup = '';
   extractedAge: number | null = null;
 
   // Multi-step KYC flow
@@ -301,7 +305,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     private cameraCapture: CameraCaptureService,
     private cameraLiveness: CameraLivenessService,
     private referenceDataService: ReferenceDataService,
-    private formExtractionService: VisitorFormExtractionService
+    private formExtractionService: VisitorFormExtractionService,
+    private toast: ToastService
   ) {
     // Detect DEO mode from route snapshot URL segments
     this.isDeoMode = this.route.snapshot.url.some(segment => segment.path === 'register-visitor');
@@ -353,22 +358,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
           this.formExtractionError = result.message;
           return;
         }
-        if (result.epic?.valid && result.epic.value) {
-          this.form.idType = 'EPIC';
-          this.form.epicNumber = result.epic.value;
-        }
-        if (result.name?.valid && result.name.value) {
-          this.form.fullName = result.name.value;
-          this.form.visitorName = result.name.value;
-        }
-        if (result.mobileNumber?.valid && result.mobileNumber.value) {
-          this.manualPhone = result.mobileNumber.value;
-          this.form.phoneNumber = result.mobileNumber.value;
-        }
-        if (result.address?.valid && result.address.value) {
-          this.form.address = result.address.value;
-          this.form.fullAddress = result.address.value;
-        }
+        this.applyExtractedVisitorData(result);
       },
       error: error => {
         this.formExtractionError = apiErrorMessage(error, 'Unable to extract the handwritten form. Please try again.');
@@ -383,6 +373,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.formExtractionResult = null;
     this.formExtractionError = '';
     this.formExtractionReviewed = false;
+    this.formExtractionSelectionWarning = '';
     this.extractedAge = null;
   }
 
@@ -391,6 +382,69 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.formExtractionSubscription = undefined;
     this.formExtractionError = '';
     this.formExtractionResult = null;
+  }
+
+  get extractionReviewPending(): boolean {
+    return !!this.formExtractionResult?.success && !this.formExtractionReviewed;
+  }
+
+  applyExtractedVisitorData(result: VisitorFormExtractionResponse): void {
+    if (!result.success) return;
+    this.formExtractionReviewed = false;
+    const epic = (result.epic?.value || '').trim().toUpperCase();
+    const validEpic = !!result.epic?.valid && this.epicPattern.test(epic);
+    const desiredIdType: VisitorRegistrationForm['idType'] = validEpic ? 'EPIC' : 'NONE';
+
+    if (!this.form.idType) {
+      this.onIdTypeChange(desiredIdType);
+    } else if (this.form.idType !== desiredIdType) {
+      this.formExtractionSelectionWarning = 'Your selected ID type was kept. Review the extracted EPIC before continuing.';
+    }
+
+    if (this.form.idType === desiredIdType) {
+      if (validEpic && !this.form.epicNumber.trim()) this.form.epicNumber = epic;
+      if (!validEpic) {
+        this.formExtractionSelectionWarning = 'EPIC was not available in the form. Please verify the details and continue using No ID.';
+      }
+    }
+
+    const name = (result.name?.value || '').trim();
+    const mobile = (result.mobileNumber?.value || '').replace(/\D/g, '');
+    const address = (result.address?.value || '').trim();
+    if (name && !this.form.fullName.trim()) this.form.fullName = name;
+    if (name && !this.form.visitorName.trim()) this.form.visitorName = name;
+    if (mobile && !this.manualPhone.trim()) this.manualPhone = mobile;
+    if (mobile && !this.form.phoneNumber.trim()) this.form.phoneNumber = mobile;
+    if (address && !this.form.address.trim()) this.form.address = address;
+    if (address && !this.form.fullAddress.trim()) this.form.fullAddress = address;
+
+    if (validEpic && this.form.idType === 'EPIC' && this.form.epicNumber === epic) {
+      this.toast.success('Form details extracted. Please verify the populated values.');
+      this.lookupExtractedEpicOnce(epic);
+    } else if (!epic) {
+      this.toast.warning('EPIC was not found. No ID has been selected.');
+    } else {
+      this.toast.warning('Extracted EPIC requires manual verification.');
+    }
+  }
+
+  private lookupExtractedEpicOnce(epic: string): void {
+    if (this.extractionEpicLookupInFlight || this.lastExtractionEpicLookup === epic || !this.form.visitorName.trim()) return;
+    this.extractionEpicLookupInFlight = true;
+    this.lastExtractionEpicLookup = epic;
+    this.kycService.verifyEpic({ epicNumber: epic, visitorName: this.form.visitorName, phoneNumber: this.manualPhone || undefined })
+      .pipe(finalize(() => { this.extractionEpicLookupInFlight = false; }))
+      .subscribe({
+        next: response => {
+          if (response.code !== '200' || !response.data) return;
+          const verified = this.mapEpicKycResponse(response);
+          if (!this.form.pollingPartNo) this.form.pollingPartNo = verified.pollingPartNo || '';
+          if (!this.form.pollingStationAddress) this.form.pollingStationAddress = verified.pollingStationAddress || '';
+          if (!this.form.assemblyConstituencyNumber) this.form.assemblyConstituencyNumber = verified.assemblyConstituencyNumber || '';
+          if (!this.form.assemblyConstituencyName) this.form.assemblyConstituencyName = verified.assemblyConstituencyName || '';
+        },
+        error: () => this.toast.warning('EPIC details could not be verified. Please review the entered information.')
+      });
   }
 
   private t(key: string, params?: Record<string, unknown>): string {
@@ -415,6 +469,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   }
 
   get canValidateId(): boolean {
+    if (this.extractionReviewPending) return false;
     if (this.form.idType === 'EPIC') {
       const hasValidEpic = this.epicPattern.test(this.form.epicNumber);
       const hasValidName = this.isValidName(this.form.visitorName);

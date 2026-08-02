@@ -60,6 +60,8 @@ class AuthService extends ChangeNotifier {
     final fullName = data['fullName'] as String? ?? uname;
     final roleStr = data['role'] as String? ?? 'PUBLIC';
     final visitorId = (data['visitorId'] as num?)?.toInt();
+    final departmentId = (data['departmentId'] as num?)?.toInt();
+    final departmentName = data['departmentName'] as String?;
     final expiresIn = (data['expiresIn'] as num?)?.toInt();
     final passwordChangeRequired = data['passwordChangeRequired'] == true;
 
@@ -82,6 +84,8 @@ class AuthService extends ChangeNotifier {
         fullName: fullName,
         role: role,
         visitorId: visitorId,
+        departmentId: departmentId,
+        departmentName: departmentName,
         passwordChangeRequired: passwordChangeRequired);
 
     await SecureAppStorage.writeUserJson(jsonEncode(_user!.toJson()));

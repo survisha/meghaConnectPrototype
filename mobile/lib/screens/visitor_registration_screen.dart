@@ -62,6 +62,10 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
   bool _otpVerified = false;
   bool _outsideMeghalaya = false;
   bool _consentAccepted = false;
+  bool _extractingForm = false;
+  bool _formExtractionReviewed = false;
+  String? _formImagePath;
+  String? _lastExtractedEpicLookup;
   String? _error;
   String? _warning;
   String? _success;
@@ -159,6 +163,7 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
 
   bool get _canGenerateRegistrationOtp {
     if (_loading) return false;
+    if (_formImagePath != null && !_formExtractionReviewed) return false;
     if (_idType == 'EPIC') {
       return _hasValidEpic && _hasValidVisitorName && _hasValidMobile;
     }
@@ -166,6 +171,95 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
       return _hasValidVisitorName && _hasValidMobile;
     }
     return true;
+  }
+
+  Future<void> _captureAndExtractForm() async {
+    if (_extractingForm) return;
+    final baselineIdType = _idType;
+    final image = await _imagePicker.pickImage(
+        source: ImageSource.camera, imageQuality: 85, maxWidth: 1600);
+    if (image == null || !mounted) return;
+    setState(() {
+      _extractingForm = true;
+      _formImagePath = image.path;
+      _formExtractionReviewed = false;
+      _clearMessages();
+    });
+    final result = await ApiService.extractVisitorForm(image.path);
+    if (!mounted) return;
+    if (result['success'] != true) {
+      setState(() {
+        _extractingForm = false;
+        _error = result['message']?.toString() ?? 'Unable to extract the form.';
+      });
+      return;
+    }
+    await _applyExtractedVisitorData(result, baselineIdType);
+    if (mounted) setState(() => _extractingForm = false);
+  }
+
+  Future<void> _applyExtractedVisitorData(
+      Map<String, dynamic> result, String baselineIdType) async {
+    String field(String key) {
+      final value = result[key];
+      return value is Map<String, dynamic>
+          ? (value['value']?.toString().trim() ?? '')
+          : '';
+    }
+
+    bool valid(String key) =>
+        result[key] is Map<String, dynamic> && result[key]['valid'] == true;
+    final epic = field('epic').toUpperCase();
+    final validEpic =
+        valid('epic') && RegExp(r'^[A-Z]{3}[0-9]{7}$').hasMatch(epic);
+    final name = field('name');
+    final mobile = field('mobileNumber').replaceAll(RegExp(r'\D'), '');
+    final address = field('address');
+    setState(() {
+      if (_idType == baselineIdType) {
+        _idType = validEpic ? 'EPIC' : 'NONE';
+      }
+      if (validEpic && _epicCtrl.text.trim().isEmpty) {
+        _epicCtrl.text = epic;
+      }
+      if (name.isNotEmpty && _visitorNameCtrl.text.trim().isEmpty) {
+        _visitorNameCtrl.text = name;
+      }
+      if (name.isNotEmpty && _fullNameCtrl.text.trim().isEmpty) {
+        _fullNameCtrl.text = name;
+      }
+      if (mobile.isNotEmpty && _phoneCtrl.text.trim().isEmpty) {
+        _phoneCtrl.text = mobile;
+      }
+      if (address.isNotEmpty && _addressCtrl.text.trim().isEmpty) {
+        _addressCtrl.text = address;
+      }
+      _warning = _idType != baselineIdType
+          ? 'Your selected ID type was kept. Please review the extracted details.'
+          : validEpic
+              ? 'Manual review required. Please verify the extracted details before continuing.'
+              : 'EPIC was not available in the form. Please verify the details and continue using No ID.';
+    });
+    if (validEpic &&
+        _idType == 'EPIC' &&
+        _lastExtractedEpicLookup != epic &&
+        _visitorNameCtrl.text.trim().isNotEmpty) {
+      _lastExtractedEpicLookup = epic;
+      final lookup = await ApiService.verifyEpic(
+          epicNumber: epic,
+          visitorName: _visitorNameCtrl.text,
+          phoneNumber: _phoneCtrl.text);
+      if (!mounted) return;
+      final data = lookup['data'];
+      if (data is Map<String, dynamic>) {
+        final polling = data['pollingdetails'];
+        if (polling is Map<String, dynamic> && _partNumberCtrl.text.isEmpty) {
+          _partNumberCtrl.text =
+              (polling['pollingpartno'] ?? polling['pollingPartNo'] ?? '')
+                  .toString();
+        }
+      }
+    }
   }
 
   void _setOutsideMeghalaya(bool value) {
@@ -866,6 +960,59 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            OutlinedButton.icon(
+              onPressed: _extractingForm ? null : _captureAndExtractForm,
+              icon: _extractingForm
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.document_scanner_outlined),
+              label: Text(_extractingForm
+                  ? 'Extracting form details…'
+                  : 'Capture handwritten form'),
+            ),
+            if (_formImagePath != null) ...[
+              const SizedBox(height: 12),
+              Semantics(
+                liveRegion: true,
+                label: 'Manual review required',
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                      color: const Color(0xFFFFF7ED),
+                      border: Border.all(color: const Color(0xFFC2410C)),
+                      borderRadius: BorderRadius.circular(8)),
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(children: [
+                          Icon(Icons.warning_amber, color: Color(0xFF9A3412)),
+                          SizedBox(width: 8),
+                          Expanded(
+                              child: Text('Manual review required',
+                                  style: TextStyle(
+                                      color: Color(0xFF7C2D12),
+                                      fontWeight: FontWeight.w800)))
+                        ]),
+                        const SizedBox(height: 6),
+                        const Text(
+                            'Please verify the extracted details before continuing.',
+                            style: TextStyle(color: Color(0xFF7C2D12))),
+                        CheckboxListTile(
+                          contentPadding: EdgeInsets.zero,
+                          value: _formExtractionReviewed,
+                          onChanged: (value) => setState(
+                              () => _formExtractionReviewed = value ?? false),
+                          title: const Text(
+                              'I have verified the extracted details.'),
+                          controlAffinity: ListTileControlAffinity.leading,
+                        ),
+                      ]),
+                ),
+              ),
+            ],
+            const SizedBox(height: 14),
             Text(
               '${i18n.t('ID_TYPE')} *',
               style: const TextStyle(fontWeight: FontWeight.w700),

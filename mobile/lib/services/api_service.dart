@@ -10,6 +10,7 @@ class ApiService {
   static Uri _fileApi(String path) => Uri.parse('${AppConfig.apiBaseUrl}$path');
   static String? lastLoginError;
   static String? lastLoginErrorCode;
+  static bool lastLoginReachedServer = false;
 
   static Future<Map<String, dynamic>?> generateCaptcha() async {
     try {
@@ -56,6 +57,36 @@ class ApiService {
       headers['Authorization'] = 'Bearer $token';
     }
     return headers;
+  }
+
+  static Future<Map<String, dynamic>> extractVisitorForm(
+      String imagePath) async {
+    try {
+      final request =
+          http.MultipartRequest('POST', _u('/visitor-form-extraction/extract'));
+      request.headers.addAll(await _authHeaders());
+      request.fields['formType'] = 'VISITOR_REGISTRATION';
+      request.files.add(await http.MultipartFile.fromPath('image', imagePath));
+      final streamed =
+          await request.send().timeout(const Duration(seconds: 430));
+      final response = await http.Response.fromStream(streamed);
+      final decoded = jsonDecode(response.body);
+      if (response.statusCode >= 200 &&
+          response.statusCode < 300 &&
+          decoded is Map<String, dynamic>) return decoded;
+      return {
+        'success': false,
+        'message': _messageFromResponse(response,
+            'Unable to extract the form. Please enter the details manually.')
+      };
+    } catch (error, stackTrace) {
+      _logError('extractVisitorForm', error, stackTrace);
+      return {
+        'success': false,
+        'message':
+            'Unable to extract the form. Please enter the details manually.'
+      };
+    }
   }
 
   static String _messageFromResponse(http.Response response, String fallback) {
@@ -206,6 +237,7 @@ class ApiService {
       {required String captchaId, required String captchaValue}) async {
     lastLoginError = null;
     lastLoginErrorCode = null;
+    lastLoginReachedServer = false;
     try {
       final resp = await http
           .post(
@@ -219,6 +251,7 @@ class ApiService {
             }),
           )
           .timeout(const Duration(seconds: 20));
+      lastLoginReachedServer = true;
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
         // normalise role field before returning
@@ -2026,20 +2059,34 @@ class ApiService {
   }
 
   // Users
-  static Future<List<dynamic>> getUsers() async {
+  static Future<Map<String, dynamic>?> getUsers({
+    int page = 0,
+    int size = 20,
+    String? search,
+    String? role,
+    String? active,
+    String? locked,
+  }) async {
     try {
       final headers = await _headers();
+      final query = <String, String>{'page': '$page', 'size': '$size'};
+      if (search != null && search.trim().isNotEmpty) {
+        query['search'] = search.trim();
+      }
+      if (role != null && role.isNotEmpty) query['role'] = role;
+      if (active != null && active.isNotEmpty) query['active'] = active;
+      if (locked != null && locked.isNotEmpty) query['locked'] = locked;
       final resp = await http
           .get(
-            _u('/users'),
+            _u('/users').replace(queryParameters: query),
             headers: headers,
           )
           .timeout(const Duration(seconds: 20));
       if (resp.statusCode == 200) {
-        return jsonDecode(resp.body) as List<dynamic>;
+        return jsonDecode(resp.body) as Map<String, dynamic>;
       }
     } catch (_) {}
-    return [];
+    return null;
   }
 
   static Future<Map<String, dynamic>?> createUser(

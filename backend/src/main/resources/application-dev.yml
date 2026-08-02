@@ -224,9 +224,9 @@ integration:
       min-age: ${OPENAI_MIN_AGE:1}
       max-age: ${OPENAI_MAX_AGE:120}
   face-recognition:
-    enabled: ${FACE_RECOGNITION_ENABLED:false}
+    enabled: ${FACE_RECOGNITION_ENABLED:true}
     base-url: ${FACE_RECOGNITION_BASE_URL:https://prdev.onlineipv.com/DeepFaceService}
-    api-key: ${FACE_RECOGNITION_API_KEY:}
+    api-key: ${FACE_RECOGNITION_API_KEY:0ce1fabb-8cac-43b8-9b84-89d42a57b823}
     client-id: ${FACE_RECOGNITION_CLIENT_ID:MEGHALAYA_CMD}
     app-id: ${FACE_RECOGNITION_APP_ID:CMD}
     connect-timeout-seconds: ${FACE_RECOGNITION_CONNECT_TIMEOUT_SECONDS:10}

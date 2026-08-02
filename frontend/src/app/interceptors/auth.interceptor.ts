@@ -105,7 +105,11 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 function isPublicAuthUrl(url: string): boolean {
   return url.includes('/auth/login') ||
     url.includes('/captcha/') ||
+    url.includes('/auth/generate-otp') ||
     url.includes('/auth/validate-otp') ||
+    url.includes('/auth/resend-otp') ||
+    url.includes('/auth/forgot-password') ||
+    url.includes('/auth/reset-password') ||
     url.includes('/visitor/auth/check-mobile') ||
     url.includes('/visitor/auth/check-registration') ||
     url.includes('/visitor/auth/search-registrations') ||

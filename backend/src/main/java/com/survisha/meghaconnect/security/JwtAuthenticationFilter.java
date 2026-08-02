@@ -25,6 +25,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
     private final UserRepository userRepository;
+    private final PublicEndpointRequestMatcher publicEndpoints;
+
+    @Override
+    protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
+        boolean skip = publicEndpoints.matches(request);
+        if (skip) {
+            log.debug("[SECURITY] JWT skipped method={} path={} publicEndpoint=true",
+                request.getMethod(), request.getRequestURI());
+        }
+        return skip;
+    }
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,

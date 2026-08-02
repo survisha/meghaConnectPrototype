@@ -9,6 +9,7 @@ import com.survisha.meghaconnect.security.JwtAuthenticationFilter;
 import com.survisha.meghaconnect.security.RestAccessDeniedHandler;
 import com.survisha.meghaconnect.security.RestAuthenticationEntryPoint;
 import com.survisha.meghaconnect.security.TemporaryPasswordAccessFilter;
+import com.survisha.meghaconnect.security.PublicEndpointRequestMatcher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -54,6 +55,7 @@ public class SecurityConfig {
                                            JwtAuthenticationFilter jwtAuthFilter,
                                            ApiRateLimitFilter apiRateLimitFilter,
                                            TemporaryPasswordAccessFilter temporaryPasswordAccessFilter,
+                                           PublicEndpointRequestMatcher publicEndpoints,
                                            RestAuthenticationEntryPoint authenticationEntryPoint,
                                            RestAccessDeniedHandler accessDeniedHandler,
                                            CorsConfigurationSource corsConfigurationSource) throws Exception {
@@ -74,9 +76,8 @@ public class SecurityConfig {
                 .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 
                 // Public API endpoints. Sensitive visitor, KYC, AI, QR, and file APIs are handled by JWT/RBAC.
+                .requestMatchers(publicEndpoints).permitAll()
                 .antMatchers(
-                    "/api/v1/auth/login",
-                    "/api/v1/captcha/**",
                     "/error",
                     "/actuator/health/**",
                     "/actuator/info",
@@ -97,14 +98,6 @@ public class SecurityConfig {
                 ).permitAll()
                 .antMatchers("/api/v1/guest-appointments").permitAll() // Public guest appointment requests
                 .antMatchers(HttpMethod.POST, "/api/v1/department-access-requests").permitAll()
-                .antMatchers(
-                    "/api/v1/visitor/auth/check-mobile",
-                    "/api/v1/visitor/auth/check-registration",
-                    "/api/v1/visitor/auth/search-registrations",
-                    "/api/v1/visitor/auth/generate-otp",
-                    "/api/v1/visitor/auth/validate-otp",
-                    "/api/v1/visitor/auth/register"
-                ).permitAll()
                 .antMatchers("/api/v1/kyc/verify/epic").permitAll()
                 .antMatchers("/api/v1/reference/**").permitAll() // Public reference data dropdowns
                 .antMatchers("/api/ai/chatbot", "/api/v1/ai/chatbot").permitAll()

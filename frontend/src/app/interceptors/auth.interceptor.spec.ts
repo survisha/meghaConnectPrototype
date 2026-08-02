@@ -49,6 +49,20 @@ describe('authInterceptor', () => {
     req.flush({});
   });
 
+  it('sends validate OTP without a token or login redirect', () => {
+    sessionStorage.setItem('megha_token', 'stale-jwt-token');
+
+    http.post('/api/v1/auth/validate-otp', {
+      phoneNumber: '9999999999',
+      otp: '123456',
+    }).subscribe();
+
+    const req = httpMock.expectOne('/api/v1/auth/validate-otp');
+    expect(req.request.headers.has('Authorization')).toBeFalse();
+    expect(router.navigate).not.toHaveBeenCalled();
+    req.flush({ success: true });
+  });
+
   it('keeps a valid session on 403 authorization failures', done => {
     sessionStorage.setItem('megha_token', 'jwt-token');
     sessionStorage.setItem('megha_user', JSON.stringify({ username: 'admin', role: 'ADMIN', fullName: 'Admin' }));

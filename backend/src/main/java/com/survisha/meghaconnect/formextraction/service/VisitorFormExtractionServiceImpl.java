@@ -5,6 +5,7 @@ import com.survisha.meghaconnect.formextraction.dto.*;
 import com.survisha.meghaconnect.formextraction.dto.ExtractedVisitorField.Confidence;
 import com.survisha.meghaconnect.formextraction.dto.ExtractedVisitorField.FieldStatus;
 import com.survisha.meghaconnect.formextraction.validation.VisitorFormImageValidator;
+import com.survisha.meghaconnect.formextraction.validation.VisitorFormImagePreprocessor;
 import com.survisha.meghaconnect.formextraction.exception.FormExtractionException;
 import com.survisha.meghaconnect.formextraction.provider.FormExtractionInput;
 import com.survisha.meghaconnect.formextraction.provider.FormExtractionProviderResolver;
@@ -25,6 +26,7 @@ import java.util.*;
 @RequiredArgsConstructor
 public class VisitorFormExtractionServiceImpl implements VisitorFormExtractionService {
     private final VisitorFormImageValidator imageValidator;
+    private final VisitorFormImagePreprocessor imagePreprocessor;
     private final FormExtractionProviderResolver providerResolver;
     private final FormExtractionProperties properties;
     private final AuditLogService auditLogService;
@@ -39,22 +41,23 @@ public class VisitorFormExtractionServiceImpl implements VisitorFormExtractionSe
         if (!validated.quality().isAcceptable()) {
             return qualityFailure(validated.quality());
         }
+        var processed = imagePreprocessor.process(validated);
         long start = System.nanoTime();
-        FormExtractionInput input = FormExtractionInput.builder().imageBytes(validated.bytes())
-                .mimeType(validated.mimeType()).formType(formType).formVersion(properties.getFormVersion())
+        FormExtractionInput input = FormExtractionInput.builder().imageBytes(processed.bytes())
+                .mimeType(processed.mimeType()).formType(formType).formVersion(properties.getFormVersion())
                 .languageHint(languageHint == null ? properties.getLanguageHint() : languageHint)
                 .requestId(RequestContextUtil.getRequestId()).build();
         VisitorFormExtractionResult result = providerResolver.resolve(properties.getProvider()).extract(input);
+        ExtractedVisitorField<String> epic = result.getExtractedEpic();
         ExtractedVisitorField<String> name = result.getExtractedName();
         ExtractedVisitorField<String> mobile = result.getExtractedMobileNumber();
-        ExtractedVisitorField<Integer> age = result.getExtractedAge();
         ExtractedVisitorField<String> address = result.getExtractedAddress();
-        validateName(name); validateMobile(mobile); validateAge(age); validateAddress(address);
+        validateEpic(epic); validateName(name); validateMobile(mobile); validateAddress(address);
         List<String> warnings = new ArrayList<>();
         warnings.addAll(result.getWarnings() == null ? List.of() : result.getWarnings());
         boolean review = result.isRequiresManualReview() || !name.isValid() || !mobile.isValid()
-                || !age.isValid() || !address.isValid() || uncertain(name) || uncertain(mobile) || uncertain(age) || uncertain(address);
-        int fieldsFound = (name.getValue()!=null?1:0)+(mobile.getValue()!=null?1:0)+(age.getValue()!=null?1:0)+(address.getValue()!=null?1:0);
+                || !epic.isValid() || !address.isValid() || uncertain(epic) || uncertain(name) || uncertain(mobile) || uncertain(address);
+        int fieldsFound = (epic.getValue()!=null?1:0)+(name.getValue()!=null?1:0)+(mobile.getValue()!=null?1:0)+(address.getValue()!=null?1:0);
         long durationMs = (System.nanoTime()-start)/1_000_000;
         auditLogService.log("VisitorFormExtraction", null, "EXTRACTED",
                 "fieldsFound="+fieldsFound+", manualReview="+review+", durationMs="+durationMs+
@@ -68,7 +71,7 @@ public class VisitorFormExtractionServiceImpl implements VisitorFormExtractionSe
         log.info("Visitor form extraction completed provider={} fieldsFound={} manualReview={} durationMs={} model={}",
                 provider, fieldsFound, review, durationMs, model);
         return VisitorFormExtractionResponse.builder().success(true).documentType("VISITOR_REGISTRATION")
-                .formVersion(properties.getFormVersion()).name(name).mobileNumber(mobile).age(age).address(address)
+                .formVersion(properties.getFormVersion()).epic(epic).name(name).mobileNumber(mobile).address(address)
                 .warnings(warnings).requiresManualReview(true).imageQuality(validated.quality())
                 .requestId(RequestContextUtil.getRequestId()).extractionTimestamp(DateTimeUtil.nowIST())
                 .modelVersion(result.getModel())
@@ -84,6 +87,10 @@ public class VisitorFormExtractionServiceImpl implements VisitorFormExtractionSe
     private void validateName(ExtractedVisitorField<String> f) {
         f.setValue(normalize(f.getValue())); String v=f.getValue();
         f.setValid(v!=null && v.length()<=properties.getMaxNameLength() && v.chars().filter(Character::isDigit).count()*2 < v.length());
+    }
+    private void validateEpic(ExtractedVisitorField<String> f) {
+        String v=normalize(f.getValue()); if(v!=null) v=v.replaceAll("[^A-Za-z0-9]","").toUpperCase(Locale.ROOT); f.setValue(v);
+        f.setValid(v!=null && v.matches("[A-Z]{3}[0-9]{7}"));
     }
     private void validateMobile(ExtractedVisitorField<String> f) {
         String v=f.getValue(); if(v!=null) v=v.replace(" ","").replace("-",""); f.setValue(v);

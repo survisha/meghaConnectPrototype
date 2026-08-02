@@ -47,13 +47,16 @@ ai:
     language-hint: ${FORM_EXTRACTION_LANGUAGE_HINT:en}
     ollama:
       enabled: ${OLLAMA_FORM_EXTRACTION_ENABLED:true}
-      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
-      model: ${OLLAMA_VISION_MODEL:qwen2.5vl:7b}
+      base-url: ${OLLAMA_BASE_URL:http://127.0.0.1:11434}
+      model: ${OLLAMA_VISION_MODEL:qwen2.5vl:3b}
       chat-path: ${OLLAMA_CHAT_PATH:/api/chat}
       stream: false
       temperature: 0
-      timeout-seconds: ${OLLAMA_FORM_EXTRACTION_TIMEOUT_SECONDS:120}
-      keep-alive: ${OLLAMA_KEEP_ALIVE:5m}
+      connect-timeout-seconds: ${OLLAMA_CONNECT_TIMEOUT_SECONDS:10}
+      write-timeout-seconds: ${OLLAMA_WRITE_TIMEOUT_SECONDS:120}
+      read-timeout-seconds: ${OLLAMA_READ_TIMEOUT_SECONDS:300}
+      call-timeout-seconds: ${OLLAMA_CALL_TIMEOUT_SECONDS:360}
+      keep-alive: ${OLLAMA_KEEP_ALIVE:10m}
     openai:
       enabled: ${OPENAI_FORM_EXTRACTION_ENABLED:false}
       base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}

@@ -13,9 +13,9 @@ public class VisitorFormExtractionResponse {
     boolean success;
     String documentType;
     String formVersion;
+    ExtractedVisitorField<String> epic;
     ExtractedVisitorField<String> name;
     ExtractedVisitorField<String> mobileNumber;
-    ExtractedVisitorField<Integer> age;
     ExtractedVisitorField<String> address;
     List<String> warnings;
     boolean requiresManualReview;

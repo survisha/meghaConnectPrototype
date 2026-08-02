@@ -5,7 +5,12 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
+import javax.validation.Valid;
+import javax.validation.constraints.AssertTrue;
 import javax.validation.constraints.Min;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Pattern;
+import java.net.URI;
 
 @Data
 @Validated
@@ -24,19 +29,42 @@ public class FormExtractionProperties {
     @Min(1) private int maxAddressLength = 500;
     @Min(1) private int minAge = 1;
     @Min(1) private int maxAge = 120;
-    private Ollama ollama = new Ollama();
+    @Valid private Ollama ollama = new Ollama();
+    @Valid private Image image = new Image();
     private OpenAi openai = new OpenAi();
 
     @Data
     public static class Ollama {
         private boolean enabled = true;
-        private String baseUrl = "http://localhost:11434";
-        private String model = "qwen2.5vl:7b";
+        @NotBlank private String baseUrl = "http://127.0.0.1:11434";
+        @NotBlank private String model = "qwen2.5vl:3b";
+        @NotBlank @Pattern(regexp = "^/[^\\s]*$", message = "must start with '/' and contain no whitespace")
         private String chatPath = "/api/chat";
         private boolean stream;
         private double temperature;
-        private int timeoutSeconds = 120;
-        private String keepAlive = "5m";
+        @Min(1) private int numPredict = 400;
+        @Min(1) private int numCtx = 4096;
+        @Min(1) private int connectTimeoutSeconds = 10;
+        @Min(1) private int writeTimeoutSeconds = 120;
+        @Min(1) private int readTimeoutSeconds = 300;
+        @Min(1) private int callTimeoutSeconds = 360;
+        @NotBlank private String keepAlive = "10m";
+
+        @AssertTrue(message = "call timeout must be greater than or equal to read timeout")
+        public boolean isCallTimeoutValid() {
+            return callTimeoutSeconds >= readTimeoutSeconds;
+        }
+
+        @AssertTrue(message = "base URL must be an absolute HTTP(S) URL")
+        public boolean isBaseUrlValid() {
+            try {
+                URI uri = URI.create(baseUrl);
+                return uri.isAbsolute() && uri.getHost() != null
+                        && ("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme()));
+            } catch (RuntimeException ex) {
+                return false;
+            }
+        }
     }
 
     @Data
@@ -50,5 +78,16 @@ public class FormExtractionProperties {
         private boolean storeResponse;
         private String imageDetail = "high";
         private int maxOutputTokens = 1000;
+    }
+
+    @Data
+    public static class Image {
+        @Min(1) private int maxLongestSide = 1600;
+        @javax.validation.constraints.DecimalMin("0.1") @javax.validation.constraints.DecimalMax("1.0")
+        private double jpegQuality = 0.82;
+        @Min(1) private long maxProcessedSizeBytes = 2_097_152;
+        private boolean autoRotate = true;
+        private boolean cropDocument = true;
+        private boolean perspectiveCorrection = true;
     }
 }

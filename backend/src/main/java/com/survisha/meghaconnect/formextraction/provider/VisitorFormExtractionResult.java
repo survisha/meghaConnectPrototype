@@ -12,9 +12,9 @@ import java.util.List;
 public class VisitorFormExtractionResult {
     String documentType;
     String formVersion;
+    ExtractedVisitorField<String> extractedEpic;
     ExtractedVisitorField<String> extractedName;
     ExtractedVisitorField<String> extractedMobileNumber;
-    ExtractedVisitorField<Integer> extractedAge;
     ExtractedVisitorField<String> extractedAddress;
     List<String> warnings;
     boolean requiresManualReview;

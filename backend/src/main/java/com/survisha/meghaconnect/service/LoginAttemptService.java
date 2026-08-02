@@ -6,6 +6,7 @@ import com.survisha.meghaconnect.util.DateTimeUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class LoginAttemptService {
     private final UserRepository userRepository;
     private final AuditLogService auditLogService;
+    private final PasswordEncoder passwordEncoder;
 
     @Value("${security.login.max-failed-attempts:3}")
     private int maxFailedAttempts;
@@ -46,5 +48,47 @@ public class LoginAttemptService {
             user.setLastLogin(DateTimeUtil.nowIST());
             userRepository.save(user);
         });
+    }
+
+    /**
+     * Restores access to the sole global administrator only after independently
+     * verifying the supplied password. Spring Security checks the locked flag
+     * before checking credentials, so without this recovery path a locked Super
+     * Admin cannot authenticate even with the correct password.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public boolean unlockSuperAdminWithValidPassword(String username, String rawPassword) {
+        User user = userRepository.findForLoginUpdate(username).orElse(null);
+        if (user == null
+                || !user.isLocked()
+                || !user.isActive()
+                || user.getRole() != User.UserRole.SUPER_ADMIN
+                || rawPassword == null
+                || !passwordMatches(rawPassword, user.getPasswordHash())) {
+            return false;
+        }
+
+        user.setLocked(false);
+        user.setFailedLoginAttempts(0);
+        user.setLastFailedLoginAt(null);
+        user.setLockedAt(null);
+        user.setLockReason(null);
+        user.setUnlockedBy("verified-super-admin-login");
+        user.setUnlockedAt(DateTimeUtil.nowIST());
+        userRepository.save(user);
+        auditLogService.log("USER", user.getId(), "ACCOUNT_UNLOCKED",
+                "Super Admin account unlocked after successful credential verification", username);
+        return true;
+    }
+
+    private boolean passwordMatches(String rawPassword, String passwordHash) {
+        if (passwordHash == null || passwordHash.isBlank()) {
+            return false;
+        }
+        try {
+            return passwordEncoder.matches(rawPassword, passwordHash);
+        } catch (RuntimeException ex) {
+            return false;
+        }
     }
 }

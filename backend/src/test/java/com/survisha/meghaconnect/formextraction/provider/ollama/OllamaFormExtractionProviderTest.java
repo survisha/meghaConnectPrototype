@@ -30,9 +30,9 @@ class OllamaFormExtractionProviderTest {
         Buffer buffer = new Buffer();
         captured.get().body().writeTo(buffer);
         JsonNode request = mapper.readTree(buffer.readUtf8());
-        assertEquals("http://localhost:11434/api/chat", captured.get().url().toString());
+        assertEquals("http://127.0.0.1:11434/api/chat", captured.get().url().toString());
         assertNull(captured.get().header("Authorization"));
-        assertEquals("qwen2.5vl:7b", request.path("model").asText());
+        assertEquals("qwen2.5vl:3b", request.path("model").asText());
         assertFalse(request.path("stream").asBoolean(true));
         assertEquals("AQIDBA==", request.path("messages").get(1).path("images").get(0).asText());
         assertEquals("object", request.path("format").path("type").asText());
@@ -77,11 +77,7 @@ class OllamaFormExtractionProviderTest {
     }
     private String successfulBody() {
         return "{\"model\":\"qwen2.5vl:7b\",\"message\":{\"role\":\"assistant\",\"content\":" +
-                "\"{\\\"documentType\\\":\\\"VISITOR_REGISTRATION\\\",\\\"formVersion\\\":\\\"V1\\\"," +
-                "\\\"name\\\":{\\\"value\\\":\\\"Rahul\\\",\\\"status\\\":\\\"EXTRACTED\\\",\\\"confidence\\\":\\\"HIGH\\\",\\\"reason\\\":null}," +
-                "\\\"mobileNumber\\\":{\\\"value\\\":\\\"9876543210\\\",\\\"status\\\":\\\"EXTRACTED\\\",\\\"confidence\\\":\\\"HIGH\\\",\\\"reason\\\":null}," +
-                "\\\"age\\\":{\\\"value\\\":38,\\\"status\\\":\\\"EXTRACTED\\\",\\\"confidence\\\":\\\"HIGH\\\",\\\"reason\\\":null}," +
-                "\\\"address\\\":{\\\"value\\\":\\\"Shillong\\\",\\\"status\\\":\\\"EXTRACTED\\\",\\\"confidence\\\":\\\"HIGH\\\",\\\"reason\\\":null}," +
+                "\"{\\\"epic\\\":\\\"ABC1234567\\\",\\\"name\\\":\\\"Rahul\\\",\\\"mobile\\\":\\\"9876543210\\\",\\\"address\\\":\\\"Shillong\\\"," +
                 "\\\"warnings\\\":[],\\\"requiresManualReview\\\":true}\"},\"done\":true}";
     }
 }

@@ -17,31 +17,26 @@ public class ProviderResultMapper {
 
     public VisitorFormExtractionResult map(JsonNode node, AIProviderType provider, String model,
                                            String providerRequestId, long durationMs) {
-        if (node == null || !node.isObject() || !node.has("name") || !node.has("mobileNumber")
-                || !node.has("age") || !node.has("address")) {
+        if (node == null || !node.isObject() || !node.has("epic") || !node.has("name") || !node.has("mobile") || !node.has("address")) {
             throw new FormExtractionException("FORM_EXTRACTION_PROVIDER_INVALID_RESPONSE",
                     "AI provider returned an incomplete extraction response.", 502);
         }
         List<String> warnings = new ArrayList<>();
         node.path("warnings").forEach(value -> warnings.add(value.asText()));
         return VisitorFormExtractionResult.builder()
-                .documentType(node.path("documentType").asText("VISITOR_REGISTRATION"))
-                .formVersion(node.path("formVersion").asText())
-                .extractedName(stringField(node.path("name")))
-                .extractedMobileNumber(stringField(node.path("mobileNumber")))
-                .extractedAge(integerField(node.path("age")))
-                .extractedAddress(stringField(node.path("address")))
+                .documentType("VISITOR_REGISTRATION").formVersion("")
+                .extractedEpic(field(node.get("epic"))).extractedName(field(node.get("name")))
+                .extractedMobileNumber(field(node.get("mobile"))).extractedAddress(field(node.get("address")))
                 .warnings(warnings).requiresManualReview(node.path("requiresManualReview").asBoolean(true))
                 .provider(provider).model(model).providerRequestId(providerRequestId)
                 .processingTimeMs(durationMs).extractionTimestamp(DateTimeUtil.nowIST()).build();
     }
 
-    private ExtractedVisitorField<String> stringField(JsonNode node) {
-        return objectMapper.convertValue(node,
-                objectMapper.getTypeFactory().constructParametricType(ExtractedVisitorField.class, String.class));
-    }
-    private ExtractedVisitorField<Integer> integerField(JsonNode node) {
-        return objectMapper.convertValue(node,
-                objectMapper.getTypeFactory().constructParametricType(ExtractedVisitorField.class, Integer.class));
+    private ExtractedVisitorField<String> field(JsonNode node) {
+        ExtractedVisitorField<String> field=new ExtractedVisitorField<>();
+        String value=node==null||node.isNull()||node.asText().isBlank()?null:node.asText();
+        field.setValue(value); field.setStatus(value==null?ExtractedVisitorField.FieldStatus.NOT_FOUND:ExtractedVisitorField.FieldStatus.EXTRACTED);
+        field.setConfidence(value==null?ExtractedVisitorField.Confidence.NONE:ExtractedVisitorField.Confidence.HIGH);
+        return field;
     }
 }

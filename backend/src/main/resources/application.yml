@@ -17,7 +17,7 @@ ai:
     api-key: ${AZURE_OPENAI_API_KEY:}
     deployment: ${AZURE_OPENAI_DEPLOYMENT:}
   form-extraction: &form-extraction
-    enabled: ${FORM_EXTRACTION_ENABLED:false}
+    enabled: ${FORM_EXTRACTION_ENABLED:true}
     provider: ${FORM_EXTRACTION_PROVIDER:ollama}
     max-image-size-bytes: ${FORM_EXTRACTION_MAX_IMAGE_SIZE_BYTES:5242880}
     connect-timeout-seconds: ${FORM_EXTRACTION_CONNECT_TIMEOUT_SECONDS:10}
@@ -26,13 +26,25 @@ ai:
     language-hint: ${FORM_EXTRACTION_LANGUAGE_HINT:en}
     ollama:
       enabled: ${OLLAMA_FORM_EXTRACTION_ENABLED:true}
-      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
-      model: ${OLLAMA_VISION_MODEL:qwen2.5vl:7b}
+      base-url: ${OLLAMA_BASE_URL:http://127.0.0.1:11434}
+      model: ${OLLAMA_VISION_MODEL:qwen2.5vl:3b}
       chat-path: ${OLLAMA_CHAT_PATH:/api/chat}
       stream: false
       temperature: 0
-      timeout-seconds: ${OLLAMA_FORM_EXTRACTION_TIMEOUT_SECONDS:120}
-      keep-alive: ${OLLAMA_KEEP_ALIVE:5m}
+      num-predict: ${OLLAMA_NUM_PREDICT:400}
+      num-ctx: ${OLLAMA_NUM_CTX:4096}
+      connect-timeout-seconds: ${OLLAMA_CONNECT_TIMEOUT_SECONDS:10}
+      write-timeout-seconds: ${OLLAMA_WRITE_TIMEOUT_SECONDS:120}
+      read-timeout-seconds: ${OLLAMA_READ_TIMEOUT_SECONDS:300}
+      call-timeout-seconds: ${OLLAMA_CALL_TIMEOUT_SECONDS:360}
+      keep-alive: ${OLLAMA_KEEP_ALIVE:10m}
+    image:
+      max-longest-side: ${FORM_EXTRACTION_IMAGE_MAX_LONGEST_SIDE:1600}
+      jpeg-quality: ${FORM_EXTRACTION_IMAGE_JPEG_QUALITY:0.82}
+      max-processed-size-bytes: ${FORM_EXTRACTION_IMAGE_MAX_PROCESSED_SIZE_BYTES:2097152}
+      auto-rotate: ${FORM_EXTRACTION_IMAGE_AUTO_ROTATE:true}
+      crop-document: ${FORM_EXTRACTION_IMAGE_CROP_DOCUMENT:true}
+      perspective-correction: ${FORM_EXTRACTION_IMAGE_PERSPECTIVE_CORRECTION:true}
     openai:
       enabled: ${OPENAI_FORM_EXTRACTION_ENABLED:false}
       base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
@@ -83,9 +95,9 @@ integration:
       min-age: ${OPENAI_MIN_AGE:1}
       max-age: ${OPENAI_MAX_AGE:120}
   face-recognition:
-    enabled: ${FACE_RECOGNITION_ENABLED:false}
+    enabled: ${FACE_RECOGNITION_ENABLED:true}
     base-url: ${FACE_RECOGNITION_BASE_URL:https://prdev.onlineipv.com/DeepFaceService}
-    api-key: ${FACE_RECOGNITION_API_KEY:}
+    api-key: ${FACE_RECOGNITION_API_KEY:0ce1fabb-8cac-43b8-9b84-89d42a57b823}
     client-id: ${FACE_RECOGNITION_CLIENT_ID:MEGHALAYA_CMD}
     app-id: ${FACE_RECOGNITION_APP_ID:CMD}
     connect-timeout-seconds: ${FACE_RECOGNITION_CONNECT_TIMEOUT_SECONDS:10}

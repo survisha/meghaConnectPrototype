@@ -349,6 +349,10 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
           this.formExtractionError = result.message;
           return;
         }
+        if (result.epic?.valid && result.epic.value) {
+          this.form.idType = 'EPIC';
+          this.form.epicNumber = result.epic.value;
+        }
         if (result.name?.valid && result.name.value) {
           this.form.fullName = result.name.value;
           this.form.visitorName = result.name.value;
@@ -361,7 +365,6 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
           this.form.address = result.address.value;
           this.form.fullAddress = result.address.value;
         }
-        this.extractedAge = result.age?.valid ? result.age.value : null;
       },
       error: error => {
         this.formExtractionLoading = false;

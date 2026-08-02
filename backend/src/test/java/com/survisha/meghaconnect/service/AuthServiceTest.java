@@ -134,4 +134,30 @@ class AuthServiceTest {
 
         assertEquals(423, ex.getHttpStatus());
     }
+
+    @Test
+    void lockedSuperAdminWithValidPasswordIsUnlockedAndAuthenticated() {
+        when(authenticationManager.authenticate(any()))
+            .thenThrow(new LockedException("locked"))
+            .thenReturn(mock(org.springframework.security.core.Authentication.class));
+        when(loginAttemptService.unlockSuperAdminWithValidPassword("superadmin", "Megha@TW26"))
+            .thenReturn(true);
+
+        User appUser = User.builder()
+            .id(1L).username("superadmin").fullName("Super Admin")
+            .role(User.UserRole.SUPER_ADMIN).active(true).locked(false)
+            .passwordHash("$2a$10$encoded").build();
+        UserDetails details = new org.springframework.security.core.userdetails.User(
+            "superadmin", appUser.getPasswordHash(),
+            List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN")));
+        when(userDetailsService.loadUserByUsername("superadmin")).thenReturn(details);
+        when(userRepository.findByNormalizedUsername("superadmin")).thenReturn(Optional.of(appUser));
+        when(jwtService.generateToken(details, appUser)).thenReturn("jwt-token");
+        when(userService.getFullNameByUsername("superadmin")).thenReturn("Super Admin");
+
+        AuthResponse response = authService.login(new AuthRequest("superadmin", "Megha@TW26"));
+
+        assertEquals("jwt-token", response.getAccessToken());
+        verify(authenticationManager, times(2)).authenticate(any());
+    }
 }

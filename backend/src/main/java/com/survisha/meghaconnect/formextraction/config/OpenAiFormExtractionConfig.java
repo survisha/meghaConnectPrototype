@@ -42,10 +42,12 @@ public class OpenAiFormExtractionConfig {
 
     @Bean
     public OkHttpClient ollamaFormExtractionOkHttpClient() {
+        FormExtractionProperties.Ollama ollama = properties.getOllama();
         return new OkHttpClient.Builder()
-                .connectTimeout(properties.getConnectTimeoutSeconds(), TimeUnit.SECONDS)
-                .readTimeout(properties.getOllama().getTimeoutSeconds(), TimeUnit.SECONDS)
-                .writeTimeout(properties.getOllama().getTimeoutSeconds(), TimeUnit.SECONDS)
+                .connectTimeout(ollama.getConnectTimeoutSeconds(), TimeUnit.SECONDS)
+                .writeTimeout(ollama.getWriteTimeoutSeconds(), TimeUnit.SECONDS)
+                .readTimeout(ollama.getReadTimeoutSeconds(), TimeUnit.SECONDS)
+                .callTimeout(ollama.getCallTimeoutSeconds(), TimeUnit.SECONDS)
                 .retryOnConnectionFailure(false)
                 .build();
     }

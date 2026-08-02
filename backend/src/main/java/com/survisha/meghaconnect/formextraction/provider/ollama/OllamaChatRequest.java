@@ -23,5 +23,9 @@ public class OllamaChatRequest {
         private List<String> images;
     }
     @Data @NoArgsConstructor @AllArgsConstructor
-    public static class OllamaOptions { private double temperature; }
+    public static class OllamaOptions {
+        private double temperature;
+        @JsonProperty("num_predict") private int numPredict;
+        @JsonProperty("num_ctx") private int numCtx;
+    }
 }

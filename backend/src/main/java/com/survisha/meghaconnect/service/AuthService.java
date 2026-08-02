@@ -48,9 +48,7 @@ public class AuthService {
         
         try {
             log.debug("[AUTH] Starting authentication for user: {}", username);
-            authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(username, request.getPassword())
-            );
+            authenticate(username, request.getPassword());
             log.info("[AUTH] Authentication successful for user: {}", username);
             loginAttemptService.recordSuccess(username);
             
@@ -176,5 +174,20 @@ public class AuthService {
 
     private String normalizeUsername(String username) {
         return username == null ? null : username.trim();
+    }
+
+    private void authenticate(String username, String password) {
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(username, password);
+        try {
+            authenticationManager.authenticate(authentication);
+        } catch (LockedException ex) {
+            if (!loginAttemptService.unlockSuperAdminWithValidPassword(username, password)) {
+                throw ex;
+            }
+            log.warn("[AUTH] Verified credentials restored locked Super Admin account username={}", username);
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(username, password));
+        }
     }
 }

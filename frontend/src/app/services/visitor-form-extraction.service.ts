@@ -16,9 +16,9 @@ export interface ExtractedVisitorField<T> {
 
 export interface VisitorFormExtractionResponse {
   success: boolean;
+  epic?: ExtractedVisitorField<string>;
   name?: ExtractedVisitorField<string>;
   mobileNumber?: ExtractedVisitorField<string>;
-  age?: ExtractedVisitorField<number>;
   address?: ExtractedVisitorField<string>;
   warnings: string[];
   requiresManualReview: boolean;

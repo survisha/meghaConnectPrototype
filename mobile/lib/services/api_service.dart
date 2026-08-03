@@ -1246,10 +1246,14 @@ class ApiService {
 
   static Future<Map<String, dynamic>> searchVisitorByFace(String photo) async {
     try {
+      final request = <String, dynamic>{
+        'photo': normalizeFacePhoto(photo),
+        'includeMatchedPhoto': false,
+      };
       final resp = await http
           .post(_u('/face-recognition/search'),
-              headers: await _authHeaders(),
-              body: jsonEncode({'photo': photo, 'includeMatchedPhoto': false}))
+              headers: await _headers(),
+              body: jsonEncode(request))
           .timeout(const Duration(seconds: 30));
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
         return Map<String, dynamic>.from(jsonDecode(resp.body) as Map);
@@ -1262,6 +1266,22 @@ class ApiService {
       _logError('searchVisitorByFace', error, stackTrace);
       return {'success': false, 'message': 'Face search is unavailable.'};
     }
+  }
+
+  static String normalizeFacePhoto(String photo) {
+    final value = photo.trim();
+    if (value.isEmpty) {
+      throw const FormatException('Face photo is required.');
+    }
+    final prefix = RegExp(r'^data:image/(jpeg|png);base64,', caseSensitive: false);
+    if (value.toLowerCase().startsWith('data:') && !prefix.hasMatch(value)) {
+      throw const FormatException('Only JPEG or PNG face images are supported.');
+    }
+    final normalized = value.replaceFirst(prefix, '');
+    if (normalized.isEmpty) {
+      throw const FormatException('Face photo is required.');
+    }
+    return normalized;
   }
 
   static Future<Map<String, dynamic>> createGuestAppointment({

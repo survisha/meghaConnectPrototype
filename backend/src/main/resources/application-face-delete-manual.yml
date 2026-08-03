@@ -1,0 +1,7 @@
+# Explicit opt-in profile for the one-time UAT face deletion integration test.
+# Provider credentials and the target enrollment ID must be supplied through the environment.
+face-delete-manual:
+  enabled: ${FACE_DELETE_MANUAL_ENABLED:false}
+  enrollment-id: ${FACE_DELETE_ENROLLMENT_ID:}
+  actor: ${FACE_DELETE_ACTOR:uat-maintenance}
+  allow-production: ${FACE_DELETE_ALLOW_PRODUCTION:false}

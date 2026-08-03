@@ -222,8 +222,7 @@ class _PublicIdentificationScreenState
 
   Future<void> _searchQueuedFace(_PendingFace pending) async {
     try {
-      var response = await ApiService.searchVisitorByFace(pending.photo);
-      if (response['success'] != true) response = await ApiService.searchVisitorByFace(pending.photo);
+      final response = await ApiService.searchVisitorByFace(pending.photo);
       final visitor = response['visitor'];
       if (!mounted) return;
       setState(() {

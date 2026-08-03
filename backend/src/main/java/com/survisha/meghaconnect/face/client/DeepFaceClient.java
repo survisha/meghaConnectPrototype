@@ -34,7 +34,7 @@ public class DeepFaceClient implements FaceRecognitionClient {
                     .post(RequestBody.create(json, JSON))
                     .header("Accept", "application/json")
                     .build();
-            log.info("Face provider URL={} json={}",properties.getBaseUrl(),json) ;
+            log.debug("Face provider request prepared operation={}", operation);
             try (Response response = faceRecognitionOkHttpClient.newCall(request).execute()) {
                 String body = response.body() == null ? null : response.body().string();
                 long elapsedMs = (System.nanoTime() - started) / 1_000_000;

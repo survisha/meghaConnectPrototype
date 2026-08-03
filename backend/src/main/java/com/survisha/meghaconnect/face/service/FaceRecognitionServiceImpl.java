@@ -12,7 +12,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -99,8 +98,8 @@ public class FaceRecognitionServiceImpl implements FaceRecognitionService {
         try {
             JsonNode result = client.post(operation, payload);
             meterRegistry.counter("face.recognition.success", "operation", operation).increment();
-            log.debug("Face recognition provider call completed operation={} durationMs={} result={}",
-                    operation, elapsedMillis(startedAt), sanitized(result));
+            log.debug("Face recognition provider call completed operation={} durationMs={}",
+                    operation, elapsedMillis(startedAt));
             return result;
         } catch (RuntimeException ex) {
             meterRegistry.counter("face.recognition.failures", "operation", operation).increment();
@@ -114,30 +113,6 @@ public class FaceRecognitionServiceImpl implements FaceRecognitionService {
         return (System.nanoTime() - startedAt) / 1_000_000;
     }
 
-    private JsonNode sanitized(JsonNode result) {
-        if (result == null) return null;
-        JsonNode copy = result.deepCopy();
-        redactSensitiveFields(copy);
-        return copy;
-    }
-
-    private void redactSensitiveFields(JsonNode node) {
-        if (node == null) return;
-        if (node.isObject()) {
-            Iterator<Map.Entry<String, JsonNode>> fields = node.fields();
-            while (fields.hasNext()) {
-                Map.Entry<String, JsonNode> field = fields.next();
-                String name = field.getKey().toLowerCase();
-                if (name.contains("photo") || name.contains("image") || name.contains("apikey") || name.contains("secret")) {
-                    ((com.fasterxml.jackson.databind.node.ObjectNode) node).put(field.getKey(), "[REDACTED]");
-                } else {
-                    redactSensitiveFields(field.getValue());
-                }
-            }
-        } else if (node.isArray()) {
-            node.forEach(this::redactSensitiveFields);
-        }
-    }
     private Map<String,Object> credentials(boolean enrollment) {
         Map<String,Object> p = new LinkedHashMap<>();
         String enrollmentApiKey = properties.getEnroll() != null ? properties.getEnroll().getApiKey() : null;

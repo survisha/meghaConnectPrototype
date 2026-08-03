@@ -9,12 +9,15 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import javax.servlet.http.HttpServletRequest;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import org.springframework.beans.factory.annotation.Qualifier;
+import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @RequestMapping("/api/v1/face-recognition")
+@Slf4j
 public class FaceRecognitionController {
     private final FaceRecognitionService service;
     private final Executor applicationTaskExecutor;
@@ -49,10 +52,30 @@ public class FaceRecognitionController {
     @PostMapping("/search")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','OSD','CMO_OFFICER','HCM','DATA_ENTRY_OPERATOR','APPROVER')")
     @Operation(summary = "Search an enrolled face (1:N); matched photo is restricted")
-    public CompletableFuture<FaceResponses.Search> search(@Valid @RequestBody FaceRequests.Search request, Authentication authentication) {
+    public CompletableFuture<FaceResponses.Search> search(@Valid @RequestBody FaceRequests.Search request,
+                                                           Authentication authentication,
+                                                           HttpServletRequest httpRequest) {
+        long startedAt = System.nanoTime();
+        log.debug("Face search request accepted requestId={} contentType={} requestBytes={} imageMimeType={} imagePresent={}",
+                com.survisha.meghaconnect.util.RequestContextUtil.getRequestId(), httpRequest.getContentType(),
+                httpRequest.getContentLengthLong(), imageMimeType(request.getPhoto()),
+                request.getPhoto() != null && !request.getPhoto().isBlank());
         boolean privileged = authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_SUPER_ADMIN") || a.getAuthority().equals("ROLE_ADMIN"));
-        return CompletableFuture.supplyAsync(() -> service.search(request, privileged), applicationTaskExecutor);
+        return CompletableFuture.supplyAsync(() -> service.search(request, privileged), applicationTaskExecutor)
+                .whenComplete((result, error) -> log.debug(
+                        "Face search request completed requestId={} matched={} success={} elapsedMs={}",
+                        com.survisha.meghaconnect.util.RequestContextUtil.getRequestId(),
+                        result != null && result.isMatched(), error == null,
+                        (System.nanoTime() - startedAt) / 1_000_000));
+    }
+
+    private String imageMimeType(String photo) {
+        if (photo == null) return "unknown";
+        String value = photo.trim().toLowerCase();
+        if (value.startsWith("data:image/jpeg;base64,")) return "image/jpeg";
+        if (value.startsWith("data:image/png;base64,")) return "image/png";
+        return "base64/unknown";
     }
 
     @PostMapping("/verify")

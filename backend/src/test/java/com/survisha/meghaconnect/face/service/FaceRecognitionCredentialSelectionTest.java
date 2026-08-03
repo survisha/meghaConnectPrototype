@@ -20,6 +20,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
 class FaceRecognitionCredentialSelectionTest {
@@ -38,7 +39,7 @@ class FaceRecognitionCredentialSelectionTest {
         properties.getEnroll().setApiKey("enrollment-key");
         service = new FaceRecognitionServiceImpl(client, properties, photoValidator,
                 new SimpleMeterRegistry(), visitorLookupService);
-        when(photoValidator.normalize(anyString(), anyString())).thenReturn("normalized-photo");
+        lenient().when(photoValidator.normalize(anyString(), anyString())).thenReturn("normalized-photo");
         when(client.post(anyString(), any())).thenReturn(new ObjectMapper().createObjectNode());
     }
 
@@ -67,6 +68,21 @@ class FaceRecognitionCredentialSelectionTest {
         ArgumentCaptor<Map<String, Object>> payload = mapCaptor();
         verify(client).post(org.mockito.ArgumentMatchers.eq("compare"), payload.capture());
         assertEquals("general-key", payload.getValue().get("apiKey"));
+    }
+
+    @Test
+    void deletionUsesProviderIdAndGeneralCredentials() {
+        FaceRequests.Delete request = new FaceRequests.Delete();
+        request.setEnrollmentId("VISITOR_TEST");
+
+        service.delete(request);
+
+        ArgumentCaptor<Map<String, Object>> payload = mapCaptor();
+        verify(client).post(org.mockito.ArgumentMatchers.eq("delete"), payload.capture());
+        assertEquals("VISITOR_TEST", payload.getValue().get("id"));
+        assertEquals("general-key", payload.getValue().get("apiKey"));
+        assertEquals("client", payload.getValue().get("clientId"));
+        assertEquals("app", payload.getValue().get("appId"));
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})

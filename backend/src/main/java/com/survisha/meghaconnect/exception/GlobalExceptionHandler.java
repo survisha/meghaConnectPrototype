@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -301,6 +302,20 @@ public class GlobalExceptionHandler {
         error.setPath(resolvePath(request));
         error.setRequestId(RequestContextUtil.getRequestId());
         return error;
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleUnsupportedMediaType(HttpMediaTypeNotSupportedException ex,
+                                                                    WebRequest request) {
+        ErrorResponse error = buildError(
+                "UNSUPPORTED_MEDIA_TYPE",
+                "The request format is not supported. Use application/json.",
+                "MEDIA-" + System.nanoTime(),
+                HttpStatus.UNSUPPORTED_MEDIA_TYPE.value(),
+                request
+        );
+        logHandledException(error, ex);
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(error);
     }
 
     private String clientSafeMessage(MeghaConnectException ex) {

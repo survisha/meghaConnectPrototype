@@ -311,6 +311,7 @@ public class VisitorAuthService {
         response.put("kycStatus", saved.getKycStatus());
         response.put("kycType", saved.getKycType());
         response.put("kycProvider", saved.getKycProvider());
+        response.put("faceEnrollmentStatus", saved.getFaceEnrollmentStatus());
         response.put("requestId", RequestContextUtil.getRequestId());
         response.put("canProceed", true);
         response.put("message", "KYC_PENDING".equalsIgnoreCase(saved.getKycStatus())

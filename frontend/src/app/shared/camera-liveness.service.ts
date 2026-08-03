@@ -6,6 +6,12 @@ import {
   FaceLivenessResult,
 } from './face-liveness-result.model';
 
+export interface AutoFaceDetection {
+  box: { left: number; top: number; width: number; height: number };
+  valid: boolean;
+  score: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class CameraLivenessService {
   private faceLandmarker: FaceLandmarker | null = null;
@@ -95,6 +101,23 @@ export class CameraLivenessService {
     };
   }
 
+  async analyzeFaces(video: HTMLVideoElement): Promise<AutoFaceDetection[]> {
+    if (!video.videoWidth || !video.videoHeight) return [];
+    const faceLandmarker = await this.getFaceLandmarker();
+    const lighting = this.measureLighting(video);
+    return faceLandmarker.detectForVideo(video, performance.now()).faceLandmarks.map(landmarks => {
+      const box = this.faceBox(landmarks);
+      const tooFar = box.width < 0.12 || box.height < 0.16;
+      const tooClose = box.width > 0.75 || box.height > 0.9;
+      const tilted = Math.abs(this.eyeLineAngleDegrees(landmarks)) > 12;
+      const frontFacing = this.isFrontFacing(landmarks);
+      const valid = frontFacing && !tilted && !tooFar && !tooClose && !lighting.poorLighting;
+      return { box, valid, score: this.score({
+        faceCentered: true, frontFacing, tilted, tooClose, tooFar, poorLighting: lighting.poorLighting
+      }) };
+    });
+  }
+
   toCaptureMetadata(result: FaceLivenessResult): FaceLivenessCaptureMetadata {
     return {
       faceCentered: result.faceCentered,
@@ -122,7 +145,7 @@ export class CameraLivenessService {
         modelAssetPath: '/assets/mediapipe/face_landmarker.task',
       },
       runningMode: 'VIDEO',
-      numFaces: 2,
+      numFaces: 6,
       minFaceDetectionConfidence: 0.55,
       minFacePresenceConfidence: 0.55,
       minTrackingConfidence: 0.55,

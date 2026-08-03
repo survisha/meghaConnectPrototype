@@ -1,8 +1,13 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:camera/camera.dart';
+import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
+import 'package:image/image.dart' as img;
 
 import '../core/config/app_config.dart';
 import '../services/api_service.dart';
@@ -58,6 +63,13 @@ class _VisitorProfile {
   }
 }
 
+class _PendingFace {
+  final String trackingId;
+  final String photo;
+
+  const _PendingFace(this.trackingId, this.photo);
+}
+
 class _CitizenHistory {
   final int visitCount;
   final String lastVisitedAt;
@@ -97,7 +109,17 @@ class _PublicIdentificationScreenState
   final _phoneCtrl = TextEditingController();
   final _epicCtrl = TextEditingController();
   final _nameCtrl = TextEditingController();
-  final _imagePicker = ImagePicker();
+  CameraController? _faceCamera;
+  final FaceDetector _faceDetector = FaceDetector(options: FaceDetectorOptions(
+    enableTracking: true,
+    performanceMode: FaceDetectorMode.fast,
+  ));
+  Timer? _faceTimer;
+  bool _detectingFaces = false;
+  int _activeFaceSearches = 0;
+  final List<_PendingFace> _faceQueue = [];
+  final Map<int, DateTime> _capturedTracks = {};
+  final List<String> _faceStatuses = [];
   String _district = '';
 
   List<_VisitorProfile> _results = [];
@@ -111,30 +133,133 @@ class _PublicIdentificationScreenState
   String? _historyError;
 
   Future<void> _identifyByFace() async {
-    final image = await _imagePicker.pickImage(
-        source: ImageSource.camera, imageQuality: 88, maxWidth: 1600);
-    if (image == null || !mounted) return;
-    setState(() {
-      _searching = true;
-      _searched = true;
-      _error = null;
-    });
-    final bytes = await image.readAsBytes();
-    final mime =
-        image.path.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
-    final response = await ApiService.searchVisitorByFace(
-        'data:$mime;base64,${base64Encode(bytes)}');
-    if (!mounted) return;
-    final visitor = response['visitor'];
-    setState(() {
-      _searching = false;
-      _results = response['matched'] == true && visitor is Map
-          ? [_VisitorProfile.fromJson(Map<String, dynamic>.from(visitor))]
-          : [];
-      _selected = _results.isEmpty ? null : _results.first;
-      if (response['success'] != true) _error = response['message']?.toString();
-    });
-    if (_selected != null) await _selectVisitor(_selected!);
+    if (_faceCamera != null) {
+      await _stopFaceIdentification();
+      return;
+    }
+    try {
+      final cameras = await availableCameras();
+      final selected = cameras.firstWhere(
+        (camera) => camera.lensDirection == CameraLensDirection.front,
+        orElse: () => cameras.first,
+      );
+      final controller = CameraController(selected, ResolutionPreset.medium, enableAudio: false);
+      await controller.initialize();
+      if (!mounted) return controller.dispose();
+      setState(() {
+        _faceCamera = controller;
+        _searched = true;
+        _error = null;
+      });
+      _scheduleFaceDetection();
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Unable to open camera. Please check camera permission.');
+    }
+  }
+
+  void _scheduleFaceDetection() {
+    _faceTimer?.cancel();
+    _faceTimer = Timer(const Duration(milliseconds: 800), _detectAndQueueFaces);
+  }
+
+  Future<void> _detectAndQueueFaces() async {
+    final controller = _faceCamera;
+    if (controller == null || !controller.value.isInitialized || _detectingFaces) return;
+    _detectingFaces = true;
+    try {
+      final capture = await controller.takePicture();
+      final faces = await _faceDetector.processImage(InputImage.fromFilePath(capture.path));
+      final bytes = await capture.readAsBytes();
+      final source = img.decodeImage(bytes);
+      if (source != null) {
+        final now = DateTime.now();
+        for (final face in faces) {
+          final trackId = face.trackingId ?? _spatialTrackId(face.boundingBox);
+          final lastCapture = _capturedTracks[trackId];
+          final qualityOk = face.boundingBox.width >= source.width * .12 &&
+              face.boundingBox.height >= source.height * .16 &&
+              (face.headEulerAngleY ?? 0).abs() <= 18 &&
+              (face.headEulerAngleZ ?? 0).abs() <= 12;
+          if (!qualityOk || (lastCapture != null && now.difference(lastCapture).inSeconds < 15)) continue;
+          _capturedTracks[trackId] = now;
+          final crop = _cropFace(source, face.boundingBox);
+          _faceQueue.add(_PendingFace('Face $trackId', 'data:image/jpeg;base64,${base64Encode(img.encodeJpg(crop, quality: 85))}'));
+        }
+        _drainFaceQueue();
+      }
+      final temporaryCapture = File(capture.path);
+      if (await temporaryCapture.exists()) {
+        await temporaryCapture.delete();
+      }
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Automatic face detection is temporarily unavailable.');
+    } finally {
+      _detectingFaces = false;
+      if (_faceCamera != null) _scheduleFaceDetection();
+    }
+  }
+
+  int _spatialTrackId(Rect box) => (box.center.dx / 40).round() * 1000 + (box.center.dy / 40).round();
+
+  img.Image _cropFace(img.Image source, Rect box) {
+    final padX = box.width * .18;
+    final padY = box.height * .18;
+    final x = math.max(0, (box.left - padX).round());
+    final y = math.max(0, (box.top - padY).round());
+    final width = math.min(source.width - x, (box.width + padX * 2).round());
+    final height = math.min(source.height - y, (box.height + padY * 2).round());
+    return img.copyCrop(source, x: x, y: y, width: width, height: height);
+  }
+
+  void _drainFaceQueue() {
+    while (_activeFaceSearches < 5 && _faceQueue.isNotEmpty) {
+      final pending = _faceQueue.removeAt(0);
+      _activeFaceSearches++;
+      if (mounted) setState(() => _faceStatuses.insert(0, '${pending.trackingId}: Searching…'));
+      _searchQueuedFace(pending);
+    }
+  }
+
+  Future<void> _searchQueuedFace(_PendingFace pending) async {
+    try {
+      var response = await ApiService.searchVisitorByFace(pending.photo);
+      if (response['success'] != true) response = await ApiService.searchVisitorByFace(pending.photo);
+      final visitor = response['visitor'];
+      if (!mounted) return;
+      setState(() {
+        _faceStatuses.remove('${pending.trackingId}: Searching…');
+        if (response['matched'] == true && visitor is Map) {
+          final profile = _VisitorProfile.fromJson(Map<String, dynamic>.from(visitor));
+          if (!_results.any((item) => item.id == profile.id)) {
+            _results.add(profile);
+          }
+          _faceStatuses.insert(0, '${pending.trackingId}: ${profile.fullName}');
+        } else {
+          _faceStatuses.insert(0, '${pending.trackingId}: No Registered Visitor');
+        }
+      });
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _faceStatuses.remove('${pending.trackingId}: Searching…');
+          _faceStatuses.insert(0, '${pending.trackingId}: Face Recognition Service Unavailable');
+        });
+      }
+    } finally {
+      _activeFaceSearches--;
+      _drainFaceQueue();
+    }
+  }
+
+  Future<void> _stopFaceIdentification() async {
+    _faceTimer?.cancel();
+    _faceTimer = null;
+    final controller = _faceCamera;
+    _faceCamera = null;
+    _faceQueue.clear();
+    _capturedTracks.clear();
+    await controller?.dispose();
+    if (mounted) setState(() {});
   }
 
   static const _districts = [
@@ -151,6 +276,9 @@ class _PublicIdentificationScreenState
 
   @override
   void dispose() {
+    _faceTimer?.cancel();
+    _faceCamera?.dispose();
+    _faceDetector.close();
     _phoneCtrl.dispose();
     _epicCtrl.dispose();
     _nameCtrl.dispose();
@@ -465,8 +593,19 @@ class _PublicIdentificationScreenState
           OutlinedButton.icon(
             onPressed: _searching ? null : _identifyByFace,
             icon: const Icon(Icons.camera_alt_outlined),
-            label: const Text('Identify by Face'),
+            label: Text(_faceCamera == null ? 'Identify by Face' : 'Close Camera'),
           ),
+          if (_faceCamera != null) ...[
+            const SizedBox(height: 10),
+            AspectRatio(
+              aspectRatio: _faceCamera!.value.aspectRatio,
+              child: CameraPreview(_faceCamera!),
+            ),
+            const SizedBox(height: 8),
+            const Text('Automatic detection active — look toward the camera.'),
+          ],
+          for (final status in _faceStatuses.take(8))
+            Padding(padding: const EdgeInsets.only(top: 6), child: Text(status)),
         ],
       ),
     );

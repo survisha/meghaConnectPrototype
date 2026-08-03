@@ -227,6 +227,8 @@ integration:
     enabled: ${FACE_RECOGNITION_ENABLED:true}
     base-url: ${FACE_RECOGNITION_BASE_URL:https://prdev.onlineipv.com/DeepFaceService}
     api-key: ${FACE_RECOGNITION_API_KEY:0ce1fabb-8cac-43b8-9b84-89d42a57b823}
+    enroll:
+      api-key: ${FACE_RECOGNITION_ENROLL_API_KEY:${FACE_RECOGNITION_API_KEY:787f049b-199d-4a99-9656-4656c84386a8}}
     client-id: ${FACE_RECOGNITION_CLIENT_ID:MEGHALAYA_CMD}
     app-id: ${FACE_RECOGNITION_APP_ID:CMD}
     connect-timeout-seconds: ${FACE_RECOGNITION_CONNECT_TIMEOUT_SECONDS:10}

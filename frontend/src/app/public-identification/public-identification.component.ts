@@ -13,6 +13,9 @@ import { apiErrorMessage } from '../shared/api-error.util';
 import { CameraCaptureService } from '../shared/camera-capture.service';
 import { FaceRecognitionService } from '../services/face-recognition.service';
 import { from, mergeMap, toArray } from 'rxjs';
+import { Subscription } from 'rxjs';
+import { AutoFaceDetection, CameraLivenessService } from '../shared/camera-liveness.service';
+import { ToastService } from '../shared/toast/toast.service';
 
 // Angular Material
 import { MatInputModule } from '@angular/material/input';
@@ -56,6 +59,15 @@ export class PublicIdentificationComponent implements OnDestroy {
   facePhoto = '';
   faceSearching = false;
   readonly maxFaces = 6;
+  readonly maxConcurrentFaceSearches = 5;
+  faceDetections: FaceIdentificationItem[] = [];
+  private detectionTimer: ReturnType<typeof setTimeout> | null = null;
+  private detectionRunning = false;
+  private nextTrackingId = 1;
+  private trackedFaces = new Map<string, TrackedFace>();
+  private faceQueue: QueuedFace[] = [];
+  private activeFaceSearches = 0;
+  private faceSearchSubscriptions = new Set<Subscription>();
 
   districts = ['East Khasi Hills','West Khasi Hills','Ri Bhoi','East Jaintia Hills','West Jaintia Hills','East Garo Hills','West Garo Hills','South Garo Hills','North Garo Hills'];
 
@@ -70,7 +82,9 @@ export class PublicIdentificationComponent implements OnDestroy {
   constructor(
     private visitorSearchService: VisitorSearchService,
     private cameraCapture: CameraCaptureService,
-    private faceRecognition: FaceRecognitionService
+    private faceRecognition: FaceRecognitionService,
+    private cameraLiveness: CameraLivenessService,
+    private toast: ToastService
   ) {}
 
   ngOnDestroy(): void { this.stopFaceCamera(); }
@@ -82,7 +96,10 @@ export class PublicIdentificationComponent implements OnDestroy {
       this.faceCameraActive = true;
       setTimeout(() => {
         const video = document.getElementById('publicFaceVideo') as HTMLVideoElement | null;
-        if (video && this.faceCameraStream) this.cameraCapture.attach(video, this.faceCameraStream);
+        if (video && this.faceCameraStream) {
+          this.cameraCapture.attach(video, this.faceCameraStream);
+          this.scheduleFaceDetection(video);
+        }
       });
     } catch { this.errorMessage = 'Camera access was blocked.'; }
   }
@@ -138,9 +155,98 @@ export class PublicIdentificationComponent implements OnDestroy {
   }
 
   private stopFaceCamera(): void {
+    if (this.detectionTimer) clearTimeout(this.detectionTimer);
+    this.detectionTimer = null;
+    this.detectionRunning = false;
+    this.faceQueue = [];
+    this.faceSearchSubscriptions.forEach(subscription => subscription.unsubscribe());
+    this.faceSearchSubscriptions.clear();
+    this.activeFaceSearches = 0;
+    this.trackedFaces.clear();
     this.cameraCapture.stop(this.faceCameraStream);
     this.faceCameraStream = null;
     this.faceCameraActive = false;
+  }
+
+  private scheduleFaceDetection(video: HTMLVideoElement): void {
+    if (!this.faceCameraActive) return;
+    this.detectionTimer = setTimeout(async () => {
+      if (!this.faceCameraActive || this.detectionRunning) return;
+      this.detectionRunning = true;
+      try {
+        const detections = await this.cameraLiveness.analyzeFaces(video);
+        this.processDetectedFaces(video, detections);
+      } catch {
+        this.errorMessage = 'Automatic face detection is unavailable.';
+      } finally {
+        this.detectionRunning = false;
+        this.scheduleFaceDetection(video);
+      }
+    }, 350);
+  }
+
+  private processDetectedFaces(video: HTMLVideoElement, detections: AutoFaceDetection[]): void {
+    const now = Date.now();
+    for (const detection of detections.filter(face => face.valid)) {
+      const centerX = detection.box.left + detection.box.width / 2;
+      const centerY = detection.box.top + detection.box.height / 2;
+      let track = Array.from(this.trackedFaces.values()).find(candidate =>
+        Math.hypot(candidate.centerX - centerX, candidate.centerY - centerY) < 0.14);
+      if (!track) {
+        track = { id: `Face ${this.nextTrackingId++}`, centerX, centerY, lastSeen: now, lastCaptured: 0 };
+        this.trackedFaces.set(track.id, track);
+      }
+      track.centerX = centerX;
+      track.centerY = centerY;
+      track.lastSeen = now;
+      if (now - track.lastCaptured >= 15000) {
+        track.lastCaptured = now;
+        const photo = this.cameraCapture.captureCrop(video, detection.box);
+        this.faceDetections.unshift({ trackingId: track.id, photo, status: 'QUEUED' });
+        this.faceQueue.push({ trackingId: track.id, photo });
+      }
+    }
+    for (const [id, track] of this.trackedFaces) {
+      if (now - track.lastSeen > 2500) this.trackedFaces.delete(id);
+    }
+    this.drainFaceQueue();
+  }
+
+  private drainFaceQueue(): void {
+    while (this.faceCameraActive && this.activeFaceSearches < this.maxConcurrentFaceSearches && this.faceQueue.length) {
+      const queued = this.faceQueue.shift()!;
+      const item = this.faceDetections.find(face => face.trackingId === queued.trackingId && face.status === 'QUEUED');
+      if (item) item.status = 'SEARCHING';
+      this.activeFaceSearches++;
+      const subscription = this.faceRecognition.search(queued.photo).subscribe({
+        next: response => {
+          if (item) {
+            item.status = response.matched && response.visitor ? 'MATCHED' : 'NOT_REGISTERED';
+            item.visitor = response.visitor;
+          }
+          if (response.matched && response.visitor?.id && !this.results.some(v => v.id === response.visitor!.id)) {
+            this.results = [...this.results, response.visitor];
+            if (!this.selected) this.select(response.visitor);
+          }
+          this.searched = true;
+        },
+        error: () => {
+          if (item) item.status = 'FAILED';
+          this.toast.error('Face Recognition Service Unavailable');
+          this.finishFaceSearch(subscription);
+        },
+        complete: () => this.finishFaceSearch(subscription)
+      });
+      this.faceSearchSubscriptions.add(subscription);
+    }
+    this.faceSearching = this.activeFaceSearches > 0 || this.faceQueue.length > 0;
+  }
+
+  private finishFaceSearch(subscription: Subscription): void {
+    this.faceSearchSubscriptions.delete(subscription);
+    this.activeFaceSearches = Math.max(0, this.activeFaceSearches - 1);
+    this.faceSearching = this.activeFaceSearches > 0 || this.faceQueue.length > 0;
+    this.drainFaceQueue();
   }
 
   private readImage(file: File): Promise<string> {
@@ -499,4 +605,24 @@ interface SearchCriteria {
   epic: string;
   name: string;
   district: string;
+}
+
+interface TrackedFace {
+  id: string;
+  centerX: number;
+  centerY: number;
+  lastSeen: number;
+  lastCaptured: number;
+}
+
+interface QueuedFace {
+  trackingId: string;
+  photo: string;
+}
+
+interface FaceIdentificationItem {
+  trackingId: string;
+  photo: string;
+  status: 'QUEUED' | 'SEARCHING' | 'MATCHED' | 'NOT_REGISTERED' | 'FAILED';
+  visitor?: Visitor;
 }

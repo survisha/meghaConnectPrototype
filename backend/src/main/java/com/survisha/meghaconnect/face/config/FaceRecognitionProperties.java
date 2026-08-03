@@ -11,11 +11,17 @@ import java.util.List;
 @Validated
 @ConfigurationProperties(prefix = "integration.face-recognition")
 public class FaceRecognitionProperties {
+    @Data
+    public static class Enrollment {
+        private String apiKey;
+    }
+
     private boolean enabled;
     private String baseUrl;
     private String apiKey;
     private String clientId;
     private String appId;
+    private Enrollment enroll = new Enrollment();
     @Min(1) private int connectTimeoutSeconds = 10;
     @Min(1) private int readTimeoutSeconds = 60;
     @Min(1) private int writeTimeoutSeconds = 60;

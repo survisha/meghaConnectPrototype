@@ -60,13 +60,25 @@
 
       <div *ngIf="faceCameraActive" class="camera-panel">
         <video id="publicFaceVideo" autoplay muted playsinline></video>
-        <button mat-raised-button color="primary" (click)="captureAndIdentify()">Capture & Identify</button>
+        <div class="inline-alert"><mat-icon>center_focus_strong</mat-icon> Automatic detection active — look toward the camera</div>
       </div>
       <div *ngIf="facePhoto && !faceCameraActive" class="camera-panel">
         <img [src]="facePhoto" alt="Identification capture" />
         <button mat-button (click)="clearFaceIdentification()">Retake</button>
       </div>
       <div *ngIf="faceSearching" class="inline-alert"><mat-icon>hourglass_empty</mat-icon> Identifying securely…</div>
+      <div *ngIf="faceDetections.length" class="auto-face-results">
+        <div *ngFor="let face of faceDetections" class="auto-face-result">
+          <img [src]="face.photo" [alt]="face.trackingId" />
+          <div>
+            <strong>{{ face.trackingId }}</strong>
+            <div *ngIf="face.status === 'QUEUED' || face.status === 'SEARCHING'">Searching…</div>
+            <div *ngIf="face.status === 'MATCHED'">{{ face.visitor?.fullName }}</div>
+            <div *ngIf="face.status === 'NOT_REGISTERED'">No Registered Visitor</div>
+            <div *ngIf="face.status === 'FAILED'">Identification failed</div>
+          </div>
+        </div>
+      </div>
 
       <div *ngIf="errorMessage" class="inline-alert inline-alert-error">
         <mat-icon>error_outline</mat-icon>

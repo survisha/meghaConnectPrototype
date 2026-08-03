@@ -4,18 +4,26 @@ import com.survisha.meghaconnect.face.dto.FaceRequests;
 import com.survisha.meghaconnect.face.dto.FaceResponses;
 import com.survisha.meghaconnect.face.service.FaceRecognitionService;
 import io.swagger.v3.oas.annotations.Operation;
-import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import org.springframework.beans.factory.annotation.Qualifier;
 
 @RestController
 @RequestMapping("/api/v1/face-recognition")
-@RequiredArgsConstructor
 public class FaceRecognitionController {
     private final FaceRecognitionService service;
+    private final Executor applicationTaskExecutor;
+
+    public FaceRecognitionController(FaceRecognitionService service,
+                                     @Qualifier("applicationTaskExecutor") Executor applicationTaskExecutor) {
+        this.service = service;
+        this.applicationTaskExecutor = applicationTaskExecutor;
+    }
 
     @PostMapping("/enroll")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','DATA_ENTRY_OPERATOR')")
@@ -39,12 +47,12 @@ public class FaceRecognitionController {
     }
 
     @PostMapping("/search")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','OSD','CMO_OFFICER','HCM','DATA_ENTRY_OPERATOR')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','OSD','CMO_OFFICER','HCM','DATA_ENTRY_OPERATOR','APPROVER')")
     @Operation(summary = "Search an enrolled face (1:N); matched photo is restricted")
-    public FaceResponses.Search search(@Valid @RequestBody FaceRequests.Search request, Authentication authentication) {
+    public CompletableFuture<FaceResponses.Search> search(@Valid @RequestBody FaceRequests.Search request, Authentication authentication) {
         boolean privileged = authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_SUPER_ADMIN") || a.getAuthority().equals("ROLE_ADMIN"));
-        return service.search(request, privileged);
+        return CompletableFuture.supplyAsync(() -> service.search(request, privileged), applicationTaskExecutor);
     }
 
     @PostMapping("/verify")

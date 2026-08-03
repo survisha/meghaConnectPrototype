@@ -189,6 +189,15 @@ public class Visitor extends BaseEntity {
     @Column(length = 500)
     private String faceEmbeddingRef;
 
+    @Column(length = 20, nullable = false)
+    @Builder.Default
+    private String faceEnrollmentStatus = "PENDING";
+
+    private java.time.LocalDateTime faceEnrolledOn;
+
+    @Column(length = 500)
+    private String faceEnrollmentMessage;
+
     /**
      * Granular KYC status:
      * PENDING | KYC_PENDING | PHOTO_MATCHED | DEMOGRAPHIC_MATCHED | FAILED | NOT_VERIFIED | MANUAL_VERIFICATION_REQUIRED

@@ -117,6 +117,8 @@ public class PublicRegistrationDto {
     private Boolean multipleFacesDetected;
     private Double livenessScore;
     private String capturedAt;
+    private Double latitude;
+    private Double longitude;
 
     /**
      * Flag indicating the user provided a manual phone number (not retrieved from ID API).

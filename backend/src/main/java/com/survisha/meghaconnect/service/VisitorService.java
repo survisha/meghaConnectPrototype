@@ -7,6 +7,7 @@ import com.survisha.meghaconnect.dto.EpicVerificationData;
 import com.survisha.meghaconnect.dto.PublicRegistrationDto;
 import com.survisha.meghaconnect.dto.VisitorDto;
 import com.survisha.meghaconnect.dto.PollingDetails;
+import com.survisha.meghaconnect.face.event.VisitorRegisteredForFaceEnrollmentEvent;
 import com.survisha.meghaconnect.exception.*;
 import com.survisha.meghaconnect.util.DateTimeUtil;
 import com.survisha.meghaconnect.util.RequestContextUtil;
@@ -14,6 +15,7 @@ import com.survisha.meghaconnect.util.ValidationConstants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 import java.io.IOException;
 import java.time.LocalDate;
@@ -32,6 +34,7 @@ public class VisitorService {
     private final VisitorRepository visitorRepository;
     private final FileStorageService fileStorageService;
     private final AuditLogService auditLogService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public Optional<Visitor> findByPhone(String phone) {
         return visitorRepository.findByPhoneNumber(phone).stream().findFirst();
@@ -502,9 +505,14 @@ public class VisitorService {
                 .privacyPolicyUrl(trimToNull(dto.getPrivacyPolicyUrl()))
                 .termsUrl(trimToNull(dto.getTermsUrl()))
                 .maskedIdentityNumber(trimToNull(dto.getMaskedIdentityNumber()))
+                .faceEnrollmentStatus("PENDING")
+                .faceEnrollmentMessage("Face enrollment queued after registration.")
                 .build();
 
         Visitor saved = visitorRepository.save(visitor);
+        eventPublisher.publishEvent(new VisitorRegisteredForFaceEnrollmentEvent(
+                saved.getId(), saved.getEpicNumber(), saved.getFullName(), dto.getLivePhotoBase64(),
+                dto.getLatitude(), dto.getLongitude()));
         if ("KYC_PENDING".equals(kycStatus)) {
             auditLogService.log("Visitor", saved.getId(), "KYC_PENDING_PROCEEDED",
                     "Visitor registered with KYC pending. Provider=" + kycProvider

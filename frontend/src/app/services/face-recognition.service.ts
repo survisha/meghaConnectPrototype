@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, retry, timeout } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Visitor } from '../models';
 
@@ -22,6 +22,6 @@ export class FaceRecognitionService {
     return this.http.post<FaceSearchResult>(`${environment.apiUrl}/face-recognition/search`, {
       photo,
       includeMatchedPhoto: false
-    });
+    }).pipe(timeout(15000), retry(1));
   }
 }

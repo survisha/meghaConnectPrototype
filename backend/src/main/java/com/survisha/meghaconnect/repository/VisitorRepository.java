@@ -14,6 +14,7 @@ public interface VisitorRepository extends JpaRepository<Visitor, Long>, JpaSpec
     List<Visitor> findByPhoneNumber(String phoneNumber);
     List<Visitor> findByPhoneNumberAndEpicNumber(String phoneNumber, String epicNumber);
     Optional<Visitor> findByEpicNumber(String epicNumber);
+    Optional<Visitor> findByEpicNumberIgnoreCase(String epicNumber);
     Optional<Visitor> findByAadhaarNumber(String aadhaarNumber);
     boolean existsByPhoneNumber(String phoneNumber);
     boolean existsByEpicNumber(String epicNumber);

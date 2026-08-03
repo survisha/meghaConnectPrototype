@@ -67,6 +67,24 @@ export class CameraCaptureService {
     return canvas.toDataURL('image/jpeg', 0.85);
   }
 
+  captureCrop(videoElement: HTMLVideoElement, box: { left: number; top: number; width: number; height: number }): string {
+    const padding = 0.18;
+    const left = Math.max(0, box.left - box.width * padding);
+    const top = Math.max(0, box.top - box.height * padding);
+    const width = Math.min(1 - left, box.width * (1 + padding * 2));
+    const height = Math.min(1 - top, box.height * (1 + padding * 2));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(videoElement.videoWidth * width));
+    canvas.height = Math.max(1, Math.round(videoElement.videoHeight * height));
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Unable to capture face.');
+    context.drawImage(videoElement,
+      videoElement.videoWidth * left, videoElement.videoHeight * top,
+      videoElement.videoWidth * width, videoElement.videoHeight * height,
+      0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', 0.85);
+  }
+
   stop(stream: MediaStream | null): void {
     stream?.getTracks().forEach(track => track.stop());
   }

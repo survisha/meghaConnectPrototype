@@ -136,8 +136,9 @@
 .user-dialog {
   width: min(520px, 100%);
   max-height: calc(100vh - 2rem);
-  overflow: visible;
+  overflow: hidden;
   background: white;
+  color: #1f2937;
   border-radius: 8px;
   box-shadow: 0 18px 48px rgba(15, 23, 42, 0.24);
   display: flex;
@@ -151,6 +152,7 @@
   gap: 1rem;
   padding: 1rem 1.25rem;
   border-bottom: 1px solid #e5e7eb;
+  flex: 0 0 auto;
 }
 
 .dialog-header h2 {
@@ -164,8 +166,13 @@
   flex-direction: column;
   gap: 1.1rem;
   padding: 1.25rem;
-  overflow: visible;
+  min-height: 0;
+  max-height: none;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
+
+.dialog-field { width: 100%; flex: 0 0 auto; }
 
 .dialog-actions {
   display: flex;
@@ -173,11 +180,20 @@
   gap: 0.5rem;
   padding: 1rem 1.25rem;
   border-top: 1px solid #e5e7eb;
+  flex: 0 0 auto;
+  min-height: 64px;
+  margin: 0;
+  background: white;
 }
 
 @media (max-width: 576px) {
   .dialog-overlay {
     align-items: flex-start;
+    padding: 0.5rem;
+  }
+
+  .user-dialog {
+    max-height: calc(100dvh - 1rem);
   }
 
   .dialog-actions {

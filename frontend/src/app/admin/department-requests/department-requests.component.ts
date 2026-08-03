@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatSelectModule } from '@angular/material/select';
 import { environment } from '../../../environments/environment';
 import { ToastService } from '../../shared/toast/toast.service';
 import { apiErrorMessage } from '../../shared/api-error.util';
@@ -15,7 +17,7 @@ interface Wrapped<T> { data:T; message:string; }
 interface PageResult<T> { content:T[]; totalElements:number; totalPages:number; number:number; size:number; }
 interface ApprovalResult { request:RequestRow; departmentAdmin:{username:string}; oneTimeTemporaryPassword:string; }
 @Component({ selector:'app-department-requests', standalone:true,
-  imports:[CommonModule,FormsModule,MatButtonModule,MatIconModule],
+  imports:[CommonModule,FormsModule,MatButtonModule,MatIconModule,MatFormFieldModule,MatSelectModule],
   templateUrl:'./department-requests.component.html', styleUrls:['./department-requests.component.scss'] })
 export class DepartmentRequestsComponent implements OnInit {
   rows:RequestRow[]=[]; loading=false; error=''; status='PENDING'; page=0; size=20; totalElements=0; totalPages=0;

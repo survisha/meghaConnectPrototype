@@ -164,29 +164,29 @@
 
   <div class="dialog-overlay" *ngIf="showDialog" (click)="closeDialog()">
     <div class="user-dialog" role="dialog" aria-modal="true" aria-labelledby="userDialogTitle" (click)="$event.stopPropagation()">
-      <div class="dialog-header">
+      <div mat-dialog-title class="dialog-header">
         <h2 id="userDialogTitle">{{ isEdit ? 'Edit User' : 'New User' }}</h2>
         <button mat-icon-button color="primary" type="button" (click)="closeDialog()" matTooltip="Close">
           <mat-icon>close</mat-icon>
         </button>
       </div>
 
-      <div class="dialog-content">
+      <mat-dialog-content class="dialog-content">
         <div *ngIf="errorMsg" class="notice error compact">
           <mat-icon>error</mat-icon> {{ errorMsg }}
         </div>
 
-        <mat-form-field appearance="outline" style="width:100%">
+        <mat-form-field appearance="outline" class="dialog-field">
           <mat-label>Full Name *</mat-label>
           <input id="userMgmt_fullNameInput" matInput [(ngModel)]="form.fullName" placeholder="Full Name" />
         </mat-form-field>
 
-        <mat-form-field appearance="outline" style="width:100%">
+        <mat-form-field appearance="outline" class="dialog-field">
           <mat-label>Username / Login ID *</mat-label>
           <input id="userMgmt_usernameInput" matInput [(ngModel)]="form.username" placeholder="Username" [disabled]="isEdit" />
         </mat-form-field>
 
-        <mat-form-field appearance="outline" style="width:100%">
+        <mat-form-field appearance="outline" class="dialog-field">
           <mat-label>Role *</mat-label>
           <mat-select id="userMgmt_roleSelect" [(ngModel)]="form.role">
             <mat-option *ngIf="!roleOptions.length" disabled>No roles loaded</mat-option>
@@ -194,7 +194,7 @@
           </mat-select>
         </mat-form-field>
 
-        <mat-form-field appearance="outline" style="width:100%" *ngIf="auth.hasRole('SUPER_ADMIN')">
+        <mat-form-field appearance="outline" class="dialog-field" *ngIf="auth.hasRole('SUPER_ADMIN')">
           <mat-label>Department *</mat-label>
           <mat-select id="userMgmt_departmentSelect" [(ngModel)]="form.departmentId">
             <mat-option *ngIf="!departmentOptions.length" disabled>No active departments loaded</mat-option>
@@ -204,17 +204,17 @@
           </mat-select>
         </mat-form-field>
 
-        <mat-form-field appearance="outline" style="width:100%">
+        <mat-form-field appearance="outline" class="dialog-field">
           <mat-label>Email</mat-label>
           <input id="userMgmt_emailInput" matInput [(ngModel)]="form.email" placeholder="Email address" />
         </mat-form-field>
 
-        <mat-form-field appearance="outline" style="width:100%">
+        <mat-form-field appearance="outline" class="dialog-field">
           <mat-label>Mobile</mat-label>
           <input id="userMgmt_phoneInput" matInput [(ngModel)]="form.phoneNumber" placeholder="10-digit mobile number" maxlength="10" />
         </mat-form-field>
 
-        <mat-form-field appearance="outline" style="width:100%" *ngIf="!isEdit">
+        <mat-form-field appearance="outline" class="dialog-field" *ngIf="!isEdit">
           <mat-label>Password *</mat-label>
           <input id="userMgmt_passwordInput" matInput [type]="showPassword ? 'text' : 'password'" [(ngModel)]="form.password" placeholder="Set password" />
           <button id="userMgmt_togglePasswordBtn" mat-icon-button matSuffix (click)="showPassword = !showPassword" type="button">
@@ -238,14 +238,14 @@
             Unlock User
           </button>
         </div>
-      </div>
+      </mat-dialog-content>
 
-      <div class="dialog-actions">
+      <mat-dialog-actions align="end" class="dialog-actions">
         <button mat-button type="button" (click)="closeDialog()">Cancel</button>
         <button mat-raised-button color="primary" type="button" (click)="save()" [disabled]="isSaving">
           {{ isSaving ? 'Saving...' : (isEdit ? 'Update' : 'Create') }}
         </button>
-      </div>
+      </mat-dialog-actions>
     </div>
   </div>
 </div>

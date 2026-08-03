@@ -1,4 +1,5 @@
 import { Component, OnDestroy } from '@angular/core';
+import { animate, style, transition, trigger } from '@angular/animations';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -12,10 +13,10 @@ import { environment } from '../../environments/environment';
 import { apiErrorMessage } from '../shared/api-error.util';
 import { CameraCaptureService } from '../shared/camera-capture.service';
 import { FaceRecognitionService } from '../services/face-recognition.service';
-import { from, mergeMap, toArray } from 'rxjs';
-import { Subscription } from 'rxjs';
+import { from, interval, mergeMap, Subscription, toArray } from 'rxjs';
 import { AutoFaceDetection, CameraLivenessService } from '../shared/camera-liveness.service';
 import { ToastService } from '../shared/toast/toast.service';
+import { AUTO_FACE_RESULT_EXPIRY_TICK_MS, AUTO_FACE_RESULT_TIMEOUT_MS } from '../config/public-identification.constants';
 
 // Angular Material
 import { MatInputModule } from '@angular/material/input';
@@ -37,6 +38,12 @@ import { MatFormFieldModule } from '@angular/material/form-field';
   ],
   templateUrl: './public-identification.component.html',
   styleUrls: ['./public-identification.component.scss'],
+  animations: [
+    trigger('faceResultLifecycle', [
+      transition(':enter', [style({ opacity: 0, transform: 'translateY(8px)' }), animate('180ms ease-out')]),
+      transition(':leave', [animate('180ms ease-in', style({ opacity: 0, transform: 'translateY(-8px)' }))]),
+    ]),
+  ],
 })
 export class PublicIdentificationComponent implements OnDestroy {
   searchPhone = '';
@@ -63,6 +70,7 @@ export class PublicIdentificationComponent implements OnDestroy {
   readonly faceCaptureRetryMs = 15000;
   readonly faceDisappearGraceMs = 2500;
   faceDetections: FaceIdentificationItem[] = [];
+  selectedFaceTrackingId: string | null = null;
   private detectionTimer: ReturnType<typeof setTimeout> | null = null;
   private detectionRunning = false;
   private nextTrackingId = 1;
@@ -70,6 +78,8 @@ export class PublicIdentificationComponent implements OnDestroy {
   private faceQueue: QueuedFace[] = [];
   private activeFaceSearches = 0;
   private faceSearchSubscriptions = new Set<Subscription>();
+  private resultExpirySubscription: Subscription | null = null;
+  private historySubscription: Subscription | null = null;
 
   districts = ['East Khasi Hills','West Khasi Hills','Ri Bhoi','East Jaintia Hills','West Jaintia Hills','East Garo Hills','West Garo Hills','South Garo Hills','North Garo Hills'];
 
@@ -89,7 +99,11 @@ export class PublicIdentificationComponent implements OnDestroy {
     private toast: ToastService
   ) {}
 
-  ngOnDestroy(): void { this.stopFaceCamera(); }
+  ngOnDestroy(): void {
+    this.stopFaceCamera();
+    this.stopResultExpiryClock();
+    this.historySubscription?.unsubscribe();
+  }
 
   async startFaceIdentification(): Promise<void> {
     this.errorMessage = '';
@@ -169,11 +183,13 @@ export class PublicIdentificationComponent implements OnDestroy {
     this.cameraCapture.stop(this.faceCameraStream);
     this.faceCameraStream = null;
     this.faceCameraActive = false;
+    this.stopResultExpiryClock();
   }
 
   private resetFaceSession(): void {
     this.faceQueue = [];
     this.faceDetections = [];
+    this.selectedFaceTrackingId = null;
     this.trackedFaces.clear();
     this.nextTrackingId = 1;
   }
@@ -225,7 +241,8 @@ export class PublicIdentificationComponent implements OnDestroy {
         const photo = this.cameraCapture.captureCrop(video, detection.box);
         this.faceDetections.push({
           trackingId: track.id, capturedImage: photo, status: 'QUEUED',
-          matchScore: detection.score, recognitionTime: new Date(now)
+          matchScore: detection.score, recognitionTime: new Date(now), createdTime: now,
+          expiryTime: 0, selected: false
         });
         this.faceQueue.push({ trackingId: track.id, photo });
       }
@@ -252,6 +269,8 @@ export class PublicIdentificationComponent implements OnDestroy {
             item.matchScore = response.score ?? item.matchScore;
             item.message = response.message;
             item.recognitionTime = new Date();
+            item.expiryTime = Date.now() + AUTO_FACE_RESULT_TIMEOUT_MS;
+            this.startResultExpiryClock();
           }
           if (response.matched && response.visitor?.id && !this.results.some(v => v.id === response.visitor!.id)) {
             this.results = [...this.results, response.visitor];
@@ -264,6 +283,8 @@ export class PublicIdentificationComponent implements OnDestroy {
             item.status = error?.name === 'TimeoutError' ? 'TIMEOUT' : 'UNAVAILABLE';
             item.message = item.status === 'TIMEOUT' ? 'Search timed out.' : 'Face recognition service is unavailable.';
             item.recognitionTime = new Date();
+            item.expiryTime = Date.now() + AUTO_FACE_RESULT_TIMEOUT_MS;
+            this.startResultExpiryClock();
           }
           this.toast.error('Face Recognition Service Unavailable');
           this.finishFaceSearch(subscription);
@@ -285,6 +306,78 @@ export class PublicIdentificationComponent implements OnDestroy {
     this.activeFaceSearches = Math.max(0, this.activeFaceSearches - 1);
     this.faceSearching = this.activeFaceSearches > 0 || this.faceQueue.length > 0;
     this.drainFaceQueue();
+  }
+
+  selectFaceResult(face: FaceIdentificationItem): void {
+    this.faceDetections.forEach(item => item.selected = item.trackingId === face.trackingId);
+    this.selectedFaceTrackingId = face.trackingId;
+    if (face.status === 'MATCHED' && face.visitor) {
+      this.select(face.visitor);
+    } else {
+      this.clearSelectedProfile();
+    }
+  }
+
+  getStatusClass(status: FaceIdentificationStatus): string {
+    switch (status) {
+      case 'MATCHED': return 'face-status-success';
+      case 'NOT_REGISTERED': return 'face-status-warning';
+      case 'FAILED': return 'face-status-error';
+      case 'TIMEOUT': return 'face-status-timeout';
+      case 'UNAVAILABLE': return 'face-status-unavailable';
+      default: return 'face-status-searching';
+    }
+  }
+
+  getFaceStatusIcon(status: FaceIdentificationStatus): string {
+    switch (status) {
+      case 'MATCHED': return 'check_circle';
+      case 'NOT_REGISTERED': return 'warning';
+      case 'FAILED': return 'error';
+      case 'TIMEOUT': return 'schedule';
+      case 'UNAVAILABLE': return 'cloud_off';
+      default: return 'sync';
+    }
+  }
+
+  faceStatusLabel(status: FaceIdentificationStatus): string {
+    if (status === 'NOT_REGISTERED') return 'Not Registered';
+    if (status === 'UNAVAILABLE') return 'Service Unavailable';
+    if (status === 'QUEUED' || status === 'SEARCHING') return 'Searching';
+    return this.statusLabel(status);
+  }
+
+  trackFaceResult(_: number, face: FaceIdentificationItem): string { return face.trackingId; }
+
+  private startResultExpiryClock(): void {
+    if (this.resultExpirySubscription) return;
+    this.resultExpirySubscription = interval(AUTO_FACE_RESULT_EXPIRY_TICK_MS).subscribe(() => this.removeExpiredFaceResults());
+  }
+
+  private removeExpiredFaceResults(): void {
+    const now = Date.now();
+    const expiredSelected = this.faceDetections.some(face =>
+      face.trackingId === this.selectedFaceTrackingId && face.expiryTime > 0 && face.expiryTime <= now);
+    this.faceDetections = this.faceDetections.filter(face => !face.expiryTime || face.expiryTime > now);
+    if (expiredSelected) {
+      this.selectedFaceTrackingId = null;
+      this.clearSelectedProfile();
+    }
+    if (!this.faceDetections.some(face => face.expiryTime > 0)) this.stopResultExpiryClock();
+  }
+
+  private stopResultExpiryClock(): void {
+    this.resultExpirySubscription?.unsubscribe();
+    this.resultExpirySubscription = null;
+  }
+
+  private clearSelectedProfile(): void {
+    this.historySubscription?.unsubscribe();
+    this.historySubscription = null;
+    this.selected = null;
+    this.selectedPhotoLoadFailed = false;
+    this.selectedPhotoPreviewOpen = false;
+    this.populateHistory();
   }
 
   private readImage(file: File): Promise<string> {
@@ -524,10 +617,12 @@ export class PublicIdentificationComponent implements OnDestroy {
   }
 
   private loadCitizenHistory(citizenId: number): void {
+    this.historySubscription?.unsubscribe();
     this.historyLoading = true;
     this.historyError = '';
-    this.visitorSearchService.getPublicIdentificationHistory(citizenId).subscribe({
+    this.historySubscription = this.visitorSearchService.getPublicIdentificationHistory(citizenId).subscribe({
       next: history => {
+        if (this.selected?.id !== citizenId) return;
         this.historyLoading = false;
         this.citizenHistory = history;
         this.schemeHistory = history.schemes || [];
@@ -539,6 +634,7 @@ export class PublicIdentificationComponent implements OnDestroy {
         }
       },
       error: error => {
+        if (this.selected?.id !== citizenId) return;
         this.historyLoading = false;
         this.historyError = apiErrorMessage(error, 'Unable to load citizen history. Please try again.');
         this.schemeHistory = [];
@@ -663,10 +759,15 @@ interface QueuedFace {
 interface FaceIdentificationItem {
   trackingId: string;
   capturedImage: string;
-  status: 'QUEUED' | 'SEARCHING' | 'MATCHED' | 'NOT_REGISTERED' | 'TIMEOUT' | 'UNAVAILABLE';
+  status: FaceIdentificationStatus;
   visitor?: Visitor;
   enrollmentId?: string;
   matchScore?: number;
   recognitionTime: Date;
+  createdTime: number;
+  expiryTime: number;
+  selected: boolean;
   message?: string;
 }
+
+type FaceIdentificationStatus = 'QUEUED' | 'SEARCHING' | 'MATCHED' | 'NOT_REGISTERED' | 'FAILED' | 'TIMEOUT' | 'UNAVAILABLE';

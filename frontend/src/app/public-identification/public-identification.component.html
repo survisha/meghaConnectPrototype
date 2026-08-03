@@ -67,20 +67,6 @@
         <button mat-button (click)="clearFaceIdentification()">Retake</button>
       </div>
       <div *ngIf="faceSearching" class="inline-alert"><mat-icon>hourglass_empty</mat-icon> Identifying securely…</div>
-      <div *ngIf="faceDetections.length" class="auto-face-results">
-        <div *ngFor="let face of faceDetections" class="auto-face-result">
-          <img [src]="face.capturedImage" [alt]="face.trackingId" />
-          <div>
-            <strong>{{ face.trackingId }}</strong>
-            <div *ngIf="face.status === 'QUEUED' || face.status === 'SEARCHING'">Searching…</div>
-            <div *ngIf="face.status === 'MATCHED'">{{ face.visitor?.fullName }}</div>
-            <div *ngIf="face.status === 'NOT_REGISTERED'">No Registered Visitor</div>
-            <div *ngIf="face.status === 'TIMEOUT'">Search Timeout</div>
-            <div *ngIf="face.status === 'UNAVAILABLE'">Service Unavailable</div>
-          </div>
-        </div>
-      </div>
-
       <div *ngIf="errorMessage" class="inline-alert inline-alert-error">
         <mat-icon>error_outline</mat-icon>
         <span>{{ errorMessage }}</span>
@@ -92,7 +78,7 @@
     <!-- Results List -->
     <div class="section-card">
       <div class="section-card-header">
-        <mat-icon>list</mat-icon> Results ({{ results.length }})
+        <mat-icon>list</mat-icon> Results ({{ faceDetections.length || results.length }})
       </div>
       <div class="section-card-body" style="padding:0">
         <div *ngIf="searching" style="padding:2rem;text-align:center;color:#6b7280;font-size:0.85rem">
@@ -103,72 +89,53 @@
           <mat-icon style="font-size:3rem;width:3rem;height:3rem;color:#d1d5db;margin-bottom:0.5rem">info</mat-icon>
           <p>Enter search criteria and click Search.</p>
         </div>
-        <div *ngIf="!searching && searched && results.length===0 && !errorMessage" style="padding:2rem;text-align:center;color:#9ca3af">
+        <div *ngIf="!searching && searched && results.length===0 && faceDetections.length===0 && !errorMessage" style="padding:2rem;text-align:center;color:#9ca3af">
           <mat-icon style="font-size:3rem;width:3rem;height:3rem;color:#d1d5db;margin-bottom:0.5rem">search_off</mat-icon>
           <p>No results found.</p>
         </div>
-        <div *ngFor="let p of results" class="result-row" [class.selected]="selected?.id===p.id" (click)="select(p)">
-          <div class="mini-avatar">{{ initial(p.fullName) }}</div>
-          <div style="flex:1">
-            <div style="font-weight:600;font-size:0.9rem;color:#1f2937">{{ displayValue(p.fullName) }}</div>
-            <div style="font-size:0.78rem;color:#6b7280">{{ displayValue(p.designation) }}</div>
-            <div style="font-size:0.75rem;color:#9ca3af">{{ displayValue(p.constituency) }}, {{ displayValue(p.district) }}</div>
-          </div>
-          <mat-icon style="color:#9ca3af">chevron_right</mat-icon>
+        <div *ngIf="faceDetections.length" class="auto-face-results" aria-live="polite">
+          <button *ngFor="let face of faceDetections; trackBy: trackFaceResult"
+            type="button" class="auto-face-result" [class.selected]="face.selected"
+            [ngClass]="getStatusClass(face.status)" [@faceResultLifecycle]
+            (click)="selectFaceResult(face)">
+            <img [src]="face.capturedImage" [alt]="face.trackingId + ' captured face'" />
+            <span class="auto-face-result-content">
+              <span class="face-result-heading">
+                <strong>{{ face.visitor?.fullName || face.trackingId }}</strong>
+                <span class="face-status-badge"><mat-icon [class.face-status-spinner]="face.status === 'QUEUED' || face.status === 'SEARCHING'">{{ getFaceStatusIcon(face.status) }}</mat-icon>{{ faceStatusLabel(face.status) }}</span>
+              </span>
+              <span class="face-result-meta"><strong>Status</strong> {{ faceStatusLabel(face.status) }}</span>
+              <span class="face-result-meta"><strong>Match score</strong> {{ face.matchScore === null || face.matchScore === undefined ? '-' : (face.matchScore | number:'1.2-2') }}</span>
+              <span class="face-result-meta"><strong>Recognition</strong> {{ face.recognitionTime | date:'mediumTime' }}</span>
+              <span class="face-result-meta" *ngIf="face.visitor"><strong>Department</strong> {{ displayValue($any(face.visitor).department || face.visitor.designation) }}</span>
+              <span class="face-result-summary">{{ face.message || face.visitor?.briefProfile || (face.status === 'NOT_REGISTERED' ? 'Visitor not found in system' : 'Face search in progress') }}</span>
+            </span>
+          </button>
         </div>
+        <ng-container *ngIf="!faceDetections.length">
+          <div *ngFor="let p of results" class="result-row" [class.selected]="selected?.id===p.id" (click)="select(p)">
+            <div class="mini-avatar">{{ initial(p.fullName) }}</div>
+            <div style="flex:1">
+              <div style="font-weight:600;font-size:0.9rem;color:#1f2937">{{ displayValue(p.fullName) }}</div>
+              <div style="font-size:0.78rem;color:#6b7280">{{ displayValue(p.designation) }}</div>
+              <div style="font-size:0.75rem;color:#9ca3af">{{ displayValue(p.constituency) }}, {{ displayValue(p.district) }}</div>
+            </div>
+            <mat-icon style="color:#9ca3af">chevron_right</mat-icon>
+          </div>
+        </ng-container>
       </div>
     </div>
 
     <!-- Profile Detail -->
     <div>
-      <div *ngIf="faceDetections.length" class="face-profile-list">
-        <div *ngFor="let face of faceDetections" class="section-card face-profile-card">
-          <div class="section-card-header">
-            <mat-icon>{{ face.status === 'MATCHED' ? 'check_circle' : face.status === 'NOT_REGISTERED' ? 'person_off' : 'hourglass_empty' }}</mat-icon>
-            {{ face.trackingId }} · {{ face.status === 'NOT_REGISTERED' ? 'Not Registered' : statusLabel(face.status) }}
-          </div>
-          <div class="section-card-body">
-            <div class="face-photo-pair">
-              <div>
-                <span>Captured Face</span>
-                <img [src]="face.capturedImage" alt="Captured face" />
-                <strong *ngIf="face.status === 'NOT_REGISTERED'" class="not-registered-label">Not Registered</strong>
-              </div>
-              <div *ngIf="face.visitor"><span>Visitor Photo</span><div class="big-avatar compact-avatar">{{ initial(face.visitor.fullName) }}</div></div>
-            </div>
-            <div *ngIf="face.status === 'QUEUED' || face.status === 'SEARCHING'" class="face-card-loading">
-              <mat-icon>hourglass_empty</mat-icon> Searching…
-            </div>
-            <ng-container *ngIf="face.status === 'MATCHED' && face.visitor as visitor">
-              <div class="profile-grid">
-                <div><span>Visitor Name</span><strong>{{ displayValue(visitor.fullName) }}</strong></div>
-                <div><span>Enrollment ID</span><strong>{{ displayValue(face.enrollmentId) }}</strong></div>
-                <div><span>EPIC</span><strong>{{ displayValue(visitor.epicNumber) }}</strong></div>
-                <div><span>Mobile</span><strong>{{ displayValue(visitor.phoneNumber) }}</strong></div>
-                <div><span>Department</span><strong>{{ displayValue($any(visitor).department || visitor.designation) }}</strong></div>
-                <div><span>Appointment Status</span><strong>{{ displayValue($any(visitor).appointmentStatus) }}</strong></div>
-                <div><span>Face Match Score</span><strong>{{ face.matchScore == null ? '-' : (face.matchScore | number:'1.2-2') }}</strong></div>
-                <div><span>Recognition Time</span><strong>{{ face.recognitionTime | date:'mediumTime' }}</strong></div>
-              </div>
-            </ng-container>
-            <div *ngIf="face.status === 'NOT_REGISTERED'" class="face-empty-result">
-              <strong>Not Registered</strong><span>{{ face.message || 'Visitor not found in system' }}</span>
-            </div>
-            <div *ngIf="face.status === 'TIMEOUT' || face.status === 'UNAVAILABLE'" class="face-empty-result error-state">
-              <strong>{{ face.status === 'TIMEOUT' ? 'Search Timeout' : 'Service Unavailable' }}</strong><span>{{ face.message }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div *ngIf="!faceDetections.length && !selected" class="section-card" style="height:100%">
+      <div *ngIf="!selected" class="section-card" style="height:100%">
         <div class="section-card-body" style="display:flex;align-items:center;justify-content:center;height:300px;flex-direction:column;color:#9ca3af">
           <mat-icon style="font-size:3rem;width:3rem;height:3rem;margin-bottom:1rem;opacity:.4">person</mat-icon>
           <p>Select a person to view their full profile</p>
         </div>
       </div>
 
-      <div *ngIf="!faceDetections.length && selected">
+      <div *ngIf="selected">
         <div class="section-card" style="margin-bottom:1rem">
           <div class="section-card-header">
             <mat-icon>badge</mat-icon> Person Profile
@@ -215,13 +182,27 @@
             <mat-divider style="margin: 1rem 0"></mat-divider>
             
             <div class="profile-grid">
+              <div><span>Visitor ID</span><strong>{{ displayValue(selected.id) }}</strong></div>
               <div><span>Phone</span><strong style="color:#1f2937">{{ displayValue(selected.phoneNumber) }}</strong></div>
               <div><span>EPIC</span><strong style="color:#1f2937">{{ displayValue(selected.epicNumber) }}</strong></div>
               <div><span>District</span><strong style="color:#1f2937">{{ displayValue(selected.district) }}</strong></div>
               <div><span>Constituency</span><strong style="color:#1f2937">{{ displayValue(selected.constituency) }}</strong></div>
               <div><span>Booth</span><strong style="color:#1f2937">{{ displayValue(selected.booth) }}</strong></div>
               <div><span>Village</span><strong style="color:#1f2937">{{ displayValue(selected.village) }}</strong></div>
+              <div><span>Address</span><strong>{{ displayValue(selected.fullAddress || selected.address || selected.addressLine || selected.address1) }}</strong></div>
             </div>
+
+            <ng-container *ngIf="selectedFaceTrackingId">
+              <mat-divider style="margin: 1rem 0"></mat-divider>
+              <div class="profile-grid" *ngFor="let face of faceDetections">
+                <ng-container *ngIf="face.trackingId === selectedFaceTrackingId">
+                  <div><span>Match Score</span><strong>{{ face.matchScore === null || face.matchScore === undefined ? '-' : (face.matchScore | number:'1.2-2') }}</strong></div>
+                  <div><span>Recognition Time</span><strong>{{ face.recognitionTime | date:'medium' }}</strong></div>
+                  <div><span>Enrollment ID</span><strong>{{ displayValue(face.enrollmentId) }}</strong></div>
+                  <div class="captured-face-detail"><span>Captured Image</span><img [src]="face.capturedImage" alt="Selected captured face" /></div>
+                </ng-container>
+              </div>
+            </ng-container>
             
             <div *ngIf="selected.briefProfile" style="margin-top:0.75rem;padding:0.75rem;background:#f9fafb;border-radius:6px;font-size:0.85rem">
               {{ selected.briefProfile }}

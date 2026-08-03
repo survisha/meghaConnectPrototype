@@ -60,6 +60,8 @@ export class PublicIdentificationComponent implements OnDestroy {
   faceSearching = false;
   readonly maxFaces = 6;
   readonly maxConcurrentFaceSearches = 5;
+  readonly faceCaptureRetryMs = 15000;
+  readonly faceDisappearGraceMs = 2500;
   faceDetections: FaceIdentificationItem[] = [];
   private detectionTimer: ReturnType<typeof setTimeout> | null = null;
   private detectionRunning = false;
@@ -91,6 +93,7 @@ export class PublicIdentificationComponent implements OnDestroy {
 
   async startFaceIdentification(): Promise<void> {
     this.errorMessage = '';
+    this.resetFaceSession();
     try {
       this.faceCameraStream = await this.cameraCapture.open('user');
       this.faceCameraActive = true;
@@ -168,6 +171,13 @@ export class PublicIdentificationComponent implements OnDestroy {
     this.faceCameraActive = false;
   }
 
+  private resetFaceSession(): void {
+    this.faceQueue = [];
+    this.faceDetections = [];
+    this.trackedFaces.clear();
+    this.nextTrackingId = 1;
+  }
+
   private scheduleFaceDetection(video: HTMLVideoElement): void {
     if (!this.faceCameraActive) return;
     this.detectionTimer = setTimeout(async () => {
@@ -187,27 +197,42 @@ export class PublicIdentificationComponent implements OnDestroy {
 
   private processDetectedFaces(video: HTMLVideoElement, detections: AutoFaceDetection[]): void {
     const now = Date.now();
+    const seenTracks = new Set<string>();
     for (const detection of detections.filter(face => face.valid)) {
       const centerX = detection.box.left + detection.box.width / 2;
       const centerY = detection.box.top + detection.box.height / 2;
-      let track = Array.from(this.trackedFaces.values()).find(candidate =>
-        Math.hypot(candidate.centerX - centerX, candidate.centerY - centerY) < 0.14);
+      let track = Array.from(this.trackedFaces.values()).find(candidate => candidate.active &&
+        Math.hypot(candidate.centerX - centerX, candidate.centerY - centerY) < 0.16 &&
+        this.descriptorDistance(candidate.descriptor, detection.descriptor) < 0.18);
+      track ??= Array.from(this.trackedFaces.values()).find(candidate => !candidate.active &&
+        now - candidate.lastSeen < this.faceCaptureRetryMs &&
+        this.descriptorDistance(candidate.descriptor, detection.descriptor) < 0.12);
       if (!track) {
-        track = { id: `Face ${this.nextTrackingId++}`, centerX, centerY, lastSeen: now, lastCaptured: 0 };
+        track = {
+          id: `Face ${this.nextTrackingId++}`, centerX, centerY, descriptor: detection.descriptor,
+          lastSeen: now, active: true, captured: false
+        };
         this.trackedFaces.set(track.id, track);
       }
       track.centerX = centerX;
       track.centerY = centerY;
+      track.descriptor = detection.descriptor;
       track.lastSeen = now;
-      if (now - track.lastCaptured >= 15000) {
-        track.lastCaptured = now;
+      track.active = true;
+      seenTracks.add(track.id);
+      if (!track.captured) {
+        track.captured = true;
         const photo = this.cameraCapture.captureCrop(video, detection.box);
-        this.faceDetections.unshift({ trackingId: track.id, photo, status: 'QUEUED' });
+        this.faceDetections.push({
+          trackingId: track.id, capturedImage: photo, status: 'QUEUED',
+          matchScore: detection.score, recognitionTime: new Date(now)
+        });
         this.faceQueue.push({ trackingId: track.id, photo });
       }
     }
     for (const [id, track] of this.trackedFaces) {
-      if (now - track.lastSeen > 2500) this.trackedFaces.delete(id);
+      if (!seenTracks.has(id) && now - track.lastSeen > this.faceDisappearGraceMs) track.active = false;
+      if (!track.active && now - track.lastSeen >= this.faceCaptureRetryMs) this.trackedFaces.delete(id);
     }
     this.drainFaceQueue();
   }
@@ -223,6 +248,10 @@ export class PublicIdentificationComponent implements OnDestroy {
           if (item) {
             item.status = response.matched && response.visitor ? 'MATCHED' : 'NOT_REGISTERED';
             item.visitor = response.visitor;
+            item.enrollmentId = response.enrollmentId;
+            item.matchScore = response.score ?? item.matchScore;
+            item.message = response.message;
+            item.recognitionTime = new Date();
           }
           if (response.matched && response.visitor?.id && !this.results.some(v => v.id === response.visitor!.id)) {
             this.results = [...this.results, response.visitor];
@@ -230,8 +259,12 @@ export class PublicIdentificationComponent implements OnDestroy {
           }
           this.searched = true;
         },
-        error: () => {
-          if (item) item.status = 'FAILED';
+        error: error => {
+          if (item) {
+            item.status = error?.name === 'TimeoutError' ? 'TIMEOUT' : 'UNAVAILABLE';
+            item.message = item.status === 'TIMEOUT' ? 'Search timed out.' : 'Face recognition service is unavailable.';
+            item.recognitionTime = new Date();
+          }
           this.toast.error('Face Recognition Service Unavailable');
           this.finishFaceSearch(subscription);
         },
@@ -240,6 +273,11 @@ export class PublicIdentificationComponent implements OnDestroy {
       this.faceSearchSubscriptions.add(subscription);
     }
     this.faceSearching = this.activeFaceSearches > 0 || this.faceQueue.length > 0;
+  }
+
+  private descriptorDistance(left: number[], right: number[]): number {
+    if (!left.length || left.length !== right.length) return Number.POSITIVE_INFINITY;
+    return left.reduce((sum, value, index) => sum + Math.abs(value - right[index]), 0) / left.length;
   }
 
   private finishFaceSearch(subscription: Subscription): void {
@@ -612,7 +650,9 @@ interface TrackedFace {
   centerX: number;
   centerY: number;
   lastSeen: number;
-  lastCaptured: number;
+  descriptor: number[];
+  active: boolean;
+  captured: boolean;
 }
 
 interface QueuedFace {
@@ -622,7 +662,11 @@ interface QueuedFace {
 
 interface FaceIdentificationItem {
   trackingId: string;
-  photo: string;
-  status: 'QUEUED' | 'SEARCHING' | 'MATCHED' | 'NOT_REGISTERED' | 'FAILED';
+  capturedImage: string;
+  status: 'QUEUED' | 'SEARCHING' | 'MATCHED' | 'NOT_REGISTERED' | 'TIMEOUT' | 'UNAVAILABLE';
   visitor?: Visitor;
+  enrollmentId?: string;
+  matchScore?: number;
+  recognitionTime: Date;
+  message?: string;
 }

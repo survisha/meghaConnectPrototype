@@ -451,3 +451,46 @@ mat-chip.status-chip {
   border-radius: 0.5rem;
   object-fit: cover;
 }
+
+.face-profile-list {
+  max-height: 72vh;
+  overflow-y: auto;
+  display: grid;
+  gap: 1rem;
+}
+
+.face-profile-card { margin: 0; }
+
+.face-photo-pair {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+
+  > div { display: grid; gap: 0.35rem; color: #6b7280; font-size: 0.75rem; }
+  img, .compact-avatar { width: 76px; height: 76px; border-radius: 0.65rem; object-fit: cover; }
+}
+
+.face-card-loading, .face-empty-result {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.8rem;
+  border-radius: 0.5rem;
+  background: #f8fafc;
+}
+
+.face-empty-result { flex-direction: column; align-items: flex-start; }
+.face-empty-result.error-state { background: #fef2f2; color: #991b1b; }
+
+.not-registered-label {
+  width: 76px;
+  color: #b91c1c;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .face-profile-list { max-height: none; }
+  .face-photo-pair { flex-wrap: wrap; }
+}

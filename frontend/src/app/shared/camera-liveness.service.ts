@@ -10,6 +10,7 @@ export interface AutoFaceDetection {
   box: { left: number; top: number; width: number; height: number };
   valid: boolean;
   score: number;
+  descriptor: number[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -112,9 +113,20 @@ export class CameraLivenessService {
       const tilted = Math.abs(this.eyeLineAngleDegrees(landmarks)) > 12;
       const frontFacing = this.isFrontFacing(landmarks);
       const valid = frontFacing && !tilted && !tooFar && !tooClose && !lighting.poorLighting;
-      return { box, valid, score: this.score({
+      return { box, valid, descriptor: this.faceDescriptor(landmarks, box), score: this.score({
         faceCentered: true, frontFacing, tilted, tooClose, tooFar, poorLighting: lighting.poorLighting
       }) };
+    });
+  }
+
+  private faceDescriptor(landmarks: NormalizedLandmark[], box: { left: number; top: number; width: number; height: number }): number[] {
+    const indexes = [1, 33, 263, 61, 291, 199];
+    return indexes.flatMap(index => {
+      const point = landmarks[index];
+      return point ? [
+        Math.round(((point.x - box.left) / Math.max(box.width, 0.001)) * 100) / 100,
+        Math.round(((point.y - box.top) / Math.max(box.height, 0.001)) * 100) / 100,
+      ] : [0, 0];
     });
   }
 

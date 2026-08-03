@@ -66,8 +66,51 @@ class _VisitorProfile {
 class _PendingFace {
   final String trackingId;
   final String photo;
+  final int session;
 
-  const _PendingFace(this.trackingId, this.photo);
+  const _PendingFace(this.trackingId, this.photo, this.session);
+}
+
+enum _FaceResultStatus {
+  queued,
+  searching,
+  matched,
+  notRegistered,
+  timeout,
+  unavailable
+}
+
+class _FaceRecognitionResult {
+  final String trackingId;
+  final String capturedImage;
+  _FaceResultStatus status;
+  _VisitorProfile? visitor;
+  String enrollmentId = '';
+  double? matchScore;
+  DateTime recognitionTime;
+  String message = '';
+
+  _FaceRecognitionResult({
+    required this.trackingId,
+    required this.capturedImage,
+    required this.status,
+    required this.recognitionTime,
+  });
+}
+
+class _MobileFaceTrack {
+  final int id;
+  int? detectorId;
+  Offset center;
+  DateTime lastSeen;
+  bool active = true;
+  bool captured = false;
+
+  _MobileFaceTrack(
+      {required this.id,
+      required this.detectorId,
+      required this.center,
+      required this.lastSeen});
 }
 
 class _CitizenHistory {
@@ -110,7 +153,8 @@ class _PublicIdentificationScreenState
   final _epicCtrl = TextEditingController();
   final _nameCtrl = TextEditingController();
   CameraController? _faceCamera;
-  final FaceDetector _faceDetector = FaceDetector(options: FaceDetectorOptions(
+  final FaceDetector _faceDetector = FaceDetector(
+      options: FaceDetectorOptions(
     enableTracking: true,
     performanceMode: FaceDetectorMode.fast,
   ));
@@ -118,8 +162,12 @@ class _PublicIdentificationScreenState
   bool _detectingFaces = false;
   int _activeFaceSearches = 0;
   final List<_PendingFace> _faceQueue = [];
-  final Map<int, DateTime> _capturedTracks = {};
-  final List<String> _faceStatuses = [];
+  final Map<int, _MobileFaceTrack> _faceTracks = {};
+  final List<_FaceRecognitionResult> _faceResults = [];
+  int _nextFaceTrackId = 1;
+  int _faceSession = 0;
+  static const _faceRetryTimeout = Duration(seconds: 15);
+  static const _faceDisappearGrace = Duration(milliseconds: 2400);
   String _district = '';
 
   List<_VisitorProfile> _results = [];
@@ -143,17 +191,22 @@ class _PublicIdentificationScreenState
         (camera) => camera.lensDirection == CameraLensDirection.front,
         orElse: () => cameras.first,
       );
-      final controller = CameraController(selected, ResolutionPreset.medium, enableAudio: false);
+      final controller = CameraController(selected, ResolutionPreset.medium,
+          enableAudio: false);
       await controller.initialize();
       if (!mounted) return controller.dispose();
       setState(() {
+        _resetFaceSession();
         _faceCamera = controller;
         _searched = true;
         _error = null;
       });
       _scheduleFaceDetection();
     } catch (_) {
-      if (mounted) setState(() => _error = 'Unable to open camera. Please check camera permission.');
+      if (mounted) {
+        setState(() =>
+            _error = 'Unable to open camera. Please check camera permission.');
+      }
     }
   }
 
@@ -164,26 +217,84 @@ class _PublicIdentificationScreenState
 
   Future<void> _detectAndQueueFaces() async {
     final controller = _faceCamera;
-    if (controller == null || !controller.value.isInitialized || _detectingFaces) return;
+    if (controller == null ||
+        !controller.value.isInitialized ||
+        _detectingFaces) return;
     _detectingFaces = true;
     try {
       final capture = await controller.takePicture();
-      final faces = await _faceDetector.processImage(InputImage.fromFilePath(capture.path));
+      final faces = await _faceDetector
+          .processImage(InputImage.fromFilePath(capture.path));
       final bytes = await capture.readAsBytes();
       final source = img.decodeImage(bytes);
       if (source != null) {
         final now = DateTime.now();
+        final seenTrackIds = <int>{};
         for (final face in faces) {
-          final trackId = face.trackingId ?? _spatialTrackId(face.boundingBox);
-          final lastCapture = _capturedTracks[trackId];
+          final center = face.boundingBox.center;
+          _MobileFaceTrack? track;
+          for (final candidate in _faceTracks.values) {
+            final detectorMatch = face.trackingId != null &&
+                candidate.detectorId == face.trackingId;
+            final spatialDistance = (candidate.center - center).distance;
+            if (candidate.active &&
+                (detectorMatch || spatialDistance < source.width * .14)) {
+              track = candidate;
+              break;
+            }
+          }
+          if (track == null) {
+            for (final candidate in _faceTracks.values) {
+              if (!candidate.active &&
+                  now.difference(candidate.lastSeen) < _faceRetryTimeout &&
+                  (candidate.center - center).distance < source.width * .1) {
+                track = candidate;
+                break;
+              }
+            }
+          }
+          track ??= _MobileFaceTrack(
+              id: _nextFaceTrackId++,
+              detectorId: face.trackingId,
+              center: center,
+              lastSeen: now);
+          _faceTracks[track.id] = track;
+          track.detectorId = face.trackingId ?? track.detectorId;
+          track.center = center;
+          track.lastSeen = now;
+          track.active = true;
+          seenTrackIds.add(track.id);
           final qualityOk = face.boundingBox.width >= source.width * .12 &&
               face.boundingBox.height >= source.height * .16 &&
+              center.dx >= source.width * .06 &&
+              center.dx <= source.width * .94 &&
+              center.dy >= source.height * .08 &&
+              center.dy <= source.height * .92 &&
               (face.headEulerAngleY ?? 0).abs() <= 18 &&
               (face.headEulerAngleZ ?? 0).abs() <= 12;
-          if (!qualityOk || (lastCapture != null && now.difference(lastCapture).inSeconds < 15)) continue;
-          _capturedTracks[trackId] = now;
+          if (!qualityOk || track.captured) continue;
+          track.captured = true;
           final crop = _cropFace(source, face.boundingBox);
-          _faceQueue.add(_PendingFace('Face $trackId', 'data:image/jpeg;base64,${base64Encode(img.encodeJpg(crop, quality: 85))}'));
+          final trackingId = 'Face ${track.id}';
+          final photo =
+              'data:image/jpeg;base64,${base64Encode(img.encodeJpg(crop, quality: 85))}';
+          _faceResults.add(_FaceRecognitionResult(
+              trackingId: trackingId,
+              capturedImage: photo,
+              status: _FaceResultStatus.queued,
+              recognitionTime: now));
+          _faceQueue.add(_PendingFace(trackingId, photo, _faceSession));
+        }
+        for (final entry in _faceTracks.entries.toList()) {
+          final track = entry.value;
+          if (!seenTrackIds.contains(track.id) &&
+              now.difference(track.lastSeen) > _faceDisappearGrace) {
+            track.active = false;
+          }
+          if (!track.active &&
+              now.difference(track.lastSeen) >= _faceRetryTimeout) {
+            _faceTracks.remove(entry.key);
+          }
         }
         _drainFaceQueue();
       }
@@ -192,14 +303,15 @@ class _PublicIdentificationScreenState
         await temporaryCapture.delete();
       }
     } catch (_) {
-      if (mounted) setState(() => _error = 'Automatic face detection is temporarily unavailable.');
+      if (mounted) {
+        setState(() =>
+            _error = 'Automatic face detection is temporarily unavailable.');
+      }
     } finally {
       _detectingFaces = false;
       if (_faceCamera != null) _scheduleFaceDetection();
     }
   }
-
-  int _spatialTrackId(Rect box) => (box.center.dx / 40).round() * 1000 + (box.center.dy / 40).round();
 
   img.Image _cropFace(img.Image source, Rect box) {
     final padX = box.width * .18;
@@ -215,7 +327,10 @@ class _PublicIdentificationScreenState
     while (_activeFaceSearches < 5 && _faceQueue.isNotEmpty) {
       final pending = _faceQueue.removeAt(0);
       _activeFaceSearches++;
-      if (mounted) setState(() => _faceStatuses.insert(0, '${pending.trackingId}: Searching…'));
+      if (mounted) {
+        setState(() => _faceResult(pending.trackingId)?.status =
+            _FaceResultStatus.searching);
+      }
       _searchQueuedFace(pending);
     }
   }
@@ -224,29 +339,54 @@ class _PublicIdentificationScreenState
     try {
       final response = await ApiService.searchVisitorByFace(pending.photo);
       final visitor = response['visitor'];
-      if (!mounted) return;
+      if (!mounted || pending.session != _faceSession) return;
       setState(() {
-        _faceStatuses.remove('${pending.trackingId}: Searching…');
-        if (response['matched'] == true && visitor is Map) {
-          final profile = _VisitorProfile.fromJson(Map<String, dynamic>.from(visitor));
+        final result = _faceResult(pending.trackingId);
+        if (result == null) return;
+        result.recognitionTime = DateTime.now();
+        result.enrollmentId = _text(response['enrollmentId']);
+        result.matchScore = _asDouble(response['score']);
+        result.message = _text(response['message']);
+        if (response['success'] != true) {
+          result.status = result.message.toLowerCase().contains('timeout')
+              ? _FaceResultStatus.timeout
+              : _FaceResultStatus.unavailable;
+        } else if (response['matched'] == true && visitor is Map) {
+          final profile =
+              _VisitorProfile.fromJson(Map<String, dynamic>.from(visitor));
+          result.status = _FaceResultStatus.matched;
+          result.visitor = profile;
           if (!_results.any((item) => item.id == profile.id)) {
             _results.add(profile);
           }
-          _faceStatuses.insert(0, '${pending.trackingId}: ${profile.fullName}');
         } else {
-          _faceStatuses.insert(0, '${pending.trackingId}: No Registered Visitor');
+          result.status = _FaceResultStatus.notRegistered;
+          result.message = result.message.isEmpty
+              ? 'Visitor not found in system'
+              : result.message;
         }
       });
-    } catch (_) {
-      if (mounted) {
+    } on TimeoutException {
+      if (mounted && pending.session == _faceSession) {
         setState(() {
-          _faceStatuses.remove('${pending.trackingId}: Searching…');
-          _faceStatuses.insert(0, '${pending.trackingId}: Face Recognition Service Unavailable');
+          final result = _faceResult(pending.trackingId);
+          result?.status = _FaceResultStatus.timeout;
+          result?.message = 'Search timed out.';
+        });
+      }
+    } catch (_) {
+      if (mounted && pending.session == _faceSession) {
+        setState(() {
+          final result = _faceResult(pending.trackingId);
+          result?.status = _FaceResultStatus.unavailable;
+          result?.message = 'Face recognition service is unavailable.';
         });
       }
     } finally {
-      _activeFaceSearches--;
-      _drainFaceQueue();
+      if (pending.session == _faceSession) {
+        _activeFaceSearches = math.max(0, _activeFaceSearches - 1);
+        _drainFaceQueue();
+      }
     }
   }
 
@@ -255,10 +395,25 @@ class _PublicIdentificationScreenState
     _faceTimer = null;
     final controller = _faceCamera;
     _faceCamera = null;
-    _faceQueue.clear();
-    _capturedTracks.clear();
+    _resetFaceSession();
     await controller?.dispose();
     if (mounted) setState(() {});
+  }
+
+  void _resetFaceSession() {
+    _faceSession++;
+    _faceQueue.clear();
+    _faceTracks.clear();
+    _faceResults.clear();
+    _activeFaceSearches = 0;
+    _nextFaceTrackId = 1;
+  }
+
+  _FaceRecognitionResult? _faceResult(String trackingId) {
+    for (final result in _faceResults) {
+      if (result.trackingId == trackingId) return result;
+    }
+    return null;
   }
 
   static const _districts = [
@@ -475,7 +630,11 @@ class _PublicIdentificationScreenState
         _buildSearchCard(),
         const SizedBox(height: 16),
         _buildResultsCard(),
-        if (_selected != null) ...[
+        if (_faceResults.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          _buildFaceProfileResults(),
+        ],
+        if (_selected != null && _faceResults.isEmpty) ...[
           const SizedBox(height: 16),
           _buildProfileDetails(_selected!),
         ],
@@ -592,7 +751,8 @@ class _PublicIdentificationScreenState
           OutlinedButton.icon(
             onPressed: _searching ? null : _identifyByFace,
             icon: const Icon(Icons.camera_alt_outlined),
-            label: Text(_faceCamera == null ? 'Identify by Face' : 'Close Camera'),
+            label:
+                Text(_faceCamera == null ? 'Identify by Face' : 'Close Camera'),
           ),
           if (_faceCamera != null) ...[
             const SizedBox(height: 10),
@@ -603,8 +763,12 @@ class _PublicIdentificationScreenState
             const SizedBox(height: 8),
             const Text('Automatic detection active — look toward the camera.'),
           ],
-          for (final status in _faceStatuses.take(8))
-            Padding(padding: const EdgeInsets.only(top: 6), child: Text(status)),
+          if (_faceResults.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+                '${_faceResults.length} face${_faceResults.length == 1 ? '' : 's'} detected',
+                style: const TextStyle(color: MeghaColors.muted)),
+          ],
         ],
       ),
     );
@@ -615,6 +779,21 @@ class _PublicIdentificationScreenState
       title: 'Results (${_results.length})',
       icon: Icons.list_alt_outlined,
       child: _buildResultsBody(),
+    );
+  }
+
+  Widget _buildFaceProfileResults() {
+    return MeghaSectionCard(
+      title: 'Profile Detail (${_faceResults.length})',
+      icon: Icons.badge_outlined,
+      child: ListView.separated(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: _faceResults.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        itemBuilder: (_, index) =>
+            _FaceRecognitionResultCard(result: _faceResults[index]),
+      ),
     );
   }
 
@@ -897,6 +1076,128 @@ class _PersonResultTile extends StatelessWidget {
       ),
     );
   }
+}
+
+class _FaceRecognitionResultCard extends StatelessWidget {
+  final _FaceRecognitionResult result;
+
+  const _FaceRecognitionResultCard({required this.result});
+
+  @override
+  Widget build(BuildContext context) {
+    final visitor = result.visitor;
+    final loading = result.status == _FaceResultStatus.queued ||
+        result.status == _FaceResultStatus.searching;
+    final title = switch (result.status) {
+      _FaceResultStatus.queued || _FaceResultStatus.searching => 'Searching…',
+      _FaceResultStatus.matched => visitor?.fullName ?? 'Matched',
+      _FaceResultStatus.notRegistered => 'Not Registered',
+      _FaceResultStatus.timeout => 'Search Timeout',
+      _FaceResultStatus.unavailable => 'Service Unavailable',
+    };
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+        borderRadius: BorderRadius.circular(10),
+        color: Colors.white,
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Column(children: [
+            const Text('Captured Face',
+                style: TextStyle(fontSize: 11, color: MeghaColors.muted)),
+            const SizedBox(height: 4),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.memory(_dataUriBytes(result.capturedImage),
+                  width: 72, height: 72, fit: BoxFit.cover),
+            ),
+            if (result.status == _FaceResultStatus.notRegistered) ...[
+              const SizedBox(height: 4),
+              const SizedBox(
+                width: 72,
+                child: Text('Not Registered',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        color: Color(0xFFB91C1C),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700)),
+              ),
+            ],
+          ]),
+          if (visitor != null) ...[
+            const SizedBox(width: 10),
+            Column(children: [
+              const Text('Visitor Photo',
+                  style: TextStyle(fontSize: 11, color: MeghaColors.muted)),
+              const SizedBox(height: 4),
+              _VisitorPhoto(
+                  name: visitor.fullName, source: visitor.photoSource),
+            ]),
+          ],
+          const SizedBox(width: 12),
+          Expanded(
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                Text(result.trackingId,
+                    style: const TextStyle(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 4),
+                Row(children: [
+                  if (loading)
+                    const SizedBox(
+                        width: 15,
+                        height: 15,
+                        child: CircularProgressIndicator(strokeWidth: 2))
+                  else
+                    Icon(
+                        result.status == _FaceResultStatus.matched
+                            ? Icons.check_circle
+                            : Icons.info_outline,
+                        size: 18,
+                        color: result.status == _FaceResultStatus.matched
+                            ? Colors.green
+                            : MeghaColors.muted),
+                  const SizedBox(width: 6),
+                  Expanded(child: Text(title)),
+                ]),
+              ])),
+        ]),
+        if (visitor != null) ...[
+          const Divider(height: 24),
+          _InfoRow('Enrollment ID', result.enrollmentId),
+          _InfoRow('EPIC', visitor.epicNumber),
+          _InfoRow('Mobile', visitor.phoneNumber),
+          _InfoRow('Department',
+              _firstText([visitor.raw['department'], visitor.designation])),
+          _InfoRow(
+              'Appointment Status', _text(visitor.raw['appointmentStatus'])),
+          _InfoRow(
+              'Face Match Score', result.matchScore?.toStringAsFixed(2) ?? ''),
+          _InfoRow(
+              'Recognition Time', result.recognitionTime.toLocal().toString()),
+        ] else if (!loading) ...[
+          const SizedBox(height: 10),
+          Text(
+              result.message.isEmpty
+                  ? 'Visitor not found in system'
+                  : result.message,
+              style: const TextStyle(color: MeghaColors.muted)),
+        ],
+      ]),
+    );
+  }
+}
+
+Uint8List _dataUriBytes(String value) {
+  final comma = value.indexOf(',');
+  return base64Decode(comma >= 0 ? value.substring(comma + 1) : value);
+}
+
+double? _asDouble(dynamic value) {
+  if (value is num) return value.toDouble();
+  return double.tryParse(value?.toString() ?? '');
 }
 
 class _VisitorPhoto extends StatelessWidget {

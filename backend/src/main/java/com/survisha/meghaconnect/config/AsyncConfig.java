@@ -9,6 +9,9 @@ import org.springframework.core.task.TaskDecorator;
 import org.springframework.scheduling.annotation.AsyncConfigurer;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tag;
+import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
 
 import java.util.Map;
 import java.util.concurrent.Executor;
@@ -17,6 +20,12 @@ import java.util.concurrent.Executor;
 @EnableAsync
 @Slf4j
 public class AsyncConfig implements AsyncConfigurer {
+
+    private final MeterRegistry meterRegistry;
+
+    public AsyncConfig(MeterRegistry meterRegistry) {
+        this.meterRegistry = meterRegistry;
+    }
 
     @Bean(name = {"applicationTaskExecutor", "taskExecutor"})
     public ThreadPoolTaskExecutor applicationTaskExecutor() {
@@ -27,6 +36,8 @@ public class AsyncConfig implements AsyncConfigurer {
         executor.setThreadNamePrefix("meghaconnect-async-");
         executor.setTaskDecorator(mdcTaskDecorator());
         executor.initialize();
+        ExecutorServiceMetrics.monitor(meterRegistry, executor.getThreadPoolExecutor(),
+                "meghaconnect.executor", java.util.List.of(Tag.of("executor", "application")));
         return executor;
     }
 

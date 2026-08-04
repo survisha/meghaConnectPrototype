@@ -8,6 +8,7 @@ import com.survisha.meghaconnect.face.dto.FaceResponses;
 import com.survisha.meghaconnect.face.validation.FacePhotoValidator;
 import com.survisha.meghaconnect.entity.Visitor;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -92,21 +93,41 @@ public class FaceRecognitionServiceImpl implements FaceRecognitionService {
     }
 
     private JsonNode call(String operation, Map<String,Object> payload) {
-        meterRegistry.counter("face.recognition.requests", "operation", operation).increment();
+        Timer.Sample sample = Timer.start(meterRegistry);
         long startedAt = System.nanoTime();
         log.debug("Face recognition provider call started operation={}", operation);
         try {
             JsonNode result = client.post(operation, payload);
-            meterRegistry.counter("face.recognition.success", "operation", operation).increment();
+            recordCall(sample, operation, "success");
             log.debug("Face recognition provider call completed operation={} durationMs={}",
                     operation, elapsedMillis(startedAt));
             return result;
         } catch (RuntimeException ex) {
-            meterRegistry.counter("face.recognition.failures", "operation", operation).increment();
+            String result = isTimeout(ex) ? "timeout" : "technical_error";
+            recordCall(sample, operation, result);
+            meterRegistry.counter("meghaconnect.external.api.errors", "provider", "deepface",
+                    "operation", operation, "result", result).increment();
             log.error("Face recognition provider call failed operation={} durationMs={} error={}",
                     operation, elapsedMillis(startedAt), ex.getMessage(), ex);
             throw ex;
         }
+    }
+
+    private void recordCall(Timer.Sample sample, String operation, String result) {
+        meterRegistry.counter("meghaconnect.face.operation", "provider", "deepface",
+                "operation", operation, "result", result).increment();
+        sample.stop(Timer.builder("meghaconnect.face.operation.duration")
+                .description("DeepFace operation duration")
+                .tags("provider", "deepface", "operation", operation, "result", result)
+                .publishPercentileHistogram().register(meterRegistry));
+    }
+
+    private boolean isTimeout(Throwable error) {
+        for (Throwable current = error; current != null; current = current.getCause()) {
+            if (current instanceof java.net.SocketTimeoutException
+                    || current instanceof java.util.concurrent.TimeoutException) return true;
+        }
+        return false;
     }
 
     private long elapsedMillis(long startedAt) {
@@ -122,7 +143,8 @@ public class FaceRecognitionServiceImpl implements FaceRecognitionService {
         return p;
     }
     private void countResult(String operation, boolean matched) {
-        meterRegistry.counter("face.recognition.results", "operation", operation, "matched", Boolean.toString(matched)).increment();
+        meterRegistry.counter("meghaconnect.face.result", "operation", operation,
+                "result", matched ? "match" : "no_match").increment();
     }
     private String text(JsonNode n, String field) { return n.hasNonNull(field) ? n.get(field).asText() : null; }
     private Double decimal(JsonNode n, String field) { return n.hasNonNull(field) && n.get(field).isNumber() ? n.get(field).asDouble() : null; }

@@ -2,16 +2,32 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
 
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
 scrape_configs:
   - job_name: "meghaconnect-api"
-    metrics_path: "/api/actuator/prometheus"
+    metrics_path: "/actuator/prometheus"
     scheme: "http"
+    bearer_token_file: /run/secrets/monitoring_bearer_token
     static_configs:
       - targets:
-          - "host.docker.internal:8080"
+          - "host.docker.internal:9091"
         labels:
           application: "meghaconnect-api"
           environment: "uat"
 
     # Ubuntu/Linux fallback if host.docker.internal is unavailable:
-    # Replace the target above with "172.17.0.1:8080" or the server's internal IP.
+    # MANAGEMENT_ADDRESS must be reachable only from the monitoring network/firewall.
+  - job_name: "node"
+    static_configs:
+      - targets: ["host.docker.internal:9100"]
+  - job_name: "mysql"
+    static_configs:
+      - targets: ["mysqld-exporter:9104"]
+  - job_name: "redis"
+    static_configs:
+      - targets: ["redis-exporter:9121"]
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]

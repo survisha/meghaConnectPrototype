@@ -1,0 +1,45 @@
+groups:
+  - name: meghaconnect-critical
+    rules:
+      - alert: MeghaConnectApplicationDown
+        expr: up{job="meghaconnect-api"} == 0
+        for: 2m
+        labels: {severity: critical}
+        annotations: {summary: "MeghaConnect application metrics target is down"}
+      - alert: MeghaConnectHigh5xxRate
+        expr: sum(rate(http_server_requests_seconds_count{job="meghaconnect-api",status=~"5..",uri!~"/actuator.*"}[5m])) / clamp_min(sum(rate(http_server_requests_seconds_count{job="meghaconnect-api",uri!~"/actuator.*"}[5m])), 0.001) > 0.05
+        for: 10m
+        labels: {severity: critical}
+        annotations: {summary: "HTTP 5xx ratio exceeds 5%"}
+      - alert: MeghaConnectDiskCritical
+        expr: 100 * (1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}) > 90
+        for: 10m
+        labels: {severity: critical}
+        annotations: {summary: "Host filesystem usage exceeds 90%"}
+  - name: meghaconnect-warning
+    rules:
+      - alert: MeghaConnectP95LatencyHigh
+        expr: histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{uri!~"/actuator.*"}[5m]))) > 2
+        for: 10m
+        labels: {severity: warning}
+        annotations: {summary: "P95 API latency exceeds 2 seconds"}
+      - alert: MeghaConnectJvmHeapHigh
+        expr: sum(jvm_memory_used_bytes{area="heap"}) / clamp_min(sum(jvm_memory_max_bytes{area="heap"}), 1) > 0.80
+        for: 15m
+        labels: {severity: warning}
+        annotations: {summary: "JVM heap usage exceeds 80%"}
+      - alert: MeghaConnectHikariPoolHigh
+        expr: hikaricp_connections_active / clamp_min(hikaricp_connections_max, 1) > 0.80
+        for: 10m
+        labels: {severity: warning}
+        annotations: {summary: "Hikari pool utilization exceeds 80%"}
+      - alert: MeghaConnectDatabasePendingConnections
+        expr: hikaricp_connections_pending > 0
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "Database connections are pending"}
+      - alert: MeghaConnectHostMemoryHigh
+        expr: 100 * (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) > 90
+        for: 10m
+        labels: {severity: critical}
+        annotations: {summary: "Host memory usage exceeds 90%"}

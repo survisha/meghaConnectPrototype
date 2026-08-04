@@ -53,6 +53,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http,
                                            JwtAuthenticationFilter jwtAuthFilter,
+                                           MonitoringEndpointAuthenticationFilter monitoringEndpointAuthenticationFilter,
                                            ApiRateLimitFilter apiRateLimitFilter,
                                            TemporaryPasswordAccessFilter temporaryPasswordAccessFilter,
                                            PublicEndpointRequestMatcher publicEndpoints,
@@ -81,12 +82,6 @@ public class SecurityConfig {
                     "/error",
                     "/actuator/health/**",
                     "/actuator/info",
-                    "/actuator/metrics/**",
-                    "/actuator/prometheus",
-                    "/api/actuator/health/**",
-                    "/api/actuator/info",
-                    "/api/actuator/metrics/**",
-                    "/api/actuator/prometheus",
                     "/swagger-ui.html",
                     "/swagger-ui/**",
                     "/v3/api-docs/**",
@@ -146,6 +141,7 @@ public class SecurityConfig {
                 .accessDeniedHandler(accessDeniedHandler)
             )
             .authenticationProvider(authenticationProvider())
+            .addFilterBefore(monitoringEndpointAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterAfter(temporaryPasswordAccessFilter, JwtAuthenticationFilter.class)
             .addFilterBefore(apiRateLimitFilter, JwtAuthenticationFilter.class)

@@ -43,7 +43,10 @@ public class VisitorFormExtractionServiceImpl implements VisitorFormExtractionSe
         if (!validated.quality().isAcceptable()) {
             return qualityFailure(validated.quality());
         }
+        long preprocessingStart = System.nanoTime();
         var processed = imagePreprocessor.process(validated);
+        meterRegistry.timer("meghaconnect.form.extraction.preprocessing.duration", "provider", configuredProvider())
+                .record(System.nanoTime() - preprocessingStart, java.util.concurrent.TimeUnit.NANOSECONDS);
         log.debug("Visitor form extraction started requestId={} provider={} formType={} imageBytes={} imageWidth={} imageHeight={}",
                 requestId, properties.getProvider(), formType, processed.bytes().length,
                 processed.width(), processed.height());
@@ -56,6 +59,12 @@ public class VisitorFormExtractionServiceImpl implements VisitorFormExtractionSe
         try {
             result = providerResolver.resolve(properties.getProvider()).extract(input);
         } catch (RuntimeException ex) {
+            String failure = isTimeout(ex) ? "timeout" : "failure";
+            meterRegistry.counter("meghaconnect.form.extraction", "provider", configuredProvider(),
+                    "model", "configured", "result", failure).increment();
+            meterRegistry.timer("meghaconnect.form.extraction.duration", "provider", configuredProvider(),
+                    "model", "configured", "result", failure)
+                    .record(System.nanoTime() - lifecycleStart, java.util.concurrent.TimeUnit.NANOSECONDS);
             log.debug("Visitor form extraction failed requestId={} provider={} formType={} imageBytes={} durationMs={} success=false exception={}",
                     requestId, properties.getProvider(), formType, processed.bytes().length,
                     (System.nanoTime()-lifecycleStart)/1_000_000, ex.getClass().getSimpleName());
@@ -77,10 +86,13 @@ public class VisitorFormExtractionServiceImpl implements VisitorFormExtractionSe
                         ", provider="+result.getProvider()+", model="+result.getModel(), actor);
         String provider = result.getProvider().name().toLowerCase(Locale.ROOT);
         String model = result.getModel() == null ? "unknown" : result.getModel();
-        meterRegistry.counter("form_extraction_success_total", "provider", provider, "model", model).increment();
-        meterRegistry.timer("form_extraction_duration", "provider", provider, "model", model)
+        meterRegistry.counter("meghaconnect.form.extraction", "provider", provider, "model", model,
+                "result", "success").increment();
+        meterRegistry.timer("meghaconnect.form.extraction.duration", "provider", provider, "model", model,
+                "result", "success")
                 .record(java.time.Duration.ofMillis(durationMs));
-        if (review) meterRegistry.counter("form_extraction_manual_review_total", "provider", provider, "model", model).increment();
+        if (review) meterRegistry.counter("meghaconnect.form.extraction.manual.review", "provider", provider,
+                "model", model).increment();
         log.debug("Visitor form extraction completed requestId={} provider={} model={} formType={} imageBytes={} imageWidth={} imageHeight={} success=true epicPresent={} epicMasked={} epicStatus={} epicValid={} namePresent={} nameMasked={} nameStatus={} nameValid={} mobilePresent={} mobileLast4={} mobileStatus={} mobileValid={} addressPresent={} addressLength={} addressStatus={} addressValid={} requiresManualReview={} warningCount={} durationMs={}",
                 requestId, provider, model, formType, processed.bytes().length, processed.width(), processed.height(),
                 present(epic), maskEpic(epic.getValue()), epic.getStatus(), epic.isValid(),
@@ -96,6 +108,18 @@ public class VisitorFormExtractionServiceImpl implements VisitorFormExtractionSe
                 .requestId(RequestContextUtil.getRequestId()).extractionTimestamp(DateTimeUtil.nowIST())
                 .modelVersion(result.getModel())
                 .message("AI-extracted values are suggestions. Review and confirm every field before registration.").build();
+    }
+
+    private String configuredProvider() {
+        return properties.getProvider() == null ? "unknown" : properties.getProvider().name().toLowerCase(Locale.ROOT);
+    }
+
+    private boolean isTimeout(Throwable error) {
+        for (Throwable current = error; current != null; current = current.getCause()) {
+            if (current instanceof java.net.SocketTimeoutException
+                    || current instanceof java.util.concurrent.TimeoutException) return true;
+        }
+        return false;
     }
 
     private VisitorFormExtractionResponse qualityFailure(ImageQualityResult quality) {

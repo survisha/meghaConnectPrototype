@@ -9,12 +9,12 @@ For the full setup guide, see `../docs/QUALITY_OBSERVABILITY_SETUP.md`.
 The backend dev profile exposes these endpoints under the configured actuator base path:
 
 - Health: `https://meghaconnect.cloud/api/actuator/health`
-- Prometheus: `https://meghaconnect.cloud/api/actuator/prometheus`
+- Prometheus scrape endpoint: private `http://<management-host>:9091/actuator/prometheus` with a bearer token file
 - Metrics list: `https://meghaconnect.cloud/api/actuator/metrics`
 
 The raw Spring Boot service target used by Prometheus is:
 
-`http://host.docker.internal:8080/api/actuator/prometheus`
+`http://host.docker.internal:9091/actuator/prometheus`
 
 On Ubuntu servers, `host.docker.internal` is mapped through Docker's `host-gateway` setting in `docker-compose.yml`. If it still does not resolve, update `prometheus.yml` to use `172.17.0.1:8080` or the server internal IP.
 
@@ -50,7 +50,9 @@ SonarQube:
 Default UAT login is `admin/admin` unless `GRAFANA_ADMIN_PASSWORD` is set. Change the password immediately after first login, or set it before start:
 
 ```bash
-GRAFANA_ADMIN_PASSWORD='change-this-before-uat' docker compose up -d
+MONITORING_BEARER_TOKEN_FILE=/secure/path/monitoring.token \
+MYSQL_EXPORTER_CONFIG_FILE=/secure/path/mysql-exporter.cnf \
+GRAFANA_ADMIN_PASSWORD='set-from-secret-manager' docker compose up -d
 ```
 
 ## Grafana Dashboard And Logs
@@ -98,8 +100,7 @@ docker compose up -d
 For UAT only:
 
 ```bash
-sudo ufw allow 3000
-sudo ufw allow 9090
+Do not open ports 3000 or 9090 to the public Internet. They are loopback-bound by Compose; expose only Grafana through the authenticated HTTPS Nginx route.
 ```
 
 For production, do not expose Prometheus port `9090` publicly. Prefer exposing only Grafana through Nginx with SSL and authentication, or keep both services private behind VPN/IP allowlisting. Keep actuator exposure limited to `health,info,metrics,prometheus`.

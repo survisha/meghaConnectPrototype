@@ -17,7 +17,7 @@ services:
     depends_on:
       - sonarqube-db
     ports:
-      - "9000:9000"
+      - "127.0.0.1:9000:9000"
     environment:
       SONAR_JDBC_URL: jdbc:postgresql://sonarqube-db:5432/${SONAR_DB_NAME:-sonarqube}
       SONAR_JDBC_USERNAME: ${SONAR_DB_USER:-sonar}
@@ -29,15 +29,17 @@ services:
       - sonarqube-logs:/opt/sonarqube/logs
 
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v2.54.1
     container_name: meghaconnect-prometheus
     restart: unless-stopped
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alerts:/etc/prometheus/rules:ro
+      - ${MONITORING_BEARER_TOKEN_FILE:?Set MONITORING_BEARER_TOKEN_FILE}:/run/secrets/monitoring_bearer_token:ro
       - prometheus-data:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
@@ -50,7 +52,7 @@ services:
     container_name: meghaconnect-loki
     restart: unless-stopped
     ports:
-      - "3100:3100"
+      - "127.0.0.1:3100:3100"
     volumes:
       - ./loki-config.yml:/etc/loki/local-config.yml:ro
       - loki-data:/loki
@@ -72,24 +74,55 @@ services:
       - "-config.file=/etc/promtail/config.yml"
 
   grafana:
-    image: grafana/grafana-oss:latest
+    image: grafana/grafana-oss:11.1.4
     container_name: meghaconnect-grafana
     restart: unless-stopped
     depends_on:
       - prometheus
       - loki
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD}
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_AUTH_ANONYMOUS_ENABLED: "false"
-      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://187.127.162.84:3000/}
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:?Set HTTPS GRAFANA_ROOT_URL}
       GF_SERVER_SERVE_FROM_SUB_PATH: ${GRAFANA_SERVE_FROM_SUB_PATH:-false}
     volumes:
       - grafana-data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
+
+  mysqld-exporter:
+    image: prom/mysqld-exporter:v0.15.1
+    container_name: meghaconnect-mysqld-exporter
+    restart: unless-stopped
+    command: ["--config.my-cnf=/cfg/.my.cnf"]
+    volumes:
+      - ${MYSQL_EXPORTER_CONFIG_FILE:?Set MYSQL_EXPORTER_CONFIG_FILE}:/cfg/.my.cnf:ro
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: meghaconnect-node-exporter
+    restart: unless-stopped
+    network_mode: host
+    pid: host
+    command:
+      - --path.rootfs=/host
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+    volumes:
+      - /:/host:ro,rslave
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.62.0
+    container_name: meghaconnect-redis-exporter
+    restart: unless-stopped
+    profiles: ["redis"]
+    environment:
+      REDIS_ADDR: ${REDIS_EXPORTER_ADDR:-redis://host.docker.internal:6379}
+      REDIS_PASSWORD_FILE: /run/secrets/redis_password
+    volumes:
+      - ${REDIS_PASSWORD_FILE:-./secrets/empty}:/run/secrets/redis_password:ro
 
 volumes:
   sonarqube-db-data:

@@ -12,6 +12,7 @@ import com.survisha.meghaconnect.repository.SchemeApplicationRepository;
 import com.survisha.meghaconnect.repository.VisitorRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import com.survisha.meghaconnect.monitoring.MonitoredOperation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -33,6 +34,7 @@ public class PublicIdentificationService {
     private final AppointmentService appointmentService;
 
     @Transactional
+    @MonitoredOperation(value = "public_identification", category = MonitoredOperation.Category.DATABASE)
     public PublicIdentificationHistoryDto getCitizenFullHistory(Long citizenId, String actor) {
         Visitor citizen = visitorRepository.findById(citizenId)
                 .orElseThrow(() -> new ResourceNotFoundException("Citizen not found"));

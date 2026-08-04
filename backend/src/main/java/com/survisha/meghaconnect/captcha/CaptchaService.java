@@ -15,6 +15,7 @@ import com.survisha.meghaconnect.captcha.CaptchaDtos.CaptchaResponse;
 import com.survisha.meghaconnect.captcha.CaptchaDtos.CaptchaValidateResponse;
 import com.survisha.meghaconnect.exception.MeghaConnectException;
 import com.survisha.meghaconnect.util.DateTimeUtil;
+import com.survisha.meghaconnect.monitoring.MonitoredOperation;
 
 @Service
 public class CaptchaService {
@@ -33,6 +34,7 @@ public class CaptchaService {
         this.enabled = enabled;
     }
 
+    @MonitoredOperation("captcha_generation")
     public CaptchaResponse generate() {
         String captchaId = UUID.randomUUID().toString();
         String captchaValue = generator.generateText();
@@ -43,11 +45,13 @@ public class CaptchaService {
         return new CaptchaResponse(captchaId, image, null, expiresAt.toString());
     }
 
+    @MonitoredOperation("captcha_validation")
     public CaptchaValidateResponse validate(String captchaId, String captchaValue) {
         validateOrThrow(captchaId, captchaValue);
         return new CaptchaValidateResponse(true, "Captcha validated successfully");
     }
 
+    @MonitoredOperation("captcha_validation")
     public void validateForLogin(String captchaId, String captchaValue) {
         if (!enabled) {
             return;

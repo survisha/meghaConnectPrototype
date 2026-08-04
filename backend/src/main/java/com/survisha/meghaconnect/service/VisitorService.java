@@ -15,6 +15,7 @@ import com.survisha.meghaconnect.util.ValidationConstants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import com.survisha.meghaconnect.monitoring.MonitoredOperation;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 import java.io.IOException;
@@ -36,10 +37,12 @@ public class VisitorService {
     private final AuditLogService auditLogService;
     private final ApplicationEventPublisher eventPublisher;
 
+    @MonitoredOperation(value = "citizen_lookup_by_phone", category = MonitoredOperation.Category.DATABASE)
     public Optional<Visitor> findByPhone(String phone) {
         return visitorRepository.findByPhoneNumber(phone).stream().findFirst();
     }
 
+    @MonitoredOperation(value = "citizen_profile_lookup", category = MonitoredOperation.Category.DATABASE)
     public List<VisitorDto> searchDtos(String mobile, String epic, String referenceId) {
         return toDtos(search(mobile, epic, referenceId));
     }
@@ -336,6 +339,7 @@ public class VisitorService {
     }
 
     @Transactional
+    @MonitoredOperation("visitor_registration")
     public Visitor registerVisitor(PublicRegistrationDto dto) {
         // Validate required fields
         if (dto.getFullName() == null || dto.getFullName().trim().isEmpty()) {

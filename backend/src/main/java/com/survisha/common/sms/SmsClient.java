@@ -11,6 +11,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
+import com.survisha.meghaconnect.monitoring.MonitoredOperation;
 
 @Component
 @RequiredArgsConstructor
@@ -20,6 +21,7 @@ public class SmsClient {
     private final RestTemplate restTemplate;
     private final SmsProperties properties;
 
+    @MonitoredOperation("sms_provider_call")
     public SmsResponse sendSms(SmsRequest request) {
         if (request == null) {
             return failure("SMS request is required.", "");
@@ -27,6 +29,7 @@ public class SmsClient {
         return sendSms(request.getMobileNumber(), request.getMessage(), request.getTemplateId());
     }
 
+    @MonitoredOperation("sms_provider_call")
     public SmsResponse sendSms(String mobileNumber, String message, String templateId) {
         String normalizedMobile = normalizeMobileNumber(mobileNumber);
         try {

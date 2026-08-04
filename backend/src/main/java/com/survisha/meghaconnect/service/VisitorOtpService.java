@@ -15,6 +15,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
+import com.survisha.meghaconnect.monitoring.MonitoredOperation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
@@ -66,6 +67,7 @@ public class VisitorOtpService {
      * @throws OtpRateLimitExceededException     if rate limit exceeded
      */
     @Transactional
+    @MonitoredOperation("otp_generation")
     public String generateOtp(String phone) {
         List<Visitor> visitors = visitorRepository.findByPhoneNumber(phone);
         if (visitors.isEmpty()) {
@@ -80,6 +82,7 @@ public class VisitorOtpService {
     }
 
     @Transactional
+    @MonitoredOperation("otp_generation")
     public String generateOtp(String phone, Long visitorId) {
         if (visitorId == null || !visitorRepository.findById(visitorId).isPresent()) {
             throw new VisitorRegistrationValidationException(
@@ -127,6 +130,7 @@ public class VisitorOtpService {
      * @throws OtpValidationFailedException if OTP is wrong
      */
     @Transactional(noRollbackFor = {OtpValidationFailedException.class, OtpMaxAttemptsExceededException.class})
+    @MonitoredOperation("otp_validation")
     public String validateOtpAndLogin(String phone, String submittedOtp) {
         List<Visitor> visitors = visitorRepository.findByPhoneNumber(phone);
         if (visitors.size() != 1) {
@@ -140,6 +144,7 @@ public class VisitorOtpService {
     }
 
     @Transactional(noRollbackFor = {OtpValidationFailedException.class, OtpMaxAttemptsExceededException.class})
+    @MonitoredOperation("otp_validation")
     public String validateOtpAndLogin(String phone, String submittedOtp, Long visitorId) {
         Optional<OtpTemp> optRecord =
                 otpTempRepository.findTopByPhoneNumberAndVisitorIdAndConsumedFalseOrderByCreatedAtDesc(
@@ -207,6 +212,7 @@ public class VisitorOtpService {
      * @throws OtpRateLimitExceededException if rate limit exceeded
      */
     @Transactional
+    @MonitoredOperation("otp_generation")
     public String generateKycOtp(String phone) {
         // Rate-limit check (same logic as regular OTP)
         LocalDateTime windowStart = DateTimeUtil.nowIST().minusMinutes(RATE_WINDOW_MINUTES);
@@ -249,6 +255,7 @@ public class VisitorOtpService {
      * @throws OtpMaxAttemptsExceededException if max attempts exceeded
      */
     @Transactional
+    @MonitoredOperation("otp_validation")
     public boolean validateKycOtp(String phone, String submittedOtp) {
         Optional<OtpTemp> optRecord =
                 otpTempRepository.findTopByPhoneNumberAndVisitorIdIsNullAndConsumedFalseOrderByCreatedAtDesc(phone);

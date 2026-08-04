@@ -34,6 +34,10 @@ public class AsyncConfig implements AsyncConfigurer {
         executor.setMaxPoolSize(16);
         executor.setQueueCapacity(100);
         executor.setThreadNamePrefix("meghaconnect-async-");
+        executor.setRejectedExecutionHandler((task, pool) -> {
+            meterRegistry.counter("meghaconnect.executor.rejected", "executor", "application").increment();
+            throw new java.util.concurrent.RejectedExecutionException("Application executor queue is full");
+        });
         executor.setTaskDecorator(mdcTaskDecorator());
         executor.initialize();
         ExecutorServiceMetrics.monitor(meterRegistry, executor.getThreadPoolExecutor(),
@@ -47,10 +51,18 @@ public class AsyncConfig implements AsyncConfigurer {
             Map<String, String> parentContext = RequestContextUtil.copyMdcContext();
             return () -> {
                 Map<String, String> previousContext = RequestContextUtil.copyMdcContext();
+                long startedAt = System.nanoTime();
+                String result = "success";
                 try {
                     RequestContextUtil.restoreMdcContext(parentContext);
                     runnable.run();
+                } catch (RuntimeException error) {
+                    result = "failure";
+                    throw error;
                 } finally {
+                    meterRegistry.timer("meghaconnect.executor.task.duration", "executor", "application",
+                            "result", result).record(System.nanoTime() - startedAt,
+                                    java.util.concurrent.TimeUnit.NANOSECONDS);
                     RequestContextUtil.restoreMdcContext(previousContext);
                 }
             };

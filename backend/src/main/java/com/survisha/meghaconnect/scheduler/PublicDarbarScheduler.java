@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import com.survisha.meghaconnect.monitoring.MonitoredOperation;
 
 import java.util.List;
 
@@ -24,6 +25,7 @@ public class PublicDarbarScheduler {
     private final PublicDarbarSchedulingService schedulingService;
 
     @Scheduled(fixedDelayString = "${meghaconnect.public-darbar.scheduler-delay-ms:60000}", zone = DateTimeUtil.IST_ZONE_ID)
+    @MonitoredOperation(value = "public_darbar_scheduler", category = MonitoredOperation.Category.SCHEDULER)
     public void scheduleSelectedAppointments() {
         String jobId = "PD-SCHED-" + RequestContextUtil.generateRequestId();
         RequestContextUtil.setRequestId(jobId);

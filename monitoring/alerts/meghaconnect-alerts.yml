@@ -6,6 +6,11 @@ groups:
         for: 2m
         labels: {severity: critical}
         annotations: {summary: "MeghaConnect application metrics target is down"}
+      - alert: MeghaConnectReadinessDown
+        expr: meghaconnect_application_readiness == 0
+        for: 3m
+        labels: {severity: critical}
+        annotations: {summary: "MeghaConnect is not ready to accept traffic"}
       - alert: MeghaConnectHigh5xxRate
         expr: sum(rate(http_server_requests_seconds_count{job="meghaconnect-api",status=~"5..",uri!~"/actuator.*"}[5m])) / clamp_min(sum(rate(http_server_requests_seconds_count{job="meghaconnect-api",uri!~"/actuator.*"}[5m])), 0.001) > 0.05
         for: 10m
@@ -16,6 +21,21 @@ groups:
         for: 10m
         labels: {severity: critical}
         annotations: {summary: "Host filesystem usage exceeds 90%"}
+      - alert: MeghaConnectDatabaseDown
+        expr: mysql_up == 0
+        for: 2m
+        labels: {severity: critical}
+        annotations: {summary: "MySQL exporter reports database unavailable"}
+      - alert: MeghaConnectRedisDown
+        expr: redis_up == 0
+        for: 2m
+        labels: {severity: critical}
+        annotations: {summary: "Redis is unavailable"}
+      - alert: MeghaConnectExternalProviderFailures
+        expr: sum by(provider) (rate(meghaconnect_external_api_errors_total[10m])) > 0.1
+        for: 10m
+        labels: {severity: critical}
+        annotations: {summary: "External provider error rate is elevated"}
   - name: meghaconnect-warning
     rules:
       - alert: MeghaConnectP95LatencyHigh
@@ -43,3 +63,28 @@ groups:
         for: 10m
         labels: {severity: critical}
         annotations: {summary: "Host memory usage exceeds 90%"}
+      - alert: MeghaConnectCpuHigh
+        expr: 100 * (1 - avg by(instance)(rate(node_cpu_seconds_total{mode="idle"}[5m]))) > 85
+        for: 15m
+        labels: {severity: warning}
+        annotations: {summary: "Host CPU usage exceeds 85%"}
+      - alert: MeghaConnectDiskWarning
+        expr: 100 * (1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}) > 80
+        for: 15m
+        labels: {severity: warning}
+        annotations: {summary: "Host filesystem usage exceeds 80%"}
+      - alert: MeghaConnectAsyncQueueBuildup
+        expr: executor_queued{name="meghaconnect.executor"} > 50
+        for: 10m
+        labels: {severity: warning}
+        annotations: {summary: "Application async executor queue exceeds 50 tasks"}
+      - alert: MeghaConnectOcrSlow
+        expr: rate(meghaconnect_form_extraction_duration_seconds_sum[10m]) / clamp_min(rate(meghaconnect_form_extraction_duration_seconds_count[10m]), 0.001) > 120
+        for: 10m
+        labels: {severity: warning}
+        annotations: {summary: "Average OCR extraction exceeds 120 seconds"}
+      - alert: MeghaConnectRedisEvictions
+        expr: increase(redis_evicted_keys_total[10m]) > 0
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "Redis is evicting keys"}

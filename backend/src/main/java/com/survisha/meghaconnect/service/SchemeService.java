@@ -12,6 +12,7 @@ import com.survisha.meghaconnect.security.JwtUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import com.survisha.meghaconnect.monitoring.MonitoredOperation;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.servlet.http.HttpServletRequest;
@@ -36,6 +37,7 @@ public class SchemeService {
     /**
      * Get all CM schemes from reference_data table
      */
+    @MonitoredOperation(value = "scheme_list_load", category = MonitoredOperation.Category.DATABASE)
     public List<SchemeDto> getAllSchemes() {
         log.debug("Fetching all schemes from reference_data");
         

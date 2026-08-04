@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import com.survisha.meghaconnect.monitoring.MonitoredOperation;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -61,6 +62,7 @@ public class FileStorageService {
     /**
      * Stores a document as normal binary data and returns encrypted metadata for DB persistence.
      */
+    @MonitoredOperation("file_upload")
     public StoredFileMetadata storeFileSecure(MultipartFile file, Long visitorId, String applicationId) throws IOException {
         validateFile(file);
         malwareScanService.assertSafe(file);

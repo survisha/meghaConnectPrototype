@@ -12,6 +12,7 @@ import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import com.survisha.meghaconnect.monitoring.MonitoredOperation;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -26,7 +27,7 @@ public class FaceRecognitionServiceImpl implements FaceRecognitionService {
     private final MeterRegistry meterRegistry;
     private final VisitorEnrollmentLookupService visitorLookupService;
 
-    @Override public FaceResponses.Enroll enroll(FaceRequests.Enroll r) {
+    @Override @MonitoredOperation("face_enrollment") public FaceResponses.Enroll enroll(FaceRequests.Enroll r) {
         log.debug("Face enrollment started enrollmentId={}", r.getEnrollmentId());
         Map<String,Object> p = credentials(true);
         p.put("enrollmentId", r.getEnrollmentId()); p.put("name", r.getName());
@@ -38,7 +39,7 @@ public class FaceRecognitionServiceImpl implements FaceRecognitionService {
                 .message("Face enrolled successfully.").build();
     }
 
-    @Override public FaceResponses.Compare compare(FaceRequests.Compare r) {
+    @Override @MonitoredOperation("face_compare") public FaceResponses.Compare compare(FaceRequests.Compare r) {
         Map<String,Object> p = credentials(false);
         p.put("photo1", photoValidator.normalize(r.getPhoto1(), "photo1"));
         p.put("photo2", photoValidator.normalize(r.getPhoto2(), "photo2"));
@@ -50,7 +51,7 @@ public class FaceRecognitionServiceImpl implements FaceRecognitionService {
                 .message(identical ? "Face matched successfully." : "Face did not match.").build();
     }
 
-    @Override public FaceResponses.Delete delete(FaceRequests.Delete r) {
+    @Override @MonitoredOperation("face_delete") public FaceResponses.Delete delete(FaceRequests.Delete r) {
         log.debug("Face deletion started enrollmentId={}", r.getEnrollmentId());
         Map<String,Object> p = credentials(false); p.put("id", r.getEnrollmentId());
         call("delete", p);
@@ -59,7 +60,7 @@ public class FaceRecognitionServiceImpl implements FaceRecognitionService {
                 .message("Enrolled face deleted successfully.").build();
     }
 
-    @Override public FaceResponses.Search search(FaceRequests.Search r, boolean mayReturnMatchedPhoto) {
+    @Override @MonitoredOperation("face_search") public FaceResponses.Search search(FaceRequests.Search r, boolean mayReturnMatchedPhoto) {
         Map<String,Object> p = credentials(false);
         p.put("photo", photoValidator.normalize(r.getPhoto(), "photo"));
         p.put("lat", r.getLatitude()); p.put("lon", r.getLongitude());
@@ -78,7 +79,7 @@ public class FaceRecognitionServiceImpl implements FaceRecognitionService {
                 .message(resolved ? "Matching visitor found." : "No matching visitor found.").build();
     }
 
-    @Override public FaceResponses.Verify verify(FaceRequests.Verify r) {
+    @Override @MonitoredOperation("face_verify") public FaceResponses.Verify verify(FaceRequests.Verify r) {
         Map<String,Object> p = credentials(false);
         p.put("enrollmentId", r.getEnrollmentId()); p.put("photo", photoValidator.normalize(r.getPhoto(), "photo"));
         p.put("lat", r.getLatitude()); p.put("lon", r.getLongitude());
@@ -103,7 +104,7 @@ public class FaceRecognitionServiceImpl implements FaceRecognitionService {
                     operation, elapsedMillis(startedAt));
             return result;
         } catch (RuntimeException ex) {
-            String result = isTimeout(ex) ? "timeout" : "technical_error";
+            String result = classifyFailure(ex);
             recordCall(sample, operation, result);
             meterRegistry.counter("meghaconnect.external.api.errors", "provider", "deepface",
                     "operation", operation, "result", result).increment();
@@ -128,6 +129,15 @@ public class FaceRecognitionServiceImpl implements FaceRecognitionService {
                     || current instanceof java.util.concurrent.TimeoutException) return true;
         }
         return false;
+    }
+
+    private String classifyFailure(RuntimeException error) {
+        if (isTimeout(error)) return "timeout";
+        if (error instanceof com.survisha.meghaconnect.face.exception.FaceRecognitionException) {
+            int status = ((com.survisha.meghaconnect.face.exception.FaceRecognitionException) error).getHttpStatus();
+            if (status >= 400 && status < 500 && status != 408) return "business_error";
+        }
+        return "technical_error";
     }
 
     private long elapsedMillis(long startedAt) {

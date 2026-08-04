@@ -35,12 +35,17 @@ No `env`, `beans`, `configprops`, `heapdump`, `threaddump`, `mappings`, or `shut
 | `meghaconnect_face_result_total` | count | operation, result | Face service | Integrations | Technical |
 | `meghaconnect_form_extraction_*` | seconds/count | provider, controlled model, result | Form extraction | Integrations | Technical; no form data |
 | `meghaconnect_external_api_errors_total` | count | provider, operation, result | External client wrapper | Integrations/alerts | Technical |
+| `meghaconnect_operation_total` | count | fixed operation, category, result | Monitored service aspect | Integrations | Technical; no arguments |
+| `meghaconnect_operation_duration_seconds_*` | seconds/count | fixed operation, category, result | Monitored service aspect | Integrations | Technical; no arguments |
+| `meghaconnect_db_operation_*` | seconds/count | fixed operation, result | Monitored service aspect | Database | Technical; no SQL/values |
 | `meghaconnect_executor_*` | threads/tasks/queue | executor | Executor binder | JVM & Server | Technical |
 | `node_*` | bytes/seconds/count | host/device/mount | Node Exporter | JVM & Server | Infrastructure |
 | `mysql_*` | count/bytes/seconds | instance/schema where bounded | mysqld_exporter | Database | Infrastructure; no SQL |
 | `redis_*` | count/bytes/seconds | instance/db | Redis exporter | Redis & Cache | Infrastructure; no keys |
 
 Forbidden metric labels include usernames, user/citizen/visitor/department IDs, mobile/EPIC values, request IDs, JWTs, IP addresses, raw URLs, SQL, exception messages, images, OTPs, and CAPTCHA data.
+
+Bounded operation values currently include `visitor_registration`, `appointment_creation`, `appointment_search`, `appointment_lookup`, `citizen_lookup_by_phone`, `citizen_profile_lookup`, `public_identification`, `face_search`, `face_enrollment`, `face_verify`, `face_compare`, `face_delete`, `ocr_form_extraction`, `otp_generation`, `otp_validation`, `captcha_generation`, `captcha_validation`, `reference_data_lookup`, `scheme_list_load`, `department_user_load`, `file_upload`, `sms_provider_call`, and `public_darbar_scheduler`.
 
 Hikari metrics describe pool behavior; they do not provide per-SQL timing. Use bounded service/repository operation timers for application operations. MySQL slow-query logs and `performance_schema` are separate operational sources and must be reviewed with `EXPLAIN`; use Loki/ELK/OpenSearch if query-log visualization is approved.
 
@@ -52,6 +57,19 @@ Hikari metrics describe pool behavior; they do not provide per-SQL timing. Use b
 4. From `monitoring/`, validate with `docker compose config`, then run `docker compose up -d`. Add `--profile redis` only when Redis is enabled.
 5. Configure the firewall so 9090, 9091, 9100, 9104, 9121, and 3000 are not Internet-accessible. Expose only HTTPS Nginx/Grafana to the approved administrator network.
 6. In Prometheus verify `meghaconnect-api`, `node`, `mysql`, `prometheus`, and optionally `redis` are UP. In Grafana verify the provisioned Prometheus source and six dashboards.
+
+After deployment, administrators monitor at `https://YOUR_DOMAIN/grafana/`. The application URL is not used as the metrics UI. Prometheus stays at loopback `http://127.0.0.1:9090`, while Actuator stays on the private management listener. Create individual Grafana accounts or connect the approved SSO provider; do not share the bootstrap administrator account.
+
+Required application service environment:
+
+```text
+SPRING_PROFILES_ACTIVE=prod
+MANAGEMENT_PORT=9091
+MANAGEMENT_ADDRESS=127.0.0.1
+MONITORING_BEARER_TOKEN=<same random value stored in monitoring.token>
+```
+
+If Prometheus runs in Docker and the application runs directly on Linux, loopback is not reachable through `host.docker.internal`. Bind the management listener to the Docker bridge/private server address and allow port 9091 only from the Docker bridge subnet. Never add a public Nginx route for `/actuator/prometheus`.
 
 For MySQL, enable `performance_schema` and a policy-approved slow-query log in UAT first. Start `long_query_time` at 2 seconds and tune from evidence. Restrict and rotate the log; do not put SQL text in Prometheus labels or dashboard panels.
 

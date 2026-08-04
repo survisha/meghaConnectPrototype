@@ -36,6 +36,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import com.survisha.meghaconnect.monitoring.MonitoredOperation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
@@ -135,6 +136,7 @@ public class AppointmentService {
         return findAllDtosForActor(actor, null, null, null, pageable);
     }
 
+    @MonitoredOperation(value = "appointment_search", category = MonitoredOperation.Category.DATABASE)
     public Page<AppointmentDto> findAllDtosForActor(String actor, String status, String source, String referredOffice, Pageable pageable) {
         Long departmentId = scopedDepartmentId(actor);
         if (departmentId == null) {
@@ -207,6 +209,7 @@ public class AppointmentService {
         return appointmentRepository.findByIdAndTenantDepartment_Id(id, departmentId);
     }
 
+    @MonitoredOperation(value = "appointment_lookup", category = MonitoredOperation.Category.DATABASE)
     public Optional<Appointment> findByApplicationId(String appId) {
         return appointmentRepository.findByApplicationId(appId);
     }
@@ -285,6 +288,7 @@ public class AppointmentService {
     }
 
     @Transactional
+    @MonitoredOperation("appointment_creation")
     public GuestAppointmentResponse createGuestAppointment(GuestAppointmentRequest request) {
         GuestAppointmentRequest safeRequest = request != null ? request : new GuestAppointmentRequest();
         String fullName = validationService.requireText(safeRequest.getFullName(), "fullName");
@@ -436,6 +440,7 @@ public class AppointmentService {
     }
 
     @Transactional
+    @MonitoredOperation("appointment_creation")
     public Appointment create(AppointmentDto dto, String createdBy) {
         if (createdBy != null && createdBy.startsWith("visitor_")) {
             validateAppointmentConsent(dto);
@@ -483,6 +488,7 @@ public class AppointmentService {
     }
 
     @Transactional
+    @MonitoredOperation("appointment_creation")
     public Map<String, Object> createMultipart(
             AppointmentMultipartRequest form,
             HttpServletRequest request,

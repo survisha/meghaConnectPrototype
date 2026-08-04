@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import com.survisha.meghaconnect.monitoring.MonitoredOperation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -49,6 +50,7 @@ public class UserService {
                 .toList();
     }
 
+    @MonitoredOperation(value = "department_user_load", category = MonitoredOperation.Category.DATABASE)
     public List<UserResponse> getUserResponsesForActor(String actor) {
         User currentUser = requireActor(actor);
         if (currentUser.getRole() == User.UserRole.DEPARTMENT_ADMIN
@@ -64,6 +66,7 @@ public class UserService {
                 ErrorCodeConstants.UNAUTHORIZED_ACCESS_MSG, 403);
     }
 
+    @MonitoredOperation(value = "department_user_load", category = MonitoredOperation.Category.DATABASE)
     public Page<UserResponse> getUserResponsesForActor(
             String actor, String search, User.UserRole role, Boolean active, Boolean locked,
             Long requestedDepartmentId, Pageable pageable) {

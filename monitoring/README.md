@@ -104,3 +104,24 @@ Do not open ports 3000 or 9090 to the public Internet. They are loopback-bound b
 ```
 
 For production, do not expose Prometheus port `9090` publicly. Prefer exposing only Grafana through Nginx with SSL and authentication, or keep both services private behind VPN/IP allowlisting. Keep actuator exposure limited to `health,info,metrics,prometheus`.
+
+## Production monitoring URL
+
+After Nginx and TLS are configured, administrators use:
+
+`https://YOUR_DOMAIN/grafana/`
+
+Prometheus and Actuator are intentionally not public monitoring pages. Grafana authenticates technical administrators and reads Prometheus as its data source.
+
+## Deployment verification
+
+On the Linux server, after starting the backend and Compose stack:
+
+```bash
+export MONITORING_BEARER_TOKEN_FILE=/opt/meghaconnect/secure/monitoring.token
+export GRAFANA_URL=https://YOUR_DOMAIN/grafana/
+chmod +x ./verify-monitoring.sh
+./verify-monitoring.sh
+```
+
+The script fails unless anonymous metrics are rejected, authenticated metrics contain HTTP meters, Prometheus is ready, required targets are UP, and Grafana reports healthy.

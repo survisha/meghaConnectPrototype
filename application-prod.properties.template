@@ -85,10 +85,20 @@ logging.pattern.file=%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %m
 # ============================================
 # SPRING BOOT ACTUATOR (Monitoring)
 # ============================================
-management.endpoints.web.exposure.include=health,info,metrics
+management.server.port=9091
+management.server.address=127.0.0.1
+management.endpoints.web.base-path=/actuator
+management.endpoints.web.exposure.include=health,info,metrics,prometheus
 management.endpoint.health.show-details=when-authorized
+management.endpoint.health.probes.enabled=true
 management.health.db.enabled=true
 management.health.diskspace.enabled=true
+management.metrics.tags.application=meghaconnect-api
+management.metrics.tags.environment=prod
+management.metrics.distribution.percentiles-histogram.http.server.requests=true
+management.metrics.distribution.percentiles.http.server.requests=0.5,0.9,0.95,0.99
+management.metrics.distribution.slo.http.server.requests=100ms,300ms,500ms,1s,2s,5s
+meghaconnect.monitoring.bearer-token=${MONITORING_BEARER_TOKEN}
 
 # ============================================
 # FILE UPLOAD (for appointment documents)

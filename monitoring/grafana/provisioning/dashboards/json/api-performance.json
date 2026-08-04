@@ -1,1 +1,20 @@
-{"uid":"meghaconnect-api","title":"MeghaConnect – API Performance","schemaVersion":39,"version":1,"refresh":"30s","templating":{"list":[{"name":"environment","type":"query","query":"label_values(http_server_requests_seconds_count,environment)"},{"name":"application","type":"query","query":"label_values(http_server_requests_seconds_count,application)"},{"name":"uri","type":"query","query":"label_values(http_server_requests_seconds_count,uri)","includeAll":true},{"name":"method","type":"query","query":"label_values(http_server_requests_seconds_count,method)","includeAll":true},{"name":"status","type":"query","query":"label_values(http_server_requests_seconds_count,status)","includeAll":true}]},"panels":[{"type":"timeseries","title":"Request Rate by Endpoint","targets":[{"expr":"sum by(uri,method)(rate(http_server_requests_seconds_count{environment=~\"$environment\",application=~\"$application\",uri=~\"$uri\",method=~\"$method\",status=~\"$status\"}[5m]))"}],"gridPos":{"x":0,"y":0,"w":12,"h":8}},{"type":"timeseries","title":"Average Response Time","targets":[{"expr":"sum by(uri)(rate(http_server_requests_seconds_sum{uri=~\"$uri\"}[5m]))/clamp_min(sum by(uri)(rate(http_server_requests_seconds_count{uri=~\"$uri\"}[5m])),0.001)"}],"gridPos":{"x":12,"y":0,"w":12,"h":8}},{"type":"heatmap","title":"Latency Heatmap","targets":[{"expr":"sum by(le)(rate(http_server_requests_seconds_bucket{uri=~\"$uri\"}[5m]))","format":"heatmap"}],"gridPos":{"x":0,"y":8,"w":24,"h":9}}]}
+{
+  "uid":"meghaconnect-api","title":"MeghaConnect – API Performance","schemaVersion":39,"version":2,"refresh":"30s",
+  "templating":{"list":[
+    {"name":"environment","type":"query","query":"label_values(http_server_requests_seconds_count,environment)"},
+    {"name":"application","type":"query","query":"label_values(http_server_requests_seconds_count,application)"},
+    {"name":"uri","type":"query","query":"label_values(http_server_requests_seconds_count,uri)","includeAll":true,"allValue":".*"},
+    {"name":"method","type":"query","query":"label_values(http_server_requests_seconds_count,method)","includeAll":true,"allValue":".*"},
+    {"name":"status","type":"query","query":"label_values(http_server_requests_seconds_count,status)","includeAll":true,"allValue":".*"}
+  ]},
+  "panels":[
+    {"type":"timeseries","title":"Request Rate per Endpoint","targets":[{"expr":"sum by(uri,method)(rate(http_server_requests_seconds_count{environment=~\"$environment\",application=~\"$application\",uri=~\"$uri\",method=~\"$method\",status=~\"$status\"}[5m]))"}],"gridPos":{"x":0,"y":0,"w":12,"h":8}},
+    {"type":"timeseries","title":"Average Response Time","targets":[{"expr":"sum by(uri)(rate(http_server_requests_seconds_sum{uri=~\"$uri\"}[5m]))/clamp_min(sum by(uri)(rate(http_server_requests_seconds_count{uri=~\"$uri\"}[5m])),0.001)"}],"gridPos":{"x":12,"y":0,"w":12,"h":8}},
+    {"type":"timeseries","title":"P95 Response Time","targets":[{"expr":"histogram_quantile(0.95,sum by(uri,le)(rate(http_server_requests_seconds_bucket{uri=~\"$uri\"}[5m])))"}],"gridPos":{"x":0,"y":8,"w":8,"h":8}},
+    {"type":"timeseries","title":"Maximum Response Time","targets":[{"expr":"max by(uri)(http_server_requests_seconds_max{uri=~\"$uri\"})"}],"gridPos":{"x":8,"y":8,"w":8,"h":8}},
+    {"type":"timeseries","title":"Status-code Distribution","targets":[{"expr":"sum by(status)(rate(http_server_requests_seconds_count{uri=~\"$uri\"}[5m]))"}],"gridPos":{"x":16,"y":8,"w":8,"h":8}},
+    {"type":"timeseries","title":"Exceptions","targets":[{"expr":"sum by(exception,uri)(rate(http_server_requests_seconds_count{exception!=\"None\",uri=~\"$uri\"}[5m]))"}],"gridPos":{"x":0,"y":16,"w":8,"h":8}},
+    {"type":"table","title":"Slow Endpoint Table","targets":[{"expr":"topk(20,sum by(uri,method)(rate(http_server_requests_seconds_sum{uri=~\"$uri\"}[5m]))/clamp_min(sum by(uri,method)(rate(http_server_requests_seconds_count{uri=~\"$uri\"}[5m])),0.001))","format":"table","instant":true}],"gridPos":{"x":8,"y":16,"w":8,"h":8}},
+    {"type":"heatmap","title":"Latency Heatmap","targets":[{"expr":"sum by(le)(rate(http_server_requests_seconds_bucket{uri=~\"$uri\"}[5m]))","format":"heatmap"}],"gridPos":{"x":16,"y":16,"w":8,"h":8}}
+  ]
+}

@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
+import com.survisha.meghaconnect.monitoring.MonitoredOperation;
 
 import java.util.List;
 import java.util.Locale;
@@ -20,6 +21,7 @@ public class ReferenceDataService {
     private final ReferenceDataRepository referenceDataRepository;
 
     @Cacheable(value = "referenceData", key = "#typeCode")
+    @MonitoredOperation(value = "reference_data_lookup", category = MonitoredOperation.Category.DATABASE)
     public List<ReferenceDataDto> getReferenceDataByType(String typeCode) {
         log.debug("Fetching reference data for type: {}", typeCode);
 
@@ -31,6 +33,7 @@ public class ReferenceDataService {
     }
 
     @Cacheable(value = "referenceData", key = "#typeCode + ':' + #parentCode")
+    @MonitoredOperation(value = "reference_data_lookup", category = MonitoredOperation.Category.DATABASE)
     public List<ReferenceDataDto> getReferenceDataByType(String typeCode, String parentCode) {
         String normalizedType = typeCode.toUpperCase(Locale.ROOT);
         if (parentCode == null || parentCode.isBlank()) {

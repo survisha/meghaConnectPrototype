@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import com.survisha.meghaconnect.monitoring.MonitoredOperation;
 
 import java.util.*;
 
@@ -33,6 +34,7 @@ public class VisitorFormExtractionServiceImpl implements VisitorFormExtractionSe
     private final MeterRegistry meterRegistry;
 
     @Override
+    @MonitoredOperation("ocr_form_extraction")
     public VisitorFormExtractionResponse extract(MultipartFile image, String formType, String languageHint, String actor) {
         long lifecycleStart = System.nanoTime();
         String requestId = RequestContextUtil.getRequestId();
@@ -59,12 +61,17 @@ public class VisitorFormExtractionServiceImpl implements VisitorFormExtractionSe
         try {
             result = providerResolver.resolve(properties.getProvider()).extract(input);
         } catch (RuntimeException ex) {
-            String failure = isTimeout(ex) ? "timeout" : "failure";
+            String failure = classifyFailure(ex);
             meterRegistry.counter("meghaconnect.form.extraction", "provider", configuredProvider(),
                     "model", "configured", "result", failure).increment();
+            meterRegistry.counter("meghaconnect.external.api.errors", "provider", configuredProvider(),
+                    "operation", "form_extraction", "result", failure).increment();
             meterRegistry.timer("meghaconnect.form.extraction.duration", "provider", configuredProvider(),
                     "model", "configured", "result", failure)
                     .record(System.nanoTime() - lifecycleStart, java.util.concurrent.TimeUnit.NANOSECONDS);
+            meterRegistry.timer("meghaconnect.form.extraction.inference.duration", "provider", configuredProvider(),
+                    "model", "configured", "result", failure)
+                    .record(System.nanoTime() - start, java.util.concurrent.TimeUnit.NANOSECONDS);
             log.debug("Visitor form extraction failed requestId={} provider={} formType={} imageBytes={} durationMs={} success=false exception={}",
                     requestId, properties.getProvider(), formType, processed.bytes().length,
                     (System.nanoTime()-lifecycleStart)/1_000_000, ex.getClass().getSimpleName());
@@ -90,7 +97,9 @@ public class VisitorFormExtractionServiceImpl implements VisitorFormExtractionSe
                 "result", "success").increment();
         meterRegistry.timer("meghaconnect.form.extraction.duration", "provider", provider, "model", model,
                 "result", "success")
-                .record(java.time.Duration.ofMillis(durationMs));
+                .record(System.nanoTime() - lifecycleStart, java.util.concurrent.TimeUnit.NANOSECONDS);
+        meterRegistry.timer("meghaconnect.form.extraction.inference.duration", "provider", provider,
+                "model", model, "result", "success").record(java.time.Duration.ofMillis(durationMs));
         if (review) meterRegistry.counter("meghaconnect.form.extraction.manual.review", "provider", provider,
                 "model", model).increment();
         log.debug("Visitor form extraction completed requestId={} provider={} model={} formType={} imageBytes={} imageWidth={} imageHeight={} success=true epicPresent={} epicMasked={} epicStatus={} epicValid={} namePresent={} nameMasked={} nameStatus={} nameValid={} mobilePresent={} mobileLast4={} mobileStatus={} mobileValid={} addressPresent={} addressLength={} addressStatus={} addressValid={} requiresManualReview={} warningCount={} durationMs={}",
@@ -120,6 +129,13 @@ public class VisitorFormExtractionServiceImpl implements VisitorFormExtractionSe
                     || current instanceof java.util.concurrent.TimeoutException) return true;
         }
         return false;
+    }
+
+    private String classifyFailure(RuntimeException error) {
+        if (isTimeout(error)) return "timeout";
+        if (error instanceof FormExtractionException
+                && ((FormExtractionException) error).getHttpStatus() == 503) return "provider_unavailable";
+        return "failure";
     }
 
     private VisitorFormExtractionResponse qualityFailure(ImageQualityResult quality) {

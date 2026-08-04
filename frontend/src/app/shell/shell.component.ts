@@ -7,7 +7,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { LanguageSelectorComponent } from '../shared/language-selector/language-selector.component';
 import { MatIconModule } from '@angular/material/icon';
 
-interface MenuItem { labelKey: string; icon: string; route?: string; children?: MenuItem[]; expanded?: boolean; roles?: UserRole[]; }
+interface MenuItem { labelKey: string; icon: string; route?: string; externalUrl?: string; children?: MenuItem[]; expanded?: boolean; roles?: UserRole[]; }
 
 @Component({
   selector: 'app-shell',
@@ -80,6 +80,8 @@ export class ShellComponent implements OnInit {
       roles: ['ADMIN'] },
     { labelKey: 'APPOINTMENT_TYPES', icon: 'event', route: '/admin/appointment-types',
       roles: ['ADMIN'] },
+    { labelKey: 'TECHNICAL_MONITORING', icon: 'monitor_heart', externalUrl: '/grafana/',
+      roles: ['SUPER_ADMIN'] },
   ];
 
   constructor(public auth: AuthService, private router: Router) {}

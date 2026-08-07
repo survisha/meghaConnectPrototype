@@ -2,6 +2,7 @@ import { of, Subject } from 'rxjs';
 import { PublicIdentificationComponent } from './public-identification.component';
 import { FaceSearchResult } from '../services/face-recognition.service';
 import { AutoFaceDetection } from '../shared/camera-liveness.service';
+import { AUTO_FACE_RESULT_TIMEOUT_MS } from '../config/public-identification.constants';
 
 describe('PublicIdentificationComponent face queue', () => {
   let component: PublicIdentificationComponent;
@@ -98,13 +99,13 @@ describe('PublicIdentificationComponent face queue', () => {
     expect(component.selected?.id).toBe(1);
   });
 
-  it('expires completed results after one minute and clears an expired selection', () => {
+  it('expires completed results after the configured timeout and clears an expired selection', () => {
     (component as any).processDetectedFaces({} as HTMLVideoElement, [face(0.1, [0.1, 0.2, 0.3])]);
     const visitor = { id: 1, fullName: 'Visitor', phoneNumber: '9999999999', epicNumber: 'A', designation: 'Citizen', district: 'Ri Bhoi', constituency: 'Nongpoh', booth: '1' };
     responses.get('photo-1')!.next({ success: true, matched: true, message: 'Matched', visitor });
     component.selectFaceResult(component.faceDetections[0] as never);
 
-    jasmine.clock().tick(60_001);
+    jasmine.clock().tick(AUTO_FACE_RESULT_TIMEOUT_MS + 1);
 
     expect(component.faceDetections).toEqual([]);
     expect(component.selected).toBeNull();

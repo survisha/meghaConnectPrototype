@@ -1,0 +1,74 @@
+name: Deploy UAT
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Immutable published tag, for example sha-<40-character-commit>
+        required: true
+        type: string
+      approve_migrations:
+        description: Confirm Flyway review and database backup policy are complete
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-uat
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: uat
+      url: https://${{ vars.UAT_DOMAIN }}
+    steps:
+      - name: Validate immutable tag
+        shell: bash
+        env:
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          [[ "$IMAGE_TAG" =~ ^sha-[0-9a-f]{40}$ ]] || {
+            echo "image_tag must be an immutable sha-<40 hex characters> tag" >&2
+            exit 1
+          }
+      - name: Configure restricted SSH identity
+        shell: bash
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.UAT_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.UAT_SSH_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/uat_deploy
+          chmod 600 ~/.ssh/uat_deploy
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+      - name: Deploy immutable images with automatic rollback
+        shell: bash
+        env:
+          IMAGE_TAG: ${{ inputs.image_tag }}
+          UAT_SERVER_HOST: ${{ secrets.UAT_SERVER_HOST }}
+          UAT_SERVER_PORT: ${{ secrets.UAT_SERVER_PORT }}
+          UAT_DEPLOY_USER: ${{ secrets.UAT_DEPLOY_USER }}
+          DEPLOY_ACTOR: ${{ github.actor }}
+          DEPLOY_COMMIT: ${{ github.sha }}
+          APPROVE_MIGRATIONS: ${{ inputs.approve_migrations }}
+        run: |
+          migration_flag=""
+          if [[ "$APPROVE_MIGRATIONS" == "true" ]]; then
+            migration_flag="--approve-migrations"
+          fi
+          ssh -i ~/.ssh/uat_deploy \
+            -p "${UAT_SERVER_PORT:-22}" \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            "${UAT_DEPLOY_USER}@${UAT_SERVER_HOST}" \
+            "/opt/meghaconnect/deploy/deploy-docker.sh \
+              --image-tag '$IMAGE_TAG' \
+              --actor '$DEPLOY_ACTOR' \
+              --commit '$DEPLOY_COMMIT' \
+              $migration_flag"

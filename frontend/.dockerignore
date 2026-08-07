@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.angular/
+.git/
+.github/
+.idea/
+.vscode/
+coverage/
+test-output/
+*.log
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.jks

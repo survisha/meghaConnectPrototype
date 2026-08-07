@@ -1,0 +1,259 @@
+name: meghaconnect-uat
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+x-security: &default-security
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+
+services:
+  backend:
+    image: ${GHCR_REGISTRY:-ghcr.io}/${GHCR_OWNER:?Set GHCR_OWNER}/meghaconnect-backend:${IMAGE_TAG:?Set immutable IMAGE_TAG}
+    container_name: meghaconnect-backend
+    restart: unless-stopped
+    env_file:
+      - /etc/meghaconnect/meghaconnect-api.env
+    environment:
+      SPRING_PROFILES_ACTIVE: uat
+      SERVER_ADDRESS: 0.0.0.0
+      SERVER_PORT: 8080
+      MANAGEMENT_ADDRESS: 0.0.0.0
+      MANAGEMENT_PORT: 9091
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      FILE_UPLOAD_ROOT: /opt/meghaconnect/uploads/uat
+      LOGGING_PATH: /opt/meghaconnect/logs
+      BUILD_VERSION: ${IMAGE_TAG}
+    ports:
+      - "127.0.0.1:${BACKEND_HOST_PORT:-8080}:8080"
+      - "127.0.0.1:${MANAGEMENT_HOST_PORT:-9091}:9091"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - /opt/meghaconnect/uploads:/opt/meghaconnect/uploads
+      - /opt/meghaconnect/logs:/opt/meghaconnect/logs
+    group_add:
+      - "${HOST_APP_GID:?Set HOST_APP_GID to the host meghaconnect group ID}"
+    tmpfs:
+      - /tmp:size=512m,mode=1770,uid=10001,gid=10001
+    read_only: true
+    <<: *default-security
+    mem_limit: ${BACKEND_MEMORY_LIMIT:-2g}
+    cpus: ${BACKEND_CPU_LIMIT:-2.0}
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:9091/actuator/health/readiness"]
+      interval: 15s
+      timeout: 5s
+      start_period: 120s
+      retries: 5
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - meghaconnect-internal
+    logging: *default-logging
+
+  frontend:
+    image: ${GHCR_REGISTRY:-ghcr.io}/${GHCR_OWNER:?Set GHCR_OWNER}/meghaconnect-frontend:${IMAGE_TAG:?Set immutable IMAGE_TAG}
+    container_name: meghaconnect-frontend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${FRONTEND_HOST_PORT:-8081}:8080"
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+      - /var/cache/nginx:size=32m,uid=101,gid=101
+      - /var/run:size=4m,uid=101,gid=101
+    <<: *default-security
+    mem_limit: ${FRONTEND_MEMORY_LIMIT:-128m}
+    cpus: ${FRONTEND_CPU_LIMIT:-0.5}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/health"]
+      interval: 15s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
+    networks:
+      - meghaconnect-internal
+    logging: *default-logging
+
+  redis:
+    image: redis:7.4.2-alpine3.21
+    container_name: meghaconnect-redis
+    restart: unless-stopped
+    env_file:
+      - /etc/meghaconnect/meghaconnect-api.env
+    entrypoint: ["/bin/sh", "/usr/local/bin/meghaconnect-redis-entrypoint.sh"]
+    volumes:
+      - redis-data:/data
+      - ./redis-entrypoint.sh:/usr/local/bin/meghaconnect-redis-entrypoint.sh:ro
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    read_only: true
+    <<: *default-security
+    cap_add:
+      - SETGID
+      - SETUID
+    mem_limit: ${REDIS_MEMORY_LIMIT:-512m}
+    cpus: ${REDIS_CPU_LIMIT:-0.5}
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$$REDIS_PASSWORD\" redis-cli --no-auth-warning ping | grep -q PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - meghaconnect-internal
+    logging: *default-logging
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: meghaconnect-prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-15d}
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./prometheus.uat.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts:/etc/prometheus/rules:ro
+      - ${MONITORING_BEARER_TOKEN_FILE:?Set MONITORING_BEARER_TOKEN_FILE}:/run/secrets/monitoring_bearer_token:ro
+      - prometheus-data:/prometheus
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    <<: *default-security
+    mem_limit: ${PROMETHEUS_MEMORY_LIMIT:-1g}
+    cpus: ${PROMETHEUS_CPU_LIMIT:-1.0}
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - meghaconnect-internal
+    logging: *default-logging
+
+  grafana:
+    image: grafana/grafana-oss:11.1.4
+    container_name: meghaconnect-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana_admin_password
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:?Set HTTPS GRAFANA_ROOT_URL}
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ${GRAFANA_ADMIN_PASSWORD_FILE:?Set GRAFANA_ADMIN_PASSWORD_FILE}:/run/secrets/grafana_admin_password:ro
+    <<: *default-security
+    mem_limit: ${GRAFANA_MEMORY_LIMIT:-512m}
+    cpus: ${GRAFANA_CPU_LIMIT:-0.5}
+    depends_on:
+      - prometheus
+      - loki
+    networks:
+      - meghaconnect-internal
+    logging: *default-logging
+
+  loki:
+    image: grafana/loki:2.9.8
+    container_name: meghaconnect-loki
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/local-config.yml"]
+    ports:
+      - "127.0.0.1:3100:3100"
+    volumes:
+      - ./monitoring/loki-config.yml:/etc/loki/local-config.yml:ro
+      - loki-data:/loki
+    <<: *default-security
+    mem_limit: ${LOKI_MEMORY_LIMIT:-512m}
+    cpus: ${LOKI_CPU_LIMIT:-0.5}
+    networks:
+      - meghaconnect-internal
+    logging: *default-logging
+
+  promtail:
+    image: grafana/promtail:2.9.8
+    container_name: meghaconnect-promtail
+    restart: unless-stopped
+    command: ["-config.file=/etc/promtail/config.yml"]
+    volumes:
+      - ./monitoring/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /opt/meghaconnect/logs:/var/log/meghaconnect:ro
+      - /var/log/nginx:/var/log/nginx:ro
+      - promtail-positions:/tmp
+    <<: *default-security
+    depends_on:
+      - loki
+    networks:
+      - meghaconnect-internal
+    logging: *default-logging
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: meghaconnect-node-exporter
+    restart: unless-stopped
+    command:
+      - --path.rootfs=/host
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+    volumes:
+      - /:/host:ro,rslave
+    pid: host
+    <<: *default-security
+    networks:
+      - meghaconnect-internal
+    logging: *default-logging
+
+  mysqld-exporter:
+    image: prom/mysqld-exporter:v0.15.1
+    container_name: meghaconnect-mysqld-exporter
+    restart: unless-stopped
+    command: ["--config.my-cnf=/run/secrets/mysql-exporter.cnf"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ${MYSQL_EXPORTER_CONFIG_FILE:?Set MYSQL_EXPORTER_CONFIG_FILE}:/run/secrets/mysql-exporter.cnf:ro
+    <<: *default-security
+    networks:
+      - meghaconnect-internal
+    logging: *default-logging
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.62.0
+    container_name: meghaconnect-redis-exporter
+    restart: unless-stopped
+    env_file:
+      - /etc/meghaconnect/meghaconnect-api.env
+    environment:
+      REDIS_ADDR: redis://redis:6379
+    <<: *default-security
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - meghaconnect-internal
+    logging: *default-logging
+
+networks:
+  meghaconnect-internal:
+    name: meghaconnect-internal
+    driver: bridge
+
+volumes:
+  redis-data:
+  prometheus-data:
+  grafana-data:
+  loki-data:
+  promtail-positions:

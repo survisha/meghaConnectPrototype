@@ -90,6 +90,9 @@ services:
     restart: unless-stopped
     env_file:
       - /etc/meghaconnect/meghaconnect-api.env
+    environment:
+      REDIS_MAXMEMORY: ${REDIS_MAXMEMORY:-384mb}
+      REDIS_MAXMEMORY_POLICY: ${REDIS_MAXMEMORY_POLICY:-noeviction}
     entrypoint: ["/bin/sh", "/usr/local/bin/meghaconnect-redis-entrypoint.sh"]
     volumes:
       - redis-data:/data

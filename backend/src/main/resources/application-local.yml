@@ -1,0 +1,10 @@
+spring:
+  data:
+    redis:
+      repositories:
+        enabled: false
+
+cache:
+  redis:
+    environment: local
+    enabled: ${REDIS_CACHE_ENABLED:false}

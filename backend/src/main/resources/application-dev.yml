@@ -10,16 +10,10 @@ server:
     mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
 
 spring:
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
-      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
   data:
     redis:
       repositories:
         enabled: false
-  cache:
-    type: none
   datasource:
     # Use +05:30 for the MySQL session because named zones require MySQL timezone tables.
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:meghaconnect_db}?useSSL=false&connectionTimeZone=%2B05:30&forceConnectionTimeZoneToSession=true&allowPublicKeyRetrieval=true
@@ -60,9 +54,6 @@ management:
   server:
     port: ${MANAGEMENT_PORT:9091}
     address: ${MANAGEMENT_ADDRESS:127.0.0.1}
-  health:
-    redis:
-      enabled: false
   info:
     env:
       enabled: true
@@ -141,10 +132,6 @@ meghaconnect:
     scheduler-delay-ms: ${PUBLIC_DARBAR_SCHEDULER_DELAY_MS:60000}
     start-time: ${PUBLIC_DARBAR_START_TIME:10:00}
     slot-duration-minutes: ${PUBLIC_DARBAR_SLOT_DURATION_MINUTES:10}
-
-cache:
-  redis:
-    enabled: ${REDIS_CACHE_ENABLED:false}
 
 sms:
   enabled: ${SMS_ENABLED:false}

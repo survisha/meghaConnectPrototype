@@ -23,7 +23,7 @@ dir /data
 appendonly yes
 appendfsync everysec
 maxmemory ${REDIS_MAXMEMORY:-384mb}
-maxmemory-policy ${REDIS_MAXMEMORY_POLICY:-allkeys-lru}
+maxmemory-policy ${REDIS_MAXMEMORY_POLICY:-noeviction}
 save 900 1
 save 300 10
 save 60 10000

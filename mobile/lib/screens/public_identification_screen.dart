@@ -11,6 +11,7 @@ import 'package:image/image.dart' as img;
 
 import '../core/config/app_config.dart';
 import '../services/api_service.dart';
+import 'visitor_registration_screen.dart';
 import '../widgets/megha_ui.dart';
 
 class _VisitorProfile {
@@ -75,6 +76,7 @@ enum _FaceResultStatus {
   queued,
   searching,
   matched,
+  epicMatched,
   notRegistered,
   timeout,
   unavailable
@@ -89,6 +91,7 @@ class _FaceRecognitionResult {
   double? matchScore;
   DateTime recognitionTime;
   String message = '';
+  Map<String, dynamic>? epicRecord;
 
   _FaceRecognitionResult({
     required this.trackingId,
@@ -324,7 +327,7 @@ class _PublicIdentificationScreenState
   }
 
   void _drainFaceQueue() {
-    while (_activeFaceSearches < 5 && _faceQueue.isNotEmpty) {
+    while (_activeFaceSearches < 1 && _faceQueue.isNotEmpty) {
       final pending = _faceQueue.removeAt(0);
       _activeFaceSearches++;
       if (mounted) {
@@ -360,12 +363,31 @@ class _PublicIdentificationScreenState
             _results.add(profile);
           }
         } else {
-          result.status = _FaceResultStatus.notRegistered;
-          result.message = result.message.isEmpty
-              ? 'Visitor not found in system'
-              : result.message;
+          result.status = _FaceResultStatus.searching;
+          result.message = 'Searching EPIC face database…';
         }
       });
+      if (response['success'] == true && response['matched'] != true) {
+        final epic = await ApiService.searchEpicByFace(pending.photo);
+        if (!mounted || pending.session != _faceSession) return;
+        setState(() {
+          final result = _faceResult(pending.trackingId);
+          if (result == null) return;
+          if (epic['matched'] == true) {
+            result.status = _FaceResultStatus.epicMatched;
+            result.epicRecord = epic;
+            result.message =
+                'EPIC record found. Verify details before registration.';
+          } else {
+            result.status = epic['providerUnavailable'] == true
+                ? _FaceResultStatus.unavailable
+                : _FaceResultStatus.notRegistered;
+            result.message = epic['providerUnavailable'] == true
+                ? 'EPIC face search unavailable. Use EPIC and Name search.'
+                : 'Visitor not found. You can create a new registration.';
+          }
+        });
+      }
     } on TimeoutException {
       if (mounted && pending.session == _faceSession) {
         setState(() {
@@ -1091,6 +1113,7 @@ class _FaceRecognitionResultCard extends StatelessWidget {
     final title = switch (result.status) {
       _FaceResultStatus.queued || _FaceResultStatus.searching => 'Searching…',
       _FaceResultStatus.matched => visitor?.fullName ?? 'Matched',
+      _FaceResultStatus.epicMatched => 'EPIC Record Found',
       _FaceResultStatus.notRegistered => 'Not Registered',
       _FaceResultStatus.timeout => 'Search Timeout',
       _FaceResultStatus.unavailable => 'Service Unavailable',
@@ -1135,6 +1158,28 @@ class _FaceRecognitionResultCard extends StatelessWidget {
               _VisitorPhoto(
                   name: visitor.fullName, source: visitor.photoSource),
             ]),
+          ],
+          if (result.status == _FaceResultStatus.epicMatched &&
+              result.epicRecord != null) ...[
+            const SizedBox(width: 10),
+            Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                  Text(_text(result.epicRecord!['name']),
+                      style: const TextStyle(fontWeight: FontWeight.w800)),
+                  Text('EPIC: ${_text(result.epicRecord!['epicNumber'])}'),
+                  Text(_text(result.epicRecord!['district'])),
+                  const SizedBox(height: 8),
+                  ElevatedButton(
+                      onPressed: () =>
+                          Navigator.of(context).push(MaterialPageRoute(
+                              builder: (_) => VisitorRegistrationScreen(
+                                    epicFacePrefill: result.epicRecord,
+                                    liveCapturedPhoto: result.capturedImage,
+                                  ))),
+                      child: const Text('Register Visitor')),
+                ])),
           ],
           const SizedBox(width: 12),
           Expanded(

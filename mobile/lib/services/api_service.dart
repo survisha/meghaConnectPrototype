@@ -1285,6 +1285,65 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, dynamic>> searchEpicByFace(String photo) async {
+    try {
+      final resp = await http
+          .post(_u('/epic/face/search'),
+              headers: await _headers(),
+              body: jsonEncode({
+                'photo': normalizeFacePhoto(photo),
+                'source': 'MOBILE_WALK_IN'
+              }))
+          .timeout(const Duration(seconds: 95));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        return Map<String, dynamic>.from(jsonDecode(resp.body) as Map);
+      }
+      return {
+        'matched': false,
+        'providerUnavailable': true,
+        'message': _messageFromResponse(
+            resp, 'EPIC face search is temporarily unavailable.')
+      };
+    } catch (error, stackTrace) {
+      _logError('searchEpicByFace', error, stackTrace);
+      return {
+        'matched': false,
+        'providerUnavailable': true,
+        'message': 'EPIC face search is temporarily unavailable.'
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> verifyEpicFace(
+      String epicNumber, String photo) async {
+    try {
+      final resp = await http
+          .post(_u('/epic/face/verify'),
+              headers: await _headers(),
+              body: jsonEncode({
+                'epicNumber': epicNumber,
+                'photo': normalizeFacePhoto(photo)
+              }))
+          .timeout(const Duration(seconds: 95));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        return Map<String, dynamic>.from(jsonDecode(resp.body) as Map);
+      }
+      return {
+        'matched': false,
+        'providerUnavailable': true,
+        'message': _messageFromResponse(
+            resp, 'EPIC face verification is temporarily unavailable.')
+      };
+    } catch (error, stackTrace) {
+      _logError('verifyEpicFace', error, stackTrace);
+      return {
+        'matched': false,
+        'providerUnavailable': true,
+        'message': 'EPIC face verification is temporarily unavailable.'
+      };
+    }
+  }
+
   static String normalizeFacePhoto(String photo) {
     final value = photo.trim();
     if (value.isEmpty) {

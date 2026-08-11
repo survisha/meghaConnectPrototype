@@ -57,6 +57,30 @@
             <span *ngIf="faceSearching">Searching securely…</span>
           </div>
           <div *ngIf="identifiedByFace" class="success-banner"><mat-icon>verified</mat-icon> Visitor identified by face.</div>
+          <div *ngIf="identificationState === 'SEARCHING_EPIC_FACE'" class="success-banner"><mat-icon>manage_search</mat-icon> Searching the EPIC face database…</div>
+          <mat-card *ngIf="identificationState === 'EPIC_MATCH_FOUND' && epicFaceResult" class="section-card">
+            <mat-card-header><mat-card-title>EPIC Verification Result</mat-card-title></mat-card-header>
+            <mat-card-content>
+              <div class="visitor-result-actions">
+                <img *ngIf="facePhoto" [src]="facePhoto" alt="Live captured face" style="max-width:140px;border-radius:8px" />
+                <img *ngIf="epicFaceResult.epicPhoto" [src]="'data:image/png;base64,' + epicFaceResult.epicPhoto" alt="EPIC reference" style="max-width:140px;border-radius:8px" />
+              </div>
+              <div class="detail-pairs">
+                <div><span>Name</span><strong>{{ epicFaceResult.name || '—' }}</strong></div>
+                <div><span>EPIC</span><strong>{{ epicFaceResult.epicNumber || '—' }}</strong></div>
+                <div><span>District</span><strong>{{ epicFaceResult.district || '—' }}</strong></div>
+                <div><span>Pincode</span><strong>{{ epicFaceResult.pincode || '—' }}</strong></div>
+                <div><span>AC/PC</span><strong>{{ epicFaceResult.acpcName || '—' }}</strong></div>
+                <div><span>Part / Serial</span><strong>{{ epicFaceResult.partNumber || '—' }} / {{ epicFaceResult.serialNumber || '—' }}</strong></div>
+              </div>
+              <p>{{ epicFaceResult.address }}</p>
+            </mat-card-content>
+            <mat-card-actions>
+              <button mat-raised-button color="primary" (click)="continueNewRegistration()">Register Visitor</button>
+              <button mat-button (click)="startFaceCamera()">Retry Face Search</button>
+              <button mat-button (click)="continueNewRegistration()">Use EPIC + Name Search</button>
+            </mat-card-actions>
+          </mat-card>
 
           <div *ngIf="errorMsg" class="error-banner">
             <mat-icon>error</mat-icon>

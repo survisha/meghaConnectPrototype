@@ -75,7 +75,7 @@ public class ApiRateLimitFilter extends OncePerRequestFilter {
                 || uri.startsWith("/api/v1/public/otp")) {
             return new Limit("otp", otpMaxRequests);
         }
-        if (uri.startsWith("/api/v1/kyc")) {
+        if (uri.startsWith("/api/v1/kyc") || uri.startsWith("/api/v1/epic/face")) {
             return new Limit("kyc", kycMaxRequests);
         }
         if (uri.startsWith("/api/ai")) {

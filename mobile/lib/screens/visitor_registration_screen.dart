@@ -20,10 +20,14 @@ import 'new_appointment_screen.dart';
 
 class VisitorRegistrationScreen extends StatefulWidget {
   final bool openAppointmentAfterSubmit;
+  final Map<String, dynamic>? epicFacePrefill;
+  final String? liveCapturedPhoto;
 
   const VisitorRegistrationScreen({
     super.key,
     this.openAppointmentAfterSubmit = false,
+    this.epicFacePrefill,
+    this.liveCapturedPhoto,
   });
 
   @override
@@ -100,6 +104,17 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
   @override
   void initState() {
     super.initState();
+    final prefill = widget.epicFacePrefill;
+    if (prefill != null) {
+      _epicCtrl.text = (prefill['epicNumber'] ?? '').toString();
+      _visitorNameCtrl.text = (prefill['name'] ?? '').toString();
+      _fullNameCtrl.text = (prefill['name'] ?? '').toString();
+      _addressCtrl.text = (prefill['address'] ?? '').toString();
+      _districtCtrl.text = (prefill['district'] ?? '').toString();
+      _constituencyCtrl.text = (prefill['acpcName'] ?? '').toString();
+      _partNumberCtrl.text = (prefill['partNumber'] ?? '').toString();
+      _livePhotoDataUri = widget.liveCapturedPhoto;
+    }
     _loadReferenceData();
   }
 

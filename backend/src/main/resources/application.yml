@@ -76,6 +76,17 @@ sms:
   sender-id: ${SMS_SENDER_ID:DEUPL}
 
 integration:
+  epic-face:
+    enabled: ${EPIC_FACE_ENABLED:false}
+    base-url: ${EPIC_FACE_BASE_URL:https://prdev.onlineipv.com/MeghalayaEPICFaceMW}
+    search-1n-path: ${EPIC_FACE_1N_PATH:/FaceService1N}
+    verify-11-path: ${EPIC_FACE_11_PATH:/FaceService11}
+    search-api-key: ${EPIC_FACE_1N_API_KEY:}
+    verify-api-key: ${EPIC_FACE_11_API_KEY:}
+    connect-timeout-seconds: ${EPIC_FACE_CONNECT_TIMEOUT:10}
+    read-timeout-seconds: ${EPIC_FACE_READ_TIMEOUT:60}
+    write-timeout-seconds: ${EPIC_FACE_WRITE_TIMEOUT:30}
+    call-timeout-seconds: ${EPIC_FACE_CALL_TIMEOUT:90}
   openai:
     form-extraction:
       enabled: ${OPENAI_FORM_EXTRACTION_ENABLED:false}

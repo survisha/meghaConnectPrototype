@@ -18,6 +18,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatRadioModule } from '@angular/material/radio';
 import { CameraCaptureService, CameraFacingMode } from '../../shared/camera-capture.service';
 import { FaceRecognitionService } from '../../services/face-recognition.service';
+import { EpicFaceResult, EpicFaceService } from '../../services/epic-face.service';
 
 @Component({
   selector: 'app-walkin',
@@ -51,6 +52,8 @@ export class WalkinComponent implements OnDestroy {
   faceCameraActive = false;
   facePhoto = '';
   faceSearching = false;
+  identificationState: 'IDLE' | 'SEARCHING_EXISTING_FACE' | 'FOUND_EXISTING_VISITOR' | 'SEARCHING_EPIC_FACE' | 'EPIC_MATCH_FOUND' | 'EPIC_FACE_NOT_FOUND' | 'ERROR' = 'IDLE';
+  epicFaceResult: EpicFaceResult | null = null;
   identifiedByFace = false;
   creating = false;
   visitorUpdateForm = this.emptyVisitorUpdateForm();
@@ -83,7 +86,8 @@ export class WalkinComponent implements OnDestroy {
     private visitorKycService: VisitorKycService,
     private router: Router,
     private cameraCapture: CameraCaptureService,
-    private faceRecognition: FaceRecognitionService
+    private faceRecognition: FaceRecognitionService,
+    private epicFace: EpicFaceService
   ) {}
 
   ngOnDestroy() {
@@ -120,6 +124,8 @@ export class WalkinComponent implements OnDestroy {
   searchByFace(): void {
     if (!this.facePhoto || this.faceSearching) return;
     this.faceSearching = true;
+    this.identificationState = 'SEARCHING_EXISTING_FACE';
+    this.epicFaceResult = null;
     this.errorMsg = '';
     this.faceRecognition.search(this.facePhoto).subscribe({
       next: result => {
@@ -129,16 +135,33 @@ export class WalkinComponent implements OnDestroy {
           this.showSearchResults = true;
           this.notFound = false;
           this.identifiedByFace = true;
+          this.identificationState = 'FOUND_EXISTING_VISITOR';
           this.selectVisitor(result.visitor.id ?? null);
         } else {
-          this.notFound = true;
-          this.showSearchResults = false;
-          this.identifiedByFace = false;
+          this.searchEpicFace();
         }
       },
       error: err => {
         this.faceSearching = false;
+        this.identificationState = 'ERROR';
         this.errorMsg = apiErrorMessage(err, 'Face search is unavailable. Please retry or use manual lookup.');
+      }
+    });
+  }
+
+  private searchEpicFace(): void {
+    this.identificationState = 'SEARCHING_EPIC_FACE';
+    this.epicFace.search(this.facePhoto).subscribe({
+      next: result => {
+        this.faceSearching = false; this.epicFaceResult = result;
+        this.identifiedByFace = false; this.showSearchResults = false;
+        this.notFound = !result.matched;
+        this.identificationState = result.matched ? 'EPIC_MATCH_FOUND' : 'EPIC_FACE_NOT_FOUND';
+      },
+      error: () => {
+        this.faceSearching = false; this.notFound = true;
+        this.identificationState = 'ERROR';
+        this.errorMsg = 'EPIC face search is temporarily unavailable. Continue with EPIC and Name search.';
       }
     });
   }
@@ -148,6 +171,8 @@ export class WalkinComponent implements OnDestroy {
     this.facePhoto = '';
     this.faceSearching = false;
     this.identifiedByFace = false;
+    this.identificationState = 'IDLE';
+    this.epicFaceResult = null;
   }
 
   stopFaceCamera(): void {
@@ -157,7 +182,10 @@ export class WalkinComponent implements OnDestroy {
   }
 
   continueNewRegistration(): void {
-    this.router.navigate(['/deo/register-visitor'], { state: { faceSearchPhoto: this.facePhoto } });
+    const epicPrefill = this.epicFaceResult?.matched ? {
+      ...this.epicFaceResult, liveCapturedPhoto: this.facePhoto, faceMatched: true
+    } : undefined;
+    this.router.navigate(['/deo/register-visitor'], { state: { faceSearchPhoto: this.facePhoto, epicPrefill } });
   }
 
   search() {

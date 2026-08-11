@@ -329,6 +329,23 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       this.capturedPhotoUrl = faceSearchPhoto;
       this.photoCaptured = true;
     }
+    const epicPrefill = history.state?.epicPrefill;
+    if (epicPrefill?.faceMatched === true && typeof epicPrefill.liveCapturedPhoto === 'string') {
+      this.form.idType = 'EPIC';
+      this.form.epicNumber = epicPrefill.epicNumber || '';
+      this.form.visitorName = epicPrefill.name || '';
+      this.form.fullName = epicPrefill.name || '';
+      this.form.address = epicPrefill.address || '';
+      this.form.fullAddress = epicPrefill.address || '';
+      this.form.district = epicPrefill.district || '';
+      this.form.pincode = epicPrefill.pincode || '';
+      this.form.constituency = epicPrefill.acpcName || '';
+      this.form.pollingPartNo = epicPrefill.partNumber || '';
+      this.form.livePhoto = epicPrefill.liveCapturedPhoto;
+      this.form.photoFromId = epicPrefill.epicPhoto || '';
+      this.form.kycProvider = 'EPIC_FACE_1N';
+      this.form.kycStatus = 'PHOTO_MATCHED';
+    }
     this.loadDesignations();
     this.loadAgendaTypes();
     this.loadMeghalayaDistricts();

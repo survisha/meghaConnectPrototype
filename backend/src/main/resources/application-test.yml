@@ -103,6 +103,17 @@ integration:
       max-address-length: ${OPENAI_MAX_ADDRESS_LENGTH:500}
       min-age: ${OPENAI_MIN_AGE:1}
       max-age: ${OPENAI_MAX_AGE:120}
+  epic-face:
+    enabled: false
+    base-url: http://127.0.0.1:1
+    search-1n-path: /FaceService1N
+    verify-11-path: /FaceService11
+    search-api-key: ""
+    verify-api-key: ""
+    connect-timeout-seconds: 1
+    read-timeout-seconds: 1
+    write-timeout-seconds: 1
+    call-timeout-seconds: 1
   face-recognition:
     enabled: ${FACE_RECOGNITION_ENABLED:false}
     base-url: ${FACE_RECOGNITION_BASE_URL:https://prdev.onlineipv.com/DeepFaceService}

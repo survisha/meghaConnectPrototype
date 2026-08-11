@@ -440,8 +440,13 @@ public class VisitorService {
             kycStatus = "PENDING";
         }
 
-        boolean kycVerified = "PHOTO_MATCHED".equals(kycStatus) || "DEMOGRAPHIC_MATCHED".equals(kycStatus);
         String kycProvider = firstNonBlank(dto.getKycProvider(), kycType);
+        // EPIC face claims arriving through a registration payload are display
+        // prefill only. Never grant verified status solely from client fields.
+        if (kycProvider != null && kycProvider.startsWith("EPIC_FACE")) {
+            kycStatus = "MANUAL_VERIFICATION_REQUIRED";
+        }
+        boolean kycVerified = "PHOTO_MATCHED".equals(kycStatus) || "DEMOGRAPHIC_MATCHED".equals(kycStatus);
         String kycFailureReason = trimToNull(dto.getKycFailureReason());
         String kycRequestId = trimToNull(dto.getKycRequestId());
 

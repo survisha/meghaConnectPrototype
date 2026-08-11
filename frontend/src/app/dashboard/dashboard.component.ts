@@ -412,7 +412,7 @@ export class DashboardComponent implements OnInit {
       { label: 'Active Scheme Apps', value: '-', matIcon: 'work', color: '#065f46', bg: '#d1fae5',
         roles: ['SUPER_ADMIN', 'HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER'] },
       { label: 'Walk-ins Today', value: '-', matIcon: 'directions_walk', color: '#0369a1', bg: '#e0f2fe',
-        roles: ['SUPER_ADMIN', 'DATA_ENTRY_OPERATOR', 'ADMIN', 'OSD'] },
+        roles: ['DATA_ENTRY_OPERATOR', 'APPROVER', 'HCM'] },
       { label: 'CMO Reviews Due', value: '-', matIcon: 'rate_review', color: '#7c3aed', bg: '#ede9fe',
         roles: ['SUPER_ADMIN', 'CMO_OFFICER'] },
     ];

@@ -44,6 +44,15 @@ public class OtpTemp {
     @Column(name = "attempt_count", nullable = false)
     private int attemptCount = 0;
 
+    @Column(name = "verification_token", unique = true, length = 64)
+    private String verificationToken;
+
+    @Column(name = "verified_at")
+    private LocalDateTime verifiedAt;
+
+    @Column(name = "registration_consumed", nullable = false)
+    private boolean registrationConsumed = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

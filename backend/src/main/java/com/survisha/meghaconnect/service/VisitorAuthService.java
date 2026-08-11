@@ -6,6 +6,7 @@ import com.survisha.meghaconnect.dto.EpicVerificationResponse;
 import com.survisha.meghaconnect.dto.EpicVerificationData;
 import com.survisha.meghaconnect.dto.PublicRegistrationDto;
 import com.survisha.meghaconnect.entity.Visitor;
+import com.survisha.meghaconnect.entity.MobileOtpVerificationStatus;
 import com.survisha.meghaconnect.exception.ErrorCodeConstants;
 import com.survisha.meghaconnect.exception.RequestValidationException;
 import com.survisha.meghaconnect.exception.VisitorNotFoundException;
@@ -14,6 +15,7 @@ import com.survisha.meghaconnect.util.RequestContextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
 import java.util.List;
@@ -151,12 +153,14 @@ public class VisitorAuthService {
         String otp = validationService.requireOtp(body != null ? body.get(ValidationConstants.FIELD_OTP) : null);
 
         if (isRegistrationOtpRequest(body)) {
-            boolean valid = visitorOtpService.validateKycOtp(phone, otp);
+            String verificationToken = visitorOtpService.validateKycOtp(phone, otp);
+            boolean valid = verificationToken != null;
             Map<String, Object> response = new HashMap<>();
             response.put("success", valid);
             response.put("code", valid ? "OTP_VALIDATED" : "OTP_INVALID");
             response.put("requiresEpic", false);
             response.put("message", valid ? "OTP validated successfully" : "Invalid OTP. Please try again.");
+            if (valid) response.put("verificationToken", verificationToken);
             return response;
         }
 
@@ -301,9 +305,38 @@ public class VisitorAuthService {
         }
     }
 
+    @Transactional
     public Map<String, Object> register(PublicRegistrationDto dto) {
-        Visitor saved = visitorService.registerVisitor(dto);
-        smsService.sendRegistrationSuccessSms(saved.getPhoneNumber(), registrationReference(saved));
+        if (Boolean.TRUE.equals(dto.getSkipMobileOtpVerification())) {
+            throw new RequestValidationException(ErrorCodeConstants.INVALID_VISITOR_DATA,
+                    "Skipping mobile OTP is available only to authorized registration staff.");
+        }
+        return registerInternal(dto, false, "public-registration");
+    }
+
+    @Transactional
+    public Map<String, Object> registerByStaff(PublicRegistrationDto dto, String actor) {
+        return registerInternal(dto, true, actor);
+    }
+
+    private Map<String, Object> registerInternal(PublicRegistrationDto dto, boolean staffMaySkip, String actor) {
+        boolean skipped = staffMaySkip && Boolean.TRUE.equals(dto.getSkipMobileOtpVerification());
+        boolean aadhaarFlow = dto.getAadhaarNumber() != null && !dto.getAadhaarNumber().trim().isEmpty()
+                && (dto.getEpicNumber() == null || dto.getEpicNumber().trim().isEmpty());
+        if (skipped && aadhaarFlow) {
+            throw new RequestValidationException(ErrorCodeConstants.INVALID_VISITOR_DATA,
+                    "Skipping mobile OTP is allowed only for EPIC or No ID registration.");
+        }
+        String phone = dto.getPhoneNumber() == null ? null : dto.getPhoneNumber().trim();
+        if (!skipped && !aadhaarFlow) visitorOtpService.consumeRegistrationProof(phone, dto.getOtpVerificationToken());
+        Visitor saved = visitorService.registerVisitor(dto,
+                skipped || aadhaarFlow ? MobileOtpVerificationStatus.NOT_VERIFIED : MobileOtpVerificationStatus.VERIFIED);
+        if (saved.getPhoneNumber() != null && !saved.getPhoneNumber().trim().isEmpty()) {
+            smsService.sendRegistrationSuccessSms(saved.getPhoneNumber(), registrationReference(saved));
+        }
+        auditLogService.log("Visitor", saved.getId(),
+                skipped ? "MOBILE_OTP_SKIPPED" : "MOBILE_OTP_VERIFIED",
+                "mobilePresent=" + (saved.getPhoneNumber() != null) + (skipped ? "; source=USER_SELECTED_SKIP" : ""), actor);
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
@@ -312,9 +345,11 @@ public class VisitorAuthService {
         response.put("kycType", saved.getKycType());
         response.put("kycProvider", saved.getKycProvider());
         response.put("faceEnrollmentStatus", saved.getFaceEnrollmentStatus());
+        response.put("mobileOtpVerification", saved.getMobileOtpVerification());
         response.put("requestId", RequestContextUtil.getRequestId());
         response.put("canProceed", true);
-        response.put("message", "KYC_PENDING".equalsIgnoreCase(saved.getKycStatus())
+        response.put("message", skipped ? "Visitor registered successfully. Mobile OTP was not verified."
+                : "KYC_PENDING".equalsIgnoreCase(saved.getKycStatus())
                 ? "Registration completed with KYC pending. Please retry verification later."
                 : "Visitor registration completed successfully.");
         return response;
@@ -333,6 +368,7 @@ public class VisitorAuthService {
         response.put("id", visitor.getId());
         response.put("fullName", visitor.getFullName());
         response.put("phoneNumber", visitor.getPhoneNumber() != null ? visitor.getPhoneNumber() : "");
+        response.put("mobileOtpVerification", visitor.getMobileOtpVerification());
         response.put("epicNumber", visitor.getEpicNumber() != null ? visitor.getEpicNumber() : "");
         response.put("aadhaarNumber", visitor.getAadhaarNumber() != null ? visitor.getAadhaarNumber() : "");
         response.put("kycType", visitor.getKycType() != null ? visitor.getKycType() : "NONE");

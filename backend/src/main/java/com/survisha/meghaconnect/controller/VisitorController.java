@@ -2,8 +2,10 @@ package com.survisha.meghaconnect.controller;
 
 import com.survisha.meghaconnect.dto.VisitorDto;
 import com.survisha.meghaconnect.dto.AssociateVisitorDto;
+import com.survisha.meghaconnect.dto.PublicRegistrationDto;
 import com.survisha.meghaconnect.entity.Visitor;
 import com.survisha.meghaconnect.service.VisitorService;
+import com.survisha.meghaconnect.service.VisitorAuthService;
 import com.survisha.meghaconnect.util.RequestContextUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -27,6 +29,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/visitors")
@@ -36,6 +39,15 @@ import java.util.List;
 public class VisitorController {
 
     private final VisitorService visitorService;
+    private final VisitorAuthService visitorAuthService;
+
+    @PostMapping("/staff-register")
+    @PreAuthorize("hasAnyRole('DATA_ENTRY_OPERATOR','APPROVER','HCM')")
+    public ResponseEntity<Map<String, Object>> registerByStaff(
+            @RequestBody PublicRegistrationDto dto,
+            @AuthenticationPrincipal UserDetails user) {
+        return ResponseEntity.ok(visitorAuthService.registerByStaff(dto, user.getUsername()));
+    }
 
     /*
      * Backward compatibility:

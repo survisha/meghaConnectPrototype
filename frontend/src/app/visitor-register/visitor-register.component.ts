@@ -242,6 +242,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   idValidated = false;
   otpSent = false;  // Flag to show OTP field
   otpVerified = false;
+  skipMobileOtpVerification = false;
+  otpVerificationToken = '';
   verifiedMobileNumber: string | null = null;
   otpValidatedAt: Date | null = null;
   photoCaptured = false;
@@ -309,7 +311,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     private toast: ToastService
   ) {
     // Detect DEO mode from route snapshot URL segments
-    this.isDeoMode = this.route.snapshot.url.some(segment => segment.path === 'register-visitor');
+    this.isDeoMode = this.route.snapshot.url.some(segment => segment.path === 'deo');
     
     // Hide left panel if staff member (non-PUBLIC) is logged in and accessing through DEO route
     if (this.isDeoMode && this.auth.isLoggedIn()) {
@@ -476,7 +478,9 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       return hasValidEpic && !!hasValidName;
     }
     if (this.form.idType === 'NONE') {
-      return this.isValidName(this.form.fullName) && this.isManualPhoneValid && !this.duplicateRegistrationBlocked;
+      return this.isValidName(this.form.fullName)
+        && (this.skipMobileOtpVerification ? (!this.manualPhone || this.isManualPhoneValid) : this.isManualPhoneValid)
+        && !this.duplicateRegistrationBlocked;
     }
     return false;
   }
@@ -495,6 +499,24 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
   get isManualPhoneValid(): boolean {
     return /^\d{10}$/.test(this.manualPhone);
+  }
+
+  get canSkipMobileOtp(): boolean {
+    return this.isDeoMode && this.auth.isLoggedIn()
+      && (this.auth.hasRole('DATA_ENTRY_OPERATOR') || this.auth.hasRole('APPROVER') || this.auth.hasRole('HCM'))
+      && (this.form.idType === 'EPIC' || this.form.idType === 'NONE');
+  }
+
+  onSkipMobileOtpVerificationChange(skip: boolean): void {
+    if (this.otpVerified || (skip && !this.canSkipMobileOtp)) return;
+    this.skipMobileOtpVerification = skip;
+    this.otpCode = '';
+    this.otpSent = false;
+    this.otpVerificationToken = '';
+    this.registrationOtpRequestId++;
+    this.errorMsg = '';
+    this.mobileValidationMsg = '';
+    this.toast.info(skip ? 'Mobile OTP verification will be skipped.' : 'Mobile OTP verification is required.');
   }
 
   loadMeghalayaDistricts(): void {
@@ -579,7 +601,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (this.form.idType === 'EPIC' && !this.isManualPhoneValid) {
+    if (this.form.idType === 'EPIC' && !this.skipMobileOtpVerification && !this.isManualPhoneValid) {
       this.mobileValidationType = 'error';
       this.mobileValidationMsg = this.t('ERROR_VALID_10_DIGIT_MOBILE');
       this.errorMsg = this.t('ERROR_MOBILE_BEFORE_OTP');
@@ -689,6 +711,12 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   }
 
   private generateRegistrationOtp(requestId = ++this.registrationOtpRequestId) {
+    if (this.skipMobileOtpVerification) {
+      this.loading = false;
+      this.idValidated = true;
+      this.currentStep = 'photo-capture';
+      return;
+    }
     this.http.post<{ success: boolean; otp?: string; message: string }>(
       `${environment.apiUrl}/visitor/auth/generate-otp`,
       {
@@ -1149,7 +1177,10 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   }
 
   get canSubmitRegistration(): boolean {
-    const hasValidPhone = /^\d{10}$/.test(this.form.phoneNumber || '');
+    const phone = this.form.phoneNumber || this.manualPhone || '';
+    const hasValidPhone = this.skipMobileOtpVerification
+      ? (!phone || /^\d{10}$/.test(phone))
+      : /^\d{10}$/.test(phone);
     return !this.loading
       && !!this.form.fullName.trim()
       && hasValidPhone
@@ -1204,6 +1235,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
         
         if (res.success) {
           this.otpVerified = true;
+          this.otpVerificationToken = (res as any).verificationToken || '';
           this.verifiedMobileNumber = this.currentOtpMobileNumber;
           this.otpValidatedAt = new Date();
 
@@ -1462,7 +1494,9 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     const boothVillage = (this.form.boothVillage || this.form.booth || '').trim();
     const payload: Record<string, string | boolean | number | null | undefined> = {
       fullName: this.form.fullName.trim(),
-      phoneNumber: this.form.phoneNumber || this.maskedPhone.replace(/\*+/g, '').trim(),
+      phoneNumber: (this.form.phoneNumber || this.manualPhone || '').trim() || null,
+      skipMobileOtpVerification: this.skipMobileOtpVerification,
+      otpVerificationToken: this.skipMobileOtpVerification ? null : this.otpVerificationToken,
       email: this.form.email.trim(),
       address: fullAddress,
       fullAddress,
@@ -1535,7 +1569,10 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       payload['manualVerification'] = true;
     }
 
-    this.http.post<{ success: boolean; message: string; visitorId?: number; kycStatus?: string; kycProvider?: string; requestId?: string; canProceed?: boolean }>(`${environment.apiUrl}/visitor/auth/register`, payload).subscribe({
+    const registrationUrl = this.canSkipMobileOtp
+      ? `${environment.apiUrl}/visitors/staff-register`
+      : `${environment.apiUrl}/visitor/auth/register`;
+    this.http.post<{ success: boolean; message: string; visitorId?: number; kycStatus?: string; kycProvider?: string; requestId?: string; canProceed?: boolean }>(registrationUrl, payload).subscribe({
       next: res => {
         this.loading = false;
         if (res.success) {
@@ -1619,6 +1656,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   onIdTypeChange(idType: VisitorRegistrationForm['idType']) {
     this.invalidatePendingRegistrationOtp();
     this.form.idType = idType;
+    this.skipMobileOtpVerification = false;
+    this.otpVerificationToken = '';
     this.isAadhaarFlow = idType === 'AADHAAR';
 
     // Clear error and success messages
@@ -1767,7 +1806,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
   get mobileFieldValidationMessage(): string {
     if ((this.form.idType !== 'EPIC' && this.form.idType !== 'NONE') || !this.mobileTouched) return '';
-    if (!this.manualPhone) return 'Mobile number is required.';
+    if (!this.manualPhone && !this.skipMobileOtpVerification) return 'Mobile number is required.';
     if (!this.isManualPhoneValid) return 'Mobile number must be 10 digits.';
     return '';
   }
@@ -2110,6 +2149,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     this.idValidated = false;
     this.otpSent = false;
     this.otpVerified = false;
+    this.skipMobileOtpVerification = false;
+    this.otpVerificationToken = '';
     this.verifiedMobileNumber = null;
     this.otpValidatedAt = null;
     this.photoCaptured = false;
@@ -2169,6 +2210,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
   resetOtpVerification() {
     this.otpVerified = false;
+    this.otpVerificationToken = '';
     this.verifiedMobileNumber = null;
     this.otpValidatedAt = null;
   }

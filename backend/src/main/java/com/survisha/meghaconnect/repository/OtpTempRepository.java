@@ -33,6 +33,9 @@ public interface OtpTempRepository extends JpaRepository<OtpTemp, Long> {
     Optional<OtpTemp> findTopByPhoneNumberAndVisitorIdIsNullAndConsumedFalseOrderByCreatedAtDesc(
             String phoneNumber);
 
+    Optional<OtpTemp> findByVerificationTokenAndPhoneNumberAndRegistrationConsumedFalse(
+            String verificationToken, String phoneNumber);
+
     /** Count failed attempts within a time window to support brute-force detection. */
     @Query("SELECT COALESCE(SUM(o.attemptCount), 0) FROM OtpTemp o " +
            "WHERE o.phoneNumber = :phone AND o.createdAt > :since")

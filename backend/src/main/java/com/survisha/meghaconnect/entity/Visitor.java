@@ -29,6 +29,11 @@ public class Visitor extends BaseEntity {
     @Column(length = 20)
     private String phoneNumber;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "mobile_otp_verification", nullable = false, length = 20)
+    @Builder.Default
+    private MobileOtpVerificationStatus mobileOtpVerification = MobileOtpVerificationStatus.NOT_VERIFIED;
+
     @Column(length = 150)
     private String email;
 

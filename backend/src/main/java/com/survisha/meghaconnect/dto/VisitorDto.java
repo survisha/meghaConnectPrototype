@@ -1,5 +1,6 @@
 package com.survisha.meghaconnect.dto;
 
+import com.survisha.meghaconnect.entity.MobileOtpVerificationStatus;
 import lombok.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -9,6 +10,7 @@ public class VisitorDto {
     private Long id;
     private String fullName;
     private String phoneNumber;
+    private MobileOtpVerificationStatus mobileOtpVerification;
     private String epicNumber;
     /** Aadhaar number – KYC fallback when EPIC is unavailable. */
     private String aadhaarNumber;

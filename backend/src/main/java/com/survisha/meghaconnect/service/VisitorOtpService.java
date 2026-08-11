@@ -23,6 +23,7 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Handles OTP generation and validation for visitor (citizen) mobile login.
@@ -256,7 +257,7 @@ public class VisitorOtpService {
      */
     @Transactional
     @MonitoredOperation("otp_validation")
-    public boolean validateKycOtp(String phone, String submittedOtp) {
+    public String validateKycOtp(String phone, String submittedOtp) {
         Optional<OtpTemp> optRecord =
                 otpTempRepository.findTopByPhoneNumberAndVisitorIdIsNullAndConsumedFalseOrderByCreatedAtDesc(phone);
 
@@ -277,13 +278,33 @@ public class VisitorOtpService {
         if (!record.getOtpCode().equals(submittedOtp)) {
             record.setAttemptCount(record.getAttemptCount() + 1);
             otpTempRepository.save(record);
-            return false;
+            return null;
         }
 
         // Mark OTP consumed to prevent replay
         record.setConsumed(true);
+        record.setVerifiedAt(DateTimeUtil.nowIST());
+        record.setVerificationToken(UUID.randomUUID().toString().replace("-", ""));
         otpTempRepository.save(record);
 
-        return true;
+        return record.getVerificationToken();
+    }
+
+    @Transactional
+    public void consumeRegistrationProof(String phone, String token) {
+        if (token == null || token.trim().isEmpty()) {
+            throw new VisitorRegistrationValidationException(
+                    ErrorCodeConstants.INVALID_VISITOR_DATA, "Mobile OTP verification is required.");
+        }
+        OtpTemp record = otpTempRepository
+                .findByVerificationTokenAndPhoneNumberAndRegistrationConsumedFalse(token.trim(), phone)
+                .orElseThrow(() -> new VisitorRegistrationValidationException(
+                        ErrorCodeConstants.INVALID_VISITOR_DATA, "Mobile OTP verification proof is invalid."));
+        if (record.getVerifiedAt() == null || record.getVerifiedAt().isBefore(DateTimeUtil.nowIST().minusMinutes(10))) {
+            throw new VisitorRegistrationValidationException(
+                    ErrorCodeConstants.INVALID_VISITOR_DATA, "Mobile OTP verification proof has expired.");
+        }
+        record.setRegistrationConsumed(true);
+        otpTempRepository.save(record);
     }
 }

@@ -60,7 +60,7 @@ export class ShellComponent implements OnInit {
     { labelKey: 'GRIEVANCES', icon: 'chat', route: '/grievances',
       roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER','DATA_ENTRY_OPERATOR','PUBLIC'] },
     { labelKey: 'REGISTER_VISITOR', icon: 'person_add', route: '/deo/register-visitor',
-      roles: ['DATA_ENTRY_OPERATOR'] },
+      roles: ['DATA_ENTRY_OPERATOR', 'APPROVER', 'HCM'] },
     { labelKey: 'PUBLIC_IDENTIFICATION', icon: 'badge', route: '/identify',
       roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER','DATA_ENTRY_OPERATOR'] },
     {

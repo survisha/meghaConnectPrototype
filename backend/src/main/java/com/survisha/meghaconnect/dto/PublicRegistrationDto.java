@@ -20,7 +20,10 @@ public class PublicRegistrationDto {
 
     // ── Basic identity ───────────────────────────────────────────
     private String fullName;        // required
-    private String phoneNumber;     // required; also used as login OTP target
+    private String phoneNumber;     // required unless authorized staff explicitly skips registration OTP
+    private Boolean skipMobileOtpVerification;
+    /** Opaque, single-use proof returned by successful registration OTP validation. */
+    private String otpVerificationToken;
     private String email;           // optional
 
     // ── KYC: EPIC (primary) ─ Aadhaar (fallback) ────────────────

@@ -621,12 +621,12 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> registerVisitor(
-      Map<String, dynamic> payload) async {
+      Map<String, dynamic> payload, {bool staffRegistration = false}) async {
     try {
       final resp = await http
           .post(
-            _u('/visitor/auth/register'),
-            headers: {'Content-Type': 'application/json'},
+            _u(staffRegistration ? '/visitors/staff-register' : '/visitor/auth/register'),
+            headers: staffRegistration ? await _headers() : {'Content-Type': 'application/json'},
             body: jsonEncode(payload),
           )
           .timeout(const Duration(seconds: 30));

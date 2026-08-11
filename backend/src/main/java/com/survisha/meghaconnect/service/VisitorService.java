@@ -1,6 +1,7 @@
 package com.survisha.meghaconnect.service;
 
 import com.survisha.meghaconnect.entity.Visitor;
+import com.survisha.meghaconnect.entity.MobileOtpVerificationStatus;
 import com.survisha.meghaconnect.repository.VisitorRepository;
 import com.survisha.meghaconnect.dto.AssociateVisitorDto;
 import com.survisha.meghaconnect.dto.EpicVerificationData;
@@ -161,7 +162,13 @@ public class VisitorService {
         }
 
         if (dto.getFullName() != null) visitor.setFullName(firstNonBlank(dto.getFullName(), visitor.getFullName()));
-        if (dto.getPhoneNumber() != null) visitor.setPhoneNumber(trimToNull(dto.getPhoneNumber()));
+        if (dto.getPhoneNumber() != null) {
+            String updatedPhone = trimToNull(dto.getPhoneNumber());
+            if (!java.util.Objects.equals(visitor.getPhoneNumber(), updatedPhone)) {
+                visitor.setMobileOtpVerification(MobileOtpVerificationStatus.NOT_VERIFIED);
+            }
+            visitor.setPhoneNumber(updatedPhone);
+        }
         if (dto.getEpicNumber() != null) visitor.setEpicNumber(normalizedEpic);
         if (dto.getDesignation() != null) visitor.setDesignation(trimToNull(dto.getDesignation()));
         if (dto.getAddress() != null) visitor.setAddress(trimToNull(dto.getAddress()));
@@ -250,6 +257,7 @@ public class VisitorService {
                 .id(visitor.getId())
                 .fullName(visitor.getFullName())
                 .phoneNumber(visitor.getPhoneNumber())
+                .mobileOtpVerification(visitor.getMobileOtpVerification())
                 .epicNumber(visitor.getEpicNumber())
                 .aadhaarNumber(maskAadhaarForResponse(visitor.getAadhaarNumber()))
                 .kycType(visitor.getKycType())
@@ -341,6 +349,10 @@ public class VisitorService {
     @Transactional
     @MonitoredOperation("visitor_registration")
     public Visitor registerVisitor(PublicRegistrationDto dto) {
+        return registerVisitor(dto, MobileOtpVerificationStatus.NOT_VERIFIED);
+    }
+
+    public Visitor registerVisitor(PublicRegistrationDto dto, MobileOtpVerificationStatus mobileOtpStatus) {
         // Validate required fields
         if (dto.getFullName() == null || dto.getFullName().trim().isEmpty()) {
             throw new VisitorRegistrationValidationException(
@@ -348,13 +360,15 @@ public class VisitorService {
                 ErrorCodeConstants.FULL_NAME_REQUIRED_MSG
             );
         }
-        if (dto.getPhoneNumber() == null || dto.getPhoneNumber().trim().isEmpty()) {
+        boolean skipMobileOtp = Boolean.TRUE.equals(dto.getSkipMobileOtpVerification());
+        if (!skipMobileOtp && (dto.getPhoneNumber() == null || dto.getPhoneNumber().trim().isEmpty())) {
             throw new VisitorRegistrationValidationException(
                 ErrorCodeConstants.PHONE_NUMBER_REQUIRED,
                 ErrorCodeConstants.PHONE_NUMBER_REQUIRED_MSG
             );
         }
-        if (!dto.getPhoneNumber().matches(ValidationConstants.REGEX_PHONE_NUMBER)) {
+        if (dto.getPhoneNumber() != null && !dto.getPhoneNumber().trim().isEmpty()
+                && !dto.getPhoneNumber().trim().matches(ValidationConstants.REGEX_PHONE_NUMBER)) {
             throw new VisitorRegistrationValidationException(
                 ErrorCodeConstants.INVALID_PHONE_FORMAT,
                 ErrorCodeConstants.INVALID_PHONE_FORMAT_MSG
@@ -376,9 +390,10 @@ public class VisitorService {
         validateKycCompletion(dto);
         validateConsent(dto);
 
-        String normalizedPhone = dto.getPhoneNumber().trim();
-        boolean mobileExists = visitorRepository.existsByPhoneNumber(normalizedPhone);
-        if (normalizedEpic != null && visitorRepository.existsByEpicNumberAndPhoneNumber(normalizedEpic, normalizedPhone)) {
+        String normalizedPhone = trimToNull(dto.getPhoneNumber());
+        boolean mobileExists = normalizedPhone != null && visitorRepository.existsByPhoneNumber(normalizedPhone);
+        if (normalizedEpic != null && normalizedPhone != null
+                && visitorRepository.existsByEpicNumberAndPhoneNumber(normalizedEpic, normalizedPhone)) {
             throw new VisitorRegistrationValidationException(
                 ErrorCodeConstants.DUPLICATE_EPIC_MOBILE_REGISTRATION,
                 ErrorCodeConstants.DUPLICATE_EPIC_MOBILE_REGISTRATION_MSG
@@ -458,6 +473,7 @@ public class VisitorService {
         Visitor visitor = Visitor.builder()
                 .fullName(dto.getFullName().trim())
                 .phoneNumber(normalizedPhone)
+                .mobileOtpVerification(mobileOtpStatus)
                 .email(dto.getEmail())
                 .epicNumber(normalizedEpic)
                 .aadhaarNumber(maskedAadhaar)

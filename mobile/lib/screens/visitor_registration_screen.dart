@@ -9,6 +9,8 @@ import 'package:provider/provider.dart';
 import '../core/config/app_config.dart';
 import '../core/i18n/app_i18n.dart';
 import '../services/api_service.dart';
+import '../services/auth_service.dart';
+import '../models/user.dart';
 import '../services/connectivity_service.dart';
 import '../services/offline_repository.dart';
 import '../services/sync_service.dart';
@@ -60,6 +62,8 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
   bool _submitted = false;
   bool _photoCaptured = false;
   bool _otpVerified = false;
+  bool _skipMobileOtpVerification = false;
+  String? _otpVerificationToken;
   bool _outsideMeghalaya = false;
   bool _consentAccepted = false;
   bool _extractingForm = false;
@@ -161,14 +165,25 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
   bool get _hasValidMobile =>
       RegExp(r'^\d{10}$').hasMatch(_phoneCtrl.text.trim());
 
+  bool get _canSkipMobileOtp {
+    final auth = context.read<AuthService>();
+    return auth.hasRole(const [
+          UserRole.DATA_ENTRY_OPERATOR,
+          UserRole.APPROVER,
+          UserRole.HCM,
+        ]) && (_idType == 'EPIC' || _idType == 'NONE');
+  }
+
   bool get _canGenerateRegistrationOtp {
     if (_loading) return false;
     if (_formImagePath != null && !_formExtractionReviewed) return false;
     if (_idType == 'EPIC') {
-      return _hasValidEpic && _hasValidVisitorName && _hasValidMobile;
+      return _hasValidEpic && _hasValidVisitorName &&
+          (_skipMobileOtpVerification ? (_phoneCtrl.text.trim().isEmpty || _hasValidMobile) : _hasValidMobile);
     }
     if (_idType == 'NONE') {
-      return _hasValidVisitorName && _hasValidMobile;
+      return _hasValidVisitorName &&
+          (_skipMobileOtpVerification ? (_phoneCtrl.text.trim().isEmpty || _hasValidMobile) : _hasValidMobile);
     }
     return true;
   }
@@ -321,6 +336,8 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
       _aadhaarTxnId = null;
       _otpCtrl.clear();
       _otpVerified = false;
+      _skipMobileOtpVerification = false;
+      _otpVerificationToken = null;
       _verifiedMobileNumber = null;
       _photoCaptured = false;
       _livePhotoDataUri = null;
@@ -355,6 +372,15 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
       _clearMessages();
       _fullNameCtrl.text = _visitorNameCtrl.text.trim();
     });
+
+    if (_skipMobileOtpVerification) {
+      setState(() {
+        _loading = false;
+        _step = 2;
+        _warning = 'Mobile OTP verification will be skipped for this registration.';
+      });
+      return;
+    }
 
     final check = await ApiService.checkVisitorRegistration(
       phoneNumber: _phoneCtrl.text.trim(),
@@ -415,10 +441,12 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
 
     final phone = _phoneCtrl.text.trim();
     final epic = _epicCtrl.text.trim().toUpperCase();
-    final check = await ApiService.checkVisitorRegistration(
-      phoneNumber: phone,
-      epicNumber: epic,
-    );
+    final check = _skipMobileOtpVerification
+        ? <String, dynamic>{}
+        : await ApiService.checkVisitorRegistration(
+            phoneNumber: phone,
+            epicNumber: epic,
+          );
 
     if (!mounted) return;
     if (check['epicMobileExists'] == true ||
@@ -456,6 +484,15 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
     }
 
     _populateFromEpic(epicResult);
+
+    if (_skipMobileOtpVerification) {
+      setState(() {
+        _loading = false;
+        _step = 2;
+        _warning = 'Mobile OTP verification will be skipped for this registration.';
+      });
+      return;
+    }
 
     final otpResult = await ApiService.generateVisitorOtp(
       phoneNumber: phone,
@@ -498,6 +535,7 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
         final demo = result['demographics'];
         if (demo is Map<String, dynamic>) _populateFromDemographics(demo);
         _otpVerified = true;
+        _otpVerificationToken = result['verificationToken']?.toString();
         _verifiedMobileNumber = _phoneCtrl.text.trim();
         if (_idType == 'NONE') {
           _fullNameCtrl.text = _visitorNameCtrl.text.trim();
@@ -610,7 +648,7 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
       setState(() => _error = i18n.t('PLEASE_CAPTURE_LIVE_PHOTO'));
       return;
     }
-    if ((_idType == 'EPIC' || _idType == 'NONE') &&
+    if (!_skipMobileOtpVerification && (_idType == 'EPIC' || _idType == 'NONE') &&
         (!_otpVerified || _verifiedMobileNumber != _phoneCtrl.text.trim())) {
       setState(
           () => _error = 'Please verify the mobile OTP before registration.');
@@ -632,7 +670,9 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
         : _normalizeLettersAndSpaces(_districtCtrl.text);
     final booth = _outsideMeghalaya ? 'NA' : _boothCtrl.text.trim();
     final payload = <String, dynamic>{
-      'phoneNumber': _phoneCtrl.text.trim(),
+      'phoneNumber': _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
+      'skipMobileOtpVerification': _skipMobileOtpVerification,
+      'otpVerificationToken': _skipMobileOtpVerification ? null : _otpVerificationToken,
       'fullName': _fullNameCtrl.text.trim(),
       'designation': _designationCtrl.text.trim(),
       'address': _addressCtrl.text.trim(),
@@ -674,7 +714,8 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
     final offline = context.read<ConnectivityService>().isOffline;
     final result = offline
         ? {'success': false, 'message': 'Network error. Please try again.'}
-        : await ApiService.registerVisitor(payload);
+        : await ApiService.registerVisitor(payload,
+            staffRegistration: _canSkipMobileOtp);
     if (!mounted) return;
 
     if (result['success'] == true) {
@@ -1102,28 +1143,55 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
                   LengthLimitingTextInputFormatter(10),
                 ],
                 onChanged: (value) {
-                  setState(_clearMessages);
+                  setState(() {
+                    _clearMessages();
+                    if (_verifiedMobileNumber != value.trim()) {
+                      _otpVerified = false;
+                      _otpVerificationToken = null;
+                    }
+                  });
                   if (value.length == 10) {
                     FocusScope.of(context).unfocus();
                     _generateOtpFocus.requestFocus();
                   }
                 },
                 decoration: InputDecoration(
-                  labelText: '${i18n.t('MOBILE_NUMBER')} *',
+                  labelText: '${i18n.t('MOBILE_NUMBER')}${_skipMobileOtpVerification ? '' : ' *'}',
                   prefixIcon: const Icon(Icons.phone_outlined),
                   hintText: i18n.t('ENTER_10_DIGIT_MOBILE'),
                 ),
                 validator: (v) {
                   if (_idType != 'EPIC') return null;
-                  if (v == null || v.isEmpty) {
+                  if ((v == null || v.isEmpty) && !_skipMobileOtpVerification) {
                     return 'Mobile number is required.';
                   }
-                  if (v.length != 10) {
+                  if (v != null && v.isNotEmpty && v.length != 10) {
                     return 'Mobile number must be 10 digits.';
                   }
                   return null;
                 },
               ),
+              if (_canSkipMobileOtp) ...[
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: _skipMobileOtpVerification,
+                  onChanged: _otpVerified ? null : (value) => setState(() {
+                    _skipMobileOtpVerification = value ?? false;
+                    _otpCtrl.clear();
+                    _otpVerificationToken = null;
+                    _clearMessages();
+                    _warning = _skipMobileOtpVerification
+                        ? 'Mobile OTP verification will be skipped.'
+                        : null;
+                  }),
+                  title: const Text('Skip mobile OTP verification'),
+                  subtitle: const Text('Use when the visitor has no mobile access or OTP cannot be completed.'),
+                ),
+                if (_skipMobileOtpVerification)
+                  MeghaStatusBanner.warning(_phoneCtrl.text.trim().isEmpty
+                      ? 'Mobile OTP verification will be skipped for this registration.'
+                      : 'The provided mobile number will be stored as unverified.'),
+              ],
               const SizedBox(height: 12),
               MeghaStatusBanner.info(i18n.t('WILL_VALIDATE_ID_SEND_OTP')),
               const SizedBox(height: 18),
@@ -1170,28 +1238,55 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
                   LengthLimitingTextInputFormatter(10),
                 ],
                 onChanged: (value) {
-                  setState(_clearMessages);
+                  setState(() {
+                    _clearMessages();
+                    if (_verifiedMobileNumber != value.trim()) {
+                      _otpVerified = false;
+                      _otpVerificationToken = null;
+                    }
+                  });
                   if (value.length == 10) {
                     FocusScope.of(context).unfocus();
                     _generateOtpFocus.requestFocus();
                   }
                 },
-                decoration: const InputDecoration(
-                  labelText: 'Mobile Number *',
-                  prefixIcon: Icon(Icons.phone_outlined),
+                decoration: InputDecoration(
+                  labelText: 'Mobile Number${_skipMobileOtpVerification ? '' : ' *'}',
+                  prefixIcon: const Icon(Icons.phone_outlined),
                   hintText: 'Enter 10 digit mobile number',
                 ),
                 validator: (v) {
                   if (_idType != 'NONE') return null;
-                  if (v == null || v.isEmpty) {
+                  if ((v == null || v.isEmpty) && !_skipMobileOtpVerification) {
                     return 'Mobile number is required.';
                   }
-                  if (v.length != 10) {
+                  if (v != null && v.isNotEmpty && v.length != 10) {
                     return 'Mobile number must be 10 digits.';
                   }
                   return null;
                 },
               ),
+              if (_canSkipMobileOtp) ...[
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: _skipMobileOtpVerification,
+                  onChanged: _otpVerified ? null : (value) => setState(() {
+                    _skipMobileOtpVerification = value ?? false;
+                    _otpCtrl.clear();
+                    _otpVerificationToken = null;
+                    _clearMessages();
+                    _warning = _skipMobileOtpVerification
+                        ? 'Mobile OTP verification will be skipped.'
+                        : null;
+                  }),
+                  title: const Text('Skip mobile OTP verification'),
+                  subtitle: const Text('Use when the visitor has no mobile access or OTP cannot be completed.'),
+                ),
+                if (_skipMobileOtpVerification)
+                  MeghaStatusBanner.warning(_phoneCtrl.text.trim().isEmpty
+                      ? 'Mobile OTP verification will be skipped for this registration.'
+                      : 'The provided mobile number will be stored as unverified.'),
+              ],
               const SizedBox(height: 12),
               MeghaStatusBanner.warning(
                 'No ID registration skips EPIC verification and keeps KYC status as Pending.',
@@ -1376,8 +1471,8 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () =>
-                      setState(() => _step = _idType == 'EPIC' ? 1 : 0),
+                  onPressed: () => setState(() => _step =
+                      (_idType == 'EPIC' && !_skipMobileOtpVerification) ? 1 : 0),
                   icon: const Icon(Icons.arrow_back),
                   label: Text(i18n.t('PREVIOUS')),
                 ),

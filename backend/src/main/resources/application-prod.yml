@@ -18,6 +18,11 @@ logging:
       max-history: ${LOG_FILE_MAX_HISTORY:30}
       total-size-cap: ${LOG_FILE_TOTAL_SIZE_CAP:2GB}
 
+cache:
+  redis:
+    environment: prod
+    enabled: ${REDIS_CACHE_ENABLED:false}
+
 spring:
   data:
     redis:

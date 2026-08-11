@@ -93,6 +93,7 @@ class AuthUser {
   final UserRole role;
   final int? visitorId;
   final int? departmentId;
+  final String? departmentCode;
   final String? departmentName;
   final bool passwordChangeRequired;
 
@@ -102,6 +103,7 @@ class AuthUser {
     required this.role,
     this.visitorId,
     this.departmentId,
+    this.departmentCode,
     this.departmentName,
     this.passwordChangeRequired = false,
   });
@@ -112,6 +114,7 @@ class AuthUser {
         'role': role.name,
         if (visitorId != null) 'visitorId': visitorId,
         if (departmentId != null) 'departmentId': departmentId,
+        if (departmentCode != null) 'departmentCode': departmentCode,
         if (departmentName != null) 'departmentName': departmentName,
         'passwordChangeRequired': passwordChangeRequired,
       };
@@ -122,6 +125,7 @@ class AuthUser {
         role: UserRole.values.byName(json['role'] as String),
         visitorId: (json['visitorId'] as num?)?.toInt(),
         departmentId: (json['departmentId'] as num?)?.toInt(),
+        departmentCode: json['departmentCode'] as String?,
         departmentName: json['departmentName'] as String?,
         passwordChangeRequired: json['passwordChangeRequired'] == true,
       );

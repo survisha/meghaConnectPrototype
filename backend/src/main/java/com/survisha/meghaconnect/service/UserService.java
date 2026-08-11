@@ -29,6 +29,8 @@ import com.survisha.meghaconnect.entity.DepartmentAccessRequest;
 @Transactional(readOnly = true)
 public class UserService {
 
+    private final com.survisha.meghaconnect.security.AccessPolicy accessPolicy;
+
     private final UserRepository userRepository;
     private final DepartmentRepository departmentRepository;
     private final RoleService roleService;
@@ -384,17 +386,7 @@ public class UserService {
         if (actorUser == null) {
             return;
         }
-        if (actorUser.getRole() == User.UserRole.SUPER_ADMIN && role == User.UserRole.DEPARTMENT_ADMIN) {
-            return;
-        }
-        if (actorUser.getRole() == User.UserRole.DEPARTMENT_ADMIN
-                && (role == User.UserRole.DEO || role == User.UserRole.DEPARTMENT_PA
-                    || role == User.UserRole.HEAD_DEPARTMENT)) {
-            return;
-        }
-        if (actorUser.getRole() == User.UserRole.ADMIN) {
-            return;
-        }
+        if (accessPolicy.canAssignRole(actorUser, role)) return;
         throw new MeghaConnectException(
                 ErrorCodeConstants.INVALID_ROLE,
                 "User role " + role + " cannot be assigned by " + actorUser.getRole(),

@@ -9,6 +9,11 @@ server:
     enabled: true
     mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
 
+cache:
+  redis:
+    environment: dev
+    enabled: ${REDIS_CACHE_ENABLED:false}
+
 spring:
   data:
     redis:

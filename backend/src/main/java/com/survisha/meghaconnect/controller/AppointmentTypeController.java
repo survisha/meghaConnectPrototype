@@ -25,6 +25,7 @@ import java.util.Optional;
 @Slf4j
 @Tag(name = "Appointment Types", description = "Appointment type configuration management (admin only)")
 @SecurityRequirement(name = "bearerAuth")
+@org.springframework.security.access.prepost.PreAuthorize("@accessPolicy.canManageCmoConfiguration()")
 public class AppointmentTypeController {
 
     private final AppointmentTypeService appointmentTypeService;

@@ -15,8 +15,8 @@ public class DeleteTest {
 	public static void main(String[] args) throws Exception
 	{
 		DeleteRequestJson reqObj = new DeleteRequestJson();
-		reqObj.setApiKey("787f049b-199d-4a99-9656-4656c84386a8");
-		reqObj.setClientId("MEGHALAYA_CMD");
+		reqObj.setApiKey("b1dc3d57-1976-4799-8e22-cb6d71905dc0");
+		reqObj.setClientId("MEGHALAYA");
 		reqObj.setAppId("CMD");
 		
 		reqObj.setId("VISITOR_576");
@@ -32,6 +32,7 @@ public class DeleteTest {
 				Request request = new Request.Builder()
 //				  .url("http://127.0.0.1:8080/DeepFaceService/verify")
 //				  .url("https://staging.aadhaarkyc.com/DeepFaceService/delete")
+				
 				  .url("https://prdev.onlineipv.com/DeepFaceService/delete")
 				  .method("POST", body)
 				  .addHeader("Content-Type", "application/json")

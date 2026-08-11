@@ -12,6 +12,7 @@ import { UIChart } from 'primeng/chart';
 import { AiInsightsDashboardComponent } from '../ai-insights-dashboard/ai-insights-dashboard.component';
 import { Appointment, AuditEntry, EventType, ScheduleEvent, SchemeApplication } from '../models';
 import { apiErrorMessage } from '../shared/api-error.util';
+import { AccessControlService } from '../services/access-control.service';
 
 
 interface QuickAction { label: string; matIcon: string; route: string; severity: string; }
@@ -82,6 +83,7 @@ export class DashboardComponent implements OnInit {
     private auditLogService: AuditLogService,
     private appointmentService: AppointmentService,
     private schemeService: SchemeService,
+    public access: AccessControlService,
   ) {}
 
   ngOnInit() {
@@ -106,7 +108,7 @@ export class DashboardComponent implements OnInit {
       this.loadSchemeMetrics();
     }
 
-    if (this.auth.hasRole('ADMIN')) {
+    if (this.access.canViewRecentActivity()) {
       this.loadRecentActivity();
     }
   }
@@ -435,9 +437,9 @@ export class DashboardComponent implements OnInit {
       { label: 'View Reports', matIcon: 'bar_chart', route: '/reports', severity: 'info',
         roles: ['SUPER_ADMIN', 'HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER'] },
       { label: 'Manage Users', matIcon: 'admin_panel_settings', route: '/admin/users', severity: 'secondary',
-        roles: ['SUPER_ADMIN', 'HCM', 'ADMIN', 'OSD'] },
+        roles: ['SUPER_ADMIN', 'DEPARTMENT_ADMIN', 'HCM', 'ADMIN', 'OSD'] },
       { label: 'Audit Trail', matIcon: 'history', route: '/reports/audit', severity: 'secondary',
-        roles: ['SUPER_ADMIN', 'ADMIN'] },
+        roles: ['SUPER_ADMIN', 'DEPARTMENT_ADMIN', 'ADMIN'] },
     ];
     this.quickActions = all.filter(a => !role || a.roles.includes(role));
   }

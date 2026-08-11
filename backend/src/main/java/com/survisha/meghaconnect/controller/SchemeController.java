@@ -26,6 +26,7 @@ import java.util.Optional;
 @Slf4j
 @Tag(name = "Schemes", description = "Scheme management and configuration (admin only)")
 @SecurityRequirement(name = "bearerAuth")
+@org.springframework.security.access.prepost.PreAuthorize("@accessPolicy.canManageCmoConfiguration()")
 public class SchemeController {
 
     private final SchemeService schemeService;

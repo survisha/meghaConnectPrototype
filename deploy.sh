@@ -34,8 +34,12 @@ PULL_LATEST="${PULL_LATEST:-false}"
 ENABLE_CERTBOT="${ENABLE_CERTBOT:-true}"
 CERTBOT_EMAIL="${CERTBOT_EMAIL:-}"
 CONFIGURE_UFW="${CONFIGURE_UFW:-false}"
+ENABLE_MONITORING="${ENABLE_MONITORING:-true}"
+MANAGEMENT_PORT="${MANAGEMENT_PORT:-9091}"
+PROMETHEUS_RETENTION="${PROMETHEUS_RETENTION:-15d}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MONITORING_SOURCE_DIR="${MONITORING_SOURCE_DIR:-${SCRIPT_DIR}/monitoring}"
 
 if [[ -n "${ARTIFACT_ROOT:-}" ]]; then
   ARTIFACT_ROOT="$(cd "${ARTIFACT_ROOT}" && pwd)"
@@ -293,6 +297,127 @@ EOF_ENV_FILE
   fi
 }
 
+set_env_value() {
+  local file="$1" key="$2" value="$3"
+  if run_as_root grep -q "^${key}=" "$file" 2>/dev/null; then
+    run_as_root sed -i "s|^${key}=.*|${key}=${value}|" "$file"
+  else
+    printf '%s=%s\n' "$key" "$value" | run_as_root tee -a "$file" >/dev/null
+  fi
+}
+
+install_native_monitoring() {
+  [[ "$ENABLE_MONITORING" == "true" ]] || { log "Native monitoring disabled"; return; }
+  [[ -d "$MONITORING_SOURCE_DIR" ]] || die "Monitoring assets not found: ${MONITORING_SOURCE_DIR}"
+  require_command apt-get
+
+  log "Installing native Prometheus, node exporter, and Grafana"
+  run_as_root apt-get update
+  run_as_root apt-get install -y prometheus prometheus-node-exporter ca-certificates curl gnupg openssl
+  require_command gpg
+  require_command openssl
+
+  if ! command -v grafana-server >/dev/null 2>&1; then
+    run_as_root install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://apt.grafana.com/gpg.key \
+      | gpg --dearmor \
+      | run_as_root tee /etc/apt/keyrings/grafana.gpg >/dev/null
+    echo "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main" \
+      | run_as_root tee /etc/apt/sources.list.d/grafana.list >/dev/null
+    run_as_root apt-get update
+    run_as_root apt-get install -y grafana
+  fi
+
+  local secrets_dir token_file grafana_env monitoring_token grafana_password
+  secrets_dir="${ENV_DIR}/secrets"
+  token_file="${secrets_dir}/monitoring-bearer-token"
+  grafana_env="${ENV_DIR}/grafana.env"
+  run_as_root install -d -m 0750 -o root -g prometheus "$secrets_dir"
+
+  if [[ ! -s "$token_file" ]]; then
+    monitoring_token="$(openssl rand -hex 32)"
+    printf '%s\n' "$monitoring_token" | run_as_root tee "$token_file" >/dev/null
+  else
+    monitoring_token="$(run_as_root cat "$token_file" | tr -d '\r\n')"
+  fi
+  run_as_root chown root:prometheus "$token_file"
+  run_as_root chmod 0640 "$token_file"
+  set_env_value "$ENV_FILE" MONITORING_BEARER_TOKEN "$monitoring_token"
+  set_env_value "$ENV_FILE" MANAGEMENT_ADDRESS 127.0.0.1
+  set_env_value "$ENV_FILE" MANAGEMENT_PORT "$MANAGEMENT_PORT"
+
+  if [[ ! -f "$grafana_env" ]]; then
+    grafana_password="$(openssl rand -base64 24 | tr -d '\r\n' | tr '/+' '_-')"
+    run_as_root tee "$grafana_env" >/dev/null <<EOF_GRAFANA_ENV
+GF_SECURITY_ADMIN_USER=admin
+GF_SECURITY_ADMIN_PASSWORD=${grafana_password}
+GF_USERS_ALLOW_SIGN_UP=false
+GF_AUTH_ANONYMOUS_ENABLED=false
+GF_SERVER_HTTP_ADDR=127.0.0.1
+GF_SERVER_HTTP_PORT=3000
+GF_SERVER_ROOT_URL=https://${DOMAIN}/grafana/
+GF_SERVER_SERVE_FROM_SUB_PATH=true
+EOF_GRAFANA_ENV
+    run_as_root chmod 0640 "$grafana_env"
+    run_as_root chown root:grafana "$grafana_env"
+    log "Generated the initial Grafana administrator credential in ${grafana_env}"
+  fi
+
+  run_as_root install -d -m 0755 /etc/prometheus/rules
+  run_as_root cp -a "${MONITORING_SOURCE_DIR}/alerts/." /etc/prometheus/rules/
+  run_as_root tee /etc/prometheus/prometheus.yml >/dev/null <<EOF_PROMETHEUS
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+rule_files:
+  - /etc/prometheus/rules/*.yml
+scrape_configs:
+  - job_name: meghaconnect-api
+    metrics_path: /actuator/prometheus
+    scheme: http
+    bearer_token_file: ${token_file}
+    static_configs:
+      - targets: ["127.0.0.1:${MANAGEMENT_PORT}"]
+        labels:
+          application: meghaconnect-api
+          environment: ${SPRING_PROFILE}
+  - job_name: node
+    static_configs:
+      - targets: ["127.0.0.1:9100"]
+  - job_name: prometheus
+    static_configs:
+      - targets: ["127.0.0.1:9090"]
+EOF_PROMETHEUS
+
+  run_as_root install -d -m 0755 \
+    /etc/grafana/provisioning/datasources \
+    /etc/grafana/provisioning/dashboards/json \
+    /etc/systemd/system/grafana-server.service.d
+  run_as_root cp -a "${MONITORING_SOURCE_DIR}/grafana/provisioning/dashboards/json/." \
+    /etc/grafana/provisioning/dashboards/json/
+  run_as_root cp "${MONITORING_SOURCE_DIR}/grafana/provisioning/dashboards/dashboards.yml" \
+    /etc/grafana/provisioning/dashboards/dashboards.yml
+  run_as_root tee /etc/grafana/provisioning/datasources/prometheus.yml >/dev/null <<'EOF_GRAFANA_DATASOURCE'
+apiVersion: 1
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://127.0.0.1:9090
+    isDefault: true
+    editable: false
+EOF_GRAFANA_DATASOURCE
+  run_as_root tee /etc/systemd/system/grafana-server.service.d/meghaconnect.conf >/dev/null <<EOF_GRAFANA_OVERRIDE
+[Service]
+EnvironmentFile=${grafana_env}
+EOF_GRAFANA_OVERRIDE
+
+  run_as_root systemctl daemon-reload
+  run_as_root systemctl enable --now prometheus prometheus-node-exporter grafana-server
+  run_as_root systemctl restart prometheus grafana-server
+}
+
 install_systemd_service() {
   log "Installing systemd service ${SERVICE_NAME}"
   run_as_root tee "${SERVICE_FILE}" >/dev/null <<EOF_SERVICE
@@ -357,6 +482,21 @@ server {
 
     client_max_body_size 25M;
 
+    location = /grafana {
+        return 301 /grafana/;
+    }
+
+    location /grafana/ {
+        proxy_pass http://127.0.0.1:3000/;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+
     location / {
         try_files \$uri \$uri/ /index.html;
     }
@@ -392,7 +532,7 @@ server {
     }
 
     location = /health {
-        proxy_pass http://127.0.0.1:${BACKEND_PORT}/api/actuator/health;
+        proxy_pass http://127.0.0.1:${MANAGEMENT_PORT}/actuator/health;
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
         proxy_set_header Authorization \$http_authorization;
@@ -414,6 +554,21 @@ server {
 
     client_max_body_size 25M;
 
+    location = /grafana {
+        return 301 /grafana/;
+    }
+
+    location /grafana/ {
+        proxy_pass http://127.0.0.1:3000/;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+
     location / {
         try_files \$uri \$uri/ /index.html;
     }
@@ -449,7 +604,7 @@ server {
     }
 
     location = /health {
-        proxy_pass http://127.0.0.1:${BACKEND_PORT}/api/actuator/health;
+        proxy_pass http://127.0.0.1:${MANAGEMENT_PORT}/actuator/health;
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
         proxy_set_header Authorization \$http_authorization;
@@ -568,6 +723,15 @@ validate_deployment() {
   else
     warn "SSL certificate is not installed yet; HTTPS check skipped."
   fi
+
+  if [[ "$ENABLE_MONITORING" == "true" ]]; then
+    curl -fsS "http://127.0.0.1:9090/-/ready" >/dev/null \
+      && log "Prometheus readiness check passed" \
+      || warn "Prometheus readiness check failed"
+    curl -fsS "http://127.0.0.1:3000/api/health" >/dev/null \
+      && log "Grafana health check passed" \
+      || warn "Grafana health check failed"
+  fi
 }
 
 main() {
@@ -593,6 +757,7 @@ main() {
   build_backend
   install_backend
   write_env_file_if_missing
+  install_native_monitoring
   install_systemd_service
   restart_backend
   install_nginx_config
@@ -603,7 +768,12 @@ main() {
 
   log "Deployment completed successfully"
   log "UI: https://${DOMAIN}"
-  log "API health: https://${DOMAIN}/api/actuator/health"
+  log "Health: https://${DOMAIN}/health"
+  if [[ "$ENABLE_MONITORING" == "true" ]]; then
+    log "Grafana: https://${DOMAIN}/grafana/"
+    log "Prometheus (server-local only): http://127.0.0.1:9090"
+    log "Actuator management (server-local only): http://127.0.0.1:${MANAGEMENT_PORT}/actuator"
+  fi
 }
 
 main "$@"

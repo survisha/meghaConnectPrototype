@@ -473,6 +473,9 @@ export class UserManagementComponent implements OnInit {
       return ['DEPARTMENT_ADMIN'];
     }
     if (this.auth.hasRole('DEPARTMENT_ADMIN')) {
+      if (this.auth.user()?.departmentCode?.trim().toUpperCase() === 'CMO') {
+        return ['APPROVER', 'DEO', 'HCM'];
+      }
       return ['DEO', 'DEPARTMENT_PA', 'HEAD_DEPARTMENT'];
     }
     return ['DEPARTMENT_ADMIN', 'DEO', 'DEPARTMENT_PA', 'HEAD_DEPARTMENT'];

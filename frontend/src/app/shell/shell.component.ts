@@ -6,8 +6,9 @@ import { UserRole } from '../models';
 import { TranslateModule } from '@ngx-translate/core';
 import { LanguageSelectorComponent } from '../shared/language-selector/language-selector.component';
 import { MatIconModule } from '@angular/material/icon';
+import { AccessControlService, AppFeature } from '../services/access-control.service';
 
-interface MenuItem { labelKey: string; icon: string; route?: string; externalUrl?: string; children?: MenuItem[]; expanded?: boolean; roles?: UserRole[]; }
+interface MenuItem { labelKey: string; icon: string; route?: string; externalUrl?: string; children?: MenuItem[]; expanded?: boolean; roles?: UserRole[]; feature?: AppFeature; }
 
 @Component({
   selector: 'app-shell',
@@ -23,7 +24,7 @@ export class ShellComponent implements OnInit {
 
   private ALL_MENU: MenuItem[] = [
     { labelKey: 'DASHBOARD', icon: 'dashboard', route: '/dashboard',
-      roles: ['SUPER_ADMIN','DEPARTMENT_ADMIN','DEPARTMENT_PA','HCM','ADMIN','OSD','APPROVER','CMO_OFFICER','DATA_ENTRY_OPERATOR'] },
+      feature: 'dashboard' },
     { labelKey: 'DEPARTMENTS', icon: 'apartment', route: '/admin/departments',
       roles: ['SUPER_ADMIN'] },
     { labelKey: 'DEPARTMENT_REQUESTS', icon: 'domain_add', route: '/admin/department-requests',
@@ -31,15 +32,15 @@ export class ShellComponent implements OnInit {
     { labelKey: 'MY_PORTAL', icon: 'person', route: '/visitor',
       roles: ['PUBLIC'] },
     { labelKey: 'CALENDAR_SCHEDULE', icon: 'event', route: '/scheduling',
-      roles: ['DEPARTMENT_ADMIN','DEPARTMENT_PA','HCM','ADMIN','OSD','APPROVER','CMO_OFFICER'] },
+      feature: 'calendar' },
     { labelKey: 'HCM_ACTIONS', icon: 'task_alt', route: '/hcm/appointments',
       roles: ['HCM','OSD','ADMIN'] },
     {
       labelKey: 'APPOINTMENTS', icon: 'groups', expanded: false,
-      roles: ['DEPARTMENT_ADMIN','DEPARTMENT_PA','HCM','ADMIN','OSD','APPROVER','CMO_OFFICER','DATA_ENTRY_OPERATOR','PUBLIC'],
+      feature: 'appointments',
       children: [
         { labelKey: 'ALL_APPOINTMENTS', icon: 'list', route: '/appointments',
-          roles: ['DEPARTMENT_ADMIN','DEPARTMENT_PA','HCM','ADMIN','OSD','APPROVER','CMO_OFFICER','DATA_ENTRY_OPERATOR'] },
+          feature: 'appointments' },
         { labelKey: 'NEW_APPOINTMENT', icon: 'add_circle', route: '/appointments/new',
           roles: ['ADMIN','OSD','PUBLIC'] },
         { labelKey: 'WALKIN_COUNTER', icon: 'login', route: '/appointments/walkin',
@@ -64,27 +65,27 @@ export class ShellComponent implements OnInit {
       roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER','DATA_ENTRY_OPERATOR'] },
     {
       labelKey: 'REPORTS', icon: 'bar_chart', expanded: false,
-      roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER'],
+      feature: 'reports',
       children: [
         { labelKey: 'ANALYTICS', icon: 'pie_chart', route: '/reports',
           roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER'] },
         { labelKey: 'SCHEME_HEATMAP', icon: 'map', route: '/reports/heatmap',
           roles: ['HCM','ADMIN','OSD','APPROVER','CMO_OFFICER'] },
         { labelKey: 'AUDIT_TRAIL', icon: 'history', route: '/reports/audit',
-          roles: ['ADMIN'] },
+          feature: 'auditTrail' },
       ]
     },
     { labelKey: 'USER_MANAGEMENT', icon: 'shield', route: '/admin/users',
-      roles: ['SUPER_ADMIN','DEPARTMENT_ADMIN'] },
+      feature: 'userManagement' },
     { labelKey: 'SCHEME_MANAGEMENT', icon: 'tune', route: '/admin/schemes',
-      roles: ['ADMIN'] },
+      feature: 'schemeManagement' },
     { labelKey: 'APPOINTMENT_TYPES', icon: 'event', route: '/admin/appointment-types',
-      roles: ['ADMIN'] },
+      feature: 'appointmentTypes' },
     { labelKey: 'TECHNICAL_MONITORING', icon: 'monitor_heart', externalUrl: '/grafana/',
       roles: ['SUPER_ADMIN'] },
   ];
 
-  constructor(public auth: AuthService, private router: Router) {}
+  constructor(public auth: AuthService, private router: Router, private access: AccessControlService) {}
 
   ngOnInit() {
     this.buildMenu();
@@ -124,14 +125,18 @@ export class ShellComponent implements OnInit {
     const role = this.auth.user()?.role;
     if (!role) return;
     this.menu = this.ALL_MENU
-      .filter(item => !item.roles || item.roles.includes(role))
+      .filter(item => this.isAllowed(item, role))
       .map(item => ({
         ...item,
         children: item.children
-          ? item.children.filter(c => !c.roles || c.roles.includes(role))
+          ? item.children.filter(c => this.isAllowed(c, role))
           : undefined,
       }))
       .filter(item => !item.children || item.children.length > 0);
+  }
+
+  private isAllowed(item: MenuItem, role: UserRole): boolean {
+    return (!item.feature || this.access.can(item.feature)) && (!item.roles || item.roles.includes(role));
   }
 
   toggle(item: MenuItem) { item.expanded = !item.expanded; }

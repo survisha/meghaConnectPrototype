@@ -53,7 +53,7 @@
     </div>
 
     <!-- Recent Activity -->
-    <div class="section-card" id="dashboard_recentActivitySection">
+    <div class="section-card" *ngIf="access.canViewRecentActivity()" id="dashboard_recentActivitySection">
       <div class="section-card-header" style="display:flex;align-items:center;gap:0.5rem">
         <mat-icon style="font-size:1.2rem;width:1.2rem;height:1.2rem">history</mat-icon>
         <span>Recent Activity</span>

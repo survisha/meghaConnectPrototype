@@ -67,7 +67,7 @@ public class AppointmentController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO','CMO_OFFICER','APPROVER','HCM','SUPER_ADMIN','DEPARTMENT_ADMIN','DEPARTMENT_PA')")
+    @PreAuthorize("hasAnyRole('ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO','CMO_OFFICER','APPROVER','HCM','SUPER_ADMIN','DEPARTMENT_PA')")
     public ResponseEntity<Page<AppointmentDto>> getAll(@RequestParam(required = false) String status,
                                                        @RequestParam(required = false) String source,
                                                        @RequestParam(required = false) String referredOffice,
@@ -85,7 +85,7 @@ public class AppointmentController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO','CMO_OFFICER','APPROVER','HCM','SUPER_ADMIN','DEPARTMENT_ADMIN','DEPARTMENT_PA')")
+    @PreAuthorize("hasAnyRole('ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO','CMO_OFFICER','APPROVER','HCM','SUPER_ADMIN','DEPARTMENT_PA')")
     public ResponseEntity<AppointmentDto> getById(@PathVariable Long id, Authentication authentication) {
         logEndpoint("/api/v1/appointments/{id}");
         return appointmentService.findByIdForActor(id, actor(authentication))
@@ -175,7 +175,7 @@ public class AppointmentController {
 
     @Operation(summary = "Get appointments for DEO", description = "Retrieve appointments visible to DEO review queues")
     @GetMapping("/deo")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO','CMO_OFFICER','DEPARTMENT_ADMIN','DEPARTMENT_PA')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO','CMO_OFFICER','DEPARTMENT_PA')")
     public ResponseEntity<Page<AppointmentDto>> getForDeo(Pageable pageable, Authentication authentication) {
         logEndpoint("/api/v1/appointments/deo");
         return ResponseEntity.ok(appointmentService.findForDeo(actor(authentication), pageable));
@@ -183,7 +183,7 @@ public class AppointmentController {
 
     @Operation(summary = "Get appointments for approver", description = "Retrieve appointments visible to approver review queues")
     @GetMapping("/approver")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','HCM','ADMIN','OSD','APPROVER','CMO','CMO_OFFICER','DEPARTMENT_ADMIN','DEPARTMENT_PA')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','HCM','ADMIN','OSD','APPROVER','CMO','CMO_OFFICER','DEPARTMENT_PA')")
     public ResponseEntity<Page<AppointmentDto>> getForApprover(Pageable pageable, Authentication authentication) {
         logEndpoint("/api/v1/appointments/approver");
         return ResponseEntity.ok(appointmentService.findForApprover(actor(authentication), pageable));

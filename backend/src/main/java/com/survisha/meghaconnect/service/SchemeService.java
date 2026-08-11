@@ -27,6 +27,8 @@ import java.util.stream.Collectors;
 @Transactional
 public class SchemeService {
 
+    private final com.survisha.meghaconnect.security.AccessPolicy accessPolicy;
+
     private static final String CM_SCHEME_TYPE = "CM_SCHEME";
 
     private final ReferenceDataRepository referenceDataRepository;
@@ -198,18 +200,7 @@ public class SchemeService {
      * Check if user has ADMIN role
      */
     public boolean isAdminUser(HttpServletRequest request) {
-        try {
-            String token = jwtUtils.extractTokenFromRequest(request);
-            if (token == null) {
-                return false;
-            }
-
-            String role = jwtUtils.getRoleFromToken(token);
-            return "ADMIN".equals(role) || "SUPER_ADMIN".equals(role);
-        } catch (Exception e) {
-            log.error("Error checking admin role", e);
-            return false;
-        }
+        return accessPolicy.canManageCmoConfiguration();
     }
 
     /**

@@ -3,6 +3,11 @@ file:
     root-path: ${FILE_UPLOAD_ROOT:/tmp/meghaconnect/uploads/test}
     crypto-key-path: ${FILE_UPLOAD_CRYPTO_KEY_PATH:/opt/meghaconnect/secure/crypto.key}
 
+cache:
+  redis:
+    environment: test
+    enabled: ${REDIS_CACHE_ENABLED:false}
+
 spring:
   jackson:
     time-zone: Asia/Kolkata

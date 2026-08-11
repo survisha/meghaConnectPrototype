@@ -61,6 +61,7 @@ class AuthService extends ChangeNotifier {
     final roleStr = data['role'] as String? ?? 'PUBLIC';
     final visitorId = (data['visitorId'] as num?)?.toInt();
     final departmentId = (data['departmentId'] as num?)?.toInt();
+    final departmentCode = data['departmentCode'] as String?;
     final departmentName = data['departmentName'] as String?;
     final expiresIn = (data['expiresIn'] as num?)?.toInt();
     final passwordChangeRequired = data['passwordChangeRequired'] == true;
@@ -85,6 +86,7 @@ class AuthService extends ChangeNotifier {
         role: role,
         visitorId: visitorId,
         departmentId: departmentId,
+        departmentCode: departmentCode,
         departmentName: departmentName,
         passwordChangeRequired: passwordChangeRequired);
 

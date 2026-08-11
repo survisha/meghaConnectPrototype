@@ -19,6 +19,7 @@ import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.Locale;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -34,13 +35,17 @@ public class AuditLogService {
         log.debug("Logging audit action - Entity: {}, Action: {}, PerformedBy: {}", 
             entityType, action, performedBy);
             
+        Optional<User> actor = hasText(performedBy)
+                ? userRepository.findByNormalizedUsername(performedBy)
+                : Optional.empty();
         AuditLog auditLog = AuditLog.builder()
+            .department(actor.map(User::getDepartment).orElse(null))
             .entityType(entityType)
             .entityId(entityId)
             .action(action)
             .details(details)
             .performedBy(performedBy)
-            .role(resolveRole(performedBy))
+            .role(actor.map(User::getRole).map(Enum::name).orElseGet(() -> resolveRole(performedBy)))
             .requestId(RequestContextUtil.getRequestId())
             .status("SUCCESS")
             .timestamp(DateTimeUtil.nowIST())
@@ -51,17 +56,29 @@ public class AuditLogService {
     @Transactional(readOnly = true)
     public Page<AuditLogDto> getAllAuditLogs(Pageable pageable, AuditLogFilterRequest filter) {
         log.debug("Fetching audit logs with pagination");
-        return auditLogRepository.findAll(buildSpecification(filter), pageable)
+        User actor = currentActor();
+        Long enforcedDepartmentId = null;
+        if (actor.getRole() == User.UserRole.DEPARTMENT_ADMIN) {
+            if (actor.getDepartment() == null || actor.getDepartment().getId() == null) {
+                throw new org.springframework.security.access.AccessDeniedException(
+                        "Department Admin is not assigned to a department");
+            }
+            enforcedDepartmentId = actor.getDepartment().getId();
+        } else if (actor.getRole() != User.UserRole.SUPER_ADMIN && actor.getRole() != User.UserRole.ADMIN) {
+            throw new org.springframework.security.access.AccessDeniedException("Access denied");
+        }
+        return auditLogRepository.findAll(buildSpecification(filter, enforcedDepartmentId), pageable)
                 .map(this::toDto);
     }
 
-    private Specification<AuditLog> buildSpecification(AuditLogFilterRequest filter) {
+    private Specification<AuditLog> buildSpecification(AuditLogFilterRequest filter, Long enforcedDepartmentId) {
         return (root, query, cb) -> {
-            if (filter == null) {
-                return cb.conjunction();
-            }
-
             var predicate = cb.conjunction();
+            if (enforcedDepartmentId != null) {
+                predicate = cb.and(predicate,
+                        cb.equal(root.get("department").get("id"), enforcedDepartmentId));
+            }
+            if (filter == null) return predicate;
             if (hasText(filter.getModule())) {
                 predicate = cb.and(predicate, cb.like(cb.lower(root.get("entityType")), like(filter.getModule())));
             }
@@ -132,6 +149,16 @@ public class AuditLogService {
                 .map(User::getRole)
                 .map(Enum::name)
                 .orElse("");
+    }
+
+    private User currentActor() {
+        var authentication = org.springframework.security.core.context.SecurityContextHolder
+                .getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new org.springframework.security.access.AccessDeniedException("Authentication required");
+        }
+        return userRepository.findByNormalizedUsername(authentication.getName())
+                .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("User not found"));
     }
 
     private LocalDateTime parseDateTime(String value) {

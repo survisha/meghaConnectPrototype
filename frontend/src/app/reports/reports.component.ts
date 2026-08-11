@@ -5,6 +5,7 @@ import { UIChart } from 'primeng/chart';
 import { TableModule } from 'primeng/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { AuthService } from '../services/auth.service';
 
 @Component({
   selector: 'app-reports',
@@ -27,6 +28,12 @@ export class ReportsComponent implements OnInit {
     { name: 'Umsning', total: 7, approved: 4, rejected: 1 },
     { name: 'Tura', total: 11, approved: 7, rejected: 2 },
   ];
+
+  constructor(public readonly auth: AuthService) {}
+
+  get showAnalytics(): boolean {
+    return !this.auth.hasRole('DEPARTMENT_ADMIN');
+  }
 
   ngOnInit() {
     this.chartOpts = { plugins: { legend: { position: 'bottom' } }, responsive: true };

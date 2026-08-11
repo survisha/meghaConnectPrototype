@@ -5,6 +5,7 @@ import '../models/user.dart';
 import '../services/auth_service.dart';
 import '../services/connectivity_service.dart';
 import '../services/navigation_service.dart';
+import '../services/access_control_service.dart';
 import '../core/i18n/app_i18n.dart';
 import '../widgets/megha_ui.dart';
 import 'dashboard_screen.dart';
@@ -237,6 +238,10 @@ class _MainShellState extends State<MainShell> {
   static const _primaryBlue = Color(0xFF1A237E);
 
   Widget _buildBody(String route) {
+    final user = context.read<AuthService>().user!;
+    if (!AccessControlService.canAccessRoute(user, route)) {
+      return const Center(child: Text('You are not authorized to access this feature.'));
+    }
     switch (route) {
       case 'dashboard':
         final role = context.read<AuthService>().user?.role;
@@ -408,11 +413,15 @@ class _MainShellState extends State<MainShell> {
   }
 
   Widget _buildDrawer(BuildContext context, AuthService auth, AuthUser user) {
-    final visibleItems =
-        _navTree.where((item) => item.roles.contains(user.role)).map((item) {
+    final visibleItems = _navTree.where((item) =>
+        user.role == UserRole.DEPARTMENT_ADMIN
+            ? AccessControlService.canAccessRoute(user, item.route)
+            : item.roles.contains(user.role)).map((item) {
       if (item.children != null) {
-        final visibleChildren =
-            item.children!.where((c) => c.roles.contains(user.role)).toList();
+        final visibleChildren = item.children!.where((c) =>
+            user.role == UserRole.DEPARTMENT_ADMIN
+                ? AccessControlService.canAccessRoute(user, c.route)
+                : c.roles.contains(user.role)).toList();
         if (item.route == 'reports' &&
             !visibleChildren.any((child) => child.route == 'heatmap')) {
           visibleChildren.insert(

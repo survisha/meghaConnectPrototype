@@ -24,8 +24,8 @@ public class EnrollPhotoTest {
 	{
 
 		EnrollRequestJson reqObj = new EnrollRequestJson();
-		reqObj.setApiKey("787f049b-199d-4a99-9656-4656c84386a8");
-		reqObj.setClientId("MEGHALAYA_CMD");
+		reqObj.setApiKey("b1dc3d57-1976-4799-8e22-cb6d71905dc0");
+		reqObj.setClientId("MEGHALAYA");
 		reqObj.setAppId("CMD");
 		reqObj.setEnrollmentId("1232");
 		reqObj.setName("Narsingh");

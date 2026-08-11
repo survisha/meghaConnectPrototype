@@ -11,6 +11,7 @@ import '../widgets/megha_ui.dart';
 import 'dashboard_screen.dart';
 import 'appointments_screen.dart';
 import 'new_appointment_screen.dart';
+import 'visitor_registration_screen.dart';
 import 'user_management_screen.dart';
 import 'calendar_screen.dart';
 import 'schemes_screen.dart';
@@ -46,10 +47,10 @@ class _NavItem {
 const _allRoles = [
   UserRole.HCM,
   UserRole.ADMIN,
-  UserRole.OSD,
   UserRole.APPROVER,
-  UserRole.CMO_OFFICER,
-  UserRole.DATA_ENTRY_OPERATOR,
+  UserRole.APPROVER,
+  UserRole.APPROVER,
+  UserRole.DEO,
   UserRole.SECURITY_POLICE,
 ];
 
@@ -81,9 +82,9 @@ final _navTree = <_NavItem>[
     roles: [
       UserRole.HCM,
       UserRole.ADMIN,
-      UserRole.OSD,
       UserRole.APPROVER,
-      UserRole.CMO_OFFICER,
+      UserRole.APPROVER,
+      UserRole.APPROVER,
     ],
   ),
   const _NavItem(
@@ -93,7 +94,7 @@ final _navTree = <_NavItem>[
     roles: [
       UserRole.HCM,
       UserRole.ADMIN,
-      UserRole.OSD,
+      UserRole.APPROVER,
       UserRole.APPROVER,
     ],
   ),
@@ -115,8 +116,8 @@ final _navTree = <_NavItem>[
         route: 'new_appointment',
         roles: [
           UserRole.ADMIN,
-          UserRole.OSD,
-          UserRole.DATA_ENTRY_OPERATOR,
+          UserRole.APPROVER,
+          UserRole.DEO,
           UserRole.PUBLIC
         ],
       ),
@@ -126,16 +127,22 @@ final _navTree = <_NavItem>[
         route: 'guest_registration',
         roles: [
           UserRole.ADMIN,
-          UserRole.OSD,
-          UserRole.DATA_ENTRY_OPERATOR,
-          UserRole.CMO_OFFICER,
+          UserRole.APPROVER,
+          UserRole.DEO,
+          UserRole.APPROVER,
         ],
       ),
       _NavItem(
         label: 'Walk-in Counter',
         icon: Icons.login_outlined,
         route: 'walkin',
-        roles: [UserRole.ADMIN, UserRole.OSD, UserRole.DATA_ENTRY_OPERATOR],
+        roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.DEO, UserRole.APPROVER, UserRole.HCM],
+      ),
+      _NavItem(
+        label: 'Register Visitor',
+        icon: Icons.person_add_alt_1_outlined,
+        route: 'register_visitor',
+        roles: [UserRole.DEO, UserRole.APPROVER, UserRole.HCM],
       ),
     ],
   ),
@@ -146,9 +153,9 @@ final _navTree = <_NavItem>[
     roles: [
       UserRole.HCM,
       UserRole.ADMIN,
-      UserRole.OSD,
       UserRole.APPROVER,
-      UserRole.CMO_OFFICER,
+      UserRole.APPROVER,
+      UserRole.APPROVER,
       UserRole.PUBLIC,
     ],
   ),
@@ -165,11 +172,9 @@ final _navTree = <_NavItem>[
     roles: [
       UserRole.HCM,
       UserRole.ADMIN,
-      UserRole.OSD,
       UserRole.APPROVER,
-      UserRole.CMO_OFFICER,
-      UserRole.DATA_ENTRY_OPERATOR,
-      UserRole.SECURITY_POLICE,
+      UserRole.APPROVER,
+      UserRole.DEO,
     ],
   ),
   const _NavItem(
@@ -179,9 +184,9 @@ final _navTree = <_NavItem>[
     roles: [
       UserRole.HCM,
       UserRole.ADMIN,
-      UserRole.OSD,
       UserRole.APPROVER,
-      UserRole.CMO_OFFICER,
+      UserRole.APPROVER,
+      UserRole.APPROVER,
     ],
     children: [
       _NavItem(
@@ -191,9 +196,9 @@ final _navTree = <_NavItem>[
         roles: [
           UserRole.HCM,
           UserRole.ADMIN,
-          UserRole.OSD,
           UserRole.APPROVER,
-          UserRole.CMO_OFFICER,
+          UserRole.APPROVER,
+          UserRole.APPROVER,
         ],
       ),
       _NavItem(
@@ -203,9 +208,9 @@ final _navTree = <_NavItem>[
         roles: [
           UserRole.HCM,
           UserRole.ADMIN,
-          UserRole.OSD,
           UserRole.APPROVER,
-          UserRole.CMO_OFFICER,
+          UserRole.APPROVER,
+          UserRole.APPROVER,
         ],
       ),
       _NavItem(
@@ -245,7 +250,7 @@ class _MainShellState extends State<MainShell> {
     switch (route) {
       case 'dashboard':
         final role = context.read<AuthService>().user?.role;
-        if (role == UserRole.HCM || role == UserRole.OSD) {
+        if (role == UserRole.HCM || role == UserRole.APPROVER) {
           return const HcmDashboardScreen();
         }
         return const DashboardScreen();
@@ -256,6 +261,8 @@ class _MainShellState extends State<MainShell> {
       case 'new_appointment':
       case 'walkin':
         return NewAppointmentScreen(isWalkIn: route == 'walkin');
+      case 'register_visitor':
+        return const VisitorRegistrationScreen(openAppointmentAfterSubmit: true);
       case 'guest_registration':
         return const GuestAppointmentScreen();
       case 'pending_sync':
@@ -300,7 +307,7 @@ class _MainShellState extends State<MainShell> {
     if (user.role == UserRole.PUBLIC) {
       return const VisitorDashboardScreen();
     }
-    if (user.role == UserRole.DATA_ENTRY_OPERATOR) {
+    if (user.role == UserRole.DEO) {
       return const DeoHomeScreen();
     }
     if (user.role == UserRole.APPROVER) {

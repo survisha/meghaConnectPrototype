@@ -477,7 +477,7 @@ public class AppointmentWorkflowService {
     }
 
     private void ensureApprover(String actorRole) {
-        if (!hasRole(actorRole, "CMO", "CMO_OFFICER", "OSD", "APPROVER")) {
+        if (!hasRole(actorRole, "APPROVER", "HCM")) {
             throw workflowException(
                     ErrorCodeConstants.APPT_UNAUTHORIZED_ACTION,
                     ErrorCodeConstants.APPT_UNAUTHORIZED_ACTION_MSG,

@@ -145,12 +145,9 @@ public class VisitorAuthController {
         return authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .anyMatch(authority -> authority.equals("ROLE_ADMIN")
-                        || authority.equals("ROLE_OSD")
                         || authority.equals("ROLE_APPROVER")
-                        || authority.equals("ROLE_CMO")
-                        || authority.equals("ROLE_CMO_OFFICER")
                         || authority.equals("ROLE_HCM")
-                        || authority.equals("ROLE_DATA_ENTRY_OPERATOR"));
+                        || authority.equals("ROLE_DEO"));
     }
 
     private Long parseVisitorId(String username) {

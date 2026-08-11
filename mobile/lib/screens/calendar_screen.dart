@@ -190,10 +190,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
         context.select<AuthService, UserRole?>((auth) => auth.user?.role);
     return {
       UserRole.ADMIN,
-      UserRole.OSD,
-      UserRole.HCM,
-      UserRole.CMO_OFFICER,
       UserRole.APPROVER,
+      UserRole.HCM,
     }.contains(role);
   }
 
@@ -201,10 +199,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final role = context.read<AuthService>().user?.role;
     return {
       UserRole.ADMIN,
-      UserRole.OSD,
-      UserRole.HCM,
-      UserRole.CMO_OFFICER,
       UserRole.APPROVER,
+      UserRole.HCM,
     }.contains(role);
   }
 

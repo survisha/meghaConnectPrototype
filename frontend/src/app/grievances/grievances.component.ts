@@ -378,6 +378,6 @@ export class GrievancesComponent implements OnInit {
     ].some(value => (value ?? '').toLowerCase().includes(q));
   }
 
-  get isStaff() { return this.auth.hasRole('HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER', 'DATA_ENTRY_OPERATOR'); }
+  get isStaff() { return this.auth.hasRole('HCM', 'ADMIN', 'APPROVER', 'DEO'); }
   get isPublic() { return this.auth.hasRole('PUBLIC'); }
 }

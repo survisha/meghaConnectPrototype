@@ -82,6 +82,6 @@ class FaceRecognitionControllerMediaTypeTest {
 
     private UsernamePasswordAuthenticationToken authentication() {
         return new UsernamePasswordAuthenticationToken("operator", "n/a",
-                List.of(new SimpleGrantedAuthority("ROLE_DATA_ENTRY_OPERATOR")));
+                List.of(new SimpleGrantedAuthority("ROLE_DEO")));
     }
 }

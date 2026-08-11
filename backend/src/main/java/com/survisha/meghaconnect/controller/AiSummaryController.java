@@ -30,7 +30,7 @@ public class AiSummaryController {
     private final RequestValidationService validationService;
 
     @PostMapping("/generate-summary")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','OSD','APPROVER','CMO','CMO_OFFICER','HCM','DATA_ENTRY_OPERATOR')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','APPROVER','HCM','DEO')")
     public ResponseEntity<Map<String, Object>> generateSummary(@RequestBody Map<String, Object> request) {
         Long appointmentId = validationService.optionalLong(
                 request != null ? request.get("appointmentId") : null,

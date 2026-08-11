@@ -330,16 +330,11 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   }
 
   private appointmentPageSource(serverPage: number, size: number) {
-    if (this.auth.hasRole('DATA_ENTRY_OPERATOR')) {
+    if (this.auth.hasRole('DEO')) {
       return this.appointmentService.getDeoAppointments(serverPage, size);
     }
-    if (this.auth.hasRole('APPROVER') && !this.auth.hasRole('ADMIN', 'OSD')) {
+    if (this.auth.hasRole('APPROVER') && !this.auth.hasRole('ADMIN')) {
       return this.appointmentService.getApproverAppointments(serverPage, size);
-    }
-    if (this.auth.hasRole('CMO_OFFICER') && !this.auth.hasRole('ADMIN', 'OSD')) {
-      return this.appointmentService.getAllAppointments(serverPage, size, 'SUBMITTED,CMO_REVIEW', {
-        sort: 'createdAt,desc',
-      });
     }
     return this.appointmentService.getAllAppointments(serverPage, size, undefined, {
       sort: 'createdAt,desc',
@@ -566,7 +561,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   }
 
   canSelectAppointments() {
-    return this.auth.hasRole('APPROVER', 'APPROVER_JT_SECY', 'CMO_OFFICER', 'CMO', 'ADMIN', 'OSD');
+    return this.auth.hasRole('APPROVER', 'APPROVER_JT_SECY', 'ADMIN');
   }
 
   canSelectAppointment(appointment: Appointment) {
@@ -608,11 +603,11 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   }
 
   get canExportPdf() {
-    return this.auth.hasRole('CMO_OFFICER', 'CMO', 'APPROVER', 'APPROVER_JT_SECY');
+    return this.auth.hasRole('APPROVER', 'APPROVER_JT_SECY');
   }
 
   get canAssignSelectedToEvent() {
-    return this.auth.hasRole('APPROVER', 'ADMIN', 'OSD') &&
+    return this.auth.hasRole('APPROVER', 'ADMIN', 'APPROVER') &&
       this.selectedAppointments.length > 0 &&
       this.selectedAppointments.every(appointment => appointment.status === 'APPROVED' || this.isFollowUpStatus(appointment.status));
   }
@@ -637,7 +632,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   }
 
   canViewAiNotes() {
-    return this.auth.hasRole('HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER');
+    return this.auth.hasRole('HCM', 'ADMIN', 'APPROVER');
   }
 
   canManageAiNotes() {
@@ -809,7 +804,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   }
 
   canUseApproverActions(appointment: Appointment | null) {
-    return !!appointment && this.auth.hasRole('HCM', 'ADMIN', 'OSD', 'APPROVER');
+    return !!appointment && this.auth.hasRole('HCM', 'ADMIN', 'APPROVER');
   }
 
   canUseJtSecForwarding(appointment: Appointment | null) {
@@ -845,7 +840,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
 
   canUseCmoActions(appointment: Appointment | null) {
     return !!appointment &&
-      this.auth.hasRole('HCM', 'ADMIN', 'OSD', 'CMO_OFFICER') &&
+      this.auth.hasRole('HCM', 'ADMIN', 'APPROVER') &&
       this.cmoQueueStatuses.has(appointment.status);
   }
 
@@ -1264,7 +1259,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   }
 
   canUploadSupportingDocument() {
-    return this.auth.hasRole('APPROVER', 'CMO_OFFICER', 'ADMIN', 'OSD', 'DATA_ENTRY_OPERATOR');
+    return this.auth.hasRole('APPROVER', 'ADMIN', 'APPROVER', 'DEO');
   }
 
   private replaceAppointment(updated: Appointment) {
@@ -1554,18 +1549,18 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
       columns.push(
         { header: 'CMO Remarks', value: appointment => appointment.cmoRemarks || '' },
         { header: 'Approver Remarks', value: appointment => appointment.approverRemarks || '' },
-        { header: 'Latest HCM / OSD Remarks', value: appointment => appointment.hcmRemarks || '' },
+        { header: 'Latest HCM / APPROVER Remarks', value: appointment => appointment.hcmRemarks || '' },
         { header: 'Allocated / Forwarded Department', value: appointment => appointment.department || '' },
       );
     }
     if (this.exportOptions.hcmActions) {
       columns.push(
-        { header: 'HCM / OSD Action Count', value: (_appointment, remarks) => remarks.length },
-        { header: 'HCM / OSD Decisions', value: (_appointment, remarks) => this.joinRemarks(remarks, 'decision') },
+        { header: 'HCM / APPROVER Action Count', value: (_appointment, remarks) => remarks.length },
+        { header: 'HCM / APPROVER Decisions', value: (_appointment, remarks) => this.joinRemarks(remarks, 'decision') },
         { header: 'Departments Forwarded', value: (appointment, remarks) => this.joinDepartments(appointment, remarks) },
-        { header: 'HCM / OSD Remarks History', value: (_appointment, remarks) => this.joinRemarks(remarks, 'hcmRemarks') },
-        { header: 'HCM / OSD Actioned By', value: (_appointment, remarks) => remarks.map(note => [note.createdByRole, note.createdBy].filter(Boolean).join('/')).filter(Boolean).join(' | ') },
-        { header: 'HCM / OSD Actioned At', value: (_appointment, remarks) => remarks.map(note => note.createdAt).filter(Boolean).join(' | ') },
+        { header: 'HCM / APPROVER Remarks History', value: (_appointment, remarks) => this.joinRemarks(remarks, 'hcmRemarks') },
+        { header: 'HCM / APPROVER Actioned By', value: (_appointment, remarks) => remarks.map(note => [note.createdByRole, note.createdBy].filter(Boolean).join('/')).filter(Boolean).join(' | ') },
+        { header: 'HCM / APPROVER Actioned At', value: (_appointment, remarks) => remarks.map(note => note.createdAt).filter(Boolean).join(' | ') },
       );
     }
     if (this.exportOptions.associates) {
@@ -1720,7 +1715,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
             this.resetJtSecRemarkForm();
           }
         },
-        error: error => this.selectedAppointmentRemarksError = apiErrorMessage(error, 'Unable to load HCM/OSD remarks.')
+        error: error => this.selectedAppointmentRemarksError = apiErrorMessage(error, 'Unable to load HCM/APPROVER remarks.')
       });
   }
 

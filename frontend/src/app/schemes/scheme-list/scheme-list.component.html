@@ -2,7 +2,7 @@
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.75rem">
     <h2 class="page-title" style="margin:0">CM Scheme Applications</h2>
     <button id="schemeList_newApplicationBtn" mat-raised-button color="primary" routerLink="/schemes/apply"
-    *ngIf="auth.hasRole('ADMIN') || auth.hasRole('OSD')">
+    *ngIf="auth.hasRole('ADMIN') || auth.hasRole('APPROVER')">
       <mat-icon>add</mat-icon> New Application
     </button>
   </div>

@@ -33,7 +33,7 @@ public class UserController {
 
     private final UserService userService;
 
-    @Operation(summary = "Get all users", description = "Retrieve list of all users (admin, HCM, OSD only)")
+    @Operation(summary = "Get all users", description = "Retrieve list of all users (admin, HCM, APPROVER only)")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Successfully retrieved users",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = UserResponse.class))),
@@ -54,7 +54,7 @@ public class UserController {
                 actor(authentication), search, role, active, locked, departmentId, pageable));
     }
 
-    @Operation(summary = "Get user by ID", description = "Retrieve a specific user by their ID (admin, HCM, OSD only)")
+    @Operation(summary = "Get user by ID", description = "Retrieve a specific user by their ID (admin, HCM, APPROVER only)")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Successfully retrieved user",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = UserResponse.class))),

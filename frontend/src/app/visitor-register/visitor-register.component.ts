@@ -6,6 +6,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { VisitorKycService } from '../services/visitor-kyc.service';
 import { AuthService } from '../services/auth.service';
+import { AccessControlService } from '../services/access-control.service';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
@@ -308,7 +309,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     private cameraLiveness: CameraLivenessService,
     private referenceDataService: ReferenceDataService,
     private formExtractionService: VisitorFormExtractionService,
-    private toast: ToastService
+    private toast: ToastService,
+    private access: AccessControlService
   ) {
     // Detect DEO mode from route snapshot URL segments
     this.isDeoMode = this.route.snapshot.url.some(segment => segment.path === 'deo');
@@ -503,7 +505,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
   get canSkipMobileOtp(): boolean {
     return this.isDeoMode && this.auth.isLoggedIn()
-      && (this.auth.hasRole('DATA_ENTRY_OPERATOR') || this.auth.hasRole('APPROVER') || this.auth.hasRole('HCM'))
+      && this.access.canRegisterVisitor()
       && (this.form.idType === 'EPIC' || this.form.idType === 'NONE');
   }
 
@@ -1582,7 +1584,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
           this.submitted = true;
           this.currentStep = 'kyc-complete';
           this.successMsg = res.message || this.t('REGISTRATION_SUCCESS');
-          if (this.isDeoMode && this.auth.hasRole('DATA_ENTRY_OPERATOR') && res.visitorId) {
+          if (this.isDeoMode && this.auth.hasRole('DEO') && res.visitorId) {
             this.router.navigate(['/appointments/new'], {
               queryParams: { visitorId: res.visitorId, source: 'walkin', walkin: 'true' }
             });

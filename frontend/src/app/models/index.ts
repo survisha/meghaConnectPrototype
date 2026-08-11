@@ -1,8 +1,7 @@
 export type UserRole =
   | 'SUPER_ADMIN' | 'DEPARTMENT_ADMIN' | 'DEO' | 'DEPARTMENT_PA' | 'HEAD_DEPARTMENT'
-  | 'HCM' | 'ADMIN' | 'OSD'
-  | 'APPROVER' | 'APPROVER_JT_SECY' | 'CMO_OFFICER'
-  | 'CMO' | 'DATA_ENTRY_OPERATOR'
+  | 'HCM' | 'ADMIN' | 'APPROVER' | 'APPROVER_JT_SECY'
+  | 'DEO'
   | 'SECURITY' | 'PUBLIC' | 'CITIZEN';
 
 export type EventType = 'A1' | 'A2' | 'A3' | 'A4' | 'B1' | 'B2';

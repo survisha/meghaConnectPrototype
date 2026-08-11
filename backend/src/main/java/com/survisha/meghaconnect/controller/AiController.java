@@ -74,7 +74,7 @@ public class AiController {
      * }
      */
     @PostMapping(value = "/analyze-document", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','OSD','APPROVER','CMO','CMO_OFFICER','HCM','DATA_ENTRY_OPERATOR')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','APPROVER','HCM','DEO')")
     public ResponseEntity<Map<String, Object>> analyzeDocument(
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "appointmentId", required = false) Long appointmentId) {
@@ -126,7 +126,7 @@ public class AiController {
      * }
      */
     @PostMapping("/check-duplicate")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','OSD','APPROVER','CMO','CMO_OFFICER','HCM','DATA_ENTRY_OPERATOR')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','APPROVER','HCM','DEO')")
     public ResponseEntity<Map<String, Object>> checkDuplicate(@RequestBody Map<String, Object> body) {
         String epicNumber   = getString(body, "epicNumber");
         String phoneNumber  = getString(body, "phoneNumber");
@@ -154,7 +154,7 @@ public class AiController {
      * { "level": "MEDIUM", "reason": "Infrastructure or public grievance – moderate priority" }
      */
     @PostMapping("/suggest-priority")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','OSD','APPROVER','CMO','CMO_OFFICER','HCM','DATA_ENTRY_OPERATOR')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','APPROVER','HCM','DEO')")
     public ResponseEntity<Map<String, String>> suggestPriority(@RequestBody Map<String, Object> body) {
         String agendaType  = getString(body, "agendaType");
         String agendaBrief = getString(body, "agendaBrief");
@@ -193,7 +193,7 @@ public class AiController {
      * Response: [ "Mon, 10 Mar – 10:00 AM (Shillong)", "Tue, 11 Mar – 02:30 PM (Shillong)", ... ]
      */
     @PostMapping("/suggest-slots")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','OSD','APPROVER','CMO','CMO_OFFICER','HCM')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','APPROVER','HCM')")
     public ResponseEntity<List<String>> suggestSlots(@RequestBody Map<String, Object> body) {
         String location   = getString(body, "requestedLocation");
         String agendaType = getString(body, "agendaType");
@@ -216,20 +216,20 @@ public class AiController {
      * }
      */
     @GetMapping("/dashboard-insights")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','OSD','APPROVER','CMO','CMO_OFFICER','HCM')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','APPROVER','HCM')")
     public ResponseEntity<Map<String, Object>> getDashboardInsights() {
         Map<String, Object> insights = aiService.getDashboardInsights();
         return ResponseEntity.ok(insights);
     }
 
     @GetMapping("/health")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','OSD','APPROVER','CMO','CMO_OFFICER','HCM')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','APPROVER','HCM')")
     public ResponseEntity<Map<String, Object>> health() {
         return ResponseEntity.ok(toHealthResponse(llmProviderService.healthCheck()));
     }
 
     @GetMapping("/appointments/{appointmentId}/priority-insight")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','OSD','APPROVER','CMO','CMO_OFFICER','HCM','DATA_ENTRY_OPERATOR')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','APPROVER','HCM','DEO')")
     public ResponseEntity<AppointmentPriorityScoringService.PriorityScore> priorityInsight(
             @PathVariable Long appointmentId) {
         Appointment appointment = appointmentRepository.findById(appointmentId)

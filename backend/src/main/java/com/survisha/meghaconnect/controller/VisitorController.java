@@ -42,7 +42,7 @@ public class VisitorController {
     private final VisitorAuthService visitorAuthService;
 
     @PostMapping("/staff-register")
-    @PreAuthorize("hasAnyRole('DATA_ENTRY_OPERATOR','APPROVER','HCM')")
+    @PreAuthorize("hasAnyRole('DEO','APPROVER','HCM')")
     public ResponseEntity<Map<String, Object>> registerByStaff(
             @RequestBody PublicRegistrationDto dto,
             @AuthenticationPrincipal UserDetails user) {
@@ -65,7 +65,7 @@ public class VisitorController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/search")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO_OFFICER','APPROVER')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','APPROVER','DEO','HCM')")
     public ResponseEntity<List<VisitorDto>> search(
             @RequestParam(required = false) String mobile,
             @RequestParam(required = false) String epic,
@@ -126,7 +126,7 @@ public class VisitorController {
     }
 
     @GetMapping("/associate-search")
-    @PreAuthorize("hasAnyRole('PUBLIC','SUPER_ADMIN','HCM','ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO_OFFICER','APPROVER')")
+    @PreAuthorize("hasAnyRole('PUBLIC','SUPER_ADMIN','HCM','ADMIN','APPROVER','DEO')")
     public ResponseEntity<List<AssociateVisitorDto>> searchAssociateCitizens(@RequestParam String query,
                                                                              @AuthenticationPrincipal UserDetails user) {
         logEndpoint("/api/v1/visitors/associate-search");
@@ -149,7 +149,7 @@ public class VisitorController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO_OFFICER','APPROVER')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','APPROVER','DEO','HCM')")
     public ResponseEntity<VisitorDto> update(@PathVariable Long id,
                                              @RequestBody VisitorDto dto,
                                              @AuthenticationPrincipal UserDetails user) {

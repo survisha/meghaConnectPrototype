@@ -42,11 +42,8 @@ public class DocumentFileService {
 
     private static final Set<String> STAFF_AUTHORITIES = Set.of(
             "ROLE_ADMIN",
-            "ROLE_OSD",
             "ROLE_APPROVER",
-            "ROLE_CMO_OFFICER",
-            "ROLE_CMO",
-            "ROLE_DATA_ENTRY_OPERATOR",
+            "ROLE_DEO",
             "ROLE_HCM"
     );
 

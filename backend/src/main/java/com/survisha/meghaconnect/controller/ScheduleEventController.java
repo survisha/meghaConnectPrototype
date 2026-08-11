@@ -44,20 +44,20 @@ public class ScheduleEventController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','CMO_OFFICER','APPROVER','HCM','OSD','ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','HCM','ADMIN')")
     public ScheduleEventDto create(@RequestBody ScheduleEvent event) {
         return scheduleEventService.toDto(scheduleEventService.create(event));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','CMO_OFFICER','APPROVER','HCM','OSD','ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','HCM','ADMIN')")
     public ScheduleEventDto update(@PathVariable Long id, @RequestBody ScheduleEvent event) {
         event.setId(id);
         return scheduleEventService.toDto(scheduleEventService.update(event));
     }
 
     @PostMapping("/{id}/appointments")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','CMO_OFFICER','APPROVER','HCM','OSD','ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','HCM','ADMIN')")
     public ScheduleEventDto assignAppointments(@PathVariable Long id,
                                                @RequestBody ScheduleEventAppointmentAssignmentRequest request,
                                                Authentication authentication) {
@@ -70,7 +70,7 @@ public class ScheduleEventController {
     }
 
     @DeleteMapping("/{id}/appointments/{appointmentId}")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','CMO_OFFICER','APPROVER','HCM','OSD','ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','HCM','ADMIN')")
     public ScheduleEventDto removeAppointment(@PathVariable Long id,
                                               @PathVariable Long appointmentId,
                                               Authentication authentication) {
@@ -83,7 +83,7 @@ public class ScheduleEventController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','CMO_OFFICER','APPROVER','HCM','OSD','ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','HCM','ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         scheduleEventService.delete(id);
         return ResponseEntity.noContent().build();

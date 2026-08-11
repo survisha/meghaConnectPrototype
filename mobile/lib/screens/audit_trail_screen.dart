@@ -59,10 +59,10 @@ class _AuditTrailScreenState extends State<AuditTrailScreen> {
   static const _roles = [
     'ADMIN',
     'HCM',
-    'OSD',
     'APPROVER',
-    'CMO_OFFICER',
-    'DATA_ENTRY_OPERATOR',
+    'APPROVER',
+    'APPROVER',
+    'DEO',
     'PUBLIC',
   ];
 

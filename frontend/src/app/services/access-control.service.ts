@@ -5,7 +5,7 @@ import { UserRole } from '../models';
 export type AppFeature =
   | 'dashboard' | 'userManagement' | 'auditTrail' | 'reports' | 'reportAnalytics'
   | 'calendar' | 'appointments' | 'appointmentTypes' | 'schemeManagement'
-  | 'recentActivity';
+  | 'recentActivity' | 'walkIn' | 'registerVisitor' | 'publicIdentification';
 
 @Injectable({ providedIn: 'root' })
 export class AccessControlService {
@@ -29,29 +29,38 @@ export class AccessControlService {
         case 'calendar':
         case 'appointments':
         case 'reportAnalytics':
+        case 'walkIn':
+        case 'registerVisitor':
+        case 'publicIdentification':
           return false;
       }
     }
 
     switch (feature) {
       case 'dashboard':
-        return this.auth.hasRole('SUPER_ADMIN', 'DEPARTMENT_PA', 'HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER', 'DATA_ENTRY_OPERATOR');
+        return this.auth.hasRole('SUPER_ADMIN', 'DEPARTMENT_PA', 'HCM', 'ADMIN', 'APPROVER', 'DEO');
       case 'userManagement':
         return this.auth.hasRole('SUPER_ADMIN');
       case 'auditTrail':
         return this.auth.hasRole('SUPER_ADMIN', 'ADMIN');
       case 'reports':
-        return this.auth.hasRole('SUPER_ADMIN', 'DEPARTMENT_PA', 'HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER');
+        return this.auth.hasRole('SUPER_ADMIN', 'DEPARTMENT_PA', 'HCM', 'ADMIN', 'APPROVER');
       case 'reportAnalytics':
-        return this.auth.hasRole('SUPER_ADMIN', 'DEPARTMENT_PA', 'HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER');
+        return this.auth.hasRole('SUPER_ADMIN', 'DEPARTMENT_PA', 'HCM', 'ADMIN', 'APPROVER');
       case 'calendar':
-        return this.auth.hasRole('SUPER_ADMIN', 'DEPARTMENT_PA', 'HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER');
+        return this.auth.hasRole('SUPER_ADMIN', 'DEPARTMENT_PA', 'HCM', 'ADMIN', 'APPROVER');
       case 'appointments':
-        return this.auth.hasRole('SUPER_ADMIN', 'DEPARTMENT_PA', 'HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER', 'DATA_ENTRY_OPERATOR');
+        return this.auth.hasRole('SUPER_ADMIN', 'DEPARTMENT_PA', 'HCM', 'ADMIN', 'APPROVER', 'DEO');
       case 'appointmentTypes':
       case 'schemeManagement':
       case 'recentActivity':
         return this.auth.hasRole('SUPER_ADMIN', 'ADMIN');
+      case 'walkIn':
+        return this.auth.hasRole('SUPER_ADMIN', 'ADMIN', 'DEO', 'APPROVER', 'HCM');
+      case 'registerVisitor':
+        return this.auth.hasRole('DEO', 'APPROVER', 'HCM');
+      case 'publicIdentification':
+        return this.auth.hasRole('SUPER_ADMIN', 'ADMIN', 'DEO', 'APPROVER', 'HCM');
     }
   }
 
@@ -63,6 +72,9 @@ export class AccessControlService {
   canViewAppointmentTypes(): boolean { return this.can('appointmentTypes'); }
   canViewSchemeManagement(): boolean { return this.can('schemeManagement'); }
   canViewRecentActivity(): boolean { return this.can('recentActivity'); }
+  canAccessWalkIn(): boolean { return this.can('walkIn'); }
+  canRegisterVisitor(): boolean { return this.can('registerVisitor'); }
+  canUsePublicIdentification(): boolean { return this.can('publicIdentification'); }
 
   get isCmoDepartmentAdmin(): boolean {
     return this.role === 'DEPARTMENT_ADMIN' && this.departmentCode === 'CMO';

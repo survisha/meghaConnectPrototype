@@ -32,7 +32,7 @@ public class SchemeApplicationController {
     private final SchemeApplicationService schemeApplicationService;
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasAnyRole('PUBLIC','SUPER_ADMIN','ADMIN','OSD','DATA_ENTRY_OPERATOR')")
+    @PreAuthorize("hasAnyRole('PUBLIC','SUPER_ADMIN','ADMIN','APPROVER','DEO','HCM')")
     public ResponseEntity<SchemeApplicationDto> create(
             @RequestBody CreateSchemeApplicationRequest request,
             @AuthenticationPrincipal UserDetails user) {
@@ -43,7 +43,7 @@ public class SchemeApplicationController {
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyRole('PUBLIC','SUPER_ADMIN','ADMIN','OSD','DATA_ENTRY_OPERATOR')")
+    @PreAuthorize("hasAnyRole('PUBLIC','SUPER_ADMIN','ADMIN','APPROVER','DEO','HCM')")
     public ResponseEntity<SchemeApplicationDto> createMultipart(
             @ModelAttribute CreateSchemeApplicationRequest form,
             HttpServletRequest request,
@@ -55,7 +55,7 @@ public class SchemeApplicationController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','HCM','ADMIN','OSD','APPROVER','CMO_OFFICER')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','HCM','ADMIN','APPROVER')")
     public ResponseEntity<Page<SchemeApplicationDto>> getAll(
             @RequestParam(required = false) String status,
             Pageable pageable) {
@@ -63,13 +63,13 @@ public class SchemeApplicationController {
     }
 
     @GetMapping("/visitor/{visitorId}")
-    @PreAuthorize("hasAnyRole('PUBLIC','SUPER_ADMIN','ADMIN','OSD','DATA_ENTRY_OPERATOR','HCM','APPROVER','CMO_OFFICER')")
+    @PreAuthorize("hasAnyRole('PUBLIC','SUPER_ADMIN','ADMIN','APPROVER','DEO','HCM')")
     public ResponseEntity<List<SchemeApplicationDto>> getByVisitor(@PathVariable Long visitorId) {
         return ResponseEntity.ok(schemeApplicationService.findByVisitor(visitorId));
     }
 
     @PutMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','HCM','ADMIN','OSD','APPROVER','CMO_OFFICER')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','HCM','ADMIN','APPROVER')")
     public ResponseEntity<SchemeApplicationDto> updateStatus(
             @PathVariable Long id,
             @RequestBody Map<String, Object> body,

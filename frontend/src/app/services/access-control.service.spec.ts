@@ -36,4 +36,20 @@ describe('AccessControlService', () => {
     expect(service.canViewCalendar()).toBeFalse();
     expect(service.canViewAppointments()).toBeFalse();
   });
+
+  for (const role of ['DEO', 'APPROVER', 'HCM'] as const) {
+    it(`allows ${role} to use walk-in, visitor registration, and public identification`, () => {
+      currentUser = { username: role.toLowerCase(), fullName: role, role };
+      expect(service.canAccessWalkIn()).toBeTrue();
+      expect(service.canRegisterVisitor()).toBeTrue();
+      expect(service.canUsePublicIdentification()).toBeTrue();
+    });
+  }
+
+  it('does not grant the visitor functions to an unrelated role', () => {
+    currentUser = { username: 'pa', fullName: 'Department PA', role: 'DEPARTMENT_PA' };
+    expect(service.canAccessWalkIn()).toBeFalse();
+    expect(service.canRegisterVisitor()).toBeFalse();
+    expect(service.canUsePublicIdentification()).toBeFalse();
+  });
 });

@@ -35,7 +35,7 @@ import { featureAccessGuard } from './guards/feature-access.guard';
 
 import { UserRole } from './models';
 
-const REPORTS_ROLES: UserRole[] = ['SUPER_ADMIN', 'DEPARTMENT_PA', 'HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER'];
+const REPORTS_ROLES: UserRole[] = ['SUPER_ADMIN', 'DEPARTMENT_PA', 'HCM', 'ADMIN', 'APPROVER'];
 
 export const routes: Routes = [
   { path: '', component: HomeComponent, pathMatch: 'full' },
@@ -55,15 +55,15 @@ export const routes: Routes = [
       { path: 'scheduling', component: SchedulingComponent, canActivate: [featureAccessGuard('calendar')] },
       { path: 'appointments', component: AppointmentListComponent, canActivate: [featureAccessGuard('appointments')] },
       { path: 'appointments/new', component: AppointmentFormComponent, canActivate: [featureAccessGuard('appointments')] },
-      { path: 'appointments/walkin', component: WalkinComponent, canActivate: [roleGuard('SUPER_ADMIN', 'ADMIN', 'OSD', 'DATA_ENTRY_OPERATOR')] },
-      { path: 'appointments/pending-approvals', component: ApproverInboxComponent, canActivate: [roleGuard('SUPER_ADMIN', 'HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER')] },
-      { path: 'appointments/approval-details/:id', component: AppointmentApprovalDetailsComponent, canActivate: [roleGuard('SUPER_ADMIN', 'HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER')] },
+      { path: 'appointments/walkin', component: WalkinComponent, canActivate: [featureAccessGuard('walkIn')] },
+      { path: 'appointments/pending-approvals', component: ApproverInboxComponent, canActivate: [roleGuard('SUPER_ADMIN', 'HCM', 'ADMIN', 'APPROVER')] },
+      { path: 'appointments/approval-details/:id', component: AppointmentApprovalDetailsComponent, canActivate: [roleGuard('SUPER_ADMIN', 'HCM', 'ADMIN', 'APPROVER')] },
       { path: 'approver', redirectTo: 'appointments', pathMatch: 'full' },
       { path: 'schemes', component: SchemeListComponent, canActivate: [roleGuard(...REPORTS_ROLES)] },
-      { path: 'schemes/apply', component: SchemeFormComponent, canActivate: [roleGuard('SUPER_ADMIN', 'ADMIN', 'OSD', 'PUBLIC')] },
+      { path: 'schemes/apply', component: SchemeFormComponent, canActivate: [roleGuard('SUPER_ADMIN', 'ADMIN', 'APPROVER', 'PUBLIC')] },
       { path: 'grievances', component: GrievancesComponent },
-      { path: 'deo/register-visitor', component: VisitorRegisterComponent, canActivate: [roleGuard('DATA_ENTRY_OPERATOR', 'APPROVER', 'HCM')] },
-      { path: 'identify', component: PublicIdentificationComponent, canActivate: [roleGuard('SUPER_ADMIN', 'HCM', 'ADMIN', 'OSD', 'APPROVER', 'CMO_OFFICER', 'DATA_ENTRY_OPERATOR')] },
+      { path: 'deo/register-visitor', component: VisitorRegisterComponent, canActivate: [featureAccessGuard('registerVisitor')] },
+      { path: 'identify', component: PublicIdentificationComponent, canActivate: [featureAccessGuard('publicIdentification')] },
       { path: 'reports', component: ReportsComponent, canActivate: [featureAccessGuard('reports')] },
       { path: 'reports/heatmap', component: HeatmapComponent, canActivate: [featureAccessGuard('reportAnalytics')] },
       { path: 'reports/audit', component: AuditTrailComponent, canActivate: [featureAccessGuard('auditTrail')] },
@@ -72,7 +72,7 @@ export const routes: Routes = [
       { path: 'admin/users', component: UserManagementComponent, canActivate: [featureAccessGuard('userManagement')] },
       { path: 'admin/schemes', component: SchemeManagementComponent, canActivate: [featureAccessGuard('schemeManagement')] },
       { path: 'admin/appointment-types', component: AppointmentTypeManagementComponent, canActivate: [featureAccessGuard('appointmentTypes')] },
-      { path: 'hcm/appointments', component: HcmDashboardComponent, canActivate: [roleGuard('SUPER_ADMIN', 'HCM', 'OSD', 'ADMIN')] },
+      { path: 'hcm/appointments', component: HcmDashboardComponent, canActivate: [roleGuard('SUPER_ADMIN', 'HCM', 'APPROVER', 'ADMIN')] },
     ]
   },
   { path: '**', redirectTo: '' }

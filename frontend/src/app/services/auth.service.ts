@@ -68,10 +68,10 @@ export class AuthService {
   DEMO_USERS = [
     { username: 'hcm', password: 'hcm123', fullName: 'HCM User', role: 'HCM' as UserRole },
     { username: 'admin', password: 'admin123', fullName: 'Admin User', role: 'ADMIN' as UserRole },
-    { username: 'saidul', password: 'osd123', fullName: 'OSD', role: 'OSD' as UserRole },
+    { username: 'saidul', password: 'osd123', fullName: 'APPROVER', role: 'APPROVER' as UserRole },
     { username: 'jtsecy', password: 'jts123', fullName: 'Approver', role: 'APPROVER' as UserRole },
-    { username: 'cmo', password: 'cmo123', fullName: 'CMO Officer', role: 'CMO_OFFICER' as UserRole },
-    { username: 'deo1', password: 'deo123', fullName: 'Data Entry Operator', role: 'DATA_ENTRY_OPERATOR' as UserRole },
+    { username: 'cmo', password: 'cmo123', fullName: 'CMO Officer', role: 'APPROVER' as UserRole },
+    { username: 'deo1', password: 'deo123', fullName: 'Data Entry Operator', role: 'DEO' as UserRole },
     { username: 'public1', password: 'public123', fullName: 'Public User', role: 'PUBLIC' as UserRole },
   ];
 
@@ -154,7 +154,7 @@ export class AuthService {
 
   private normalizeRole(role: string): UserRole {
     const normalized = (role || '').replace(/^ROLE_/, '').trim().toUpperCase();
-    return (normalized === 'CMO' ? 'CMO_OFFICER' : normalized) as UserRole;
+    return normalized as UserRole;
   }
 
   private unwrapLoginResponse(response: LoginResponse | { data: LoginResponse }): LoginResponse {

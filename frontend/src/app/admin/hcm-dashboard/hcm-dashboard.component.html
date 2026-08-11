@@ -350,7 +350,7 @@
             <p class="remarks">{{ appointment.approverRemarks }}</p>
           </div>
           <div class="detail-row" *ngIf="appointment.hcmRemarks">
-            <strong>HCM/OSD Remarks:</strong>
+            <strong>HCM/APPROVER Remarks:</strong>
             <p class="remarks">{{ appointment.hcmRemarks }}</p>
           </div>
         </div>
@@ -386,7 +386,7 @@
         </div>
 
         <div class="notes-history" *ngIf="remarksHistory.length > 0">
-          <h3>HCM / OSD Notes History</h3>
+          <h3>HCM / APPROVER Notes History</h3>
           <div class="note-row" *ngFor="let note of remarksHistory">
             <strong>{{ note.decision || 'Remark' }}</strong>
             <span>{{ note.departmentName || note.departmentCode || 'No department' }}</span>

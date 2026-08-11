@@ -129,11 +129,11 @@ class UserServiceTest {
                 .username("newuser")
                 .fullName("New User")
                 .password("secret1")
-                .role(User.UserRole.DATA_ENTRY_OPERATOR)
+                .role(User.UserRole.DEO)
                 .phoneNumber("9876543210")
                 .build();
 
-        when(roleService.existsByRoleName("DATA_ENTRY_OPERATOR")).thenReturn(true);
+        when(roleService.existsByRoleName("DEO")).thenReturn(true);
         when(passwordEncoder.encode("secret1")).thenReturn("$2a$10$encoded");
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
             User user = invocation.getArgument(0);

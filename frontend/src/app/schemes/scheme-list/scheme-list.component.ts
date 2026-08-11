@@ -297,20 +297,20 @@ export class SchemeListComponent implements OnInit {
 
   canUseSchemeDecisionActions(scheme: SchemeApplication | null) {
     return !!scheme &&
-      this.auth.hasRole('HCM', 'ADMIN', 'OSD', 'APPROVER') &&
+      this.auth.hasRole('HCM', 'ADMIN', 'APPROVER') &&
       !this.isFinalSchemeStatus(scheme.status);
   }
 
   canUseSchemeFollowUpAction(scheme: SchemeApplication | null) {
     return !!scheme &&
-      this.auth.hasRole('APPROVER', 'CMO_OFFICER', 'OSD') &&
+      this.auth.hasRole('APPROVER') &&
       !this.isFinalSchemeStatus(scheme.status) &&
       scheme.status !== 'FOLLOWUP';
   }
 
   canUseSchemeCmoActions(scheme: SchemeApplication | null) {
     return !!scheme &&
-      this.auth.hasRole('HCM', 'ADMIN', 'OSD', 'CMO_OFFICER') &&
+      this.auth.hasRole('HCM', 'ADMIN', 'APPROVER') &&
       !this.isFinalSchemeStatus(scheme.status);
   }
 

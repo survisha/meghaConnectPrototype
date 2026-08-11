@@ -29,18 +29,14 @@ class _QuickAction {
 const _allStaff = [
   UserRole.HCM,
   UserRole.ADMIN,
-  UserRole.OSD,
   UserRole.APPROVER,
-  UserRole.CMO_OFFICER,
-  UserRole.DATA_ENTRY_OPERATOR,
+  UserRole.DEO,
 ];
 
 const _seniorStaff = [
   UserRole.HCM,
   UserRole.ADMIN,
-  UserRole.OSD,
   UserRole.APPROVER,
-  UserRole.CMO_OFFICER,
 ];
 
 final _allKpis = <_Kpi>[
@@ -52,7 +48,7 @@ final _allKpis = <_Kpi>[
       Icons.pending_actions_outlined,
       Color(0xFFB45309),
       Color(0xFFFEF3C7),
-      [UserRole.HCM, UserRole.ADMIN, UserRole.OSD, UserRole.APPROVER]),
+      [UserRole.HCM, UserRole.ADMIN, UserRole.APPROVER]),
   const _Kpi('Active Scheme Apps', 12, Icons.workspace_premium_outlined,
       Color(0xFF065F46), Color(0xFFD1FAE5), _seniorStaff),
   const _Kpi(
@@ -61,9 +57,9 @@ final _allKpis = <_Kpi>[
       Icons.login_outlined,
       Color(0xFF0369A1),
       Color(0xFFE0F2FE),
-      [UserRole.DATA_ENTRY_OPERATOR, UserRole.ADMIN, UserRole.OSD]),
+      [UserRole.DEO, UserRole.ADMIN, UserRole.APPROVER]),
   const _Kpi('CMO Reviews Due', 7, Icons.rate_review_outlined,
-      Color(0xFF7C3AED), Color(0xFFEDE9FE), [UserRole.CMO_OFFICER]),
+      Color(0xFF7C3AED), Color(0xFFEDE9FE), [UserRole.APPROVER]),
 ];
 
 final _allQuickActions = <_QuickAction>[
@@ -72,32 +68,32 @@ final _allQuickActions = <_QuickAction>[
       Icons.add_circle_outline,
       'new_appointment',
       Color(0xFF1A237E),
-      [UserRole.ADMIN, UserRole.OSD, UserRole.DATA_ENTRY_OPERATOR]),
+      [UserRole.ADMIN, UserRole.APPROVER, UserRole.DEO]),
   const _QuickAction(
       'Walk-in Counter',
       Icons.login_outlined,
       'walkin',
       Color(0xFF2E7D32),
-      [UserRole.ADMIN, UserRole.OSD, UserRole.DATA_ENTRY_OPERATOR]),
+      [UserRole.ADMIN, UserRole.APPROVER, UserRole.DEO]),
   const _QuickAction(
       'Guest Registration',
       Icons.person_add_alt_1_outlined,
       'guest_registration',
       Color(0xFF0F766E),
-      [UserRole.ADMIN, UserRole.OSD, UserRole.DATA_ENTRY_OPERATOR]),
+      [UserRole.ADMIN, UserRole.APPROVER, UserRole.DEO]),
   const _QuickAction('Apply for Scheme', Icons.workspace_premium_outlined,
-      'scheme_form', Color(0xFFB45309), [UserRole.ADMIN, UserRole.OSD]),
+      'scheme_form', Color(0xFFB45309), [UserRole.ADMIN, UserRole.APPROVER]),
   const _QuickAction(
       'Identify Person', Icons.badge_outlined, 'identify', Color(0xFF0288D1), [
     UserRole.HCM,
     UserRole.ADMIN,
-    UserRole.OSD,
-    UserRole.DATA_ENTRY_OPERATOR
+    UserRole.APPROVER,
+    UserRole.DEO
   ]),
   const _QuickAction('View Reports', Icons.bar_chart_outlined, 'reports',
       Color(0xFF6D28D9), _seniorStaff),
   const _QuickAction('Manage Users', Icons.manage_accounts_outlined, 'users',
-      Color(0xFF0369A1), [UserRole.HCM, UserRole.ADMIN, UserRole.OSD]),
+      Color(0xFF0369A1), [UserRole.HCM, UserRole.ADMIN, UserRole.APPROVER]),
   const _QuickAction('Audit Trail', Icons.history, 'audit', Color(0xFF374151),
       [UserRole.ADMIN]),
 ];
@@ -121,7 +117,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _loadData() async {
     final role = context.read<AuthService>().user?.role;
-    if (role == UserRole.HCM || role == UserRole.OSD) {
+    if (role == UserRole.HCM || role == UserRole.APPROVER) {
       return;
     }
     final schedFuture = ApiService.getScheduleEvents();
@@ -141,7 +137,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
     final role = auth.user!.role;
-    if (role == UserRole.HCM || role == UserRole.OSD) {
+    if (role == UserRole.HCM || role == UserRole.APPROVER) {
       return const HcmDashboardScreen();
     }
 

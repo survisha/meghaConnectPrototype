@@ -20,7 +20,7 @@ public class VisitorFormExtractionController {
     private final VisitorFormExtractionService service;
 
     @PostMapping(value="/extract", consumes=MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','DEPARTMENT_ADMIN','DEPARTMENT_PA','DATA_ENTRY_OPERATOR')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','DEPARTMENT_ADMIN','DEPARTMENT_PA','DEO','APPROVER','HCM')")
     @Operation(summary="Extract handwritten visitor details for operator review",
             description="Returns AI suggestions only. It never registers or persists visitor details or the image.")
     public VisitorFormExtractionResponse extract(@RequestPart("image") MultipartFile image,

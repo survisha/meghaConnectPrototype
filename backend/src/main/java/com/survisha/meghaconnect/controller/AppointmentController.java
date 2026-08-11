@@ -67,7 +67,7 @@ public class AppointmentController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO','CMO_OFFICER','APPROVER','HCM','SUPER_ADMIN','DEPARTMENT_PA')")
+    @PreAuthorize("hasAnyRole('ADMIN','APPROVER','DEO','HCM','SUPER_ADMIN','DEPARTMENT_PA')")
     public ResponseEntity<Page<AppointmentDto>> getAll(@RequestParam(required = false) String status,
                                                        @RequestParam(required = false) String source,
                                                        @RequestParam(required = false) String referredOffice,
@@ -85,7 +85,7 @@ public class AppointmentController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO','CMO_OFFICER','APPROVER','HCM','SUPER_ADMIN','DEPARTMENT_PA')")
+    @PreAuthorize("hasAnyRole('ADMIN','APPROVER','DEO','HCM','SUPER_ADMIN','DEPARTMENT_PA')")
     public ResponseEntity<AppointmentDto> getById(@PathVariable Long id, Authentication authentication) {
         logEndpoint("/api/v1/appointments/{id}");
         return appointmentService.findByIdForActor(id, actor(authentication))
@@ -96,7 +96,7 @@ public class AppointmentController {
 
     @Operation(summary = "Get appointment documents", description = "Retrieve documents attached to an appointment")
     @GetMapping("/{id}/documents")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','CMO','CMO_OFFICER','APPROVER','HCM','OSD','ADMIN','DATA_ENTRY_OPERATOR')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','HCM','ADMIN','DEO')")
     public ResponseEntity<List<AppointmentDocumentDto>> getDocuments(@PathVariable Long id) {
         logEndpoint("/api/v1/appointments/{id}/documents");
         return ResponseEntity.ok(appointmentService.findDocumentDtos(id));
@@ -104,7 +104,7 @@ public class AppointmentController {
 
     @Operation(summary = "Get AI notes for appointment documents", description = "Retrieve officer-facing AI notes generated from uploaded appointment documents")
     @GetMapping("/{id}/ai-notes")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','CMO','CMO_OFFICER','APPROVER','HCM','OSD','ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','HCM','ADMIN')")
     public ResponseEntity<List<AppointmentDocumentAiNotesDto>> getAiNotes(@PathVariable Long id) {
         logEndpoint("/api/v1/appointments/{id}/ai-notes");
         return ResponseEntity.ok(appointmentDocumentAiNotesService.getNotesForAppointment(id));
@@ -112,7 +112,7 @@ public class AppointmentController {
 
     @Operation(summary = "Regenerate AI notes for a document", description = "Queue AI note regeneration for an uploaded appointment document")
     @PostMapping("/documents/{documentId}/ai-notes/regenerate")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','CMO','CMO_OFFICER','APPROVER','HCM','OSD','ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','HCM','ADMIN')")
     public ResponseEntity<AppointmentDocumentAiNotesDto> regenerateAiNotes(@PathVariable Long documentId) {
         logEndpoint("/api/v1/appointments/documents/{documentId}/ai-notes/regenerate");
         return ResponseEntity.ok(appointmentDocumentAiNotesService.regenerate(documentId));
@@ -126,7 +126,7 @@ public class AppointmentController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/by-app-id/{appId}")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO','CMO_OFFICER','APPROVER','HCM')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','APPROVER','DEO','HCM')")
     public ResponseEntity<AppointmentDto> getByApplicationId(@PathVariable String appId) {
         logEndpoint("/api/v1/appointments/by-app-id/{appId}");
         return appointmentService.findByApplicationId(appId)
@@ -149,7 +149,7 @@ public class AppointmentController {
 
     @Operation(summary = "Get visitor pass details", description = "Retrieve visitor pass metadata for a scheduled citizen appointment")
     @GetMapping("/{id}/visitor-pass")
-    @PreAuthorize("hasAnyRole('PUBLIC','CITIZEN','SUPER_ADMIN','ADMIN','OSD','DATA_ENTRY_OPERATOR','HCM','APPROVER','CMO','CMO_OFFICER','SECURITY')")
+    @PreAuthorize("hasAnyRole('PUBLIC','CITIZEN','SUPER_ADMIN','ADMIN','APPROVER','DEO','HCM','SECURITY')")
     public ResponseEntity<Map<String, Object>> getVisitorPass(@PathVariable Long id,
                                                               @AuthenticationPrincipal UserDetails user) {
         logEndpoint("/api/v1/appointments/{id}/visitor-pass");
@@ -158,7 +158,7 @@ public class AppointmentController {
 
     @Operation(summary = "Download visitor pass", description = "Download the visitor pass file for a scheduled citizen appointment")
     @GetMapping(value = "/{id}/visitor-pass/download", produces = MediaType.APPLICATION_PDF_VALUE)
-    @PreAuthorize("hasAnyRole('PUBLIC','CITIZEN','SUPER_ADMIN','ADMIN','OSD','DATA_ENTRY_OPERATOR','HCM','APPROVER','CMO','CMO_OFFICER','SECURITY')")
+    @PreAuthorize("hasAnyRole('PUBLIC','CITIZEN','SUPER_ADMIN','ADMIN','APPROVER','DEO','HCM','SECURITY')")
     public ResponseEntity<byte[]> downloadVisitorPass(@PathVariable Long id,
                                                       @AuthenticationPrincipal UserDetails user) {
         logEndpoint("/api/v1/appointments/{id}/visitor-pass/download");
@@ -175,7 +175,7 @@ public class AppointmentController {
 
     @Operation(summary = "Get appointments for DEO", description = "Retrieve appointments visible to DEO review queues")
     @GetMapping("/deo")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO','CMO_OFFICER','DEPARTMENT_PA')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','APPROVER','DEO','DEPARTMENT_PA','HCM')")
     public ResponseEntity<Page<AppointmentDto>> getForDeo(Pageable pageable, Authentication authentication) {
         logEndpoint("/api/v1/appointments/deo");
         return ResponseEntity.ok(appointmentService.findForDeo(actor(authentication), pageable));
@@ -183,7 +183,7 @@ public class AppointmentController {
 
     @Operation(summary = "Get appointments for approver", description = "Retrieve appointments visible to approver review queues")
     @GetMapping("/approver")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','HCM','ADMIN','OSD','APPROVER','CMO','CMO_OFFICER','DEPARTMENT_PA')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','HCM','ADMIN','APPROVER','DEPARTMENT_PA')")
     public ResponseEntity<Page<AppointmentDto>> getForApprover(Pageable pageable, Authentication authentication) {
         logEndpoint("/api/v1/appointments/approver");
         return ResponseEntity.ok(appointmentService.findForApprover(actor(authentication), pageable));
@@ -191,7 +191,7 @@ public class AppointmentController {
 
     @Operation(summary = "Assign follow-up appointments to a schedule event", description = "Link selected follow-up applications to an existing calendar event")
     @PostMapping("/assign-event")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','ADMIN','OSD')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','ADMIN','HCM')")
     public ResponseEntity<ScheduleEventDto> assignEvent(@RequestBody Map<String, Object> body,
                                                         Authentication authentication) {
         logEndpoint("/api/v1/appointments/assign-event");
@@ -203,9 +203,9 @@ public class AppointmentController {
         return ResponseEntity.ok(scheduleEventService.assignAppointments(eventId, request, actor(authentication), role(authentication)));
     }
 
-    @Operation(summary = "Get HCM/OSD action appointments for date", description = "Retrieve scheduled appointments for HCM/OSD action on a selected date")
+    @Operation(summary = "Get HCM/APPROVER action appointments for date", description = "Retrieve scheduled appointments for HCM/APPROVER action on a selected date")
     @GetMapping("/hcm-actions")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','HCM','OSD','ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','HCM','APPROVER','ADMIN')")
     public ResponseEntity<List<AppointmentDto>> getHcmActionAppointments(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         logEndpoint("/api/v1/appointments/hcm-actions");
@@ -216,7 +216,7 @@ public class AppointmentController {
     }
 
     @PostMapping("/{id}/reschedule")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','HCM','OSD','ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','HCM','ADMIN')")
     public ResponseEntity<AppointmentDto> rescheduleAppointment(@PathVariable Long id,
                                                                 @RequestBody Map<String, Object> body,
                                                                 @AuthenticationPrincipal UserDetails user) {
@@ -226,14 +226,14 @@ public class AppointmentController {
     }
 
     @GetMapping("/{id}/remarks")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','HCM','OSD','ADMIN','APPROVER','CMO','CMO_OFFICER','DATA_ENTRY_OPERATOR','SECURITY')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','HCM','APPROVER','ADMIN','DEO','SECURITY')")
     public ResponseEntity<List<HcmActionDto>> getRemarks(@PathVariable Long id) {
         logEndpoint("/api/v1/appointments/{id}/remarks");
         return ResponseEntity.ok(hcmActionService.getRemarksForAppointment(id));
     }
 
     @PostMapping("/{id}/remarks")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','HCM','OSD','ADMIN','APPROVER','APPROVER_JT_SECY')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','HCM','APPROVER','ADMIN','APPROVER_JT_SECY')")
     public ResponseEntity<HcmActionDto> addRemark(@PathVariable Long id,
                                                   @RequestBody HcmActionDto body,
                                                   Authentication authentication) {
@@ -243,7 +243,7 @@ public class AppointmentController {
     }
 
     @PutMapping("/{id}/remarks/{remarkId}")
-    @PreAuthorize("hasAnyRole('APPROVER','APPROVER_JT_SECY')")
+    @PreAuthorize("hasAnyRole('APPROVER','APPROVER_JT_SECY','HCM')")
     public ResponseEntity<HcmActionDto> updateRemark(@PathVariable Long id,
                                                      @PathVariable Long remarkId,
                                                      @RequestBody HcmActionDto body,
@@ -253,7 +253,7 @@ public class AppointmentController {
     }
 
     @PostMapping("/export-audit")
-    @PreAuthorize("hasAnyRole('CMO','CMO_OFFICER','APPROVER','APPROVER_JT_SECY')")
+    @PreAuthorize("hasAnyRole('APPROVER','APPROVER_JT_SECY','HCM')")
     public ResponseEntity<Void> auditPdfExport(@RequestBody Map<String, Object> body,
                                                Authentication authentication) {
         logEndpoint("/api/v1/appointments/export-audit");
@@ -269,7 +269,7 @@ public class AppointmentController {
     }
 
     @PostMapping(value = "/{id}/supporting-documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','CMO','CMO_OFFICER','ADMIN','OSD','DATA_ENTRY_OPERATOR')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','ADMIN','DEO','HCM')")
     public ResponseEntity<AppointmentDocumentDto> uploadSupportingDocument(@PathVariable Long id,
                                                                            @RequestParam("file") MultipartFile file,
                                                                            @AuthenticationPrincipal UserDetails user) {
@@ -288,7 +288,7 @@ public class AppointmentController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyRole('PUBLIC','CITIZEN','SUPER_ADMIN','ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO','CMO_OFFICER','APPROVER','HCM')")
+    @PreAuthorize("hasAnyRole('PUBLIC','CITIZEN','SUPER_ADMIN','ADMIN','APPROVER','DEO','HCM')")
     public ResponseEntity<Map<String, Object>> createMultipart(
             @ModelAttribute AppointmentMultipartRequest form,
             HttpServletRequest request,
@@ -301,7 +301,7 @@ public class AppointmentController {
     }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasAnyRole('PUBLIC','CITIZEN','SUPER_ADMIN','ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO','CMO_OFFICER','APPROVER','HCM')")
+    @PreAuthorize("hasAnyRole('PUBLIC','CITIZEN','SUPER_ADMIN','ADMIN','APPROVER','DEO','HCM')")
     public ResponseEntity<AppointmentDto> create(@Valid @RequestBody AppointmentDto dto,
                                                  @AuthenticationPrincipal UserDetails user) {
         logEndpoint("/api/v1/appointments");
@@ -321,7 +321,7 @@ public class AppointmentController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','CMO','CMO_OFFICER','APPROVER','HCM','OSD','ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','HCM','ADMIN')")
     public ResponseEntity<AppointmentDto> updateStatus(
             @PathVariable Long id,
             @RequestBody Map<String, String> body,
@@ -331,7 +331,7 @@ public class AppointmentController {
     }
 
     @PutMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','CMO','CMO_OFFICER','APPROVER','HCM','OSD','ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','HCM','ADMIN')")
     public ResponseEntity<AppointmentDto> putStatus(
             @PathVariable Long id,
             @RequestBody Map<String, String> body,
@@ -342,7 +342,7 @@ public class AppointmentController {
 
     @Operation(summary = "Submit CMO review", description = "Persist CMO category/location review, missing information note, and forwarding status")
     @PostMapping("/{id}/cmo-review")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','CMO','CMO_OFFICER','HCM','OSD','ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','HCM','ADMIN')")
     public ResponseEntity<AppointmentDto> submitCmoReview(
             @PathVariable Long id,
             @RequestBody Map<String, Object> body,
@@ -362,7 +362,7 @@ public class AppointmentController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PostMapping("/{id}/schedule")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','CMO','CMO_OFFICER','APPROVER','HCM','OSD','ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','HCM','ADMIN')")
     public ResponseEntity<AppointmentDto> schedule(
             @PathVariable Long id,
             @RequestBody Map<String, Object> body,
@@ -400,15 +400,12 @@ public class AppointmentController {
         return user.getAuthorities().stream()
             .map(GrantedAuthority::getAuthority)
             .anyMatch(authority -> authority.equals("ROLE_ADMIN")
-                || authority.equals("ROLE_OSD")
                 || authority.equals("ROLE_APPROVER")
-                || authority.equals("ROLE_CMO")
-                || authority.equals("ROLE_CMO_OFFICER")
                 || authority.equals("ROLE_HCM")
                 || authority.equals("ROLE_SUPER_ADMIN")
                 || authority.equals("ROLE_DEPARTMENT_ADMIN")
                 || authority.equals("ROLE_DEPARTMENT_PA")
-                || authority.equals("ROLE_DATA_ENTRY_OPERATOR"));
+                || authority.equals("ROLE_DEO"));
     }
 
     private void logEndpoint(String endpoint) {

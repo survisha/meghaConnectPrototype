@@ -77,13 +77,13 @@ public class AppointmentTypeConfig extends BaseEntity {
     private Boolean allowDirectScheduling = false;  // Can non-admin directly schedule?
 
     @Column(length = 500)
-    private String directSchedulingRoles; // Comma-separated: ADMIN,OSD,HCM
+    private String directSchedulingRoles; // Comma-separated: ADMIN,APPROVER,HCM
 
     @Column(nullable = false)
     private Boolean bypassApprovalProcess = false;  // Skip approval for direct scheduling?
 
     @Column(length = 500)
-    private String approverBypassRoles;  // Roles that can bypass approval: ADMIN,OSD
+    private String approverBypassRoles;  // Roles that can bypass approval: ADMIN,APPROVER
 
     // ==================== CONFLICT HANDLING ====================
     @Column(nullable = false)
@@ -93,7 +93,7 @@ public class AppointmentTypeConfig extends BaseEntity {
     private Boolean allowConflictOverride = false;  // Can conflicts be overridden?
 
     @Column(length = 500)
-    private String conflictOverrideRoles; // Who can override: ADMIN,OSD
+    private String conflictOverrideRoles; // Who can override: ADMIN,APPROVER
 
     @Column(nullable = false)
     private Boolean notifyOnConflict = true;
@@ -133,7 +133,7 @@ public class AppointmentTypeConfig extends BaseEntity {
     @Column
     private Integer waitingListNotificationDays;  // Notify X days before slot
 
-    // ==================== OSD SPECIAL ROLE ====================
+    // ==================== APPROVER SPECIAL ROLE ====================
     @Column(nullable = false)
     private Boolean osdCanOverride = false;
 
@@ -148,7 +148,7 @@ public class AppointmentTypeConfig extends BaseEntity {
     private Boolean allowDragDropRescheduling = false;
 
     @Column(length = 500)
-    private String dragDropAllowedRoles; // Who can drag-drop: ADMIN,OSD,HCM
+    private String dragDropAllowedRoles; // Who can drag-drop: ADMIN,APPROVER,HCM
 
     @Column(nullable = false)
     private Boolean validateConflictsOnDragDrop = true;

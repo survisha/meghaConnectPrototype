@@ -78,7 +78,7 @@ class _HcmDashboardScreenState extends State<HcmDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthService>().user!;
-    final title = user.role == UserRole.OSD ? 'OSD Dashboard' : 'HCM Dashboard';
+    final title = user.role == UserRole.APPROVER ? 'APPROVER Dashboard' : 'HCM Dashboard';
     return Column(
       children: [
         _header(user, title),

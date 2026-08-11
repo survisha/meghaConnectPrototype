@@ -51,8 +51,8 @@ export class AppointmentApprovalService {
   /**
    * Get pending appointments for CMO Officer
    */
-  getPendingAppointments(role: string = 'CMO_OFFICER'): Observable<AppointmentApproval[]> {
-    const path = role === 'DATA_ENTRY_OPERATOR' ? 'deo' : 'approver';
+  getPendingAppointments(role: string = 'APPROVER'): Observable<AppointmentApproval[]> {
+    const path = role === 'DEO' ? 'deo' : 'approver';
     return this.http.get<unknown>(`${this.apiUrl}/${path}?page=0&size=100`).pipe(
       map(res => this.normalizeApprovalList(res)),
       tap(appointments => this.pendingAppointments$.next(appointments))

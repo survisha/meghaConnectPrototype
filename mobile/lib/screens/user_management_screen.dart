@@ -804,9 +804,7 @@ UserRole _parseRole(String raw) {
   final normalized = raw.startsWith('ROLE_') ? raw.substring(5) : raw;
   final mapped = normalized == 'SECURITY'
       ? 'SECURITY_POLICE'
-      : normalized == 'CMO'
-          ? 'CMO_OFFICER'
-          : normalized;
+      : normalized;
   return UserRole.values.firstWhere(
     (role) => role.name == mapped,
     orElse: () => UserRole.PUBLIC,
@@ -833,14 +831,8 @@ Color _roleColor(UserRole role) {
       return const Color(0xFF1A237E);
     case UserRole.ADMIN:
       return const Color(0xFF1565C0);
-    case UserRole.OSD:
-      return const Color(0xFF0288D1);
     case UserRole.APPROVER:
-      return const Color(0xFF00838F);
-    case UserRole.CMO_OFFICER:
-      return const Color(0xFF2E7D32);
-    case UserRole.DATA_ENTRY_OPERATOR:
-      return const Color(0xFF558B2F);
+      return const Color(0xFF0288D1);
     case UserRole.SECURITY_POLICE:
       return const Color(0xFF7C3AED);
     case UserRole.PUBLIC:

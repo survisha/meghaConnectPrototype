@@ -6,10 +6,7 @@ enum UserRole {
   HEAD_DEPARTMENT,
   HCM,
   ADMIN,
-  OSD,
   APPROVER,
-  CMO_OFFICER,
-  DATA_ENTRY_OPERATOR,
   SECURITY_POLICE,
   PUBLIC,
 }
@@ -21,8 +18,6 @@ extension UserRoleExtension on UserRole {
         return 'Super Admin';
       case UserRole.DEPARTMENT_ADMIN:
         return 'Department Admin';
-      case UserRole.DEO:
-        return 'Data Entry Operator';
       case UserRole.DEPARTMENT_PA:
         return 'Department PA';
       case UserRole.HEAD_DEPARTMENT:
@@ -31,13 +26,9 @@ extension UserRoleExtension on UserRole {
         return 'Hon. Chief Minister';
       case UserRole.ADMIN:
         return 'System Admin';
-      case UserRole.OSD:
-        return 'OSD';
       case UserRole.APPROVER:
         return 'Approver';
-      case UserRole.CMO_OFFICER:
-        return 'CMO Officer';
-      case UserRole.DATA_ENTRY_OPERATOR:
+      case UserRole.DEO:
         return 'Data Entry Operator';
       case UserRole.SECURITY_POLICE:
         return 'Security / Police';
@@ -52,8 +43,6 @@ extension UserRoleExtension on UserRole {
         return 'SUPER ADMIN';
       case UserRole.DEPARTMENT_ADMIN:
         return 'DEPT ADMIN';
-      case UserRole.DEO:
-        return 'DEO';
       case UserRole.DEPARTMENT_PA:
         return 'DEPT PA';
       case UserRole.HEAD_DEPARTMENT:
@@ -62,13 +51,9 @@ extension UserRoleExtension on UserRole {
         return 'HCM';
       case UserRole.ADMIN:
         return 'ADMIN';
-      case UserRole.OSD:
-        return 'OSD';
       case UserRole.APPROVER:
         return 'APPROVER';
-      case UserRole.CMO_OFFICER:
-        return 'CMO';
-      case UserRole.DATA_ENTRY_OPERATOR:
+      case UserRole.DEO:
         return 'DEO';
       case UserRole.SECURITY_POLICE:
         return 'SECURITY';
@@ -82,7 +67,7 @@ extension UserRoleExtension on UserRole {
       this == UserRole.DEPARTMENT_ADMIN ||
       this == UserRole.HCM ||
       this == UserRole.ADMIN ||
-      this == UserRole.OSD;
+      this == UserRole.APPROVER;
 
   bool get isStaff => this != UserRole.PUBLIC;
 }

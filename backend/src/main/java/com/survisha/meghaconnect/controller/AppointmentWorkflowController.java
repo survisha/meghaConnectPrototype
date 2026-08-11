@@ -92,7 +92,7 @@ public class AppointmentWorkflowController {
     }
 
     @GetMapping("/approver/pending")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','CMO','CMO_OFFICER','OSD','APPROVER')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','HCM')")
     public ApiResponse<List<AppointmentWorkflowResponse>> getPendingForApprover(
             @RequestParam(required = false) String district,
             @RequestParam(required = false) String department,
@@ -119,7 +119,7 @@ public class AppointmentWorkflowController {
     }
 
     @PostMapping("/approver/{id}/select-public-darbar")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','CMO','CMO_OFFICER','OSD','APPROVER')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','HCM')")
     public ApiResponse<AppointmentWorkflowResponse> markForPublicDarbar(@PathVariable Long id,
                                                                         @RequestBody(required = false) MarkPublicDarbarRequest request,
                                                                         Authentication authentication) {
@@ -131,7 +131,7 @@ public class AppointmentWorkflowController {
     }
 
     @PostMapping("/approver/{id}/approve")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','CMO','CMO_OFFICER','OSD','APPROVER')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','HCM')")
     public ApiResponse<AppointmentWorkflowResponse> approveNormalAppointment(@PathVariable Long id,
                                                                              @Valid @RequestBody ApproveAppointmentRequest request,
                                                                              Authentication authentication) {
@@ -143,7 +143,7 @@ public class AppointmentWorkflowController {
     }
 
     @PostMapping("/approver/{id}/reject")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','CMO','CMO_OFFICER','OSD','APPROVER')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','HCM')")
     public ApiResponse<AppointmentWorkflowResponse> rejectAppointment(@PathVariable Long id,
                                                                       @Valid @RequestBody RejectAppointmentRequest request,
                                                                       Authentication authentication) {
@@ -155,7 +155,7 @@ public class AppointmentWorkflowController {
     }
 
     @GetMapping("/approver/public-darbar-selected")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','CMO','CMO_OFFICER','OSD','APPROVER')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','HCM')")
     public ApiResponse<List<AppointmentWorkflowResponse>> getSelectedForPublicDarbar(Authentication authentication) {
         log.info("Approver selected Public Darbar appointment list request received");
         return ApiResponse.success(

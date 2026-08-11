@@ -61,7 +61,7 @@ public class AppointmentTypeDto {
     private Boolean autoAddFromWaitingList;
     private Integer waitingListNotificationDays;
 
-    // ==================== OSD SPECIAL ROLE ====================
+    // ==================== APPROVER SPECIAL ROLE ====================
     private Boolean osdCanOverride;
     private Boolean osdCanBypassLimits;
     private Boolean osdCanDirectSchedule;

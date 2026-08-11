@@ -80,7 +80,7 @@ export class AuditTrailComponent implements OnInit, OnDestroy {
 
   moduleOptions: string[] = [];
   actionOptions: string[] = [];
-  readonly roleOptions = ['ADMIN', 'HCM', 'OSD', 'APPROVER', 'CMO_OFFICER', 'DATA_ENTRY_OPERATOR', 'PUBLIC'];
+  readonly roleOptions = ['ADMIN', 'HCM', 'APPROVER', 'DEO', 'PUBLIC'];
   readonly statusOptions = ['SUCCESS', 'FAILED', 'PENDING'];
 
   private filterTimer: ReturnType<typeof setTimeout> | null = null;

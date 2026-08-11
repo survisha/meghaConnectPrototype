@@ -59,7 +59,7 @@ class AppointmentWorkflowServiceTest {
                 42L,
                 MarkPublicDarbarRequest.builder().remarks("Suitable for Public Darbar").build(),
                 "cmo",
-                "CMO_OFFICER"
+                "APPROVER"
         );
 
         assertEquals(Appointment.AppointmentStatus.FOLLOWUP, appointment.getStatus());
@@ -71,7 +71,7 @@ class AppointmentWorkflowServiceTest {
                 eq("FOLLOWUP"),
                 any(),
                 eq("cmo"),
-                eq("CMO_OFFICER")
+                eq("APPROVER")
         );
         verify(notificationService).appointmentSelectedForPublicDarbar(appointment);
     }
@@ -84,7 +84,7 @@ class AppointmentWorkflowServiceTest {
                         42L,
                         RejectAppointmentRequest.builder().reason(" ").build(),
                         "osd",
-                        "OSD"
+                        "APPROVER"
                 )
         );
 

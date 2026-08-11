@@ -374,13 +374,13 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
 
   Future<Map<String, dynamic>> _pageForRole(UserRole? role, int page) {
     if (role == UserRole.PUBLIC) return ApiService.getMyAppointments();
-    if (role == UserRole.DATA_ENTRY_OPERATOR) {
+    if (role == UserRole.DEO) {
       return ApiService.getDeoAppointments(page: page, size: _pageSize);
     }
     if (widget.forceApproverMode || role == UserRole.APPROVER) {
       return ApiService.getApproverAppointments(page: page, size: _pageSize);
     }
-    if (role == UserRole.CMO_OFFICER) {
+    if (role == UserRole.APPROVER) {
       return ApiService.getAppointments(
         page: page,
         size: _pageSize,
@@ -444,8 +444,8 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     final role = context.watch<AuthService>().user!.role;
     final canAddNew = [
       UserRole.ADMIN,
-      UserRole.OSD,
-      UserRole.DATA_ENTRY_OPERATOR,
+      UserRole.APPROVER,
+      UserRole.DEO,
     ].contains(role);
 
     return Column(
@@ -1036,7 +1036,7 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
                           'CMO Remarks', _text(_details['cmoRemarks'], '-')),
                       _DetailLine('Approver Remarks',
                           _text(_details['approverRemarks'], '-')),
-                      _DetailLine('HCM / OSD Remarks',
+                      _DetailLine('HCM / APPROVER Remarks',
                           _text(_details['hcmRemarks'], '-')),
                     ],
                   ),
@@ -1906,20 +1906,18 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
               widget.appointment.status == 'SUBMITTED'));
 
   bool _canUseCmoActions(UserRole role) =>
-      [UserRole.HCM, UserRole.ADMIN, UserRole.OSD, UserRole.CMO_OFFICER]
+      [UserRole.HCM, UserRole.ADMIN, UserRole.APPROVER]
           .contains(role) &&
       ['SUBMITTED', 'CMO_REVIEW'].contains(widget.appointment.status);
 
   bool _canUseJtSecForwarding(UserRole role) =>
-      [UserRole.HCM, UserRole.ADMIN, UserRole.OSD].contains(role);
+      [UserRole.HCM, UserRole.ADMIN, UserRole.APPROVER].contains(role);
 
   bool _canUploadDocuments(UserRole role) => [
         UserRole.HCM,
         UserRole.ADMIN,
-        UserRole.OSD,
         UserRole.APPROVER,
-        UserRole.CMO_OFFICER,
-        UserRole.DATA_ENTRY_OPERATOR
+        UserRole.DEO
       ].contains(role);
 
   String _applicantAddress() {
@@ -2120,9 +2118,7 @@ class _NoteBlock extends StatelessWidget {
 bool _canViewAiNotes(UserRole? role) => [
       UserRole.HCM,
       UserRole.ADMIN,
-      UserRole.OSD,
       UserRole.APPROVER,
-      UserRole.CMO_OFFICER,
     ].contains(role);
 
 bool _canManageAiNotes(UserRole role) => _canViewAiNotes(role);
@@ -2130,7 +2126,6 @@ bool _canManageAiNotes(UserRole role) => _canViewAiNotes(role);
 bool _canUseApproverActions(UserRole role) => [
       UserRole.HCM,
       UserRole.ADMIN,
-      UserRole.OSD,
       UserRole.APPROVER,
     ].contains(role);
 

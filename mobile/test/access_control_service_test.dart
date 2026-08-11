@@ -16,4 +16,20 @@ void main() {
     const user = AuthUser(username: 'cmo', fullName: 'CMO Admin', role: UserRole.DEPARTMENT_ADMIN, departmentCode: 'cmo');
     expect(AccessControlService.canViewRecentActivity(user), isTrue);
   });
+
+  for (final role in const [UserRole.DEO, UserRole.APPROVER, UserRole.HCM]) {
+    test('${role.name} can access all visitor counter functions', () {
+      final user = AuthUser(username: role.name, fullName: role.name, role: role);
+      expect(AccessControlService.canAccessRoute(user, 'walkin'), isTrue);
+      expect(AccessControlService.canAccessRoute(user, 'register_visitor'), isTrue);
+      expect(AccessControlService.canAccessRoute(user, 'identify'), isTrue);
+    });
+  }
+
+  test('unrelated authenticated role cannot access visitor counter functions', () {
+    const user = AuthUser(username: 'pa', fullName: 'PA', role: UserRole.DEPARTMENT_PA);
+    expect(AccessControlService.canAccessRoute(user, 'walkin'), isFalse);
+    expect(AccessControlService.canAccessRoute(user, 'register_visitor'), isFalse);
+    expect(AccessControlService.canAccessRoute(user, 'identify'), isFalse);
+  });
 }

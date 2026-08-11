@@ -57,7 +57,7 @@ export class LoginComponent implements OnInit {
   demoCredentials = [
     { label: 'HCM (hcm / hcm123)', value: { u: 'hcm', p: 'hcm123' } },
     { label: 'Admin (admin / admin123)', value: { u: 'admin', p: 'admin123' } },
-    { label: 'OSD (saidul / osd123)', value: { u: 'saidul', p: 'osd123' } },
+    { label: 'APPROVER (saidul / osd123)', value: { u: 'saidul', p: 'osd123' } },
     { label: 'Jt Secretary (jtsecy / jts123)', value: { u: 'jtsecy', p: 'jts123' } },
     { label: 'CMO Officer (cmo / cmo123)', value: { u: 'cmo', p: 'cmo123' } },
     { label: 'DEO (deo1 / deo123)', value: { u: 'deo1', p: 'deo123' } },

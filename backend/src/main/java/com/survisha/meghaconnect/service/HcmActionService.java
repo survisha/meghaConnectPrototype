@@ -109,7 +109,7 @@ public class HcmActionService {
         Appointment appointment = appointmentRepository.findById(appointmentId)
             .orElseThrow(() -> new IllegalArgumentException("Appointment not found: " + appointmentId));
         if (isHcmOrOsd(actorRole) && appointment.getScheduledDateTime() == null && appointment.getStatus() != Appointment.AppointmentStatus.SCHEDULED) {
-            throw new IllegalArgumentException("HCM/OSD remarks can be added only for scheduled appointments.");
+            throw new IllegalArgumentException("HCM/APPROVER remarks can be added only for scheduled appointments.");
         }
 
         String departmentCode = trimToNull(actionDto != null ? actionDto.getDepartmentCode() : null);
@@ -338,7 +338,7 @@ public class HcmActionService {
             String token = jwtUtils.extractTokenFromRequest(request);
             if (token == null) return false;
             String role = jwtUtils.getRoleFromToken(token);
-            return "HCM".equals(role) || "OSD".equals(role) || "ADMIN".equals(role) || "SUPER_ADMIN".equals(role);
+            return "HCM".equals(role) || "APPROVER".equals(role) || "ADMIN".equals(role) || "SUPER_ADMIN".equals(role);
         } catch (Exception e) {
             log.error("Error checking HCM role", e);
             return false;
@@ -431,12 +431,12 @@ public class HcmActionService {
 
     private boolean isHcmOrOsd(String actorRole) {
         String role = trimToNull(actorRole);
-        return "HCM".equals(role) || "OSD".equals(role) || "ADMIN".equals(role) || "SUPER_ADMIN".equals(role);
+        return "HCM".equals(role) || "APPROVER".equals(role) || "ADMIN".equals(role) || "SUPER_ADMIN".equals(role);
     }
 
     private boolean isApproverRole(String actorRole) {
         String role = trimToNull(actorRole);
-        return "APPROVER".equals(role) || "APPROVER_JT_SECY".equals(role);
+        return "APPROVER".equals(role) || "HCM".equals(role) || "APPROVER_JT_SECY".equals(role);
     }
 
     private String resolveDepartmentName(String departmentCode) {

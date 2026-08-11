@@ -126,11 +126,8 @@ export class UserManagementComponent implements OnInit {
     const map: Record<string, { [klass: string]: any }> = {
       HCM: { 'background': '#fee2e2', 'color': '#991b1b' },
       ADMIN: { 'background': '#fef3c7', 'color': '#92400e' },
-      OSD: { 'background': '#fef3c7', 'color': '#92400e' },
       APPROVER: { 'background': '#dbeafe', 'color': '#1e40af' },
-      CMO_OFFICER: { 'background': '#dbeafe', 'color': '#1e40af' },
-      CMO: { 'background': '#dbeafe', 'color': '#1e40af' },
-      DATA_ENTRY_OPERATOR: { 'background': '#f3f4f6', 'color': '#374151' },
+      DEO: { 'background': '#f3f4f6', 'color': '#374151' },
       SECURITY: { 'background': '#ecfdf5', 'color': '#047857' },
       SUPER_ADMIN: { 'background': '#f5f3ff', 'color': '#5b21b6' },
       DEPARTMENT_ADMIN: { 'background': '#e0f2fe', 'color': '#075985' },
@@ -491,7 +488,7 @@ export class UserManagementComponent implements OnInit {
 
   private normalizeRoleName(role: string): string {
     const normalized = (role ?? '').trim().toUpperCase();
-    if (normalized === 'SAIDUL_OSD') return 'OSD';
+    if (normalized === 'SAIDUL_APPROVER') return 'APPROVER';
     if (normalized === 'APPROVER_JT_SECY') return 'APPROVER';
     if (normalized === 'SECURITY_POLICE') return 'SECURITY';
     return normalized;

@@ -85,7 +85,7 @@ public class VisitorAppointmentController {
      * - aiSummary, aiPriorityLevel: AI-generated fields
      */
     @PostMapping("/appointments")
-    @PreAuthorize("hasAnyRole('PUBLIC','CITIZEN','SUPER_ADMIN','ADMIN','OSD','DATA_ENTRY_OPERATOR','CMO','CMO_OFFICER','APPROVER','HCM')")
+    @PreAuthorize("hasAnyRole('PUBLIC','CITIZEN','SUPER_ADMIN','ADMIN','APPROVER','DEO','HCM')")
     public ResponseEntity<Map<String, Object>> submitAppointment(
             @RequestParam(required = false) Long applicantId,
             @RequestParam(required = false) String applicantName,
@@ -419,12 +419,9 @@ public class VisitorAppointmentController {
         return user != null && user.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .anyMatch(authority -> authority.equals("ROLE_ADMIN")
-                        || authority.equals("ROLE_OSD")
                         || authority.equals("ROLE_APPROVER")
-                        || authority.equals("ROLE_CMO")
-                        || authority.equals("ROLE_CMO_OFFICER")
                         || authority.equals("ROLE_HCM")
-                        || authority.equals("ROLE_DATA_ENTRY_OPERATOR"));
+                        || authority.equals("ROLE_DEO"));
     }
 
     private void validateConsent(Boolean consentAccepted, String consentVersion, String consentTimestamp) {

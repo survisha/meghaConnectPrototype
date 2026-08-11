@@ -168,7 +168,7 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
   bool get _canSkipMobileOtp {
     final auth = context.read<AuthService>();
     return auth.hasRole(const [
-          UserRole.DATA_ENTRY_OPERATOR,
+          UserRole.DEO,
           UserRole.APPROVER,
           UserRole.HCM,
         ]) && (_idType == 'EPIC' || _idType == 'NONE');

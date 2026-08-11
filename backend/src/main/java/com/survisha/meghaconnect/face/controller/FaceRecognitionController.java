@@ -29,14 +29,14 @@ public class FaceRecognitionController {
     }
 
     @PostMapping("/enroll")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','DATA_ENTRY_OPERATOR')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','DEO')")
     @Operation(summary = "Enroll a Base64 JPEG or PNG face photo")
     public FaceResponses.Enroll enroll(@Valid @RequestBody FaceRequests.Enroll request) {
         return service.enroll(request);
     }
 
     @PostMapping("/compare")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','OSD','APPROVER','CMO_OFFICER','HCM','DATA_ENTRY_OPERATOR')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','APPROVER','HCM','DEO')")
     @Operation(summary = "Compare two face photos (1:1)")
     public FaceResponses.Compare compare(@Valid @RequestBody FaceRequests.Compare request) {
         return service.compare(request);
@@ -50,7 +50,7 @@ public class FaceRecognitionController {
     }
 
     @PostMapping("/search")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','OSD','CMO_OFFICER','HCM','DATA_ENTRY_OPERATOR','APPROVER')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','APPROVER','HCM','DEO')")
     @Operation(summary = "Search an enrolled face (1:N); matched photo is restricted")
     public CompletableFuture<FaceResponses.Search> search(@Valid @RequestBody FaceRequests.Search request,
                                                            Authentication authentication,
@@ -79,7 +79,7 @@ public class FaceRecognitionController {
     }
 
     @PostMapping("/verify")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','OSD','APPROVER','CMO_OFFICER','HCM','DATA_ENTRY_OPERATOR')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','APPROVER','HCM','DEO')")
     @Operation(summary = "Verify a face against an enrollment (1:1)")
     public FaceResponses.Verify verify(@Valid @RequestBody FaceRequests.Verify request) {
         return service.verify(request);

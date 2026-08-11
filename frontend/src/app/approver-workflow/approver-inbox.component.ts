@@ -55,7 +55,7 @@ export class ApproverInboxComponent implements OnInit {
   
   loading = false;
   errorMsg = '';
-  userRole = 'CMO_OFFICER'; // Default role, can be overridden from auth service
+  userRole = 'APPROVER'; // Default role, can be overridden from auth service
 
   statusBadgeColor: { [key: string]: string } = {
     'SUBMITTED': '#1e40af',

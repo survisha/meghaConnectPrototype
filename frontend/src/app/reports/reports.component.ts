@@ -6,11 +6,13 @@ import { TableModule } from 'primeng/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../services/auth.service';
+import { FormsModule } from '@angular/forms';
+import { DecisionSupportService } from '../services/decision-support.service';
 
 @Component({
   selector: 'app-reports',
   standalone: true,
-  imports: [CommonModule, RouterLink, UIChart, TableModule, MatButtonModule, MatIconModule],
+  imports: [CommonModule, FormsModule, RouterLink, UIChart, TableModule, MatButtonModule, MatIconModule],
   templateUrl: './reports.component.html',
   styleUrls: ['./reports.component.scss'],
 })
@@ -28,8 +30,13 @@ export class ReportsComponent implements OnInit {
     { name: 'Umsning', total: 7, approved: 4, rejected: 1 },
     { name: 'Tura', total: 11, approved: 7, rejected: 2 },
   ];
+  reportRows: any[] = [];
+  reportTotal = 0;
+  reportLoading = false;
+  reportError = '';
+  filters: Record<string, string | number> = { status: '', category: '', followUpStatus: '', fromDate: '', toDate: '', page: 0, size: 25 };
 
-  constructor(public readonly auth: AuthService) {}
+  constructor(public readonly auth: AuthService, private readonly decisions: DecisionSupportService) {}
 
   get showAnalytics(): boolean {
     return !this.auth.hasRole('DEPARTMENT_ADMIN');
@@ -60,5 +67,21 @@ export class ReportsComponent implements OnInit {
         { label: 'Rejected', data: [5,4,2,2,2,2], backgroundColor: '#dc2626' },
       ]
     };
+    this.loadReport();
+  }
+
+  loadReport(): void {
+    this.reportLoading = true; this.reportError = '';
+    this.decisions.report(this.filters).subscribe({
+      next: page => { this.reportRows = page.content ?? []; this.reportTotal = page.totalElements ?? this.reportRows.length; this.reportLoading = false; },
+      error: () => { this.reportError = 'Unable to load the report.'; this.reportLoading = false; }
+    });
+  }
+
+  export(format: 'pdf' | 'xlsx'): void {
+    this.decisions.exportReport(format, this.filters).subscribe(blob => {
+      const url = URL.createObjectURL(blob); const anchor = document.createElement('a');
+      anchor.href = url; anchor.download = `appointment-report.${format}`; anchor.click(); URL.revokeObjectURL(url);
+    });
   }
 }

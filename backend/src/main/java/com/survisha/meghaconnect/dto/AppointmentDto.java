@@ -42,6 +42,7 @@ public class AppointmentDto {
     private String agendaType;
     private String agendaBrief;
     private Appointment.AppointmentStatus status;
+    private Appointment.AppointmentCategory appointmentCategory;
     private Appointment.MeetingLocation requestedLocation;
     private LocalDateTime scheduledDateTime;
     private Integer scheduledDurationMinutes;
@@ -50,6 +51,16 @@ public class AppointmentDto {
     private String approverRemarks;
     private String hcmRemarks;
     private String shortNotes;
+    private Long routedDepartmentId;
+    private String routedDepartmentName;
+    private String routedOfficer;
+    private String returnReason;
+    private String requiredInformation;
+    private LocalDate returnDueDate;
+    private String meetingOutcome;
+    private LocalDateTime completedAt;
+    private String completedBy;
+    private Boolean followUpRequired;
     private Boolean isWalkIn;
     private String walkInTokenNumber;
     private Integer meetingCountLast6Months;

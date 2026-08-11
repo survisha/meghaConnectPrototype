@@ -171,19 +171,25 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
           UserRole.DEO,
           UserRole.APPROVER,
           UserRole.HCM,
-        ]) && (_idType == 'EPIC' || _idType == 'NONE');
+        ]) &&
+        (_idType == 'EPIC' || _idType == 'NONE');
   }
 
   bool get _canGenerateRegistrationOtp {
     if (_loading) return false;
     if (_formImagePath != null && !_formExtractionReviewed) return false;
     if (_idType == 'EPIC') {
-      return _hasValidEpic && _hasValidVisitorName &&
-          (_skipMobileOtpVerification ? (_phoneCtrl.text.trim().isEmpty || _hasValidMobile) : _hasValidMobile);
+      return _hasValidEpic &&
+          _hasValidVisitorName &&
+          (_skipMobileOtpVerification
+              ? (_phoneCtrl.text.trim().isEmpty || _hasValidMobile)
+              : _hasValidMobile);
     }
     if (_idType == 'NONE') {
       return _hasValidVisitorName &&
-          (_skipMobileOtpVerification ? (_phoneCtrl.text.trim().isEmpty || _hasValidMobile) : _hasValidMobile);
+          (_skipMobileOtpVerification
+              ? (_phoneCtrl.text.trim().isEmpty || _hasValidMobile)
+              : _hasValidMobile);
     }
     return true;
   }
@@ -377,7 +383,8 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
       setState(() {
         _loading = false;
         _step = 2;
-        _warning = 'Mobile OTP verification will be skipped for this registration.';
+        _warning =
+            'Mobile OTP verification will be skipped for this registration.';
       });
       return;
     }
@@ -489,7 +496,8 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
       setState(() {
         _loading = false;
         _step = 2;
-        _warning = 'Mobile OTP verification will be skipped for this registration.';
+        _warning =
+            'Mobile OTP verification will be skipped for this registration.';
       });
       return;
     }
@@ -648,7 +656,8 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
       setState(() => _error = i18n.t('PLEASE_CAPTURE_LIVE_PHOTO'));
       return;
     }
-    if (!_skipMobileOtpVerification && (_idType == 'EPIC' || _idType == 'NONE') &&
+    if (!_skipMobileOtpVerification &&
+        (_idType == 'EPIC' || _idType == 'NONE') &&
         (!_otpVerified || _verifiedMobileNumber != _phoneCtrl.text.trim())) {
       setState(
           () => _error = 'Please verify the mobile OTP before registration.');
@@ -670,9 +679,11 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
         : _normalizeLettersAndSpaces(_districtCtrl.text);
     final booth = _outsideMeghalaya ? 'NA' : _boothCtrl.text.trim();
     final payload = <String, dynamic>{
-      'phoneNumber': _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
+      'phoneNumber':
+          _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
       'skipMobileOtpVerification': _skipMobileOtpVerification,
-      'otpVerificationToken': _skipMobileOtpVerification ? null : _otpVerificationToken,
+      'otpVerificationToken':
+          _skipMobileOtpVerification ? null : _otpVerificationToken,
       'fullName': _fullNameCtrl.text.trim(),
       'designation': _designationCtrl.text.trim(),
       'address': _addressCtrl.text.trim(),
@@ -1156,7 +1167,8 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
                   }
                 },
                 decoration: InputDecoration(
-                  labelText: '${i18n.t('MOBILE_NUMBER')}${_skipMobileOtpVerification ? '' : ' *'}',
+                  labelText:
+                      '${i18n.t('MOBILE_NUMBER')}${_skipMobileOtpVerification ? '' : ' *'}',
                   prefixIcon: const Icon(Icons.phone_outlined),
                   hintText: i18n.t('ENTER_10_DIGIT_MOBILE'),
                 ),
@@ -1175,17 +1187,20 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
                 CheckboxListTile(
                   contentPadding: EdgeInsets.zero,
                   value: _skipMobileOtpVerification,
-                  onChanged: _otpVerified ? null : (value) => setState(() {
-                    _skipMobileOtpVerification = value ?? false;
-                    _otpCtrl.clear();
-                    _otpVerificationToken = null;
-                    _clearMessages();
-                    _warning = _skipMobileOtpVerification
-                        ? 'Mobile OTP verification will be skipped.'
-                        : null;
-                  }),
+                  onChanged: _otpVerified
+                      ? null
+                      : (value) => setState(() {
+                            _skipMobileOtpVerification = value ?? false;
+                            _otpCtrl.clear();
+                            _otpVerificationToken = null;
+                            _clearMessages();
+                            _warning = _skipMobileOtpVerification
+                                ? 'Mobile OTP verification will be skipped.'
+                                : null;
+                          }),
                   title: const Text('Skip mobile OTP verification'),
-                  subtitle: const Text('Use when the visitor has no mobile access or OTP cannot be completed.'),
+                  subtitle: const Text(
+                      'Use when the visitor has no mobile access or OTP cannot be completed.'),
                 ),
                 if (_skipMobileOtpVerification)
                   MeghaStatusBanner.warning(_phoneCtrl.text.trim().isEmpty
@@ -1251,7 +1266,8 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
                   }
                 },
                 decoration: InputDecoration(
-                  labelText: 'Mobile Number${_skipMobileOtpVerification ? '' : ' *'}',
+                  labelText:
+                      'Mobile Number${_skipMobileOtpVerification ? '' : ' *'}',
                   prefixIcon: const Icon(Icons.phone_outlined),
                   hintText: 'Enter 10 digit mobile number',
                 ),
@@ -1270,17 +1286,20 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
                 CheckboxListTile(
                   contentPadding: EdgeInsets.zero,
                   value: _skipMobileOtpVerification,
-                  onChanged: _otpVerified ? null : (value) => setState(() {
-                    _skipMobileOtpVerification = value ?? false;
-                    _otpCtrl.clear();
-                    _otpVerificationToken = null;
-                    _clearMessages();
-                    _warning = _skipMobileOtpVerification
-                        ? 'Mobile OTP verification will be skipped.'
-                        : null;
-                  }),
+                  onChanged: _otpVerified
+                      ? null
+                      : (value) => setState(() {
+                            _skipMobileOtpVerification = value ?? false;
+                            _otpCtrl.clear();
+                            _otpVerificationToken = null;
+                            _clearMessages();
+                            _warning = _skipMobileOtpVerification
+                                ? 'Mobile OTP verification will be skipped.'
+                                : null;
+                          }),
                   title: const Text('Skip mobile OTP verification'),
-                  subtitle: const Text('Use when the visitor has no mobile access or OTP cannot be completed.'),
+                  subtitle: const Text(
+                      'Use when the visitor has no mobile access or OTP cannot be completed.'),
                 ),
                 if (_skipMobileOtpVerification)
                   MeghaStatusBanner.warning(_phoneCtrl.text.trim().isEmpty
@@ -1472,7 +1491,9 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () => setState(() => _step =
-                      (_idType == 'EPIC' && !_skipMobileOtpVerification) ? 1 : 0),
+                      (_idType == 'EPIC' && !_skipMobileOtpVerification)
+                          ? 1
+                          : 0),
                   icon: const Icon(Icons.arrow_back),
                   label: Text(i18n.t('PREVIOUS')),
                 ),

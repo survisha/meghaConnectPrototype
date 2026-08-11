@@ -60,29 +60,23 @@ import java.util.LinkedHashSet;
 public class AppointmentService {
 
     private static final List<Appointment.AppointmentStatus> DEO_VISIBLE_STATUSES = Arrays.asList(
-        Appointment.AppointmentStatus.CREATED,
-        Appointment.AppointmentStatus.SUBMITTED,
-        Appointment.AppointmentStatus.DEO_PROCESSED,
-        Appointment.AppointmentStatus.PENDING_APPROVER_REVIEW,
-        Appointment.AppointmentStatus.CMO_REVIEW,
-        Appointment.AppointmentStatus.APPROVER_REVIEW,
-        Appointment.AppointmentStatus.APPROVED,
-        Appointment.AppointmentStatus.HCM_PENDING,
-        Appointment.AppointmentStatus.FOLLOWUP,
-        Appointment.AppointmentStatus.SELECTED_FOR_PUBLIC_DARBAR,
-        Appointment.AppointmentStatus.APPROVED_WITH_DATE_TIME,
-        Appointment.AppointmentStatus.SCHEDULED
+        Appointment.AppointmentStatus.PENDING,
+        Appointment.AppointmentStatus.SCHEDULED,
+        Appointment.AppointmentStatus.REJECTED,
+        Appointment.AppointmentStatus.HCM_MET_COMPLETED,
+        Appointment.AppointmentStatus.ROUTED_TO_OFFICIAL,
+        Appointment.AppointmentStatus.COMPLETED,
+        Appointment.AppointmentStatus.SELECTED_FOR_PUBLIC_DARBAR
     );
 
     private static final List<Appointment.AppointmentStatus> APPROVER_VISIBLE_STATUSES = Arrays.asList(
-        Appointment.AppointmentStatus.APPROVER_REVIEW,
-        Appointment.AppointmentStatus.APPROVED,
-        Appointment.AppointmentStatus.HCM_ACCEPTED,
-        Appointment.AppointmentStatus.FORWARDED_TO_DEPARTMENT,
-        Appointment.AppointmentStatus.FOLLOWUP,
+        Appointment.AppointmentStatus.PENDING,
         Appointment.AppointmentStatus.SCHEDULED,
+        Appointment.AppointmentStatus.REJECTED,
+        Appointment.AppointmentStatus.HCM_MET_COMPLETED,
+        Appointment.AppointmentStatus.ROUTED_TO_OFFICIAL,
         Appointment.AppointmentStatus.COMPLETED,
-        Appointment.AppointmentStatus.HCM_REJECTED
+        Appointment.AppointmentStatus.SELECTED_FOR_PUBLIC_DARBAR
     );
     private static final List<Appointment.AppointmentStatus> KNOWN_APPOINTMENT_STATUSES =
         Arrays.asList(Appointment.AppointmentStatus.values());
@@ -332,8 +326,9 @@ public class AppointmentService {
             .agendaType("Guest Appointment")
             .subject("Guest Appointment - " + fullName)
             .appointmentType("Guest Appointment")
+            .appointmentCategory(Appointment.AppointmentCategory.SCHEDULED)
             .agendaBrief(reason)
-            .status(Appointment.AppointmentStatus.SUBMITTED)
+            .status(Appointment.AppointmentStatus.PENDING)
             .requestedLocation(Appointment.MeetingLocation.OTHERS)
             .mlaMdcApproved(false)
             .isWalkIn(false)
@@ -462,10 +457,13 @@ public class AppointmentService {
             .subject(dto.getSubject())
             .department(dto.getDepartment())
             .appointmentType(dto.getAppointmentType())
+            .appointmentCategory(Boolean.TRUE.equals(dto.getIsWalkIn())
+                ? Appointment.AppointmentCategory.WALK_IN
+                : Appointment.AppointmentCategory.SCHEDULED)
             .appointmentSource("CITIZEN")
             .agendaType(dto.getAgendaType())
             .agendaBrief(dto.getAgendaBrief())
-            .status(Appointment.AppointmentStatus.SUBMITTED)
+            .status(Appointment.AppointmentStatus.PENDING)
             .requestedLocation(dto.getRequestedLocation())
             .mlaMdcApproved(dto.getMlaMdcApproved())
             .consentAccepted(dto.getConsentAccepted())
@@ -523,7 +521,10 @@ public class AppointmentService {
             .agendaBrief(safeForm.getAgendaBrief())
             .appointmentSource(walkIn ? "WALKIN" : "CITIZEN")
             .appointmentType(walkIn ? "B2 Walk-in" : null)
-            .status(walkIn ? Appointment.AppointmentStatus.SCHEDULED : Appointment.AppointmentStatus.SUBMITTED)
+            .appointmentCategory(walkIn
+                ? Appointment.AppointmentCategory.WALK_IN
+                : Appointment.AppointmentCategory.SCHEDULED)
+            .status(Appointment.AppointmentStatus.PENDING)
             .requestedLocation(location)
             .mlaMdcApproved(safeForm.getMlaMdcApproved() != null && safeForm.getMlaMdcApproved())
             .consentAccepted(safeForm.getConsentAccepted())
@@ -645,6 +646,7 @@ public class AppointmentService {
             .agendaType(appointment.getAgendaType())
             .agendaBrief(appointment.getAgendaBrief())
             .status(appointment.getStatus())
+            .appointmentCategory(appointment.getAppointmentCategory())
             .requestedLocation(appointment.getRequestedLocation())
             .scheduledDateTime(appointment.getScheduledDateTime())
             .scheduledDurationMinutes(appointment.getScheduledDurationMinutes())
@@ -653,6 +655,16 @@ public class AppointmentService {
             .approverRemarks(appointment.getApproverRemarks())
             .hcmRemarks(appointment.getHcmRemarks())
             .shortNotes(appointment.getShortNotes())
+            .routedDepartmentId(appointment.getRoutedDepartment() != null ? appointment.getRoutedDepartment().getId() : null)
+            .routedDepartmentName(appointment.getRoutedDepartment() != null ? appointment.getRoutedDepartment().getDepartmentName() : null)
+            .routedOfficer(appointment.getRoutedOfficer())
+            .returnReason(appointment.getReturnReason())
+            .requiredInformation(appointment.getRequiredInformation())
+            .returnDueDate(appointment.getReturnDueDate())
+            .meetingOutcome(appointment.getMeetingOutcome())
+            .completedAt(appointment.getCompletedAt())
+            .completedBy(appointment.getCompletedBy())
+            .followUpRequired(appointment.getFollowUpRequired())
             .isWalkIn(appointment.getIsWalkIn())
             .walkInTokenNumber(walkInRepository.findByAppointment_Id(appointment.getId())
                     .map(WalkIn::getTokenNumber)
@@ -1169,7 +1181,7 @@ public class AppointmentService {
                 .agendaType(firstNonBlank(form.getAgendaType(), form.getRegistrationAgendaType()))
                 .briefDescription(firstNonBlank(form.getAgendaBrief(), form.getRegistrationBriefDescription()))
                 .createdByDeoId(actor)
-                .status("CREATED")
+                .status(WalkIn.WalkInStatus.PENDING)
                 .createdAt(DateTimeUtil.nowIST())
                 .updatedAt(DateTimeUtil.nowIST())
                 .build();

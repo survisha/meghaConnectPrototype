@@ -4,7 +4,11 @@ import com.survisha.meghaconnect.dto.AppointmentDto;
 import com.survisha.meghaconnect.entity.Appointment;
 import com.survisha.meghaconnect.exception.ResourceNotFoundException;
 import com.survisha.meghaconnect.repository.AppointmentRepository;
+import com.survisha.meghaconnect.repository.DepartmentRepository;
+import com.survisha.meghaconnect.repository.WalkInRepository;
+import com.survisha.meghaconnect.service.AppointmentAuditService;
 import com.survisha.meghaconnect.service.AppointmentService;
+import com.survisha.meghaconnect.service.AppointmentLifecycleService;
 import com.survisha.meghaconnect.util.DateTimeUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -22,8 +26,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -45,6 +51,103 @@ public class AppointmentApprovalController {
 
     private final AppointmentService appointmentService;
     private final AppointmentRepository appointmentRepository;
+    private final AppointmentLifecycleService lifecycleService;
+    private final AppointmentAuditService appointmentAuditService;
+    private final DepartmentRepository departmentRepository;
+    private final WalkInRepository walkInRepository;
+
+    @PostMapping("/{id}/return-information")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','HCM')")
+    public AppointmentDto returnForInformation(@PathVariable Long id,
+                                               @RequestBody ReturnInformationRequest request,
+                                               Authentication authentication) {
+        if (request.getReason() == null || request.getReason().isBlank()
+                || request.getRequiredInformation() == null || request.getRequiredInformation().isBlank()) {
+            throw new IllegalArgumentException("Return reason and required information are required.");
+        }
+        Appointment appointment = pendingScheduled(id);
+        appointment.setReturnReason(request.getReason().trim());
+        appointment.setRequiredInformation(request.getRequiredInformation().trim());
+        appointment.setReturnDueDate(request.getDueDate());
+        appointment.setApproverRemarks(request.getRemarks());
+        appointment.setUpdatedBy(actor(authentication));
+        Appointment saved = appointmentRepository.save(appointment);
+        auditSameStatus(saved, "RETURNED_FOR_INFORMATION", request.getReason(), authentication);
+        return appointmentService.toDto(saved);
+    }
+
+    @PostMapping("/{id}/resubmit")
+    @PreAuthorize("hasAnyRole('PUBLIC','CITIZEN','DEO','SUPER_ADMIN')")
+    public AppointmentDto resubmit(@PathVariable Long id, Authentication authentication) {
+        Appointment appointment = pendingScheduled(id);
+        if (appointment.getReturnReason() == null) {
+            throw new IllegalStateException("Appointment has not been returned for information.");
+        }
+        appointment.setReturnReason(null);
+        appointment.setRequiredInformation(null);
+        appointment.setReturnDueDate(null);
+        appointment.setUpdatedBy(actor(authentication));
+        Appointment saved = appointmentRepository.save(appointment);
+        auditSameStatus(saved, "RESUBMITTED", "Additional information resubmitted", authentication);
+        return appointmentService.toDto(saved);
+    }
+
+    @PostMapping("/{id}/route")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','HCM')")
+    public AppointmentDto routeAndClose(@PathVariable Long id,
+                                        @RequestBody RouteRequest request,
+                                        Authentication authentication) {
+        if (request.getDepartmentId() == null && (request.getOfficer() == null || request.getOfficer().isBlank())) {
+            throw new IllegalArgumentException("Department or responsible officer is required.");
+        }
+        Appointment appointment = pendingScheduled(id);
+        Appointment.AppointmentStatus oldStatus = appointment.getStatus();
+        if (request.getDepartmentId() != null) {
+            appointment.setRoutedDepartment(departmentRepository.findById(request.getDepartmentId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Department not found")));
+        }
+        appointment.setRoutedOfficer(request.getOfficer());
+        appointment.setMeetingOutcome(request.getDirection());
+        appointment.setApproverRemarks(request.getRemarks());
+        appointment.setFollowUpRequired(Boolean.TRUE.equals(request.getFollowUpRequired()));
+        lifecycleService.transition(appointment, Appointment.AppointmentStatus.ROUTED_TO_OFFICIAL);
+        appointment.setUpdatedBy(actor(authentication));
+        Appointment saved = appointmentRepository.save(appointment);
+        audit(saved, oldStatus, "ROUTED_TO_OFFICIAL", request.getDirection(), authentication);
+        return appointmentService.toDto(saved);
+    }
+
+    @PostMapping("/{id}/complete")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','HCM','DEO')")
+    public AppointmentDto completeMeeting(@PathVariable Long id,
+                                          @RequestBody CompleteMeetingRequest request,
+                                          Authentication authentication) {
+        if (request.getOutcome() == null || request.getOutcome().isBlank()) {
+            throw new IllegalArgumentException("Meeting outcome is required.");
+        }
+        Appointment appointment = appointmentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
+        Appointment.AppointmentStatus oldStatus = appointment.getStatus();
+        Appointment.AppointmentStatus target = appointment.getAppointmentCategory() == Appointment.AppointmentCategory.WALK_IN
+                ? Appointment.AppointmentStatus.COMPLETED
+                : Appointment.AppointmentStatus.HCM_MET_COMPLETED;
+        lifecycleService.transition(appointment, target);
+        appointment.setMeetingOutcome(request.getOutcome().trim());
+        appointment.setHcmRemarks(request.getRemarks());
+        appointment.setFollowUpRequired(Boolean.TRUE.equals(request.getFollowUpRequired()));
+        appointment.setCompletedAt(DateTimeUtil.nowIST());
+        appointment.setCompletedBy(actor(authentication));
+        appointment.setUpdatedBy(actor(authentication));
+        Appointment saved = appointmentRepository.save(appointment);
+        if (target == Appointment.AppointmentStatus.COMPLETED) {
+            walkInRepository.findByAppointment_Id(id).ifPresent(walkIn -> {
+                walkIn.setStatus(com.survisha.meghaconnect.entity.WalkIn.WalkInStatus.COMPLETED);
+                walkInRepository.save(walkIn);
+            });
+        }
+        audit(saved, oldStatus, "MEETING_COMPLETED", request.getOutcome(), authentication);
+        return appointmentService.toDto(saved);
+    }
 
     /**
      * Get pending appointments for CMO Officer or Joint Secretary (Approver)
@@ -63,7 +166,7 @@ public class AppointmentApprovalController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     public ResponseEntity<List<AppointmentDto>> getPendingAppointments(
-            @RequestParam(defaultValue = "SUBMITTED,CMO_REVIEW") String status,
+            @RequestParam(defaultValue = "PENDING") String status,
             Pageable pageable) {
         
         try {
@@ -190,7 +293,7 @@ public class AppointmentApprovalController {
                     .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
             
             Appointment.AppointmentStatus oldStatus = appointment.getStatus();
-            appointment.setStatus(Appointment.AppointmentStatus.HCM_REJECTED);
+            lifecycleService.transition(appointment, Appointment.AppointmentStatus.REJECTED);
 
             if (oldStatus == Appointment.AppointmentStatus.CMO_REVIEW) {
                 appointment.setCmoRemarks("REJECTED: " + request.getRejectReason());
@@ -228,7 +331,7 @@ public class AppointmentApprovalController {
             
             appointment.setScheduledDateTime(scheduledTime);
             appointment.setScheduledDurationMinutes(30);
-            appointment.setStatus(Appointment.AppointmentStatus.SCHEDULED);
+            lifecycleService.transition(appointment, Appointment.AppointmentStatus.SCHEDULED);
             appointment.setUpdatedAt(DateTimeUtil.nowIST());
             
             if (request.getLocation() != null) {
@@ -326,12 +429,48 @@ public class AppointmentApprovalController {
 
     // ──────────────────────── Helper Methods ────────────────────────
 
+    private Appointment pendingScheduled(Long id) {
+        Appointment appointment = appointmentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
+        if (appointment.getAppointmentCategory() != Appointment.AppointmentCategory.SCHEDULED
+                || appointment.getStatus() != Appointment.AppointmentStatus.PENDING) {
+            throw new IllegalStateException("Action is allowed only for a pending scheduled appointment.");
+        }
+        return appointment;
+    }
+
+    private void auditSameStatus(Appointment appointment, String action, String remarks, Authentication authentication) {
+        audit(appointment, appointment.getStatus(), action, remarks, authentication);
+    }
+
+    private void audit(Appointment appointment, Appointment.AppointmentStatus oldStatus,
+                       String action, String remarks, Authentication authentication) {
+        appointmentAuditService.recordStatusChange(appointment, oldStatus, appointment.getStatus(), action,
+                remarks, actor(authentication), actorRole(authentication));
+    }
+
+    private String actor(Authentication authentication) {
+        return authentication != null ? authentication.getName() : "system";
+    }
+
+    private String actorRole(Authentication authentication) {
+        if (authentication == null || authentication.getAuthorities().isEmpty()) return "SYSTEM";
+        return authentication.getAuthorities().iterator().next().getAuthority().replaceFirst("^ROLE_", "");
+    }
+
     private AppointmentDto convertToDTO(Appointment appointment) {
         return appointmentService.toDto(appointment);
     }
 
     private List<Appointment.AppointmentStatus> parseStatus(String status) {
-        return Arrays.asList(Appointment.AppointmentStatus.SUBMITTED, Appointment.AppointmentStatus.CMO_REVIEW);
+        if (status == null || status.isBlank()) {
+            return List.of(Appointment.AppointmentStatus.PENDING);
+        }
+        return Arrays.stream(status.split(","))
+                .map(String::trim)
+                .filter(value -> !value.isEmpty())
+                .map(value -> Appointment.AppointmentStatus.valueOf(value.toUpperCase()))
+                .collect(Collectors.toList());
     }
 
     private List<Map<String, Object>> generateAvailableSlots() {
@@ -390,6 +529,30 @@ public class AppointmentApprovalController {
         private String endTime;
         private String location;
         private Long excludeAppointmentId;
+    }
+
+    @Data
+    public static class ReturnInformationRequest {
+        private String reason;
+        private String requiredInformation;
+        private LocalDate dueDate;
+        private String remarks;
+    }
+
+    @Data
+    public static class RouteRequest {
+        private Long departmentId;
+        private String officer;
+        private String direction;
+        private String remarks;
+        private Boolean followUpRequired;
+    }
+
+    @Data
+    public static class CompleteMeetingRequest {
+        private String outcome;
+        private String remarks;
+        private Boolean followUpRequired;
     }
 }
 

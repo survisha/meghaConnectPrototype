@@ -13,6 +13,28 @@
     </div>
   </div>
 
+  <div class="section-card" style="margin-bottom:1.5rem">
+    <div class="section-card-header" style="display:flex;justify-content:space-between;align-items:center;gap:.75rem;flex-wrap:wrap">
+      <span>Appointment &amp; Follow-up Report</span>
+      <div style="display:flex;gap:.5rem"><button mat-stroked-button (click)="export('xlsx')">Excel</button><button mat-stroked-button (click)="export('pdf')">PDF</button></div>
+    </div>
+    <div class="section-card-body">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.75rem;margin-bottom:1rem">
+        <select [(ngModel)]="filters['status']"><option value="">All statuses</option><option>PENDING</option><option>SCHEDULED</option><option>REJECTED</option><option>HCM_MET_COMPLETED</option><option>ROUTED_TO_OFFICIAL</option><option>COMPLETED</option></select>
+        <select [(ngModel)]="filters['category']"><option value="">All categories</option><option>SCHEDULED</option><option>WALK_IN</option><option>PUBLIC_DARBAR</option></select>
+        <select [(ngModel)]="filters['followUpStatus']"><option value="">All follow-ups</option><option>PENDING</option><option>IN_PROGRESS</option><option>OVERDUE</option><option>COMPLETED</option></select>
+        <input type="date" [(ngModel)]="filters['fromDate']" aria-label="From date"><input type="date" [(ngModel)]="filters['toDate']" aria-label="To date">
+        <button mat-flat-button color="primary" (click)="loadReport()">Apply filters</button>
+      </div>
+      <p *ngIf="reportError" class="dir-red">{{ reportError }}</p>
+      <p-table [value]="reportRows" [loading]="reportLoading" styleClass="p-datatable-sm" [scrollable]="true">
+        <ng-template pTemplate="header"><tr><th>ID</th><th>Citizen</th><th>Type</th><th>Status</th><th>Department</th><th>Scheduled</th><th>Follow-up</th></tr></ng-template>
+        <ng-template pTemplate="body" let-r><tr><td>{{ r.appointmentId }}</td><td>{{ r.visitorName }}</td><td>{{ r.category }}</td><td>{{ r.status }}</td><td>{{ r.departmentName || r.routedDepartmentName || '—' }}</td><td>{{ r.scheduledDateTime | date:'medium' }}</td><td>{{ r.followUpStatus || '—' }}</td></tr></ng-template>
+      </p-table>
+      <small>{{ reportTotal }} matching record(s)</small>
+    </div>
+  </div>
+
   <div *ngIf="showAnalytics" style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
     <div class="section-card">
       <div class="section-card-header" style="display:flex;align-items:center;gap:0.5rem">

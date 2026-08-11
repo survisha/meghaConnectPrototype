@@ -56,12 +56,19 @@ public class WalkIn {
     @Column(name = "created_by_deo_id", length = 100)
     private String createdByDeoId;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
-    private String status;
+    @Builder.Default
+    private WalkInStatus status = WalkInStatus.PENDING;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    public enum WalkInStatus {
+        PENDING,
+        COMPLETED
+    }
 }

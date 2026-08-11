@@ -25,6 +25,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTabsModule } from '@angular/material/tabs';
 import { apiErrorMessage } from '../../shared/api-error.util';
 import { ToastService } from '../../shared/toast/toast.service';
+import { DashboardSummary, DecisionSupportService } from '../../services/decision-support.service';
 
 interface HcmAppointmentCard {
   id: number;
@@ -77,6 +78,8 @@ export class HcmDashboardComponent implements OnInit {
   loadingRemarks = false;
   loadingCitizenHistory = false;
   citizenHistoryError = '';
+  dashboardSummary: DashboardSummary | null = null;
+  citizenIntelligence: any = null;
   loadingAppointments = false;
   submittingAction = false;
   errorMsg = '';
@@ -113,12 +116,21 @@ export class HcmDashboardComponent implements OnInit {
     private appointmentService: AppointmentService,
     private referenceDataService: ReferenceDataService,
     private visitorSearchService: VisitorSearchService,
+    private decisionSupport: DecisionSupportService,
     private toast: ToastService,
   ) {}
   
   ngOnInit() {
     this.loadDepartments();
     this.loadAppointments();
+    this.loadDecisionSupport();
+  }
+
+  private loadDecisionSupport(): void {
+    this.decisionSupport.dashboardSummary().subscribe({
+      next: summary => this.dashboardSummary = summary,
+      error: error => this.setApiError('dashboardSummary', error, 'Unable to load dashboard summary.')
+    });
   }
   
   /**
@@ -301,6 +313,7 @@ export class HcmDashboardComponent implements OnInit {
     this.showDetailsDialog = false;
     this.selectedDetailAppointment = null;
     this.citizenHistory = null;
+    this.citizenIntelligence = null;
     this.citizenAppointmentHistory = [];
     this.citizenHistoryError = '';
     this.loadingCitizenHistory = false;
@@ -509,13 +522,22 @@ export class HcmDashboardComponent implements OnInit {
     }
 
     this.loadingCitizenHistory = true;
-    this.visitorSearchService.getPublicIdentificationHistory(citizenId).subscribe({
-      next: history => {
+    this.decisionSupport.citizenIntelligence(citizenId).subscribe({
+      next: intelligence => {
         if (this.selectedDetailAppointment?.id !== appointment.id) {
           return;
         }
-        this.citizenHistory = history;
-        this.citizenAppointmentHistory = history.appointments || [];
+        this.citizenIntelligence = intelligence;
+        this.citizenAppointmentHistory = intelligence.visitHistory || [];
+        this.citizenHistory = {
+          citizenId,
+          citizenName: intelligence.profile?.name || '',
+          photoUrl: intelligence.profile?.photoUrl,
+          visitCount: this.citizenAppointmentHistory.length,
+          lastVisitedAt: this.citizenAppointmentHistory[0]?.dateTime,
+          schemes: intelligence.schemeBenefits || [],
+          appointments: this.citizenAppointmentHistory,
+        } as PublicIdentificationHistory;
         this.loadingCitizenHistory = false;
       },
       error: error => {

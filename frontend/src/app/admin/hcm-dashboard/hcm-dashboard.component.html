@@ -7,6 +7,15 @@
     </button>
   </div>
 
+  <div class="summary-grid" *ngIf="dashboardSummary">
+    <mat-card><strong>{{ dashboardSummary.pendingScheduled }}</strong><span>Pending Appointments</span></mat-card>
+    <mat-card><strong>{{ dashboardSummary.scheduledUpcoming }}</strong><span>Scheduled Appointments</span></mat-card>
+    <mat-card><strong>{{ dashboardSummary.liveWalkIns }}</strong><span>Live Walk-ins</span></mat-card>
+    <mat-card><strong>{{ dashboardSummary.completedAppointments }}</strong><span>Completed</span></mat-card>
+    <mat-card><strong>{{ dashboardSummary.openFollowUps }}</strong><span>Open Follow-ups</span></mat-card>
+    <mat-card><strong>{{ dashboardSummary.overdueFollowUps }}</strong><span>Overdue Follow-ups</span></mat-card>
+  </div>
+
   <div *ngIf="errorMsg" class="error-message">
     {{ errorMsg }}
   </div>
@@ -364,6 +373,14 @@
           <div class="detail-row" *ngIf="!loadingCitizenHistory && citizenHistory">
             <strong>Total Visits:</strong>
             {{ citizenHistory.visitCount || 0 }}
+          </div>
+          <div class="detail-row" *ngIf="citizenIntelligence?.aiSummary">
+            <strong>Citizen Intelligence Briefing</strong>
+            <span>{{ citizenIntelligence.aiSummary }}</span>
+          </div>
+          <div class="detail-row" *ngIf="citizenIntelligence?.followUpSummary">
+            <strong>Follow-ups</strong>
+            <span>Open {{ citizenIntelligence.followUpSummary.open || 0 }} · Overdue {{ citizenIntelligence.followUpSummary.overdue || 0 }} · Completed {{ citizenIntelligence.followUpSummary.completed || 0 }}</span>
           </div>
           <div class="detail-row" *ngIf="!loadingCitizenHistory && citizenHistory?.lastVisitedAt">
             <strong>Last Visit:</strong>

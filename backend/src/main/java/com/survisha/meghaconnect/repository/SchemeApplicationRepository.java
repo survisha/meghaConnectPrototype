@@ -9,6 +9,7 @@ import java.util.List;
 
 @Repository
 public interface SchemeApplicationRepository extends JpaRepository<SchemeApplication, Long>, JpaSpecificationExecutor<SchemeApplication> {
+    List<SchemeApplication> findByAppointment_IdIn(List<Long> appointmentIds);
 
     List<SchemeApplication> findByApplicant_IdAndSchemeTypeOrderByCreatedAtDesc(
             Long applicantId,

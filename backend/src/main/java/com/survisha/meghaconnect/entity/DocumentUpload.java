@@ -31,6 +31,10 @@ public class DocumentUpload extends BaseEntity {
     @JoinColumn(name = "scheme_app_id")
     private SchemeApplication schemeApplication;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "follow_up_id")
+    private DirectionFollowUp followUp;
+
     @Column(nullable = false, length = 100)
     private String documentType;  // e.g., EPIC_SCAN, APPLICATION_LETTER, etc.
 

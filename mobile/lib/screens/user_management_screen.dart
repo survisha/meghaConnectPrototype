@@ -802,9 +802,7 @@ class _MetaLine extends StatelessWidget {
 
 UserRole _parseRole(String raw) {
   final normalized = raw.startsWith('ROLE_') ? raw.substring(5) : raw;
-  final mapped = normalized == 'SECURITY'
-      ? 'SECURITY_POLICE'
-      : normalized;
+  final mapped = normalized == 'SECURITY' ? 'SECURITY_POLICE' : normalized;
   return UserRole.values.firstWhere(
     (role) => role.name == mapped,
     orElse: () => UserRole.PUBLIC,

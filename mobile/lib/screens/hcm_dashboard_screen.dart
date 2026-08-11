@@ -24,6 +24,7 @@ class _HcmDashboardScreenState extends State<HcmDashboardScreen> {
   DateTime _selectedDate = DateTime.now();
   List<Map<String, dynamic>> _appointments = [];
   List<Map<String, String>> _departments = [];
+  Map<String, dynamic> _dashboardSummary = const {};
   int _pageIndex = 0;
   bool _loading = true;
   bool _submitting = false;
@@ -56,11 +57,13 @@ class _HcmDashboardScreenState extends State<HcmDashboardScreen> {
     final results = await Future.wait([
       ApiService.getHcmActionAppointments(date),
       ApiService.getReferenceData('DEPARTMENT'),
+      ApiService.getHcmDashboardSummary(),
     ]);
     if (!mounted) return;
 
-    var appointments =
-        results[0].where(_isPendingHcmActionAppointment).toList();
+    var appointments = (results[0] as List<Map<String, dynamic>>)
+        .where(_isPendingHcmActionAppointment)
+        .toList();
     if (appointments.isEmpty && context.read<ConnectivityService>().isOffline) {
       final cached = await OfflineRepository().cachedAppointments();
       appointments = cached.where(_isPendingHcmActionAppointment).toList();
@@ -70,6 +73,7 @@ class _HcmDashboardScreenState extends State<HcmDashboardScreen> {
     setState(() {
       _appointments = appointments;
       _departments = results[1] as List<Map<String, String>>;
+      _dashboardSummary = results[2] as Map<String, dynamic>;
       _loading = false;
       _error = null;
     });
@@ -78,7 +82,8 @@ class _HcmDashboardScreenState extends State<HcmDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthService>().user!;
-    final title = user.role == UserRole.APPROVER ? 'APPROVER Dashboard' : 'HCM Dashboard';
+    final title =
+        user.role == UserRole.APPROVER ? 'APPROVER Dashboard' : 'HCM Dashboard';
     return Column(
       children: [
         _header(user, title),
@@ -200,22 +205,24 @@ class _HcmDashboardScreenState extends State<HcmDashboardScreen> {
           childAspectRatio: 1.45,
           children: [
             _SummaryCard(
-              label: 'Pending Actions',
-              value: _appointments.length,
+              label: 'Pending Scheduled',
+              value: (_dashboardSummary['pendingScheduled'] as num?)?.toInt() ??
+                  _appointments.length,
               icon: Icons.pending_actions_outlined,
               color: const Color(0xFFB45309),
             ),
             _SummaryCard(
-              label: 'Accepted',
-              value: _appointments
-                  .where((e) => _text(e['status']).contains('ACCEPT'))
-                  .length,
+              label: 'Upcoming',
+              value:
+                  (_dashboardSummary['scheduledUpcoming'] as num?)?.toInt() ??
+                      0,
               icon: Icons.done_all_outlined,
               color: const Color(0xFF15803D),
             ),
             _SummaryCard(
-              label: 'Need Review',
-              value: _appointments.length,
+              label: 'Overdue Follow-ups',
+              value:
+                  (_dashboardSummary['overdueFollowUps'] as num?)?.toInt() ?? 0,
               icon: Icons.assignment_late_outlined,
               color: const Color(0xFF7C3AED),
             ),

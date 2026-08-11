@@ -215,6 +215,17 @@
   }
 }
 
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+
+  mat-card { padding: 16px; display: flex; flex-direction: column; gap: 6px; }
+  strong { font-size: 1.6rem; color: #1a237e; }
+  span { color: #475569; }
+}
+
 .date-filter-row {
   display: flex;
   justify-content: flex-start;

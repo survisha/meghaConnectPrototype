@@ -58,6 +58,10 @@ export class ApproverInboxComponent implements OnInit {
   userRole = 'APPROVER'; // Default role, can be overridden from auth service
 
   statusBadgeColor: { [key: string]: string } = {
+    'PENDING': '#d97706',
+    'REJECTED': '#dc2626',
+    'ROUTED_TO_OFFICIAL': '#7c3aed',
+    'HCM_MET_COMPLETED': '#059669',
     'SUBMITTED': '#1e40af',
     'CMO_REVIEW': '#ea580c',
     'APPROVER_REVIEW': '#7c3aed',
@@ -158,6 +162,38 @@ export class ApproverInboxComponent implements OnInit {
 
   scheduleAppointment(appointmentId: number): void {
     this.router.navigate(['/scheduling'], { queryParams: { appointmentId: appointmentId } });
+  }
+
+  returnAppointment(appointmentId: number): void {
+    const reason = window.prompt('Return reason');
+    if (!reason?.trim()) return;
+    const requiredInformation = window.prompt('Required information');
+    if (!requiredInformation?.trim()) return;
+    this.appointmentService.returnForInformation(appointmentId, { reason, requiredInformation }).subscribe({
+      next: () => this.loadPendingAppointments(),
+      error: err => this.errorMsg = apiErrorMessage(err, 'Unable to return appointment for information.')
+    });
+  }
+
+  routeAppointment(appointmentId: number): void {
+    const departmentText = window.prompt('Department ID (leave blank when routing to a named official)');
+    const officer = window.prompt('Responsible official/officer');
+    const direction = window.prompt('Direction/instruction');
+    const departmentId = departmentText?.trim() ? Number(departmentText) : undefined;
+    if (!departmentId && !officer?.trim()) return;
+    this.appointmentService.routeAndClose(appointmentId, { departmentId, officer: officer || undefined, direction: direction || undefined }).subscribe({
+      next: () => this.loadPendingAppointments(),
+      error: err => this.errorMsg = apiErrorMessage(err, 'Unable to route appointment.')
+    });
+  }
+
+  rejectAppointment(appointmentId: number): void {
+    const reason = window.prompt('Rejection reason');
+    if (!reason?.trim()) return;
+    this.appointmentService.rejectAppointment(appointmentId, reason).subscribe({
+      next: () => this.loadPendingAppointments(),
+      error: err => this.errorMsg = apiErrorMessage(err, 'Unable to reject appointment.')
+    });
   }
 
   getStatusBadgeColor(status: string): string {

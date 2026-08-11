@@ -51,13 +51,8 @@ final _allKpis = <_Kpi>[
       [UserRole.HCM, UserRole.ADMIN, UserRole.APPROVER]),
   const _Kpi('Active Scheme Apps', 12, Icons.workspace_premium_outlined,
       Color(0xFF065F46), Color(0xFFD1FAE5), _seniorStaff),
-  const _Kpi(
-      'Walk-ins Today',
-      4,
-      Icons.login_outlined,
-      Color(0xFF0369A1),
-      Color(0xFFE0F2FE),
-      [UserRole.DEO, UserRole.ADMIN, UserRole.APPROVER]),
+  const _Kpi('Walk-ins Today', 4, Icons.login_outlined, Color(0xFF0369A1),
+      Color(0xFFE0F2FE), [UserRole.DEO, UserRole.ADMIN, UserRole.APPROVER]),
   const _Kpi('CMO Reviews Due', 7, Icons.rate_review_outlined,
       Color(0xFF7C3AED), Color(0xFFEDE9FE), [UserRole.APPROVER]),
 ];
@@ -69,12 +64,8 @@ final _allQuickActions = <_QuickAction>[
       'new_appointment',
       Color(0xFF1A237E),
       [UserRole.ADMIN, UserRole.APPROVER, UserRole.DEO]),
-  const _QuickAction(
-      'Walk-in Counter',
-      Icons.login_outlined,
-      'walkin',
-      Color(0xFF2E7D32),
-      [UserRole.ADMIN, UserRole.APPROVER, UserRole.DEO]),
+  const _QuickAction('Walk-in Counter', Icons.login_outlined, 'walkin',
+      Color(0xFF2E7D32), [UserRole.ADMIN, UserRole.APPROVER, UserRole.DEO]),
   const _QuickAction(
       'Guest Registration',
       Icons.person_add_alt_1_outlined,
@@ -84,12 +75,11 @@ final _allQuickActions = <_QuickAction>[
   const _QuickAction('Apply for Scheme', Icons.workspace_premium_outlined,
       'scheme_form', Color(0xFFB45309), [UserRole.ADMIN, UserRole.APPROVER]),
   const _QuickAction(
-      'Identify Person', Icons.badge_outlined, 'identify', Color(0xFF0288D1), [
-    UserRole.HCM,
-    UserRole.ADMIN,
-    UserRole.APPROVER,
-    UserRole.DEO
-  ]),
+      'Identify Person',
+      Icons.badge_outlined,
+      'identify',
+      Color(0xFF0288D1),
+      [UserRole.HCM, UserRole.ADMIN, UserRole.APPROVER, UserRole.DEO]),
   const _QuickAction('View Reports', Icons.bar_chart_outlined, 'reports',
       Color(0xFF6D28D9), _seniorStaff),
   const _QuickAction('Manage Users', Icons.manage_accounts_outlined, 'users',

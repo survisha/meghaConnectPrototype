@@ -46,6 +46,11 @@ public class Appointment extends BaseEntity {
     @Column(length = 50)
     private String appointmentType;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "appointment_category", nullable = false, length = 30)
+    @Builder.Default
+    private AppointmentCategory appointmentCategory = AppointmentCategory.SCHEDULED;
+
     @Column(length = 20)
     private String appointmentSource;
 
@@ -125,6 +130,33 @@ public class Appointment extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String rejectionReason;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "routed_department_id")
+    private Department routedDepartment;
+
+    @Column(length = 200)
+    private String routedOfficer;
+
+    @Column(columnDefinition = "TEXT")
+    private String returnReason;
+
+    @Column(columnDefinition = "TEXT")
+    private String requiredInformation;
+
+    private LocalDate returnDueDate;
+
+    @Column(columnDefinition = "TEXT")
+    private String meetingOutcome;
+
+    private LocalDateTime completedAt;
+
+    @Column(length = 100)
+    private String completedBy;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private Boolean followUpRequired = false;
+
     @Column(length = 100)
     private String selectedForPublicDarbarBy;
 
@@ -185,8 +217,10 @@ public class Appointment extends BaseEntity {
 
     public enum EventType  { A1, A2, A3, A4, B1, B2 }
     public enum MeetingLocation { SHILLONG, TURA, DELHI, OTHERS }
+    public enum AppointmentCategory { SCHEDULED, WALK_IN, PUBLIC_DARBAR }
 
     public enum AppointmentStatus {
+        PENDING, HCM_MET_COMPLETED, ROUTED_TO_OFFICIAL,
         CREATED, PENDING_APPROVER_REVIEW, FOLLOWUP, SELECTED_FOR_PUBLIC_DARBAR,
         PUBLIC_DARBAR_DATE_CREATED, SCHEDULED_FOR_PUBLIC_DARBAR,
         APPROVED, APPROVED_WITH_DATE_TIME, REJECTED,

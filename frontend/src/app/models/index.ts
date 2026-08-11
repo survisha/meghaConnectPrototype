@@ -9,6 +9,7 @@ export type Location  = 'SHILLONG' | 'TURA' | 'DELHI' | 'OTHERS';
 export type SchemeType = 'CMSDF' | 'CMSG' | 'CM_CARE' | 'CM_CONNECT' | 'CM_ELEVATE' | 'FOCUS_PLUS' | 'OTHERS';
 export type DirectionColor = 'GREEN' | 'YELLOW' | 'BLUE';
 export type AppointmentStatus =
+  | 'PENDING' | 'SCHEDULED' | 'REJECTED' | 'HCM_MET_COMPLETED' | 'ROUTED_TO_OFFICIAL'
   | 'CREATED' | 'SUBMITTED' | 'DEO_PROCESSED' | 'PENDING_APPROVER_REVIEW'
   | 'CMO_REVIEW' | 'APPROVER_REVIEW' | 'APPROVED' | 'HCM_PENDING'
   | 'HCM_ACCEPTED' | 'HCM_SNOOZED' | 'HCM_REJECTED'
@@ -16,6 +17,8 @@ export type AppointmentStatus =
   | 'SCHEDULED_FOR_PUBLIC_DARBAR' | 'APPROVED_WITH_DATE_TIME'
   | 'REJECTED' | 'SCHEDULED' | 'FORWARDED_TO_DEPARTMENT'
   | 'SUPPORTING_DOCUMENT_REQUIRED' | 'COMPLETED' | 'CANCELLED';
+
+export type AppointmentCategory = 'SCHEDULED' | 'WALK_IN' | 'PUBLIC_DARBAR';
 
 export type KycStatus = 'PENDING' | 'KYC_PENDING' | 'PHOTO_MATCHED' | 'DEMOGRAPHIC_MATCHED' | 'FAILED' | 'MANUAL_VERIFICATION_REQUIRED' | 'VERIFIED' | 'REJECTED';
 
@@ -103,6 +106,7 @@ export interface Appointment {
   agendaType: string;
   agendaBrief: string;
   status: AppointmentStatus;
+  appointmentCategory?: AppointmentCategory;
   requestedLocation: Location;
   scheduledDateTime?: string;
   scheduledDurationMinutes?: number;
@@ -113,6 +117,16 @@ export interface Appointment {
   approverRemarks?: string;
   hcmRemarks?: string;
   shortNotes?: string;
+  routedDepartmentId?: number;
+  routedDepartmentName?: string;
+  routedOfficer?: string;
+  returnReason?: string;
+  requiredInformation?: string;
+  returnDueDate?: string;
+  meetingOutcome?: string;
+  completedAt?: string;
+  completedBy?: string;
+  followUpRequired?: boolean;
   directions?: Direction[];
   associates?: AssociateCitizen[];
   isWalkIn?: boolean;

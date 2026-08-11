@@ -9,4 +9,5 @@ import java.util.Optional;
 @Repository
 public interface WalkInRepository extends JpaRepository<WalkIn, Long> {
     Optional<WalkIn> findByAppointment_Id(Long appointmentId);
+    long countByStatus(WalkIn.WalkInStatus status);
 }

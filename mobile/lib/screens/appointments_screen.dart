@@ -1906,8 +1906,7 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
               widget.appointment.status == 'SUBMITTED'));
 
   bool _canUseCmoActions(UserRole role) =>
-      [UserRole.HCM, UserRole.ADMIN, UserRole.APPROVER]
-          .contains(role) &&
+      [UserRole.HCM, UserRole.ADMIN, UserRole.APPROVER].contains(role) &&
       ['SUBMITTED', 'CMO_REVIEW'].contains(widget.appointment.status);
 
   bool _canUseJtSecForwarding(UserRole role) =>

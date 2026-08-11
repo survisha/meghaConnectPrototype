@@ -60,11 +60,10 @@ class _ApproverWorkflowScreenState extends State<ApproverWorkflowScreen> {
     if (!mounted) return;
     final content = (data['content'] as List<dynamic>?) ?? [];
     const reviewStatuses = {
-      'SUBMITTED',
-      'PENDING_APPROVER_REVIEW',
-      'APPROVER_REVIEW',
-      'HCM_PENDING',
-      'CMO_REVIEW'
+      'PENDING',
+      'SCHEDULED',
+      'REJECTED',
+      'ROUTED_TO_OFFICIAL'
     };
     setState(() {
       _appointments = content
@@ -96,13 +95,13 @@ class _ApproverWorkflowScreenState extends State<ApproverWorkflowScreen> {
 
   Color _statusColor(String status) {
     switch (status) {
-      case 'APPROVER_REVIEW':
+      case 'PENDING':
         return const Color(0xFFF57F17);
-      case 'HCM_PENDING':
+      case 'SCHEDULED':
         return const Color(0xFF1565C0);
       case 'HCM_ACCEPTED':
         return const Color(0xFF2E7D32);
-      case 'HCM_REJECTED':
+      case 'REJECTED':
         return const Color(0xFFC62828);
       default:
         return Colors.grey;
@@ -118,7 +117,7 @@ class _ApproverWorkflowScreenState extends State<ApproverWorkflowScreen> {
       ),
       builder: (ctx) => _ApproverDetailSheet(
         appointment: appt,
-        onApprove: (remarks) => _handleAction(appt, 'APPROVE', remarks),
+        onApprove: (remarks) => _handleRoute(appt, remarks),
         onReject: (remarks) => _handleAction(appt, 'REJECT', remarks),
         onReschedule: (date) => _handleReschedule(appt, date),
       ),
@@ -127,12 +126,12 @@ class _ApproverWorkflowScreenState extends State<ApproverWorkflowScreen> {
 
   Future<void> _handleAction(
       _ApproverAppointment appt, String action, String remarks) async {
-    final newStatus = action == 'APPROVE' ? 'HCM_PENDING' : 'HCM_REJECTED';
+    const newStatus = 'REJECTED';
     final offline = context.read<ConnectivityService>().isOffline;
     final result = offline
         ? null
-        : await ApiService.updateAppointmentStatus(appt.backendId, newStatus,
-            remarks: remarks.isNotEmpty ? remarks : null);
+        : await ApiService.rejectPendingAppointment(appt.backendId,
+            remarks.isNotEmpty ? remarks : 'Rejected by Approver');
     if (!mounted) return;
     if (result != null) {
       setState(() {
@@ -160,23 +159,45 @@ class _ApproverWorkflowScreenState extends State<ApproverWorkflowScreen> {
     }
     final message = result == null
         ? 'No internet connection. Saved offline.'
-        : action == 'APPROVE'
-            ? '${appt.id} approved and forwarded to HCM.'
-            : '${appt.id} rejected.';
+        : '${appt.id} rejected.';
     result == null
         ? AppNotificationService.info(message)
         : AppNotificationService.success(message);
   }
 
-  void _handleReschedule(_ApproverAppointment appt, String newDate) {
-    AppNotificationService.success('${appt.id} rescheduled to $newDate.');
+  Future<void> _handleReschedule(
+      _ApproverAppointment appt, String newDate) async {
+    final date = DateTime.tryParse(newDate);
+    final result = date == null
+        ? null
+        : await ApiService.schedulePendingAppointment(appt.backendId, date);
+    if (!mounted) return;
+    if (result == null) {
+      AppNotificationService.error('Unable to schedule ${appt.id}.');
+      return;
+    }
+    setState(() => appt.status = 'SCHEDULED');
+    AppNotificationService.success('${appt.id} scheduled for $newDate.');
+  }
+
+  Future<void> _handleRoute(_ApproverAppointment appt, String remarks) async {
+    final result = await ApiService.routePendingAppointment(appt.backendId,
+        officer: 'Responsible Official', direction: remarks);
+    if (!mounted) return;
+    if (result == null) {
+      AppNotificationService.error('Unable to route ${appt.id}.');
+      return;
+    }
+    setState(() => appt.status = 'ROUTED_TO_OFFICIAL');
+    AppNotificationService.success(
+        '${appt.id} routed to the responsible official.');
   }
 
   @override
   Widget build(BuildContext context) {
     final role = context.watch<AuthService>().user!.role;
     final pendingCount =
-        _appointments.where((a) => a.status == 'APPROVER_REVIEW').length;
+        _appointments.where((a) => a.status == 'PENDING').length;
 
     return Column(
       children: [
@@ -250,7 +271,7 @@ class _ApproverWorkflowScreenState extends State<ApproverWorkflowScreen> {
 
   Widget _buildAppointmentCard(_ApproverAppointment appt) {
     final statusColor = _statusColor(appt.status);
-    final isPending = appt.status == 'APPROVER_REVIEW';
+    final isPending = appt.status == 'PENDING';
     return GestureDetector(
       onTap: () => _openDetailSheet(appt),
       child: Container(
@@ -356,7 +377,7 @@ class _ApproverWorkflowScreenState extends State<ApproverWorkflowScreen> {
                     Expanded(
                       child: OutlinedButton.icon(
                         icon: const Icon(Icons.check_circle_outline, size: 16),
-                        label: const Text('Approve'),
+                        label: const Text('Review'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: const Color(0xFF2E7D32),
                           side: const BorderSide(color: Color(0xFF2E7D32)),
@@ -482,7 +503,7 @@ class _ApproverDetailSheetState extends State<_ApproverDetailSheet> {
   @override
   Widget build(BuildContext context) {
     final appt = widget.appointment;
-    final isPending = appt.status == 'APPROVER_REVIEW';
+    final isPending = appt.status == 'PENDING';
 
     return DraggableScrollableSheet(
       initialChildSize: 0.75,
@@ -651,7 +672,7 @@ class _ApproverDetailSheetState extends State<_ApproverDetailSheet> {
               controller: _remarksCtrl,
               maxLines: 3,
               decoration: const InputDecoration(
-                hintText: 'Enter your remarks before approving or rejecting...',
+                hintText: 'Enter routing direction or rejection reason...',
                 border: OutlineInputBorder(),
                 contentPadding:
                     EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -663,7 +684,7 @@ class _ApproverDetailSheetState extends State<_ApproverDetailSheet> {
                 Expanded(
                   child: ElevatedButton.icon(
                     icon: const Icon(Icons.check_circle_outline),
-                    label: const Text('Approve & Push to HCM'),
+                    label: const Text('Route to Official'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF2E7D32),
                       foregroundColor: Colors.white,
@@ -699,7 +720,7 @@ class _ApproverDetailSheetState extends State<_ApproverDetailSheet> {
                 Expanded(
                   child: OutlinedButton.icon(
                     icon: const Icon(Icons.calendar_today_outlined),
-                    label: const Text('Reschedule'),
+                    label: const Text('Schedule'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: const Color(0xFF1A237E),
                       side: const BorderSide(color: Color(0xFF1A237E)),

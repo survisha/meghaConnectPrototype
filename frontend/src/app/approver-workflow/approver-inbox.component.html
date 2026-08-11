@@ -172,11 +172,29 @@
                       matTooltip="Review Details">
                 <mat-icon>visibility</mat-icon>
               </button>
-              <button *ngIf="element.status === 'CMO_REVIEW' || element.status === 'APPROVER_REVIEW'"
+              <button *ngIf="element.status === 'PENDING'"
+                      mat-icon-button color="warn"
+                      (click)="returnAppointment(element.appointmentId)"
+                      matTooltip="Return for More Information">
+                <mat-icon>assignment_return</mat-icon>
+              </button>
+              <button *ngIf="element.status === 'PENDING'"
                       mat-icon-button color="accent"
                       (click)="scheduleAppointment(element.appointmentId)"
                       matTooltip="Schedule Appointment">
                 <mat-icon>calendar_month</mat-icon>
+              </button>
+              <button *ngIf="element.status === 'PENDING'"
+                      mat-icon-button
+                      (click)="routeAppointment(element.appointmentId)"
+                      matTooltip="Route to Official / Department and Close">
+                <mat-icon>account_tree</mat-icon>
+              </button>
+              <button *ngIf="element.status === 'PENDING'"
+                      mat-icon-button color="warn"
+                      (click)="rejectAppointment(element.appointmentId)"
+                      matTooltip="Reject Appointment">
+                <mat-icon>cancel</mat-icon>
               </button>
             </div>
           </td>

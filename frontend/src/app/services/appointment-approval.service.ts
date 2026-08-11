@@ -13,7 +13,8 @@ export interface AppointmentApproval {
   agendaType: string;
   requestedLocation: string;
   agendaBrief: string;
-  status: string; // SUBMITTED, CMO_REVIEW, APPROVER_REVIEW, HCM_PENDING, SCHEDULED
+  status: string;
+  appointmentCategory?: 'SCHEDULED' | 'WALK_IN' | 'PUBLIC_DARBAR';
   submittedDate: string;
   projectName?: string;
   schemeType?: string;
@@ -52,11 +53,25 @@ export class AppointmentApprovalService {
    * Get pending appointments for CMO Officer
    */
   getPendingAppointments(role: string = 'APPROVER'): Observable<AppointmentApproval[]> {
-    const path = role === 'DEO' ? 'deo' : 'approver';
-    return this.http.get<unknown>(`${this.apiUrl}/${path}?page=0&size=100`).pipe(
+    const url = role === 'DEO'
+      ? `${this.apiUrl}/deo?page=0&size=100`
+      : `${this.apiUrl}/pending?status=PENDING&page=0&size=100`;
+    return this.http.get<unknown>(url).pipe(
       map(res => this.normalizeApprovalList(res)),
       tap(appointments => this.pendingAppointments$.next(appointments))
     );
+  }
+
+  returnForInformation(appointmentId: number, payload: { reason: string; requiredInformation: string; dueDate?: string; remarks?: string }): Observable<any> {
+    return this.http.post(`${this.apiUrl}/${appointmentId}/return-information`, payload);
+  }
+
+  routeAndClose(appointmentId: number, payload: { departmentId?: number; officer?: string; direction?: string; remarks?: string; followUpRequired?: boolean }): Observable<any> {
+    return this.http.post(`${this.apiUrl}/${appointmentId}/route`, payload);
+  }
+
+  completeMeeting(appointmentId: number, payload: { outcome: string; remarks?: string; followUpRequired?: boolean }): Observable<any> {
+    return this.http.post(`${this.apiUrl}/${appointmentId}/complete`, payload);
   }
 
   /**
@@ -89,10 +104,7 @@ export class AppointmentApprovalService {
    * CMO rejects appointment
    */
   rejectAppointment(appointmentId: number, rejectReason: string): Observable<any> {
-    return this.http.put(`${this.apiUrl}/${appointmentId}/status`, {
-      remarks: rejectReason,
-      status: 'REJECTED'
-    });
+    return this.http.put(`${this.apiUrl}/${appointmentId}/reject`, { rejectReason });
   }
 
   /**
@@ -180,7 +192,8 @@ export class AppointmentApprovalService {
       agendaType: raw.agendaType ?? raw.appointmentType ?? raw.subject ?? '',
       requestedLocation: raw.requestedLocation ?? 'OTHERS',
       agendaBrief: raw.agendaBrief ?? raw.description ?? '',
-      status: raw.status ?? 'SUBMITTED',
+      status: raw.status ?? 'PENDING',
+      appointmentCategory: raw.appointmentCategory ?? (raw.isWalkIn ? 'WALK_IN' : 'SCHEDULED'),
       submittedDate: raw.submittedDate ?? raw.createdAt ?? raw.updatedAt ?? new Date().toISOString(),
       projectName: raw.projectName,
       schemeType: raw.schemeType,

@@ -7,6 +7,19 @@ import '../core/security/secure_app_storage.dart';
 
 class ApiService {
   static Uri _u(String path) => Uri.parse('${AppConfig.apiV1BaseUrl}$path');
+
+  static Future<Map<String, dynamic>> getHcmDashboardSummary() async {
+    try {
+      final response = await http
+          .get(_u('/hcm/dashboard-summary'), headers: await _headers())
+          .timeout(const Duration(seconds: 20));
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return const {};
+  }
+
   static Uri _fileApi(String path) => Uri.parse('${AppConfig.apiBaseUrl}$path');
   static String? lastLoginError;
   static String? lastLoginErrorCode;
@@ -621,12 +634,17 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> registerVisitor(
-      Map<String, dynamic> payload, {bool staffRegistration = false}) async {
+      Map<String, dynamic> payload,
+      {bool staffRegistration = false}) async {
     try {
       final resp = await http
           .post(
-            _u(staffRegistration ? '/visitors/staff-register' : '/visitor/auth/register'),
-            headers: staffRegistration ? await _headers() : {'Content-Type': 'application/json'},
+            _u(staffRegistration
+                ? '/visitors/staff-register'
+                : '/visitor/auth/register'),
+            headers: staffRegistration
+                ? await _headers()
+                : {'Content-Type': 'application/json'},
             body: jsonEncode(payload),
           )
           .timeout(const Duration(seconds: 30));
@@ -1252,8 +1270,7 @@ class ApiService {
       };
       final resp = await http
           .post(_u('/face-recognition/search'),
-              headers: await _headers(),
-              body: jsonEncode(request))
+              headers: await _headers(), body: jsonEncode(request))
           .timeout(const Duration(seconds: 30));
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
         return Map<String, dynamic>.from(jsonDecode(resp.body) as Map);
@@ -1273,9 +1290,11 @@ class ApiService {
     if (value.isEmpty) {
       throw const FormatException('Face photo is required.');
     }
-    final prefix = RegExp(r'^data:image/(jpeg|png);base64,', caseSensitive: false);
+    final prefix =
+        RegExp(r'^data:image/(jpeg|png);base64,', caseSensitive: false);
     if (value.toLowerCase().startsWith('data:') && !prefix.hasMatch(value)) {
-      throw const FormatException('Only JPEG or PNG face images are supported.');
+      throw const FormatException(
+          'Only JPEG or PNG face images are supported.');
     }
     final normalized = value.replaceFirst(prefix, '');
     if (normalized.isEmpty) {
@@ -1346,6 +1365,47 @@ class ApiService {
           .timeout(const Duration(seconds: 20));
       if (resp.statusCode == 200) {
         return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  static Future<Map<String, dynamic>?> schedulePendingAppointment(
+      int id, DateTime date,
+      {String? remarks}) async {
+    final start = DateTime(date.year, date.month, date.day, 10);
+    final end = start.add(const Duration(minutes: 30));
+    return _appointmentJsonPut(
+        '/appointments/$id/schedule',
+        {
+          'startTime': start.toIso8601String(),
+          'endTime': end.toIso8601String(),
+          'location': 'CM_OFFICE',
+          'remarks': remarks,
+        },
+        'schedulePendingAppointment');
+  }
+
+  static Future<Map<String, dynamic>?> rejectPendingAppointment(
+      int id, String reason) async {
+    return _appointmentJsonPut('/appointments/$id/reject',
+        {'rejectReason': reason}, 'rejectPendingAppointment');
+  }
+
+  static Future<Map<String, dynamic>?> routePendingAppointment(int id,
+      {required String officer, String? direction}) async {
+    try {
+      final response = await http
+          .post(_u('/appointments/$id/route'),
+              headers: await _headers(),
+              body: jsonEncode({
+                'officer': officer,
+                'direction': direction,
+                'followUpRequired': false
+              }))
+          .timeout(const Duration(seconds: 20));
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
       }
     } catch (_) {}
     return null;

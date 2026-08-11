@@ -36,6 +36,7 @@ public class AppointmentWorkflowService {
     private static final int DEFAULT_DURATION_MINUTES = 30;
 
     private static final List<Appointment.AppointmentStatus> REVIEWABLE_STATUSES = Arrays.asList(
+            Appointment.AppointmentStatus.PENDING,
             Appointment.AppointmentStatus.CREATED,
             Appointment.AppointmentStatus.SUBMITTED,
             Appointment.AppointmentStatus.PENDING_APPROVER_REVIEW,
@@ -66,6 +67,7 @@ public class AppointmentWorkflowService {
     private final AppointmentAuditService appointmentAuditService;
     private final AppointmentNotificationService notificationService;
     private final QrTokenService qrTokenService;
+    private final AppointmentLifecycleService lifecycleService;
 
     @Transactional
     public AppointmentWorkflowResponse createDraft(CitizenAppointmentRequest request,
@@ -88,6 +90,7 @@ public class AppointmentWorkflowService {
                 .subject(trimToNull(request.getSubject()))
                 .department(trimToNull(request.getDepartment()))
                 .appointmentType(trimToNull(request.getAppointmentType()))
+                .appointmentCategory(Appointment.AppointmentCategory.SCHEDULED)
                 .agendaType(trimToNull(firstNonBlank(request.getAgendaType(), request.getAppointmentType())))
                 .agendaBrief(trimToNull(request.getDescription()))
                 .status(Appointment.AppointmentStatus.CREATED)
@@ -149,7 +152,7 @@ public class AppointmentWorkflowService {
         ensureStatus(appointment, "SUBMIT", Appointment.AppointmentStatus.CREATED, Appointment.AppointmentStatus.SUBMITTED);
 
         Appointment.AppointmentStatus oldStatus = appointment.getStatus();
-        appointment.setStatus(Appointment.AppointmentStatus.PENDING_APPROVER_REVIEW);
+        appointment.setStatus(Appointment.AppointmentStatus.PENDING);
         appointment.setUpdatedBy(actor);
         Appointment saved = appointmentRepository.save(appointment);
         appointmentAuditService.recordStatusChange(
@@ -264,7 +267,7 @@ public class AppointmentWorkflowService {
         appointment.setScheduledDurationMinutes(request.getDurationMinutes() != null
                 ? request.getDurationMinutes()
                 : DEFAULT_DURATION_MINUTES);
-        appointment.setStatus(Appointment.AppointmentStatus.APPROVED_WITH_DATE_TIME);
+        lifecycleService.transition(appointment, Appointment.AppointmentStatus.SCHEDULED);
         appointment.setApprovedBy(actor);
         appointment.setApproverRemarks(RequestContextUtil.sanitizeForLog(request.getRemarks()));
         appointment.setUpdatedBy(actor);
@@ -304,7 +307,7 @@ public class AppointmentWorkflowService {
         ensureMutable(appointment, "REJECT");
 
         Appointment.AppointmentStatus oldStatus = appointment.getStatus();
-        appointment.setStatus(Appointment.AppointmentStatus.REJECTED);
+        lifecycleService.transition(appointment, Appointment.AppointmentStatus.REJECTED);
         appointment.setRejectedBy(actor);
         appointment.setRejectionReason(RequestContextUtil.sanitizeForLog(request.getReason()));
         appointment.setUpdatedBy(actor);

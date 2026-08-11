@@ -29,4 +29,7 @@ public interface DocumentUploadRepository extends JpaRepository<DocumentUpload, 
      * Find all documents of a specific type for a visitor
      */
     List<DocumentUpload> findByVisitorIdAndDocumentType(Long visitorId, String documentType);
+
+    List<DocumentUpload> findByFollowUp_IdOrderByUploadedDateDesc(Long followUpId);
+    List<DocumentUpload> findByAppointment_IdIn(List<Long> appointmentIds);
 }

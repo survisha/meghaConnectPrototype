@@ -136,7 +136,13 @@ final _navTree = <_NavItem>[
         label: 'Walk-in Counter',
         icon: Icons.login_outlined,
         route: 'walkin',
-        roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.DEO, UserRole.APPROVER, UserRole.HCM],
+        roles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.DEO,
+          UserRole.APPROVER,
+          UserRole.HCM
+        ],
       ),
       _NavItem(
         label: 'Register Visitor',
@@ -245,7 +251,8 @@ class _MainShellState extends State<MainShell> {
   Widget _buildBody(String route) {
     final user = context.read<AuthService>().user!;
     if (!AccessControlService.canAccessRoute(user, route)) {
-      return const Center(child: Text('You are not authorized to access this feature.'));
+      return const Center(
+          child: Text('You are not authorized to access this feature.'));
     }
     switch (route) {
       case 'dashboard':
@@ -262,7 +269,8 @@ class _MainShellState extends State<MainShell> {
       case 'walkin':
         return NewAppointmentScreen(isWalkIn: route == 'walkin');
       case 'register_visitor':
-        return const VisitorRegistrationScreen(openAppointmentAfterSubmit: true);
+        return const VisitorRegistrationScreen(
+            openAppointmentAfterSubmit: true);
       case 'guest_registration':
         return const GuestAppointmentScreen();
       case 'pending_sync':
@@ -420,15 +428,17 @@ class _MainShellState extends State<MainShell> {
   }
 
   Widget _buildDrawer(BuildContext context, AuthService auth, AuthUser user) {
-    final visibleItems = _navTree.where((item) =>
-        user.role == UserRole.DEPARTMENT_ADMIN
+    final visibleItems = _navTree
+        .where((item) => user.role == UserRole.DEPARTMENT_ADMIN
             ? AccessControlService.canAccessRoute(user, item.route)
-            : item.roles.contains(user.role)).map((item) {
+            : item.roles.contains(user.role))
+        .map((item) {
       if (item.children != null) {
-        final visibleChildren = item.children!.where((c) =>
-            user.role == UserRole.DEPARTMENT_ADMIN
+        final visibleChildren = item.children!
+            .where((c) => user.role == UserRole.DEPARTMENT_ADMIN
                 ? AccessControlService.canAccessRoute(user, c.route)
-                : c.roles.contains(user.role)).toList();
+                : c.roles.contains(user.role))
+            .toList();
         if (item.route == 'reports' &&
             !visibleChildren.any((child) => child.route == 'heatmap')) {
           visibleChildren.insert(

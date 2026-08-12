@@ -104,7 +104,7 @@ public class AppointmentController {
 
     @Operation(summary = "Get AI notes for appointment documents", description = "Retrieve officer-facing AI notes generated from uploaded appointment documents")
     @GetMapping("/{id}/ai-notes")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','HCM','ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','HCM')")
     public ResponseEntity<List<AppointmentDocumentAiNotesDto>> getAiNotes(@PathVariable Long id) {
         logEndpoint("/api/v1/appointments/{id}/ai-notes");
         return ResponseEntity.ok(appointmentDocumentAiNotesService.getNotesForAppointment(id));
@@ -112,7 +112,7 @@ public class AppointmentController {
 
     @Operation(summary = "Regenerate AI notes for a document", description = "Queue AI note regeneration for an uploaded appointment document")
     @PostMapping("/documents/{documentId}/ai-notes/regenerate")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','HCM','ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','HCM')")
     public ResponseEntity<AppointmentDocumentAiNotesDto> regenerateAiNotes(@PathVariable Long documentId) {
         logEndpoint("/api/v1/appointments/documents/{documentId}/ai-notes/regenerate");
         return ResponseEntity.ok(appointmentDocumentAiNotesService.regenerate(documentId));
@@ -216,7 +216,7 @@ public class AppointmentController {
     }
 
     @PostMapping("/{id}/reschedule")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','HCM','ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','HCM')")
     public ResponseEntity<AppointmentDto> rescheduleAppointment(@PathVariable Long id,
                                                                 @RequestBody Map<String, Object> body,
                                                                 @AuthenticationPrincipal UserDetails user) {

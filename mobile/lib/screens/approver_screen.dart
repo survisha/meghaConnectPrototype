@@ -17,6 +17,7 @@ class _ApproverAppointment {
   final String agendaBrief;
   final String eventType;
   final String location;
+  final String appointmentCategory;
   String status;
   String? approverRemarks;
   final String? shortNotes;
@@ -30,6 +31,7 @@ class _ApproverAppointment {
     required this.agendaBrief,
     required this.eventType,
     required this.location,
+    required this.appointmentCategory,
     required this.status,
     this.shortNotes,
   });
@@ -85,6 +87,8 @@ class _ApproverWorkflowScreenState extends State<ApproverWorkflowScreen> {
               m['agendaBrief'] as String? ?? m['description'] as String? ?? '',
           eventType: m['eventType'] as String? ?? '',
           location: m['requestedLocation'] as String? ?? '',
+          appointmentCategory: m['appointmentCategory'] as String? ??
+              (m['isWalkIn'] == true ? 'WALK_IN' : 'SCHEDULED'),
           status: m['status'] as String? ?? '',
           shortNotes: m['shortNotes'] as String?,
         );
@@ -196,8 +200,10 @@ class _ApproverWorkflowScreenState extends State<ApproverWorkflowScreen> {
   @override
   Widget build(BuildContext context) {
     final role = context.watch<AuthService>().user!.role;
-    final pendingCount =
-        _appointments.where((a) => a.status == 'PENDING').length;
+    final pendingCount = _appointments
+        .where((a) =>
+            a.status == 'PENDING' && a.appointmentCategory == 'SCHEDULED')
+        .length;
 
     return Column(
       children: [
@@ -370,7 +376,7 @@ class _ApproverWorkflowScreenState extends State<ApproverWorkflowScreen> {
                   ),
                 ),
               ],
-              if (isPending) ...[
+              if (isPending && appt.appointmentCategory == 'SCHEDULED') ...[
                 const SizedBox(height: 10),
                 Row(
                   children: [
@@ -656,7 +662,7 @@ class _ApproverDetailSheetState extends State<_ApproverDetailSheet> {
               ),
             ),
           ],
-          if (isPending) ...[
+          if (isPending && appt.appointmentCategory == 'SCHEDULED') ...[
             const SizedBox(height: 20),
             const Divider(),
             const SizedBox(height: 12),

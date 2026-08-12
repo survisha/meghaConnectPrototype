@@ -7,7 +7,7 @@
         <mat-icon>login</mat-icon> Walk-in
       </button>
       <button mat-raised-button color="primary" routerLink="/appointments/new"
-              *ngIf="auth.hasRole('ADMIN') || auth.hasRole('APPROVER')">
+              *ngIf="auth.hasRole('ADMIN') || auth.hasRole('APPROVER') || auth.hasRole('DEO')">
         <mat-icon>add</mat-icon> New Appointment
       </button>
     </div>
@@ -838,16 +838,6 @@
       <div class="details-action-buttons" *ngIf="canUseApproverActions(appointment)">
         <button mat-icon-button
                 type="button"
-                class="approve-action"
-                [disabled]="!canApproveOrReject(appointment) || actionUpdating"
-                (click)="openApprove(appointment)"
-                matTooltip="Approve"
-                matTooltipPosition="above">
-          <mat-icon>check_circle</mat-icon>
-        </button>
-
-        <button mat-icon-button
-                type="button"
                 class="reject-action"
                 [disabled]="!canApproveOrReject(appointment) || actionUpdating"
                 (click)="openReject(appointment)"
@@ -861,7 +851,7 @@
                 class="reschedule-action"
                 [disabled]="!canRescheduleAppointment(appointment) || actionUpdating"
                 (click)="openReschedule(appointment)"
-                matTooltip="Schedule"
+                [matTooltip]="appointment.status === 'SCHEDULED' ? 'Reschedule' : 'Schedule'"
                 matTooltipPosition="above">
           <mat-icon>event</mat-icon>
         </button>

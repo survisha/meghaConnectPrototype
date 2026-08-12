@@ -8,6 +8,8 @@ import com.survisha.meghaconnect.repository.AppointmentRepository;
 import com.survisha.meghaconnect.repository.DocumentUploadRepository;
 import com.survisha.meghaconnect.repository.VisitorRepository;
 import com.survisha.meghaconnect.service.AppointmentDocumentAiNotesService;
+import com.survisha.meghaconnect.service.AppointmentAuditService;
+import com.survisha.meghaconnect.service.AppointmentLifecycleService;
 import com.survisha.meghaconnect.service.AuditLogService;
 import com.survisha.meghaconnect.service.FileStorageService;
 import com.survisha.meghaconnect.service.RequestValidationService;
@@ -71,6 +73,8 @@ public class VisitorAppointmentController {
     private final AppointmentDocumentAiNotesService appointmentDocumentAiNotesService;
     private final ObjectMapper          objectMapper;
     private final RequestValidationService validationService;
+    private final AppointmentLifecycleService lifecycleService;
+    private final AppointmentAuditService appointmentAuditService;
 
     /**
      * Submit a new appointment / scheme application request from a citizen.
@@ -207,7 +211,7 @@ public class VisitorAppointmentController {
                     .agendaType(agendaTypeValue)
                     .agendaBrief(agendaBrief)
                     .appointmentCategory(Appointment.AppointmentCategory.SCHEDULED)
-                    .status(Appointment.AppointmentStatus.PENDING)
+                    .status(lifecycleService.initialStatus(Appointment.AppointmentCategory.SCHEDULED))
                     .requestedLocation(location)
                     .mlaMdcApproved(mlaMdcApproved != null && mlaMdcApproved)
                     .consentAccepted(consentAccepted)
@@ -228,6 +232,8 @@ public class VisitorAppointmentController {
             }
 
             Appointment saved = appointmentRepository.save(appt);
+            appointmentAuditService.recordStatusChange(saved, null, saved.getStatus(),
+                    "APPOINTMENT_CREATED", "Citizen appointment submitted", user.getUsername(), "CITIZEN");
 
             // ── Save uploaded documents ──────────────────────────────────────────
             try {

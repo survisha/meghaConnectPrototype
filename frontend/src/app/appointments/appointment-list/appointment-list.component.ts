@@ -11,6 +11,7 @@ import { ReferenceDataService } from '../../services/reference-data.service';
 import { ScheduleEventService } from '../../services/schedule-event.service';
 import { VisitorService } from '../../services/visitor.service';
 import { Appointment, AppointmentDocument, AppointmentStatus, EventType, Location, ScheduleEvent } from '../../models';
+import { canRejectScheduled, canScheduleOrReschedule, isLiveWalkIn as isPendingWalkIn } from '../appointment-action-policy';
 import { catchError, finalize } from 'rxjs/operators';
 import { MatTableModule } from '@angular/material/table';
 import { MatPaginatorModule } from '@angular/material/paginator';
@@ -333,7 +334,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     if (this.auth.hasRole('DEO')) {
       return this.appointmentService.getDeoAppointments(serverPage, size);
     }
-    if (this.auth.hasRole('APPROVER') && !this.auth.hasRole('ADMIN')) {
+    if (this.auth.hasRole('APPROVER', 'HCM') && !this.auth.hasRole('ADMIN')) {
       return this.appointmentService.getApproverAppointments(serverPage, size);
     }
     return this.appointmentService.getAllAppointments(serverPage, size, undefined, {
@@ -561,7 +562,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   }
 
   canSelectAppointments() {
-    return this.auth.hasRole('APPROVER', 'APPROVER_JT_SECY', 'ADMIN');
+    return this.auth.hasRole('APPROVER', 'APPROVER_JT_SECY', 'ADMIN', 'HCM');
   }
 
   canSelectAppointment(appointment: Appointment) {
@@ -603,11 +604,11 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   }
 
   get canExportPdf() {
-    return this.auth.hasRole('APPROVER', 'APPROVER_JT_SECY');
+    return this.auth.hasRole('APPROVER', 'APPROVER_JT_SECY', 'HCM');
   }
 
   get canAssignSelectedToEvent() {
-    return this.auth.hasRole('APPROVER', 'ADMIN', 'APPROVER') &&
+    return this.auth.hasRole('APPROVER', 'ADMIN', 'HCM') &&
       this.selectedAppointments.length > 0 &&
       this.selectedAppointments.every(appointment => appointment.status === 'APPROVED' || this.isFollowUpStatus(appointment.status));
   }
@@ -804,11 +805,15 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   }
 
   canUseApproverActions(appointment: Appointment | null) {
-    return !!appointment && this.auth.hasRole('HCM', 'ADMIN', 'APPROVER');
+    return !!appointment && this.auth.hasRole('SUPER_ADMIN', 'APPROVER', 'HCM');
+  }
+
+  isLiveWalkIn(appointment: Appointment | null) {
+    return isPendingWalkIn(appointment);
   }
 
   canUseJtSecForwarding(appointment: Appointment | null) {
-    return !!appointment && this.auth.hasRole('APPROVER', 'APPROVER_JT_SECY');
+    return !!appointment && this.auth.hasRole('APPROVER', 'APPROVER_JT_SECY', 'HCM');
   }
 
   canEditJtSecRemark(note: AppointmentRemark) {
@@ -829,13 +834,11 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   }
 
   canApproveOrReject(appointment: Appointment | null) {
-    return this.canUseApproverActions(appointment) && appointment?.status === 'APPROVER_REVIEW';
+    return this.canUseApproverActions(appointment) && canRejectScheduled(appointment);
   }
 
   canRescheduleAppointment(appointment: Appointment | null) {
-    return this.canUseApproverActions(appointment) && !!appointment &&
-      (['APPROVED', 'FOLLOWUP', 'SCHEDULED'].includes(appointment.status)
-        || (appointment.appointmentSource === 'GUEST' && appointment.status === 'SUBMITTED'));
+    return this.canUseApproverActions(appointment) && canScheduleOrReschedule(appointment);
   }
 
   canUseCmoActions(appointment: Appointment | null) {
@@ -1259,7 +1262,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   }
 
   canUploadSupportingDocument() {
-    return this.auth.hasRole('APPROVER', 'ADMIN', 'APPROVER', 'DEO');
+    return this.auth.hasRole('APPROVER', 'ADMIN', 'HCM', 'DEO');
   }
 
   private replaceAppointment(updated: Appointment) {

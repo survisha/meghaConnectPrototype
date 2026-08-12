@@ -118,7 +118,7 @@ public class AppointmentApprovalController {
     }
 
     @PostMapping("/{id}/complete")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','HCM','DEO')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','HCM')")
     public AppointmentDto completeMeeting(@PathVariable Long id,
                                           @RequestBody CompleteMeetingRequest request,
                                           Authentication authentication) {
@@ -214,7 +214,7 @@ public class AppointmentApprovalController {
      * R003: Updates status to CMO_REVIEW → APPROVER_REVIEW
      */
     @PutMapping("/{id}/cmo-approve")
-    @PreAuthorize("hasAnyRole('APPROVER','HCM')")
+    @PreAuthorize("denyAll()")
     @Operation(
         summary = "CMO approves and forwards appointment",
         description = "CMO review approval, records remarks, and routes to Joint Secretary"
@@ -251,7 +251,7 @@ public class AppointmentApprovalController {
      * R003: Updates status to APPROVER_REVIEW → HCM_PENDING (awaiting scheduling)
      */
     @PutMapping("/{id}/approver-approve")
-    @PreAuthorize("hasAnyRole('APPROVER','APPROVER_JT_SECY','HCM')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','APPROVER_JT_SECY','HCM')")
     @Operation(
         summary = "Joint Secretary approves for scheduling",
         description = "Joint Secretary reviews and approves, ready for calendar scheduling"
@@ -282,11 +282,12 @@ public class AppointmentApprovalController {
      * R003: Updates status to REJECTED with rejection reason
      */
     @PutMapping("/{id}/reject")
-    @PreAuthorize("hasAnyRole('APPROVER','APPROVER_JT_SECY','HCM')")
+    @PreAuthorize("denyAll()")
     @Operation(summary = "Reject appointment")
     public ResponseEntity<AppointmentDto> rejectAppointment(
             @PathVariable Long id,
-            @RequestBody RejectRequest request) {
+            @RequestBody RejectRequest request,
+            Authentication authentication) {
         
         try {
             Appointment appointment = appointmentRepository.findById(id)
@@ -307,10 +308,13 @@ public class AppointmentApprovalController {
             
             appointment.setUpdatedAt(DateTimeUtil.nowIST());
             Appointment updated = appointmentRepository.save(appointment);
+            audit(updated, oldStatus, "REJECTED", request.getRejectReason(), authentication);
             
             return ResponseEntity.ok(convertToDTO(updated));
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.notFound().build();
+        } catch (IllegalStateException e) {
+            throw e;
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
@@ -321,11 +325,12 @@ public class AppointmentApprovalController {
      * R003: Updates status to SCHEDULED with date/time/location
      */
     @PutMapping("/{id}/schedule")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','HCM','ADMIN','APPROVER')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','APPROVER_JT_SECY','HCM')")
     @Operation(summary = "Schedule appointment in calendar")
     public ResponseEntity<AppointmentDto> scheduleAppointment(
             @PathVariable Long id,
-            @RequestBody ScheduleRequest request) {
+            @RequestBody ScheduleRequest request,
+            Authentication authentication) {
         
         try {
             Appointment appointment = appointmentRepository.findById(id)
@@ -349,9 +354,12 @@ public class AppointmentApprovalController {
             }
             
             Appointment updated = appointmentRepository.save(appointment);
+            audit(updated, Appointment.AppointmentStatus.PENDING, "SCHEDULED", request.getRemarks(), authentication);
             return ResponseEntity.ok(convertToDTO(updated));
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.notFound().build();
+        } catch (IllegalStateException e) {
+            throw e;
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
@@ -362,15 +370,20 @@ public class AppointmentApprovalController {
      * R015: Allows rescheduling of already scheduled appointments
      */
     @PutMapping("/{id}/reschedule")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','HCM','ADMIN','APPROVER')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','APPROVER_JT_SECY','HCM')")
     @Operation(summary = "Reschedule appointment")
     public ResponseEntity<AppointmentDto> rescheduleAppointment(
             @PathVariable Long id,
-            @RequestBody RescheduleRequest request) {
+            @RequestBody RescheduleRequest request,
+            Authentication authentication) {
         
         try {
             Appointment appointment = appointmentRepository.findById(id)
                     .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
+            if (appointment.getAppointmentCategory() != Appointment.AppointmentCategory.SCHEDULED
+                    || appointment.getStatus() != Appointment.AppointmentStatus.SCHEDULED) {
+                throw new IllegalStateException("Only scheduled appointments in SCHEDULED status can be rescheduled.");
+            }
             
             LocalDateTime newTime = LocalDateTime.parse(request.getStartTime());
             appointment.setScheduledDateTime(newTime);
@@ -381,9 +394,12 @@ public class AppointmentApprovalController {
             appointment.setShortNotes(rescheduleNote);
             
             Appointment updated = appointmentRepository.save(appointment);
+            auditSameStatus(updated, "RESCHEDULED", rescheduleNote, authentication);
             return ResponseEntity.ok(convertToDTO(updated));
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.notFound().build();
+        } catch (IllegalStateException e) {
+            throw e;
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }

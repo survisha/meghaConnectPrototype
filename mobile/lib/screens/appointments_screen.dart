@@ -377,7 +377,9 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     if (role == UserRole.DEO) {
       return ApiService.getDeoAppointments(page: page, size: _pageSize);
     }
-    if (widget.forceApproverMode || role == UserRole.APPROVER) {
+    if (widget.forceApproverMode ||
+        role == UserRole.APPROVER ||
+        role == UserRole.HCM) {
       return ApiService.getApproverAppointments(page: page, size: _pageSize);
     }
     if (role == UserRole.APPROVER) {
@@ -1398,11 +1400,6 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
     final actions = <Widget>[];
     if (_canApproveOrReject(role)) {
       actions.add(_ActionButton(
-        label: 'Approve',
-        icon: Icons.check_circle_outline,
-        onPressed: () => _approveReject(true),
-      ));
-      actions.add(_ActionButton(
         label: 'Reject',
         icon: Icons.cancel_outlined,
         color: const Color(0xFF991B1B),
@@ -1896,14 +1893,13 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
 
   bool _canApproveOrReject(UserRole role) =>
       _canUseApproverActions(role) &&
-      widget.appointment.status == 'APPROVER_REVIEW';
+      !widget.appointment.isWalkIn &&
+      widget.appointment.status == 'PENDING';
 
   bool _canReschedule(UserRole role) =>
       _canUseApproverActions(role) &&
-      (['APPROVED', 'FOLLOWUP', 'SCHEDULED']
-              .contains(widget.appointment.status) ||
-          (widget.appointment.source == 'GUEST' &&
-              widget.appointment.status == 'SUBMITTED'));
+      !widget.appointment.isWalkIn &&
+      ['PENDING', 'SCHEDULED'].contains(widget.appointment.status);
 
   bool _canUseCmoActions(UserRole role) =>
       [UserRole.HCM, UserRole.ADMIN, UserRole.APPROVER].contains(role) &&

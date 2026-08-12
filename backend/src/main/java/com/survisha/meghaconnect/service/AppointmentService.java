@@ -117,6 +117,8 @@ public class AppointmentService {
     private final WalkInTokenService walkInTokenService;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
+    private final AppointmentLifecycleService lifecycleService;
+    private final AppointmentAuditService appointmentAuditService;
 
     public Page<Appointment> findAll(Pageable pageable) {
         return appointmentRepository.findByStatusIn(KNOWN_APPOINTMENT_STATUSES, pageable);
@@ -328,7 +330,7 @@ public class AppointmentService {
             .appointmentType("Guest Appointment")
             .appointmentCategory(Appointment.AppointmentCategory.SCHEDULED)
             .agendaBrief(reason)
-            .status(Appointment.AppointmentStatus.PENDING)
+            .status(lifecycleService.initialStatus(Appointment.AppointmentCategory.SCHEDULED))
             .requestedLocation(Appointment.MeetingLocation.OTHERS)
             .mlaMdcApproved(false)
             .isWalkIn(false)
@@ -352,6 +354,8 @@ public class AppointmentService {
         appointment.setCreatedBy("guest");
         appointment.setUpdatedBy("guest");
         Appointment saved = appointmentRepository.save(appointment);
+        appointmentAuditService.recordStatusChange(saved, null, saved.getStatus(), "APPOINTMENT_CREATED",
+            "Guest scheduled appointment created", "guest", "GUEST");
 
         if (safeRequest.getSupportingDocument() != null && !safeRequest.getSupportingDocument().isEmpty()) {
             uploadSupportingDocument(saved.getId(), safeRequest.getSupportingDocument(), "guest");
@@ -370,6 +374,9 @@ public class AppointmentService {
     public Appointment reschedule(Long id, Map<String, Object> body, String updatedBy) {
         Appointment appt = appointmentRepository.findById(id)
             .orElseThrow(() -> new AppointmentNotFoundException(id));
+        if (appt.getAppointmentCategory() != Appointment.AppointmentCategory.SCHEDULED) {
+            throw new IllegalStateException("Walk-in appointments cannot be scheduled or rescheduled.");
+        }
         LocalDateTime scheduledDateTime = parseScheduleDateTime(body);
         if (scheduledDateTime.isBefore(DateTimeUtil.nowIST())) {
             throw new MeghaConnectException(ErrorCodeConstants.APPT_INVALID_SCHEDULE_DATE_TIME,
@@ -390,6 +397,8 @@ public class AppointmentService {
         appt.setStatus(Appointment.AppointmentStatus.SCHEDULED);
         appt.setUpdatedBy(updatedBy);
         Appointment saved = appointmentRepository.save(appt);
+        appointmentAuditService.recordStatusChange(saved, Appointment.AppointmentStatus.SCHEDULED,
+            Appointment.AppointmentStatus.SCHEDULED, "RESCHEDULED", "Meeting date/time changed", updatedBy, "API");
         generateQrIfApproved(saved, updatedBy);
         auditLogService.log("Appointment", saved.getId(), "RESCHEDULED",
             "Rescheduled for: " + scheduledDateTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME), updatedBy);
@@ -463,7 +472,8 @@ public class AppointmentService {
             .appointmentSource("CITIZEN")
             .agendaType(dto.getAgendaType())
             .agendaBrief(dto.getAgendaBrief())
-            .status(Appointment.AppointmentStatus.PENDING)
+            .status(lifecycleService.initialStatus(Boolean.TRUE.equals(dto.getIsWalkIn())
+                ? Appointment.AppointmentCategory.WALK_IN : Appointment.AppointmentCategory.SCHEDULED))
             .requestedLocation(dto.getRequestedLocation())
             .mlaMdcApproved(dto.getMlaMdcApproved())
             .consentAccepted(dto.getConsentAccepted())
@@ -479,6 +489,9 @@ public class AppointmentService {
         appt.setUpdatedBy(createdBy);
 
         Appointment saved = appointmentRepository.save(appt);
+        appointmentAuditService.recordStatusChange(saved, null, saved.getStatus(),
+            Boolean.TRUE.equals(saved.getIsWalkIn()) ? "WALK_IN_CREATED" : "APPOINTMENT_CREATED",
+            "Created with canonical initial status", createdBy, "CREATOR");
         saveAppointmentAssociates(toAssociatesJson(dto.getAssociates()), saved, applicant, createdBy);
         auditLogService.log("Appointment", saved.getId(), "CREATED",
             "New appointment created: " + appId, createdBy);
@@ -524,7 +537,8 @@ public class AppointmentService {
             .appointmentCategory(walkIn
                 ? Appointment.AppointmentCategory.WALK_IN
                 : Appointment.AppointmentCategory.SCHEDULED)
-            .status(Appointment.AppointmentStatus.PENDING)
+            .status(lifecycleService.initialStatus(walkIn
+                ? Appointment.AppointmentCategory.WALK_IN : Appointment.AppointmentCategory.SCHEDULED))
             .requestedLocation(location)
             .mlaMdcApproved(safeForm.getMlaMdcApproved() != null && safeForm.getMlaMdcApproved())
             .consentAccepted(safeForm.getConsentAccepted())
@@ -549,6 +563,9 @@ public class AppointmentService {
         }
 
         Appointment saved = appointmentRepository.save(appt);
+        appointmentAuditService.recordStatusChange(saved, null, saved.getStatus(),
+            walkIn ? "WALK_IN_CREATED" : "APPOINTMENT_CREATED",
+            "Created with canonical initial status", actor, "CREATOR");
         saveSchemeApplicationIfRequired(safeForm, saved, applicant, schemeType, actor);
         saveAppointmentDocuments(request, saved, applicant, appId, actor);
         saveAppointmentAssociates(safeForm.getAssociates(), saved, applicant, actor);
@@ -729,8 +746,13 @@ public class AppointmentService {
             .orElseThrow(() -> new AppointmentNotFoundException(id));
 
         Appointment.AppointmentStatus oldStatus = appt.getStatus();
-        validateStatusTransition(appt, newStatus);
-        appt.setStatus(newStatus);
+        if (appt.getAppointmentCategory() == Appointment.AppointmentCategory.SCHEDULED
+                || appt.getAppointmentCategory() == Appointment.AppointmentCategory.WALK_IN) {
+            lifecycleService.transition(appt, newStatus);
+        } else {
+            validateStatusTransition(appt, newStatus);
+            appt.setStatus(newStatus);
+        }
         if (remarks != null) {
             if (newStatus == Appointment.AppointmentStatus.APPROVER_REVIEW || newStatus == Appointment.AppointmentStatus.CMO_REVIEW) {
                 appt.setCmoRemarks(remarks);
@@ -741,6 +763,8 @@ public class AppointmentService {
         appt.setUpdatedBy(updatedBy);
 
         Appointment saved = appointmentRepository.save(appt);
+        appointmentAuditService.recordStatusChange(saved, oldStatus, newStatus, "STATUS_CHANGE",
+            remarks, updatedBy, "API");
         generateQrIfApproved(saved, updatedBy);
         auditLogService.log("Appointment", saved.getId(), "STATUS_CHANGE",
             "Status: " + oldStatus + " → " + newStatus, updatedBy);
@@ -809,24 +833,23 @@ public class AppointmentService {
                                 String updatedBy) {
         Appointment appt = appointmentRepository.findById(id)
             .orElseThrow(() -> new AppointmentNotFoundException(id));
+        if (appt.getAppointmentCategory() != Appointment.AppointmentCategory.SCHEDULED) {
+            throw new IllegalStateException("Walk-in appointments cannot be scheduled.");
+        }
         if (dateTime == null || dateTime.isBefore(DateTimeUtil.nowIST())) {
             throw new MeghaConnectException(ErrorCodeConstants.APPT_INVALID_SCHEDULE_DATE_TIME,
                 "Appointments cannot be scheduled in the past.", HttpStatus.BAD_REQUEST.value());
         }
-        if (appt.getStatus() != Appointment.AppointmentStatus.APPROVED
-                && appt.getStatus() != Appointment.AppointmentStatus.FOLLOWUP
-                && appt.getStatus() != Appointment.AppointmentStatus.SCHEDULED
-                && !(isGuestAppointment(appt) && appt.getStatus() == Appointment.AppointmentStatus.SUBMITTED)) {
-            invalidTransition("Only APPROVED, FOLLOWUP, or SCHEDULED applications can be scheduled.");
-        }
+        Appointment.AppointmentStatus oldStatus = appt.getStatus();
+        lifecycleService.transition(appt, Appointment.AppointmentStatus.SCHEDULED);
 
         assertNoMeetingConflict(id, dateTime, durationMinutes);
 
         appt.setScheduledDateTime(dateTime);
         appt.setScheduledDurationMinutes(durationMinutes);
-        appt.setStatus(Appointment.AppointmentStatus.SCHEDULED);
-
         Appointment saved = appointmentRepository.save(appt);
+        appointmentAuditService.recordStatusChange(saved, oldStatus, saved.getStatus(), "SCHEDULED",
+            "Scheduled for: " + dateTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME), updatedBy, "API");
         generateQrIfApproved(saved, updatedBy);
         auditLogService.log("Appointment", saved.getId(), "SCHEDULED",
             "Scheduled for: " + dateTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME), updatedBy);

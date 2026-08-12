@@ -19,7 +19,7 @@ public class DeleteTest {
 		reqObj.setClientId("MEGHALAYA");
 		reqObj.setAppId("CMD");
 		
-		reqObj.setId("VISITOR_576");
+		reqObj.setId("VISITOR_581");
 
 		String jsonReq  = new Gson().toJson(reqObj);
 		

@@ -23,15 +23,24 @@ public class EpicFaceService {
     private final AuditLogService audit;
 
     public EpicFaceResponse search(String photo, String actor) {
+        log.debug("Starting EPIC face operation=search_1n photoEncodedSize={}", photo == null ? 0 : photo.length());
         String normalized = photoValidator.normalize(photo, "photo");
+        log.debug("Validated EPIC face operation=search_1n normalizedPhotoEncodedSize={}", normalized.length());
         Timer.Sample sample = Timer.start(metrics);
         long started = System.nanoTime();
         try {
+            log.debug("Calling EPIC face provider operation=search_1n");
             FaceSearch1NProviderResponse p = client.search(normalized);
+            log.debug("EPIC face provider responded operation=search_1n error={} matched={} errorCode={}",
+                    p.isError(), p.isMatched(), p.getErrorCode() == null ? null : safe(p.getErrorCode()));
             if (p.isError()) throw providerRejected(p.getErrorCode());
             EpicFaceResponse result = response(p);
             record("search_1n", result.isMatched(), actor, result.getEpicNumber(), normalized.length());
             return result;
+        } catch (RuntimeException ex) {
+            log.warn("EPIC face operation=search_1n failed errorType={}", ex.getClass().getSimpleName());
+            log.debug("EPIC face operation=search_1n failure details", ex);
+            throw ex;
         } finally {
             sample.stop(Timer.builder("meghaconnect.epic.face.duration").tag("operation", "search_1n").register(metrics));
             log.info("EPIC face operation={} durationMs={}", "search_1n", (System.nanoTime() - started) / 1_000_000);
@@ -39,17 +48,30 @@ public class EpicFaceService {
     }
 
     public EpicFaceResponse verify(String epic, String photo, String actor) {
+        long started = System.nanoTime();
         String normalizedEpic = epic == null ? null : epic.trim().toUpperCase();
+        log.debug("Starting EPIC face operation=verify_11 epic={} photoEncodedSize={}",
+                mask(normalizedEpic), photo == null ? 0 : photo.length());
         String normalized = photoValidator.normalize(photo, "photo");
+        log.debug("Validated EPIC face operation=verify_11 normalizedPhotoEncodedSize={}", normalized.length());
         Timer.Sample sample = Timer.start(metrics);
         try {
+            log.debug("Calling EPIC face provider operation=verify_11 epic={}", mask(normalizedEpic));
             FaceVerify11ProviderResponse p = client.verify(normalizedEpic, normalized);
+            log.debug("EPIC face provider responded operation=verify_11 error={} matched={} errorCode={}",
+                    p.isError(), p.isMatched(), p.getErrorCode() == null ? null : safe(p.getErrorCode()));
             if (p.isError()) throw providerRejected(p.getErrorCode());
             EpicFaceResponse result = response(p);
             record("verify_11", result.isMatched(), actor, normalizedEpic, normalized.length());
             return result;
+        } catch (RuntimeException ex) {
+            log.warn("EPIC face operation=verify_11 failed epic={} errorType={}",
+                    mask(normalizedEpic), ex.getClass().getSimpleName());
+            log.debug("EPIC face operation=verify_11 failure details", ex);
+            throw ex;
         } finally {
             sample.stop(Timer.builder("meghaconnect.epic.face.duration").tag("operation", "verify_11").register(metrics));
+            log.info("EPIC face operation={} durationMs={}", "verify_11", (System.nanoTime() - started) / 1_000_000);
         }
     }
 

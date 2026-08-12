@@ -205,6 +205,11 @@ document:
       path: ${LIBREOFFICE_PATH:soffice}
     cache-dir: ${DOCUMENT_PREVIEW_CACHE_DIR:${java.io.tmpdir}/meghaconnect-preview-cache}
 
+epic-api:
+  enabled: ${EPIC_API_ENABLED:false}
+  endpoint: ${EPIC_API_ENDPOINT:https://devuat.offlinekyc.com/ECSOVDServiceV2}
+  api-key: ${EPIC_API_KEY:}
+
 integration:
   openai:
     form-extraction:

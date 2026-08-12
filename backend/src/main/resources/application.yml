@@ -75,6 +75,11 @@ sms:
   route: ${SMS_ROUTE:2}
   sender-id: ${SMS_SENDER_ID:DEUPL}
 
+epic-api:
+  enabled: ${EPIC_API_ENABLED:false}
+  endpoint: ${EPIC_API_ENDPOINT:https://devuat.offlinekyc.com/ECSOVDServiceV2}
+  api-key: ${EPIC_API_KEY:}
+
 integration:
   epic-face:
     enabled: ${EPIC_FACE_ENABLED:false}

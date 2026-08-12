@@ -4,6 +4,7 @@ import com.survisha.meghaconnect.dto.EpicVerificationRequest;
 import com.survisha.meghaconnect.dto.EpicVerificationResponse;
 import com.survisha.meghaconnect.dto.EpicVerificationData;
 import com.survisha.meghaconnect.dto.PollingDetails;
+import com.survisha.meghaconnect.config.EpicApiProperties;
 import com.survisha.meghaconnect.exception.EpicNameMismatchException;
 import com.survisha.meghaconnect.exception.ErrorCodeConstants;
 import com.survisha.meghaconnect.exception.ExternalServiceException;
@@ -11,7 +12,7 @@ import com.survisha.meghaconnect.exception.MeghaConnectException;
 import com.survisha.meghaconnect.util.DateTimeUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -49,18 +50,8 @@ import java.util.stream.Collectors;
 public class EpicVerificationService {
 
     private final RestTemplate restTemplate;
-
-    @Value("${epic.api.endpoint:https://devuat.offlinekyc.com/ECSOVDServiceV2}")
-    private String epicApiEndpoint;
-
-    @Value("${epic.api.key:}")  // Will be provided as env var or application property
-    private String epicApiKey;
-
-    @Value("${epic.api.enabled:false}")
-    private boolean epicApiEnabled;
-
-    @Value("${spring.profiles.active:}")
-    private String activeProfiles;
+    private final EpicApiProperties properties;
+    private final Environment environment;
     
     // Local name comparison threshold. The EPIC API currently returns a fixed
     // low namematchscore, so validation must compare input and returned names.
@@ -74,10 +65,10 @@ public class EpicVerificationService {
      */
     public EpicVerificationResponse verifyEpic(EpicVerificationRequest request) {
 
-        log.info("EPIC verification requested epic={} apiEnabled={}", maskEpic(request.getEpicNumber()), epicApiEnabled);
+        log.info("EPIC verification requested epic={} apiEnabled={}", maskEpic(request.getEpicNumber()), properties.isEnabled());
 
         // If API is disabled, return mock response for development
-        if (!epicApiEnabled || epicApiKey.isBlank()) {
+        if (!properties.isEnabled() || properties.getApiKey() == null || properties.getApiKey().isBlank()) {
             if (isProductionProfile()) {
                 log.error("EPIC API disabled or API key missing in production profile.");
                 return EpicVerificationResponse.builder()
@@ -97,7 +88,7 @@ public class EpicVerificationService {
             // Build request to external API
             Map<String, Object> apiRequest = new HashMap<>();
             apiRequest.put("txnType", "VID_VERIFICATION");
-            apiRequest.put("apiKey", epicApiKey);
+            apiRequest.put("apiKey", properties.getApiKey());
             apiRequest.put("voterIdNumber", request.getEpicNumber());
             apiRequest.put("nameOnVoterCard", request.getVisitorName().toUpperCase());
             apiRequest.put("consumerIdentifier", "ref-vid-" + UUID.randomUUID().toString().substring(0, 8));
@@ -110,7 +101,7 @@ public class EpicVerificationService {
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(apiRequest, headers);
             ResponseEntity<EpicVerificationResponse> response = restTemplate.postForEntity(
-                    epicApiEndpoint + "/api/ovd/verify",
+                    properties.getEndpoint().replaceAll("/$", "") + "/api/ovd/verify",
                     entity,
                     EpicVerificationResponse.class
             );
@@ -156,8 +147,7 @@ public class EpicVerificationService {
     }
 
     private boolean isProductionProfile() {
-        return activeProfiles != null && Arrays.stream(activeProfiles.split(","))
-                .map(String::trim)
+        return Arrays.stream(environment.getActiveProfiles())
                 .anyMatch(profile -> profile.equalsIgnoreCase("prod") || profile.equalsIgnoreCase("production"));
     }
 

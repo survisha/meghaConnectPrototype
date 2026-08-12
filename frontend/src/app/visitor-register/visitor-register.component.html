@@ -250,6 +250,25 @@
            
           </mat-form-field>
 
+          <div *ngIf="canSkipMobileOtp && !otpSent" style="margin:0.25rem 0 0.75rem">
+            <mat-checkbox
+              id="visitorRegister_skipMobileOtpCheckbox"
+              data-testid="visitor-registration-skip-mobile-otp"
+              [checked]="skipMobileOtpVerification"
+              [disabled]="otpVerified"
+              (change)="onSkipMobileOtpChange($event.checked)">
+              Skip mobile OTP verification
+            </mat-checkbox>
+            <div style="font-size:0.8rem;color:#6b7280;margin:0.35rem 0 0 2rem">
+              Select this when the visitor has no mobile access or uses a relative/family member's number and OTP cannot be completed.
+            </div>
+          </div>
+
+          <div class="kyc-notice" *ngIf="skipMobileOtpVerification" style="background:#fffbeb;border-color:#f59e0b">
+            <mat-icon style="color:#b45309">warning_amber</mat-icon>
+            {{ manualPhone ? 'The provided mobile number will be stored as unverified.' : 'Mobile OTP verification will be skipped for this registration.' }}
+          </div>
+
           <div
             *ngIf="(mobileFieldValidationMessage || mobileValidationMsg) && !otpSent && (form.idType === 'EPIC' || form.idType === 'NONE')"
             class="mobile-validation-msg"
@@ -285,7 +304,7 @@
               [disabled]="loading || !canSendEpicOtp" 
               data-testid="citizen-registration-generate-otp-btn"
               (click)="validateId()">
-              <span *ngIf="!loading"><mat-icon>send</mat-icon> {{ 'GENERATE_OTP' | translate }}</span>
+              <span *ngIf="!loading"><mat-icon>{{ skipMobileOtpVerification ? 'arrow_forward' : 'send' }}</mat-icon> {{ skipMobileOtpVerification ? 'Continue' : ('GENERATE_OTP' | translate) }}</span>
               <span *ngIf="loading"><mat-icon class="spin-icon">sync</mat-icon> {{ 'LOADING' | translate }}</span>
             </button>
             <button
@@ -460,25 +479,6 @@
             </mat-select>
             <mat-hint>Select laptop camera or external USB camera.</mat-hint>
           </mat-form-field>
-
-          <div *ngIf="canSkipMobileOtp && !otpSent" style="margin:0.25rem 0 0.75rem">
-            <mat-checkbox
-              id="visitorRegister_skipMobileOtpCheckbox"
-              data-testid="visitor-registration-skip-mobile-otp"
-              [checked]="skipMobileOtpVerification"
-              [disabled]="otpVerified"
-              (change)="onSkipMobileOtpVerificationChange($event.checked)">
-              Skip mobile OTP verification
-            </mat-checkbox>
-            <div style="font-size:0.8rem;color:#6b7280;margin:0.35rem 0 0 2rem">
-              Select this when the visitor has no mobile access or uses a relative/family member's number and OTP cannot be completed.
-            </div>
-          </div>
-
-          <div class="kyc-notice" *ngIf="skipMobileOtpVerification" style="background:#fffbeb;border-color:#f59e0b">
-            <mat-icon style="color:#b45309">warning_amber</mat-icon>
-            {{ manualPhone ? 'The provided mobile number will be stored as unverified.' : 'Mobile OTP verification will be skipped for this registration.' }}
-          </div>
 
           <div class="camera-section">
             <div *ngIf="!isCameraActive && !capturedPhotoUrl" class="camera-placeholder">

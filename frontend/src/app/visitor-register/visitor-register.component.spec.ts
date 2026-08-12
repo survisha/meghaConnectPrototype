@@ -8,11 +8,12 @@ describe('VisitorRegisterComponent form extraction', () => {
     kyc.verifyEpic.and.returnValue(of({ code: '200', data: {
       verifiedName: 'Rahul', voteridnumber: 'ABC1234567', pollingdetails: { pollingpartno: '12' }
     }}));
-    const toast = jasmine.createSpyObj('ToastService', ['success', 'warning']);
+    const toast = jasmine.createSpyObj('ToastService', ['success', 'warning', 'info']);
     const component = new VisitorRegisterComponent(
       {} as any, {} as any, { snapshot: { url: [{ path: 'register-visitor' }] } } as any,
       kyc, { isLoggedIn: () => false } as any, { detectChanges: () => undefined } as any,
-      { instant: (key: string) => key } as any, { stop: () => undefined } as any, {} as any, {} as any, {} as any, toast
+      { instant: (key: string) => key } as any, { stop: () => undefined } as any, {} as any, {} as any, {} as any, toast,
+      { canRegisterVisitor: () => true } as any
     );
     return { component, kyc, toast };
   }
@@ -65,5 +66,78 @@ describe('VisitorRegisterComponent form extraction', () => {
     expect(component.manualPhone).toBe('9999999999');
     expect(component.form.address).toBe('Manual Address');
     expect(kyc.verifyEpic).not.toHaveBeenCalled();
+  });
+});
+
+describe('VisitorRegisterComponent mobile OTP skip', () => {
+  function createStaffComponent() {
+    const toast = jasmine.createSpyObj('ToastService', ['success', 'warning', 'info']);
+    return new VisitorRegisterComponent(
+      {} as any, {} as any, { snapshot: { url: [{ path: 'deo' }] } } as any, {} as any,
+      { isLoggedIn: () => true, user: () => ({ role: 'DEO' }) } as any,
+      { detectChanges: () => undefined } as any, { instant: (key: string) => key } as any,
+      { stop: () => undefined } as any, {} as any, {} as any, {} as any, toast,
+      { canRegisterVisitor: () => true } as any
+    );
+  }
+
+  it('TC-OTP-SKIP-001/002/003/004 exposes skip for EPIC and No ID before camera capture', () => {
+    const component = createStaffComponent();
+    component.form.idType = 'EPIC';
+    expect(component.canSkipMobileOtp).toBeTrue();
+    component.form.idType = 'NONE';
+    expect(component.canSkipMobileOtp).toBeTrue();
+    expect(component.currentStep).toBe('id-entry');
+    expect(component.photoCaptured).toBeFalse();
+    component.onSkipMobileOtpChange(true);
+    expect(component.skipMobileOtpVerification).toBeTrue();
+  });
+
+  it('TC-OTP-SKIP-005/006 makes mobile optional and validates it when supplied', () => {
+    const component = createStaffComponent();
+    component.form.idType = 'NONE';
+    component.form.fullName = 'Test Visitor';
+    component.onSkipMobileOtpChange(true);
+    expect(component.canValidateId).toBeTrue();
+    component.manualPhone = '123';
+    component.mobileTouched = true;
+    expect(component.canValidateId).toBeFalse();
+    expect(component.mobileFieldValidationMessage).toBe('Mobile number must be 10 digits.');
+    component.manualPhone = '9876543210';
+    expect(component.canValidateId).toBeTrue();
+  });
+
+  it('TC-OTP-SKIP-007/008/009 retains OTP verification when skip is false', () => {
+    const component = createStaffComponent();
+    component.form.idType = 'EPIC';
+    component.form.epicNumber = 'ABC1234567';
+    component.form.visitorName = 'TEST VISITOR';
+    component.manualPhone = '9876543210';
+    expect(component.canSendEpicOtp).toBeTrue();
+    expect(component.isCurrentMobileOtpVerified).toBeFalse();
+    component.otpVerified = true;
+    component.verifiedMobileNumber = '9876543210';
+    expect(component.isCurrentMobileOtpVerified).toBeTrue();
+  });
+
+  it('TC-OTP-SKIP-010 keeps photo validation independent', () => {
+    const component = createStaffComponent();
+    component.skipMobileOtpVerification = true;
+    component.form.fullName = 'Test Visitor';
+    component.form.designation = 'Citizen';
+    component.form.outsideState = true;
+    expect(component.canSubmitRegistration).toBeFalse();
+    component.form.livePhoto = 'data:image/jpeg;base64,photo';
+    expect(component.canSubmitRegistration).toBeTrue();
+  });
+
+  it('TC-OTP-SKIP-011/012 resets skip for a new form and ID type change', () => {
+    const component = createStaffComponent();
+    component.skipMobileOtpVerification = true;
+    component.resetForm();
+    expect(component.skipMobileOtpVerification).toBeFalse();
+    component.skipMobileOtpVerification = true;
+    component.onIdTypeChange('NONE');
+    expect(component.skipMobileOtpVerification).toBeFalse();
   });
 });

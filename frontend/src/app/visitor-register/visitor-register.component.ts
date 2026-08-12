@@ -526,15 +526,18 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       && (this.form.idType === 'EPIC' || this.form.idType === 'NONE');
   }
 
-  onSkipMobileOtpVerificationChange(skip: boolean): void {
+  onSkipMobileOtpChange(skip: boolean): void {
     if (this.otpVerified || (skip && !this.canSkipMobileOtp)) return;
+    this.invalidatePendingRegistrationOtp();
     this.skipMobileOtpVerification = skip;
     this.otpCode = '';
     this.otpSent = false;
     this.otpVerificationToken = '';
-    this.registrationOtpRequestId++;
+    this.resetOtpVerification();
     this.errorMsg = '';
     this.mobileValidationMsg = '';
+    this.mobileValidationType = '';
+    this.mobileTouched = false;
     this.toast.info(skip ? 'Mobile OTP verification will be skipped.' : 'Mobile OTP verification is required.');
   }
 
@@ -600,7 +603,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
 
   get canSendEpicOtp(): boolean {
     return this.canValidateId
-      && this.isManualPhoneValid
+      && (this.skipMobileOtpVerification || this.isManualPhoneValid)
       && !this.duplicateRegistrationBlocked
       && !this.hasVisibleErrorMessage
       && !this.isCurrentMobileOtpVerified;
@@ -1063,7 +1066,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       this.errorMsg = 'Full name is required.';
       return;
     }
-    if (!this.isManualPhoneValid) {
+    if ((!this.skipMobileOtpVerification && !this.isManualPhoneValid)
+        || (this.skipMobileOtpVerification && !!this.manualPhone && !this.isManualPhoneValid)) {
       this.loading = false;
       this.errorMsg = this.t('ERROR_VALID_10_DIGIT_MOBILE');
       return;
@@ -1826,7 +1830,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   get mobileFieldValidationMessage(): string {
     if ((this.form.idType !== 'EPIC' && this.form.idType !== 'NONE') || !this.mobileTouched) return '';
     if (!this.manualPhone && !this.skipMobileOtpVerification) return 'Mobile number is required.';
-    if (!this.isManualPhoneValid) return 'Mobile number must be 10 digits.';
+    if (this.manualPhone && !this.isManualPhoneValid) return 'Mobile number must be 10 digits.';
     return '';
   }
 
@@ -1987,6 +1991,16 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   }
 
   private checkRegistrationStatus(proceedAfterCheck: boolean) {
+    if (this.skipMobileOtpVerification && !this.manualPhone) {
+      this.loading = false;
+      if (!proceedAfterCheck) return;
+      if (this.form.idType === 'NONE') {
+        this.continueWithNoId();
+      } else {
+        this.verifyEpic();
+      }
+      return;
+    }
     if (!this.isManualPhoneValid) {
       this.mobileValidationType = 'error';
       this.mobileValidationMsg = this.t('ERROR_VALID_10_DIGIT_MOBILE');

@@ -11,7 +11,8 @@
     <mat-card><strong>{{ dashboardSummary.pendingScheduled }}</strong><span>Pending Appointments</span></mat-card>
     <mat-card><strong>{{ dashboardSummary.scheduledUpcoming }}</strong><span>Scheduled Appointments</span></mat-card>
     <mat-card><strong>{{ dashboardSummary.liveWalkIns }}</strong><span>Live Walk-ins</span></mat-card>
-    <mat-card><strong>{{ dashboardSummary.completedAppointments }}</strong><span>Completed</span></mat-card>
+    <mat-card><a href="/completed-appointments"><strong>{{ dashboardSummary.completedAppointments }}</strong><span>Completed Appointments</span></a></mat-card>
+    <mat-card><a href="/rejected-appointments"><strong>{{ dashboardSummary.rejected }}</strong><span>Rejected Appointments</span></a></mat-card>
     <mat-card><strong>{{ dashboardSummary.openFollowUps }}</strong><span>Open Follow-ups</span></mat-card>
     <mat-card><strong>{{ dashboardSummary.overdueFollowUps }}</strong><span>Overdue Follow-ups</span></mat-card>
   </div>

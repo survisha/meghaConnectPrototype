@@ -294,6 +294,10 @@ public class AppointmentApprovalController {
             
             Appointment.AppointmentStatus oldStatus = appointment.getStatus();
             lifecycleService.transition(appointment, Appointment.AppointmentStatus.REJECTED);
+            appointment.setRejectionReason(request.getRejectReason());
+            appointment.setRejectedAt(DateTimeUtil.nowIST());
+            org.springframework.security.core.Authentication currentAuth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            appointment.setRejectedBy(currentAuth != null ? currentAuth.getName() : "SYSTEM");
 
             if (oldStatus == Appointment.AppointmentStatus.CMO_REVIEW) {
                 appointment.setCmoRemarks("REJECTED: " + request.getRejectReason());

@@ -310,6 +310,7 @@ public class AppointmentWorkflowService {
         lifecycleService.transition(appointment, Appointment.AppointmentStatus.REJECTED);
         appointment.setRejectedBy(actor);
         appointment.setRejectionReason(RequestContextUtil.sanitizeForLog(request.getReason()));
+        appointment.setRejectedAt(com.survisha.meghaconnect.util.DateTimeUtil.nowIST());
         appointment.setUpdatedBy(actor);
 
         Appointment saved = appointmentRepository.save(appointment);

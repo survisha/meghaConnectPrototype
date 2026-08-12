@@ -130,6 +130,8 @@ public class Appointment extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String rejectionReason;
 
+    private LocalDateTime rejectedAt;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "routed_department_id")
     private Department routedDepartment;

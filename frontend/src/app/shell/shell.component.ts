@@ -67,6 +67,10 @@ export class ShellComponent implements OnInit {
       labelKey: 'REPORTS', icon: 'bar_chart', expanded: false,
       feature: 'reports',
       children: [
+        { labelKey: 'COMPLETED_APPOINTMENTS', icon: 'task_alt', route: '/completed-appointments',
+          feature: 'completedAppointments' },
+        { labelKey: 'REJECTED_APPOINTMENTS', icon: 'cancel', route: '/rejected-appointments',
+          feature: 'rejectedAppointments' },
         { labelKey: 'ANALYTICS', icon: 'pie_chart', route: '/reports',
           roles: ['HCM','ADMIN','APPROVER'] },
         { labelKey: 'SCHEME_HEATMAP', icon: 'map', route: '/reports/heatmap',

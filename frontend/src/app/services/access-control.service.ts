@@ -5,7 +5,9 @@ import { UserRole } from '../models';
 export type AppFeature =
   | 'dashboard' | 'userManagement' | 'auditTrail' | 'reports' | 'reportAnalytics'
   | 'calendar' | 'appointments' | 'appointmentTypes' | 'schemeManagement'
-  | 'recentActivity' | 'walkIn' | 'registerVisitor' | 'publicIdentification';
+  | 'recentActivity' | 'walkIn' | 'registerVisitor' | 'publicIdentification'
+  | 'completedAppointments' | 'rejectedAppointments';
+  
 
 @Injectable({ providedIn: 'root' })
 export class AccessControlService {
@@ -32,6 +34,8 @@ export class AccessControlService {
         case 'walkIn':
         case 'registerVisitor':
         case 'publicIdentification':
+        case 'completedAppointments':
+        case 'rejectedAppointments':
           return false;
       }
     }
@@ -61,6 +65,9 @@ export class AccessControlService {
         return this.auth.hasRole('DEO', 'APPROVER', 'HCM');
       case 'publicIdentification':
         return this.auth.hasRole('SUPER_ADMIN', 'ADMIN', 'DEO', 'APPROVER', 'HCM');
+      case 'completedAppointments':
+      case 'rejectedAppointments':
+        return this.auth.hasRole('SUPER_ADMIN', 'APPROVER', 'HCM');
     }
   }
 
@@ -75,6 +82,8 @@ export class AccessControlService {
   canAccessWalkIn(): boolean { return this.can('walkIn'); }
   canRegisterVisitor(): boolean { return this.can('registerVisitor'); }
   canUsePublicIdentification(): boolean { return this.can('publicIdentification'); }
+  canViewCompletedAppointments(): boolean { return this.can('completedAppointments'); }
+  canViewRejectedAppointments(): boolean { return this.can('rejectedAppointments'); }
 
   get isCmoDepartmentAdmin(): boolean {
     return this.role === 'DEPARTMENT_ADMIN' && this.departmentCode === 'CMO';

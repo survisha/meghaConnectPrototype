@@ -17,6 +17,8 @@ import { PublicIdentificationComponent } from './public-identification/public-id
 import { ReportsComponent } from './reports/reports.component';
 import { HeatmapComponent } from './reports/heatmap/heatmap.component';
 import { AuditTrailComponent } from './reports/audit-trail/audit-trail.component';
+import { CompletedAppointmentsComponent } from './completed-appointments/completed-appointments.component';
+import { RejectedAppointmentsComponent } from './rejected-appointments/rejected-appointments.component';
 import { UserManagementComponent } from './admin/user-management.component';
 import { DepartmentManagementComponent } from './admin/departments/department-management.component';
 import { DepartmentRequestsComponent } from './admin/department-requests/department-requests.component';
@@ -67,6 +69,8 @@ export const routes: Routes = [
       { path: 'reports', component: ReportsComponent, canActivate: [featureAccessGuard('reports')] },
       { path: 'reports/heatmap', component: HeatmapComponent, canActivate: [featureAccessGuard('reportAnalytics')] },
       { path: 'reports/audit', component: AuditTrailComponent, canActivate: [featureAccessGuard('auditTrail')] },
+      { path: 'completed-appointments', component: CompletedAppointmentsComponent, canActivate: [roleGuard('SUPER_ADMIN', 'APPROVER', 'HCM')] },
+      { path: 'rejected-appointments', component: RejectedAppointmentsComponent, canActivate: [roleGuard('SUPER_ADMIN', 'APPROVER', 'HCM')] },
       { path: 'admin/departments', component: DepartmentManagementComponent, canActivate: [roleGuard('SUPER_ADMIN')] },
       { path: 'admin/department-requests', component: DepartmentRequestsComponent, canActivate: [roleGuard('SUPER_ADMIN')] },
       { path: 'admin/users', component: UserManagementComponent, canActivate: [featureAccessGuard('userManagement')] },

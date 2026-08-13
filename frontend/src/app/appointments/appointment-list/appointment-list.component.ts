@@ -140,10 +140,9 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   cmoActionUpdating = false;
   errorMsg = '';
   remarksText = '';
-  jtSecDecisionText = '';
-  jtSecRemarksText = '';
-  jtSecDepartmentCode = '';
-  jtSecRemarkId: number | null = null;
+  approverRemarksText = '';
+  approverDepartmentCode = '';
+  hcmRemarksText = '';
   rescheduleDate: Date | null = null;
   rescheduleTime = '10:00';
   pendingAction: 'APPROVE' | 'REJECT' | 'RETURN_PENDING' | null = null;
@@ -806,25 +805,26 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     return isPendingWalkIn(appointment);
   }
 
-  canUseJtSecForwarding(appointment: Appointment | null) {
-    return !!appointment && this.auth.hasRole('APPROVER', 'APPROVER_JT_SECY', 'HCM');
+  canEditApproverRemarks(appointment: Appointment | null) {
+    return !!appointment && this.auth.hasRole('APPROVER', 'APPROVER_JT_SECY', 'ADMIN', 'SUPER_ADMIN');
   }
 
-  canEditJtSecRemark(note: AppointmentRemark) {
-    if (!this.canUseJtSecForwarding(this.selectedAppointment) || !note.id) return false;
-    return true;
+  canEditHcmRemarks(appointment: Appointment | null) {
+    return !!appointment && this.auth.hasRole('APPROVER', 'APPROVER_JT_SECY', 'HCM', 'ADMIN', 'SUPER_ADMIN');
   }
 
-  editJtSecRemark(note: AppointmentRemark) {
-    if (!this.canEditJtSecRemark(note)) return;
-    this.jtSecRemarkId = note.id ?? null;
-    this.jtSecDecisionText = note.decision ?? '';
-    this.jtSecRemarksText = note.hcmRemarks ?? '';
-    this.jtSecDepartmentCode = note.departmentCode ?? '';
+  saveApproverRemarks() {
+    this.saveSeparatedRemark('APPROVER_REMARK', this.approverRemarksText, this.approverDepartmentCode);
   }
 
-  cancelJtSecRemarkEdit() {
-    this.resetJtSecRemarkForm();
+  saveHcmRemarks() {
+    this.saveSeparatedRemark('HCM_REMARK', this.hcmRemarksText);
+  }
+
+  remarkTypeLabel(value?: string) {
+    if (value === 'APPROVER_REMARK') return 'Approver Remark';
+    if (value === 'HCM_REMARK') return 'HCM Remark';
+    return value || 'Remark';
   }
 
   canApproveOrReject(appointment: Appointment | null) {
@@ -1089,9 +1089,12 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
       });
   }
 
-  saveJtSecForwarding() {
-    const remarks = this.jtSecRemarksText.trim();
-    if (!this.selectedAppointment || !this.canUseJtSecForwarding(this.selectedAppointment) || this.actionUpdating) return;
+  private saveSeparatedRemark(type: 'APPROVER_REMARK' | 'HCM_REMARK', value: string, departmentCode = '') {
+    const remarks = value.trim();
+    const canEdit = type === 'APPROVER_REMARK'
+      ? this.canEditApproverRemarks(this.selectedAppointment)
+      : this.canEditHcmRemarks(this.selectedAppointment);
+    if (!this.selectedAppointment || !canEdit || this.actionUpdating) return;
     if (!remarks) {
       this.snackBar.open('Please enter remarks before saving.', 'Close', { duration: 3000, panelClass: ['error-snackbar'] });
       return;
@@ -1100,24 +1103,19 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     const appointment = this.selectedAppointment;
     const payload = {
       hcmRemarks: remarks,
-      decision: this.jtSecDecisionText.trim() || (this.jtSecDepartmentCode ? 'FORWARDED_TO_DEPARTMENT' : 'REMARK'),
-      departmentCode: this.jtSecDepartmentCode || undefined,
+      decision: type,
+      departmentCode: type === 'APPROVER_REMARK' ? departmentCode || undefined : undefined,
     };
-    const request = this.jtSecRemarkId
-      ? this.appointmentService.updateRemark(appointment.id, this.jtSecRemarkId, payload)
-      : this.appointmentService.addRemark(appointment.id, payload);
 
     this.actionUpdating = true;
-    request.pipe(finalize(() => this.actionUpdating = false))
+    this.appointmentService.addRemark(appointment.id, payload).pipe(finalize(() => this.actionUpdating = false))
       .subscribe({
         next: _note => {
-          const wasEditing = Boolean(this.jtSecRemarkId);
-          this.resetJtSecRemarkForm();
           this.loadAppointmentRemarks(appointment.id);
           this.loadAppointmentById(appointment.id);
-          this.snackBar.open(wasEditing ? 'Approver remark updated.' : 'Approver remark saved.', 'Close', { duration: 5000, panelClass: ['success-snackbar'] });
+          this.snackBar.open(type === 'APPROVER_REMARK' ? 'Approver remarks saved.' : 'HCM remarks saved.', 'Close', { duration: 5000, panelClass: ['success-snackbar'] });
         },
-        error: error => this.snackBar.open(apiErrorMessage(error, 'Failed to save Approver remarks.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] })
+        error: error => this.snackBar.open(apiErrorMessage(error, 'Failed to save remarks.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] })
       });
   }
 
@@ -1301,6 +1299,8 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
       .subscribe(updated => {
         if (!updated) return;
         this.selectedAppointment = updated;
+        this.approverRemarksText = updated.approverRemarks ?? '';
+        this.hcmRemarksText = updated.hcmRemarks ?? '';
         this.replaceAppointment(updated);
       });
   }
@@ -1674,6 +1674,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
 
   openViewDetails(appointment: Appointment) {
     this.selectedAppointment = appointment;
+    this.resetRemarkForms();
     this.loadVisitorPhoto(appointment);
     this.loadDocuments(appointment.id);
     this.loadAppointmentRemarks(appointment.id);
@@ -1719,7 +1720,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     this.selectedAppointmentRemarks = [];
     this.selectedAppointmentRemarksError = '';
     this.selectedAppointmentRemarksLoading = false;
-    this.resetJtSecRemarkForm();
+    this.resetRemarkForms();
     this.selectedSupportingDocument = null;
     this.stopProofCamera();
     this.clearProofCapture();
@@ -1734,19 +1735,17 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
       .subscribe({
         next: remarks => {
           this.selectedAppointmentRemarks = remarks;
-          if (this.jtSecRemarkId && !remarks.some(note => note.id === this.jtSecRemarkId)) {
-            this.resetJtSecRemarkForm();
-          }
+          const approverNote = remarks.find(note => note.decision === 'APPROVER_REMARK');
+          this.approverDepartmentCode = approverNote?.departmentCode ?? '';
         },
         error: error => this.selectedAppointmentRemarksError = apiErrorMessage(error, 'Unable to load HCM/APPROVER remarks.')
       });
   }
 
-  private resetJtSecRemarkForm() {
-    this.jtSecDecisionText = '';
-    this.jtSecRemarksText = '';
-    this.jtSecDepartmentCode = '';
-    this.jtSecRemarkId = null;
+  private resetRemarkForms() {
+    this.approverRemarksText = this.selectedAppointment?.approverRemarks ?? '';
+    this.hcmRemarksText = this.selectedAppointment?.hcmRemarks ?? '';
+    this.approverDepartmentCode = '';
   }
 
   private loadVisitorPhoto(appointment: Appointment) {

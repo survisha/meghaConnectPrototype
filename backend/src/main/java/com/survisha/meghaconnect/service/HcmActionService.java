@@ -30,6 +30,8 @@ import java.util.stream.Collectors;
 @Slf4j
 @Transactional
 public class HcmActionService {
+    private static final String APPROVER_REMARK = "APPROVER_REMARK";
+    private static final String HCM_REMARK = "HCM_REMARK";
     
     private final HcmActionRepository hcmActionRepository;
     private final AppointmentRepository appointmentRepository;
@@ -116,6 +118,7 @@ public class HcmActionService {
         String departmentName = resolveDepartmentName(departmentCode);
         String remarks = trimToNull(actionDto != null ? actionDto.getHcmRemarks() : null);
         String decision = trimToNull(actionDto != null ? actionDto.getDecision() : null);
+        validateRemarkAccess(decision, actorRole);
 
         HcmAction action = HcmAction.builder()
             .appointmentId(appointmentId)
@@ -134,7 +137,8 @@ public class HcmActionService {
             .build();
         HcmAction saved = hcmActionRepository.save(action);
 
-        if (remarks != null && isApproverRole(actorRole)) {
+        if (remarks != null && (APPROVER_REMARK.equals(decision)
+                || (!isRemarkType(decision) && isApproverRole(actorRole)))) {
             appointment.setApproverRemarks(remarks);
         } else if (remarks != null) {
             appointment.setHcmRemarks(remarks);
@@ -142,7 +146,7 @@ public class HcmActionService {
         if (departmentCode != null) {
             appointment.setDepartment(departmentName != null ? departmentName : departmentCode);
             appointment.setStatus(Appointment.AppointmentStatus.FORWARDED_TO_DEPARTMENT);
-        } else if (decision != null) {
+        } else if (decision != null && !isRemarkType(decision)) {
             appointment.setStatus(Appointment.AppointmentStatus.COMPLETED);
         }
         appointment.setUpdatedBy(actor);
@@ -170,6 +174,7 @@ public class HcmActionService {
         String departmentName = resolveDepartmentName(departmentCode);
         String remarks = trimToNull(actionDto != null ? actionDto.getHcmRemarks() : null);
         String decision = trimToNull(actionDto != null ? actionDto.getDecision() : null);
+        validateRemarkAccess(decision, actorRole);
 
         action.setHcmRemarks(remarks);
         action.setDecision(decision);
@@ -177,7 +182,8 @@ public class HcmActionService {
         action.setDepartmentName(departmentName);
         HcmAction saved = hcmActionRepository.save(action);
 
-        if (remarks != null && isApproverRole(actorRole)) {
+        if (remarks != null && (APPROVER_REMARK.equals(decision)
+                || (!isRemarkType(decision) && isApproverRole(actorRole)))) {
             appointment.setApproverRemarks(remarks);
         } else if (remarks != null) {
             appointment.setHcmRemarks(remarks);
@@ -436,7 +442,23 @@ public class HcmActionService {
 
     private boolean isApproverRole(String actorRole) {
         String role = trimToNull(actorRole);
-        return "APPROVER".equals(role) || "HCM".equals(role) || "APPROVER_JT_SECY".equals(role);
+        return "APPROVER".equals(role) || "APPROVER_JT_SECY".equals(role)
+            || "ADMIN".equals(role) || "SUPER_ADMIN".equals(role);
+    }
+
+    private void validateRemarkAccess(String remarkType, String actorRole) {
+        // Existing callers may continue sending their workflow decision value.
+        if (!isRemarkType(remarkType)) return;
+        if (APPROVER_REMARK.equals(remarkType) && !isApproverRole(actorRole)) {
+            throw new IllegalArgumentException("Approver remarks can only be updated by an Approver.");
+        }
+        if (HCM_REMARK.equals(remarkType) && !isHcmOrOsd(actorRole)) {
+            throw new IllegalArgumentException("HCM remarks can only be updated by HCM or an Approver.");
+        }
+    }
+
+    private boolean isRemarkType(String value) {
+        return APPROVER_REMARK.equals(value) || HCM_REMARK.equals(value);
     }
 
     private String resolveDepartmentName(String departmentCode) {

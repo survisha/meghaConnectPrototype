@@ -572,28 +572,8 @@
       <div class="description-box">{{ selectedAppointment.shortNotes }}</div>
     </section>
 
-    <section class="detail-section" *ngIf="selectedAppointment.cmoRemarks || selectedAppointment.approverRemarks">
-      <h3>Approver Section</h3>
-      <div class="remarks-list">
-        <div class="remark-card" *ngIf="selectedAppointment.cmoRemarks">
-          <span class="field-label">CMO Remarks</span>
-          <div class="description-box">{{ selectedAppointment.cmoRemarks }}</div>
-        </div>
-
-        <div class="remark-card" *ngIf="selectedAppointment.approverRemarks">
-          <span class="field-label">Approver Remarks</span>
-          <div class="description-box">{{ selectedAppointment.approverRemarks }}</div>
-        </div>
-
-      </div>
-    </section>
-
-    <section class="detail-section" *ngIf="selectedAppointment.hcmRemarks || selectedAppointment.meetingOutcome || selectedAppointment.completedAt">
-      <h3>HCM Section</h3>
-      <div class="remark-card" *ngIf="selectedAppointment.hcmRemarks">
-        <span class="field-label">HCM Remarks / Directions</span>
-        <div class="description-box">{{ selectedAppointment.hcmRemarks }}</div>
-      </div>
+    <section class="detail-section" *ngIf="selectedAppointment.meetingOutcome || selectedAppointment.completedAt">
+      <h3>Meeting Information</h3>
       <div class="detail-row" *ngIf="selectedAppointment.meetingOutcome"><span>Meeting Outcome</span><strong>{{ selectedAppointment.meetingOutcome }}</strong></div>
       <div class="detail-row" *ngIf="selectedAppointment.scheduledDateTime"><span>Meeting Date / Time</span><strong>{{ selectedAppointment.scheduledDateTime | date:'medium' }}</strong></div>
       <div class="detail-row" *ngIf="selectedAppointment.completedAt"><span>Completed</span><strong>{{ selectedAppointment.completedAt | date:'medium' }}</strong></div>
@@ -616,15 +596,8 @@
             <span class="field-label">
               {{ note.createdByRole || 'HCM/APPROVER' }} / {{ note.createdBy || '-' }}
             </span>
-            <button mat-icon-button
-                    type="button"
-                    *ngIf="canEditJtSecRemark(note)"
-                    (click)="editJtSecRemark(note)"
-                    matTooltip="Edit remark">
-              <mat-icon>edit</mat-icon>
-            </button>
           </div>
-          <strong>{{ note.decision || 'Remark' }}</strong>
+          <strong>{{ remarkTypeLabel(note.decision) }}</strong>
           <span>{{ note.departmentName || note.departmentCode || selectedAppointment.department || 'No department allocated' }}</span>
           <div class="description-box">{{ note.hcmRemarks || '—' }}</div>
           <small>{{ note.createdAt | date:'medium' }}</small>
@@ -632,23 +605,14 @@
       </div>
     </section>
 
-    <section class="detail-section jtsec-forward-panel" *ngIf="canUseJtSecForwarding(selectedAppointment)">
+    <section class="detail-section approver-forward-panel">
       <div class="documents-title">
-        <h3>{{ jtSecRemarkId ? 'Edit Approver Remark' : 'Add Approver Remark' }}</h3>
-        <button mat-stroked-button type="button" *ngIf="jtSecRemarkId" (click)="cancelJtSecRemarkEdit()">
-          <mat-icon>close</mat-icon>
-          Cancel Edit
-        </button>
+        <h3>Approver Remarks</h3>
       </div>
       <div class="cmo-form-grid">
-        <mat-form-field appearance="outline" class="full-width-field">
-          <mat-label>Decision</mat-label>
-          <input matInput [(ngModel)]="jtSecDecisionText" placeholder="Forwarded for verification">
-        </mat-form-field>
-
         <mat-form-field appearance="outline">
           <mat-label>Forward to Department</mat-label>
-          <mat-select [(ngModel)]="jtSecDepartmentCode">
+          <mat-select [(ngModel)]="approverDepartmentCode" [disabled]="!canEditApproverRemarks(selectedAppointment)">
             <mat-option value="">No department</mat-option>
             <mat-option *ngFor="let department of departments" [value]="department.value">
               {{ department.label }}
@@ -658,7 +622,7 @@
 
         <mat-form-field appearance="outline" class="full-width-field">
           <mat-label>Add Remarks / Notes</mat-label>
-          <textarea matInput [(ngModel)]="jtSecRemarksText" rows="3"></textarea>
+          <textarea matInput [(ngModel)]="approverRemarksText" rows="3" [readonly]="!canEditApproverRemarks(selectedAppointment)"></textarea>
         </mat-form-field>
       </div>
 
@@ -666,10 +630,27 @@
         <button mat-raised-button
                 color="primary"
                 type="button"
-                [disabled]="actionUpdating"
-                (click)="saveJtSecForwarding()">
+                *ngIf="canEditApproverRemarks(selectedAppointment)"
+                [disabled]="actionUpdating || !approverRemarksText.trim()"
+                (click)="saveApproverRemarks()">
           <mat-icon>save</mat-icon>
           Save Remarks
+        </button>
+      </div>
+    </section>
+
+    <section class="detail-section hcm-remarks-panel">
+      <h3>HCM Remarks</h3>
+      <mat-form-field appearance="outline" class="full-width-field">
+        <mat-label>HCM Remarks / Directions</mat-label>
+        <textarea matInput [(ngModel)]="hcmRemarksText" rows="4" [readonly]="!canEditHcmRemarks(selectedAppointment)"></textarea>
+      </mat-form-field>
+      <div class="details-action-buttons" *ngIf="canEditHcmRemarks(selectedAppointment)">
+        <button mat-raised-button color="primary" type="button"
+                [disabled]="actionUpdating || !hcmRemarksText.trim()"
+                (click)="saveHcmRemarks()">
+          <mat-icon>save</mat-icon>
+          Save HCM Remarks
         </button>
       </div>
     </section>

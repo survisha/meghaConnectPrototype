@@ -454,6 +454,16 @@
   }
 }
 
+.approver-forward-panel,
+.hcm-remarks-panel {
+  border: 1px solid #dbe5f0;
+  border-radius: 10px;
+  padding: 1rem;
+}
+
+.approver-forward-panel { background: #f8fbff; }
+.hcm-remarks-panel { background: #fbfaf7; }
+
 .detail-row {
   display: flex;
   align-items: center;
@@ -1150,4 +1160,3 @@ mat-chip.status-chip {
     color: #4b5563 !important;
   }
 }
-

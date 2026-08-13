@@ -35,6 +35,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { apiErrorMessage } from '../../shared/api-error.util';
 import { CameraCaptureService, CameraDeviceOption, CameraFacingMode } from '../../shared/camera-capture.service';
+import { appointmentRemarkExportFields } from '../appointment-pdf-export.util';
 
 type SortDirection = 'asc' | 'desc';
 type AppointmentSortColumn =
@@ -1337,32 +1338,33 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     }
 
     this.exportPreparing = true;
-    const remarksSource = forkJoin(appointments.map(appointment =>
-      this.appointmentService.getRemarks(appointment.id).pipe(catchError(() => of([] as AppointmentRemark[])))
-    ));
-    const photoSource = forkJoin(appointments.map(appointment =>
-      this.loadExportPhoto(appointment).catch(() => null)
+    const appointmentSource = forkJoin(appointments.map(appointment =>
+      this.appointmentService.getAppointmentById(appointment.id).pipe(catchError(() => of(appointment)))
     ));
 
-    forkJoin({ remarksRows: remarksSource, photoRows: photoSource })
-      .pipe(finalize(() => this.exportPreparing = false))
-      .subscribe({
-        next: ({ remarksRows, photoRows }) => {
-          const remarksByAppointmentId = new Map<number, AppointmentRemark[]>();
-          appointments.forEach((appointment, index) => {
-            remarksByAppointmentId.set(appointment.id, remarksRows[index] ?? []);
-          });
-          this.generateAppointmentPdf(appointments, remarksByAppointmentId, photoRows);
-          this.auditPdfExport(appointments);
-          this.closeExportDialog();
+    appointmentSource.subscribe({
+        next: refreshedAppointments => {
+          Promise.all(refreshedAppointments.map(appointment => this.loadExportPhoto(appointment).catch(() => null)))
+            .then(photoRows => {
+              this.generateAppointmentPdf(refreshedAppointments, photoRows);
+              this.auditPdfExport(refreshedAppointments);
+              this.closeExportDialog();
+              this.exportPreparing = false;
+            })
+            .catch(error => {
+              this.exportPreparing = false;
+              this.snackBar.open(apiErrorMessage(error, 'Unable to export appointments.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] });
+            });
         },
-        error: error => this.snackBar.open(apiErrorMessage(error, 'Unable to export appointments.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] })
+        error: error => {
+          this.exportPreparing = false;
+          this.snackBar.open(apiErrorMessage(error, 'Unable to export appointments.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] });
+        }
       });
   }
 
   private generateAppointmentPdf(
     appointments: Appointment[],
-    remarksByAppointmentId: Map<number, AppointmentRemark[]>,
     photoRows: Array<string | null>
   ) {
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
@@ -1384,31 +1386,38 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
 
     autoTable(doc, {
       startY: 34,
-      head: [['S.No', 'Token', 'Applicant Name', 'Agenda', 'Brief Agenda / Brief Description', 'Mobile Number', 'Address', 'Visitor Photo', 'Remarks']],
-      body: appointments.map((appointment, index) => [
-        index + 1,
-        this.exportTokenLastFour(appointment),
-        this.getDisplayName(appointment),
-        appointment.agendaType || appointment.subject || '-',
-        appointment.agendaBrief || appointment.reasonForAppointment || appointment.applicant?.briefDescription || '-',
-        this.getDisplayPhone(appointment),
-        this.applicantAddress(appointment) || appointment.guestAddress || '-',
-        photoByRow.has(index) ? '' : 'No Photo',
-        this.exportRemarks(appointment, remarksByAppointmentId.get(appointment.id) ?? []),
-      ]),
+      head: [['S.No', 'Token', 'Applicant Name', 'Agenda', 'Brief Agenda / Brief Description', 'Mobile Number', 'Address', 'Visitor Photo', 'Approver Remarks', 'Forwarded Department', 'HCM Remarks / Directions']],
+      body: appointments.map((appointment, index) => {
+        const remarkFields = appointmentRemarkExportFields(appointment);
+        return [
+          index + 1,
+          this.exportTokenLastFour(appointment),
+          this.getDisplayName(appointment),
+          appointment.agendaType || appointment.subject || '-',
+          appointment.agendaBrief || appointment.reasonForAppointment || appointment.applicant?.briefDescription || '-',
+          this.getDisplayPhone(appointment),
+          this.applicantAddress(appointment) || appointment.guestAddress || '-',
+          photoByRow.has(index) ? '' : 'No Photo',
+          remarkFields.approverRemarks,
+          remarkFields.forwardedDepartment,
+          remarkFields.hcmRemarks,
+        ];
+      }),
       theme: 'grid',
       styles: { font: 'helvetica', fontSize: 8, cellPadding: 2, overflow: 'linebreak', valign: 'middle' },
       headStyles: { fillColor: [31, 41, 55], textColor: 255, fontStyle: 'bold' },
       columnStyles: {
         0: { cellWidth: 12, halign: 'center' },
-        1: { cellWidth: 15, halign: 'center' },
-        2: { cellWidth: 28 },
-        3: { cellWidth: 26 },
-        4: { cellWidth: 48 },
-        5: { cellWidth: 24 },
-        6: { cellWidth: 40 },
-        7: { cellWidth: 24, minCellHeight: 24, halign: 'center' },
-        8: { cellWidth: 54 },
+        1: { cellWidth: 14, halign: 'center' },
+        2: { cellWidth: 24 },
+        3: { cellWidth: 20 },
+        4: { cellWidth: 32 },
+        5: { cellWidth: 20 },
+        6: { cellWidth: 28 },
+        7: { cellWidth: 18, minCellHeight: 24, halign: 'center' },
+        8: { cellWidth: 30 },
+        9: { cellWidth: 23 },
+        10: { cellWidth: 32 },
       },
       margin: { left: 14, right: 14 },
       didParseCell: data => {
@@ -1440,16 +1449,6 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
       return digits.slice(-4);
     }
     return token.length > 4 ? token.slice(-4) : token;
-  }
-
-  private exportRemarks(appointment: Appointment, remarks: AppointmentRemark[]) {
-    const values = [
-      appointment.cmoRemarks,
-      appointment.approverRemarks,
-      appointment.hcmRemarks,
-      ...remarks.map(note => note.hcmRemarks),
-    ].filter(Boolean) as string[];
-    return Array.from(new Set(values)).join('\n') || '-';
   }
 
   private async loadExportPhoto(appointment: Appointment): Promise<string | null> {
@@ -1572,7 +1571,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
       columns.push(
         { header: 'CMO Remarks', value: appointment => appointment.cmoRemarks || '' },
         { header: 'Approver Remarks', value: appointment => appointment.approverRemarks || '' },
-        { header: 'Latest HCM / APPROVER Remarks', value: appointment => appointment.hcmRemarks || '' },
+        { header: 'HCM Remarks / Directions', value: appointment => appointment.hcmRemarks || 'Not Available' },
         { header: 'Allocated / Forwarded Department', value: appointment => appointment.department || '' },
       );
     }

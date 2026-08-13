@@ -1,5 +1,5 @@
 import { Appointment } from '../models';
-import { canRejectScheduled, canScheduleOrReschedule, isLiveWalkIn } from './appointment-action-policy';
+import { canRejectScheduled, canReturnToPending, canScheduleOrReschedule, isLiveWalkIn } from './appointment-action-policy';
 
 describe('appointment action policy', () => {
   const appt = (category: 'SCHEDULED'|'WALK_IN', status: any) =>
@@ -10,11 +10,16 @@ describe('appointment action policy', () => {
     expect(canScheduleOrReschedule(appt('SCHEDULED', 'PENDING'))).toBeTrue();
   });
 
-  it('never exposes schedule or reject for a pending walk-in', () => {
+  it('allows rejecting a pending walk-in without exposing schedule', () => {
     const walkIn = appt('WALK_IN', 'PENDING');
     expect(isLiveWalkIn(walkIn)).toBeTrue();
-    expect(canRejectScheduled(walkIn)).toBeFalse();
+    expect(canRejectScheduled(walkIn)).toBeTrue();
     expect(canScheduleOrReschedule(walkIn)).toBeFalse();
+  });
+
+  it('allows eligible scheduled appointments to return to pending regardless of event type', () => {
+    expect(canReturnToPending(appt('SCHEDULED', 'SCHEDULED'))).toBeTrue();
+    expect(canReturnToPending(appt('SCHEDULED', 'COMPLETED'))).toBeFalse();
   });
 
   it('keeps completed walk-ins read-only', () => {

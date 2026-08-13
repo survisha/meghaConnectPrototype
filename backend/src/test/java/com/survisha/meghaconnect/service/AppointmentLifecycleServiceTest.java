@@ -20,6 +20,8 @@ class AppointmentLifecycleServiceTest {
                 Appointment.AppointmentStatus.ROUTED_TO_OFFICIAL);
         assertAllowed(Appointment.AppointmentCategory.SCHEDULED, Appointment.AppointmentStatus.SCHEDULED,
                 Appointment.AppointmentStatus.HCM_MET_COMPLETED);
+        assertAllowed(Appointment.AppointmentCategory.SCHEDULED, Appointment.AppointmentStatus.SCHEDULED,
+                Appointment.AppointmentStatus.PENDING);
     }
 
     @Test
@@ -33,12 +35,12 @@ class AppointmentLifecycleServiceTest {
     }
 
     @Test
-    void walkInAllowsOnlyPendingToCompleted() {
+    void walkInAllowsPendingToCompletedOrRejected() {
         assertAllowed(Appointment.AppointmentCategory.WALK_IN, Appointment.AppointmentStatus.PENDING,
                 Appointment.AppointmentStatus.COMPLETED);
         assertRejected(Appointment.AppointmentCategory.WALK_IN, Appointment.AppointmentStatus.PENDING,
                 Appointment.AppointmentStatus.SCHEDULED);
-        assertRejected(Appointment.AppointmentCategory.WALK_IN, Appointment.AppointmentStatus.PENDING,
+        assertAllowed(Appointment.AppointmentCategory.WALK_IN, Appointment.AppointmentStatus.PENDING,
                 Appointment.AppointmentStatus.REJECTED);
         assertRejected(Appointment.AppointmentCategory.WALK_IN, Appointment.AppointmentStatus.COMPLETED,
                 Appointment.AppointmentStatus.COMPLETED);

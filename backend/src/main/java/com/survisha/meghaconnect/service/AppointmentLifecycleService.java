@@ -22,13 +22,15 @@ public class AppointmentLifecycleService {
                             Appointment.AppointmentStatus.REJECTED,
                             Appointment.AppointmentStatus.ROUTED_TO_OFFICIAL),
                     transition(Appointment.AppointmentStatus.SCHEDULED,
-                            Appointment.AppointmentStatus.HCM_MET_COMPLETED)
+                            Appointment.AppointmentStatus.HCM_MET_COMPLETED,
+                            Appointment.AppointmentStatus.PENDING)
             );
 
     private static final Map<Appointment.AppointmentStatus, Set<Appointment.AppointmentStatus>> WALK_IN_TRANSITIONS =
             transitions(
                     transition(Appointment.AppointmentStatus.PENDING,
-                            Appointment.AppointmentStatus.COMPLETED)
+                            Appointment.AppointmentStatus.COMPLETED,
+                            Appointment.AppointmentStatus.REJECTED)
             );
 
     public void transition(Appointment appointment, Appointment.AppointmentStatus targetStatus) {

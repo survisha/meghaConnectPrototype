@@ -1,6 +1,6 @@
 <div>
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.75rem">
-    <h2 class="page-title" style="margin:0">Appointments</h2>
+    <h2 class="page-title" style="margin:0">{{ listMode === 'walkin' ? 'Walk-in Appointments' : 'Appointments' }}</h2>
     <div style="display:flex;gap:0.5rem">
       <button mat-raised-button color="accent" routerLink="/appointments/walkin" 
               *ngIf="auth.hasRole('ADMIN') || auth.hasRole('DEO')">
@@ -177,14 +177,14 @@
             </td>
           </ng-container>
 
-          <ng-container matColumnDef="eventType">
+          <ng-container matColumnDef="appointmentSource">
             <th mat-header-cell *matHeaderCellDef>
-              <button type="button" class="sort-header-button" (click)="setSort('eventType')">
-                Type <mat-icon>{{ sortIcon('eventType') }}</mat-icon>
+              <button type="button" class="sort-header-button" (click)="setSort('appointmentSource')">
+                Appointment Source <mat-icon>{{ sortIcon('appointmentSource') }}</mat-icon>
               </button>
             </th>
             <td mat-cell *matCellDef="let appt">
-              <span class="event-badge" [class]="'type-'+appt.eventType">{{ appt.eventType }}</span>
+              <span class="event-badge">{{ appt.appointmentSource || '—' }}</span>
             </td>
           </ng-container>
 
@@ -425,7 +425,7 @@
       <mat-chip [class]="'status-chip status-' + getStatusSeverity(selectedAppointment.status)">
         {{ getStatusLabel(selectedAppointment.status) }}
       </mat-chip>
-      <span class="event-badge" [class]="'type-' + selectedAppointment.eventType">{{ selectedAppointment.eventType }}</span>
+      <span class="event-badge">{{ selectedAppointment.appointmentSource || '—' }}</span>
       <span class="associate-count-chip" *ngIf="associateCount(selectedAppointment) > 0">
         <mat-icon>groups</mat-icon>
         {{ associateCount(selectedAppointment) }} associate{{ associateCount(selectedAppointment) === 1 ? '' : 's' }}
@@ -572,9 +572,8 @@
       <div class="description-box">{{ selectedAppointment.shortNotes }}</div>
     </section>
 
-    <section class="detail-section"
-             *ngIf="selectedAppointment.cmoRemarks || selectedAppointment.approverRemarks || selectedAppointment.hcmRemarks">
-      <h3>Remarks</h3>
+    <section class="detail-section" *ngIf="selectedAppointment.cmoRemarks || selectedAppointment.approverRemarks">
+      <h3>Approver Section</h3>
       <div class="remarks-list">
         <div class="remark-card" *ngIf="selectedAppointment.cmoRemarks">
           <span class="field-label">CMO Remarks</span>
@@ -586,11 +585,18 @@
           <div class="description-box">{{ selectedAppointment.approverRemarks }}</div>
         </div>
 
-        <div class="remark-card" *ngIf="selectedAppointment.hcmRemarks">
-          <span class="field-label">HCM / APPROVER Remarks</span>
-          <div class="description-box">{{ selectedAppointment.hcmRemarks }}</div>
-        </div>
       </div>
+    </section>
+
+    <section class="detail-section" *ngIf="selectedAppointment.hcmRemarks || selectedAppointment.meetingOutcome || selectedAppointment.completedAt">
+      <h3>HCM Section</h3>
+      <div class="remark-card" *ngIf="selectedAppointment.hcmRemarks">
+        <span class="field-label">HCM Remarks / Directions</span>
+        <div class="description-box">{{ selectedAppointment.hcmRemarks }}</div>
+      </div>
+      <div class="detail-row" *ngIf="selectedAppointment.meetingOutcome"><span>Meeting Outcome</span><strong>{{ selectedAppointment.meetingOutcome }}</strong></div>
+      <div class="detail-row" *ngIf="selectedAppointment.scheduledDateTime"><span>Meeting Date / Time</span><strong>{{ selectedAppointment.scheduledDateTime | date:'medium' }}</strong></div>
+      <div class="detail-row" *ngIf="selectedAppointment.completedAt"><span>Completed</span><strong>{{ selectedAppointment.completedAt | date:'medium' }}</strong></div>
     </section>
 
     <section class="detail-section"
@@ -628,7 +634,7 @@
 
     <section class="detail-section jtsec-forward-panel" *ngIf="canUseJtSecForwarding(selectedAppointment)">
       <div class="documents-title">
-        <h3>{{ jtSecRemarkId ? 'Edit JtSec Remark' : 'Add JtSec Remark' }}</h3>
+        <h3>{{ jtSecRemarkId ? 'Edit Approver Remark' : 'Add Approver Remark' }}</h3>
         <button mat-stroked-button type="button" *ngIf="jtSecRemarkId" (click)="cancelJtSecRemarkEdit()">
           <mat-icon>close</mat-icon>
           Cancel Edit
@@ -848,6 +854,15 @@
 
         <button mat-icon-button
                 type="button"
+                [disabled]="!canReturnAppointmentToPending(appointment) || actionUpdating"
+                (click)="openReturnToPending(appointment)"
+                matTooltip="Return to Pending"
+                matTooltipPosition="above">
+          <mat-icon>assignment_late</mat-icon>
+        </button>
+
+        <button mat-icon-button
+                type="button"
                 class="reschedule-action"
                 [disabled]="!canRescheduleAppointment(appointment) || actionUpdating"
                 (click)="openReschedule(appointment)"
@@ -898,7 +913,7 @@
 <ng-template #appointmentRemarksDialog>
   <div class="action-dialog-title" mat-dialog-title>
     <div>
-      <span class="eyebrow">{{ pendingAction === 'APPROVE' ? 'Approve Appointment' : 'Reject Appointment' }}</span>
+      <span class="eyebrow">{{ pendingAction === 'APPROVE' ? 'Approve Appointment' : pendingAction === 'REJECT' ? 'Reject Appointment' : 'Return Appointment to Pending' }}</span>
       <h2>{{ selectedAppointment?.applicationId }}</h2>
     </div>
     <button mat-icon-button aria-label="Close action dialog" (click)="closeAppointmentRemarksDialog()">
@@ -910,7 +925,7 @@
     <div *ngIf="selectedAppointment" class="dialog-appt-summary">
       <strong>{{ selectedAppointment.applicationId }}</strong>
       <span>{{ selectedAppointment.applicant.fullName || selectedAppointment.applicantName || '—' }}</span>
-      <span class="event-badge" [class]="'type-' + selectedAppointment.eventType">{{ selectedAppointment.eventType }}</span>
+      <span class="event-badge">{{ selectedAppointment.appointmentSource || '—' }}</span>
     </div>
 
     <mat-form-field appearance="outline" class="full-width-field">
@@ -918,7 +933,7 @@
       <textarea matInput
                 [(ngModel)]="remarksText"
                 rows="4"
-                [placeholder]="pendingAction === 'APPROVE' ? 'Add remarks before forwarding to HCM...' : 'Add remarks before rejecting...'">
+                [placeholder]="pendingAction === 'APPROVE' ? 'Add remarks before forwarding to HCM...' : pendingAction === 'REJECT' ? 'Add remarks before rejecting...' : 'Explain why this appointment is being returned to Pending...'">
       </textarea>
     </mat-form-field>
   </mat-dialog-content>
@@ -927,11 +942,11 @@
     <button mat-stroked-button type="button" (click)="closeAppointmentRemarksDialog()">Cancel</button>
     <button mat-raised-button
             type="button"
-            [color]="pendingAction === 'APPROVE' ? 'primary' : 'warn'"
-            [disabled]="actionUpdating"
+            [color]="pendingAction === 'REJECT' ? 'warn' : 'primary'"
+            [disabled]="actionUpdating || !remarksText.trim()"
             (click)="confirmAction()">
       <mat-icon>{{ pendingAction === 'APPROVE' ? 'check' : 'close' }}</mat-icon>
-      {{ pendingAction === 'APPROVE' ? 'Approve' : 'Confirm Reject' }}
+      {{ pendingAction === 'APPROVE' ? 'Approve' : pendingAction === 'REJECT' ? 'Confirm Reject' : 'Return to Pending' }}
     </button>
   </mat-dialog-actions>
 </ng-template>

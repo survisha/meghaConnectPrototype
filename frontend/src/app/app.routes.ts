@@ -11,6 +11,7 @@ import { SchedulingComponent } from './scheduling/scheduling.component';
 import { AppointmentListComponent } from './appointments/appointment-list/appointment-list.component';
 import { AppointmentFormComponent } from './appointments/appointment-form/appointment-form.component';
 import { WalkinComponent } from './appointments/walkin/walkin.component';
+import { WalkinAppointmentListComponent } from './appointments/walkin-appointment-list/walkin-appointment-list.component';
 import { SchemeListComponent } from './schemes/scheme-list/scheme-list.component';
 import { SchemeFormComponent } from './schemes/scheme-form/scheme-form.component';
 import { PublicIdentificationComponent } from './public-identification/public-identification.component';
@@ -58,6 +59,7 @@ export const routes: Routes = [
       { path: 'appointments', component: AppointmentListComponent, canActivate: [featureAccessGuard('appointments')] },
       { path: 'appointments/new', component: AppointmentFormComponent, canActivate: [featureAccessGuard('appointments')] },
       { path: 'appointments/walkin', component: WalkinComponent, canActivate: [featureAccessGuard('walkIn')] },
+      { path: 'walkin-appointments', component: WalkinAppointmentListComponent, canActivate: [featureAccessGuard('walkIn')] },
       { path: 'appointments/pending-approvals', component: ApproverInboxComponent, canActivate: [roleGuard('SUPER_ADMIN', 'HCM', 'ADMIN', 'APPROVER')] },
       { path: 'appointments/approval-details/:id', component: AppointmentApprovalDetailsComponent, canActivate: [roleGuard('SUPER_ADMIN', 'HCM', 'ADMIN', 'APPROVER')] },
       { path: 'approver', redirectTo: 'appointments', pathMatch: 'full' },

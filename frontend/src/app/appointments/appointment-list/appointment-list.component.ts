@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, TemplateRef, ViewChild } from '@angular/core';
+import { Component, Input, OnDestroy, OnInit, TemplateRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -11,7 +11,7 @@ import { ReferenceDataService } from '../../services/reference-data.service';
 import { ScheduleEventService } from '../../services/schedule-event.service';
 import { VisitorService } from '../../services/visitor.service';
 import { Appointment, AppointmentDocument, AppointmentStatus, EventType, Location, ScheduleEvent } from '../../models';
-import { canRejectScheduled, canScheduleOrReschedule, isLiveWalkIn as isPendingWalkIn } from '../appointment-action-policy';
+import { canRejectScheduled, canReturnToPending, canScheduleOrReschedule, isLiveWalkIn as isPendingWalkIn } from '../appointment-action-policy';
 import { catchError, finalize } from 'rxjs/operators';
 import { MatTableModule } from '@angular/material/table';
 import { MatPaginatorModule } from '@angular/material/paginator';
@@ -42,7 +42,7 @@ type AppointmentSortColumn =
   | 'designation'
   | 'constituency'
   | 'agenda'
-  | 'eventType'
+  | 'appointmentSource'
   | 'location'
   | 'status'
   | 'createdAt'
@@ -87,6 +87,7 @@ interface AppointmentExportOptions {
   styleUrls: ['./appointment-list.component.scss'],
 })
 export class AppointmentListComponent implements OnInit, OnDestroy {
+  @Input() listMode: 'appointments' | 'walkin' = 'appointments';
   @ViewChild('appointmentDetailsDialog') appointmentDetailsDialog!: TemplateRef<unknown>;
   @ViewChild('documentPreviewDialog') documentPreviewDialog!: TemplateRef<unknown>;
   @ViewChild('appointmentRemarksDialog') appointmentRemarksDialog!: TemplateRef<unknown>;
@@ -145,7 +146,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   jtSecRemarkId: number | null = null;
   rescheduleDate: Date | null = null;
   rescheduleTime = '10:00';
-  pendingAction: 'APPROVE' | 'REJECT' | null = null;
+  pendingAction: 'APPROVE' | 'REJECT' | 'RETURN_PENDING' | null = null;
   cmoModifyEventType: EventType = 'A4';
   cmoModifyLocation: Location = 'SHILLONG';
   cmoModifyRemarks = '';
@@ -161,7 +162,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   departments: Array<{ label: string; value: string }> = [];
   selectedEventId: number | null = null;
   eventTypeOptions: Array<{ label: string; value: EventType | '' }> = [{ label: 'All Types', value: '' }];
-  displayedColumns: string[] = ['select', 'applicant', 'designation', 'constituency', 'agenda', 'eventType', 'location', 'status', 'createdAt', 'aiNotes', 'actions'];
+  displayedColumns: string[] = ['select', 'applicant', 'designation', 'constituency', 'agenda', 'appointmentSource', 'location', 'status', 'createdAt', 'aiNotes', 'actions'];
   pageSizeOptions = [10, 25, 50];
   pageSize = 10;
   pageIndex = 0;
@@ -175,17 +176,9 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
 
   statusOptions = [
     { label: 'All Statuses', value: '' },
-    { label: 'Submitted', value: 'SUBMITTED' },
-      { label: 'Approved by Approver', value: 'APPROVED' },
-    { label: 'CMO Review', value: 'CMO_REVIEW' },
-    { label: 'Approver Review', value: 'APPROVER_REVIEW' },
-    { label: 'Follow-up', value: 'FOLLOWUP' },
-    { label: 'Scheduled for Public Durbar', value: 'SCHEDULED_FOR_PUBLIC_DARBAR' },
-    { label: 'HCM Pending', value: 'HCM_PENDING' },
-    { label: 'HCM ACCEPTED', value: 'HCM_ACCEPTED' },
-    { label: 'Forwarded to Department', value: 'FORWARDED_TO_DEPARTMENT' },
+    { label: 'Pending', value: 'PENDING' },
     { label: 'Scheduled', value: 'SCHEDULED' },
-    { label: 'Completed', value: 'COMPLETED' },
+    { label: 'Reschedule', value: 'SCHEDULED' },
   ];
 
   sourceOptions = [
@@ -382,6 +375,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
           a.applicantName?.toLowerCase().includes(searchValue) ||
           a.applicationId?.toLowerCase().includes(searchValue) ||
           a.applicant?.phoneNumber?.includes(searchValue)) &&
+        (this.listMode === 'walkin' ? a.eventType === 'B2' : a.eventType !== 'B2') &&
         (!this.filterStatus || this.matchesStatusFilter(a.status, this.filterStatus)) &&
         (!this.filterSource || (a.appointmentSource || 'CITIZEN') === this.filterSource) &&
         (!this.filterEventType || a.eventType === this.filterEventType) &&
@@ -463,8 +457,8 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
         return appointment.applicant?.constituency || '';
       case 'agenda':
         return appointment.agendaType || appointment.subject || '';
-      case 'eventType':
-        return appointment.eventType || '';
+      case 'appointmentSource':
+        return appointment.appointmentSource || '';
       case 'location':
         return appointment.requestedLocation || '';
       case 'status':
@@ -841,6 +835,10 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     return this.canUseApproverActions(appointment) && canScheduleOrReschedule(appointment);
   }
 
+  canReturnAppointmentToPending(appointment: Appointment | null) {
+    return this.canUseApproverActions(appointment) && canReturnToPending(appointment);
+  }
+
   canUseCmoActions(appointment: Appointment | null) {
     return !!appointment &&
       this.auth.hasRole('HCM', 'ADMIN', 'APPROVER') &&
@@ -994,6 +992,21 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     });
   }
 
+  openReturnToPending(appointment: Appointment) {
+    this.selectedAppointment = appointment;
+    this.pendingAction = 'RETURN_PENDING';
+    this.remarksText = '';
+    this.appointmentRemarksDialogRef = this.dialog.open(this.appointmentRemarksDialog, {
+      width: '520px', maxWidth: '94vw', autoFocus: false,
+      panelClass: 'appointment-action-dialog-panel'
+    });
+    this.appointmentRemarksDialogRef.afterClosed().subscribe(() => {
+      this.appointmentRemarksDialogRef = undefined;
+      this.pendingAction = null;
+      this.remarksText = '';
+    });
+  }
+
   openReschedule(appointment: Appointment) {
     this.selectedAppointment = appointment;
     this.rescheduleDate = appointment.scheduledDateTime ? new Date(appointment.scheduledDateTime) : null;
@@ -1023,12 +1036,17 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
 
   confirmAction() {
     if (!this.selectedAppointment || !this.pendingAction || this.actionUpdating) return;
+    const remarks = this.remarksText.trim();
+    if (!remarks) {
+      this.snackBar.open('Remarks are required.', 'Close', { duration: 3000, panelClass: ['error-snackbar'] });
+      return;
+    }
     const appointment = this.selectedAppointment;
     const action = this.pendingAction;
-    const newStatus: AppointmentStatus = action === 'APPROVE' ? 'APPROVED' : 'REJECTED';
+    const newStatus: AppointmentStatus = action === 'APPROVE' ? 'APPROVED' : action === 'REJECT' ? 'REJECTED' : 'PENDING';
 
     this.actionUpdating = true;
-    this.appointmentService.updateStatus(appointment.id, newStatus, this.remarksText)
+    this.appointmentService.updateStatus(appointment.id, newStatus, remarks)
       .pipe(finalize(() => this.actionUpdating = false))
       .subscribe({
         next: updated => {
@@ -1037,10 +1055,12 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
           this.appointmentRemarksDialogRef?.close();
           const message = action === 'APPROVE'
             ? `${updated.applicationId} approved by Approver. It can now be scheduled.`
-            : `${updated.applicationId} has been rejected.`;
+            : action === 'REJECT'
+              ? (this.isLiveWalkIn(appointment) ? 'Walk-in rejected successfully.' : `${updated.applicationId} has been rejected.`)
+              : 'Appointment returned to Pending successfully.';
           this.snackBar.open(message, 'Close', {
             duration: 5000,
-            panelClass: [action === 'APPROVE' ? 'success-snackbar' : 'error-snackbar']
+            panelClass: [action === 'REJECT' ? 'error-snackbar' : 'success-snackbar']
           });
         },
         error: error => this.snackBar.open(apiErrorMessage(error, 'Failed to update appointment.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] })
@@ -1095,9 +1115,9 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
           this.resetJtSecRemarkForm();
           this.loadAppointmentRemarks(appointment.id);
           this.loadAppointmentById(appointment.id);
-          this.snackBar.open(wasEditing ? 'JtSec remark updated.' : 'JtSec remark saved.', 'Close', { duration: 5000, panelClass: ['success-snackbar'] });
+          this.snackBar.open(wasEditing ? 'Approver remark updated.' : 'Approver remark saved.', 'Close', { duration: 5000, panelClass: ['success-snackbar'] });
         },
-        error: error => this.snackBar.open(apiErrorMessage(error, 'Failed to save JtSec remarks.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] })
+        error: error => this.snackBar.open(apiErrorMessage(error, 'Failed to save Approver remarks.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] })
       });
   }
 

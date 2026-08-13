@@ -45,6 +45,8 @@ export class ShellComponent implements OnInit {
           roles: ['ADMIN','APPROVER','PUBLIC'] },
         { labelKey: 'WALKIN_COUNTER', icon: 'login', route: '/appointments/walkin',
           feature: 'walkIn' },
+        { labelKey: 'WALKIN_APPOINTMENTS', icon: 'format_list_bulleted', route: '/walkin-appointments',
+          feature: 'walkIn' },
       ]
     },
     {

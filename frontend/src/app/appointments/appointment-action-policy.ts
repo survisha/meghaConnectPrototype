@@ -7,7 +7,10 @@ export const isWalkInAppointment = (a: Appointment | null): boolean =>
   !!a && (a.appointmentCategory === 'WALK_IN' || a.isWalkIn === true);
 
 export const canRejectScheduled = (a: Appointment | null): boolean =>
-  isScheduledAppointment(a) && a?.status === 'PENDING';
+  !!a && (isScheduledAppointment(a) || isWalkInAppointment(a)) && a.status === 'PENDING';
+
+export const canReturnToPending = (a: Appointment | null): boolean =>
+  !!a && a.status === 'SCHEDULED';
 
 export const canScheduleOrReschedule = (a: Appointment | null): boolean =>
   isScheduledAppointment(a) && !!a && ['PENDING', 'SCHEDULED'].includes(a.status);

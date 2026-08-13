@@ -24,6 +24,7 @@ class _VisitorProfile {
   final String constituency;
   final String booth;
   final String village;
+  final String address;
   final String kycStatus;
   final String briefProfile;
   final String photoSource;
@@ -39,6 +40,7 @@ class _VisitorProfile {
     required this.constituency,
     required this.booth,
     required this.village,
+    required this.address,
     required this.kycStatus,
     required this.briefProfile,
     required this.photoSource,
@@ -56,6 +58,12 @@ class _VisitorProfile {
       constituency: _text(raw['constituency']),
       booth: _text(raw['booth']),
       village: _text(raw['village']),
+      address: _firstText([
+        raw['fullAddress'],
+        raw['address'],
+        raw['addressLine'],
+        raw['address1'],
+      ]),
       kycStatus: _text(raw['kycStatus']),
       briefProfile: _text(raw['briefProfile']),
       photoSource: _photoSource(raw),
@@ -156,6 +164,8 @@ class _PublicIdentificationScreenState
   final _epicCtrl = TextEditingController();
   final _nameCtrl = TextEditingController();
   CameraController? _faceCamera;
+  List<CameraDescription> _availableFaceCameras = const [];
+  bool _switchingCamera = false;
   final FaceDetector _faceDetector = FaceDetector(
       options: FaceDetectorOptions(
     enableTracking: true,
@@ -190,26 +200,68 @@ class _PublicIdentificationScreenState
     }
     try {
       final cameras = await availableCameras();
+      if (cameras.isEmpty) {
+        throw CameraException('noCamera', 'No camera is available.');
+      }
+      _availableFaceCameras = cameras;
       final selected = cameras.firstWhere(
         (camera) => camera.lensDirection == CameraLensDirection.front,
         orElse: () => cameras.first,
       );
-      final controller = CameraController(selected, ResolutionPreset.medium,
-          enableAudio: false);
-      await controller.initialize();
-      if (!mounted) return controller.dispose();
-      setState(() {
-        _resetFaceSession();
-        _faceCamera = controller;
-        _searched = true;
-        _error = null;
-      });
-      _scheduleFaceDetection();
+      await _openFaceCamera(selected);
     } catch (_) {
       if (mounted) {
         setState(() =>
             _error = 'Unable to open camera. Please check camera permission.');
       }
+    }
+  }
+
+  Future<void> _openFaceCamera(CameraDescription camera) async {
+    final controller = CameraController(
+      camera,
+      ResolutionPreset.medium,
+      enableAudio: false,
+    );
+    await controller.initialize();
+    if (!mounted) return controller.dispose();
+    setState(() {
+      _resetFaceSession();
+      _faceCamera = controller;
+      _searched = true;
+      _error = null;
+    });
+    _scheduleFaceDetection();
+  }
+
+  Future<void> _switchFaceCamera() async {
+    final current = _faceCamera;
+    if (current == null || _switchingCamera) return;
+    final cameras = _availableFaceCameras;
+    final targetDirection =
+        current.description.lensDirection == CameraLensDirection.back
+            ? CameraLensDirection.front
+            : CameraLensDirection.back;
+    final matching = cameras
+        .where((camera) => camera.lensDirection == targetDirection)
+        .toList();
+    if (matching.isEmpty) return;
+
+    setState(() => _switchingCamera = true);
+    _faceTimer?.cancel();
+    _faceTimer = null;
+    _faceCamera = null;
+    _resetFaceSession();
+    await current.dispose();
+    try {
+      await _openFaceCamera(matching.first);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _error =
+            'Unable to switch camera. Please close the camera and try again.');
+      }
+    } finally {
+      if (mounted) setState(() => _switchingCamera = false);
     }
   }
 
@@ -339,6 +391,7 @@ class _PublicIdentificationScreenState
   }
 
   Future<void> _searchQueuedFace(_PendingFace pending) async {
+    _VisitorProfile? visitorToAutoSelect;
     try {
       final response = await ApiService.searchVisitorByFace(pending.photo);
       final visitor = response['visitor'];
@@ -362,11 +415,17 @@ class _PublicIdentificationScreenState
           if (!_results.any((item) => item.id == profile.id)) {
             _results.add(profile);
           }
+          if (_selected == null && profile.id > 0) {
+            visitorToAutoSelect = profile;
+          }
         } else {
           result.status = _FaceResultStatus.searching;
           result.message = 'Searching EPIC face database…';
         }
       });
+      if (visitorToAutoSelect != null) {
+        await _selectVisitor(visitorToAutoSelect!);
+      }
       if (response['success'] == true && response['matched'] != true) {
         final epic = await ApiService.searchEpicByFace(pending.photo);
         if (!mounted || pending.session != _faceSession) return;
@@ -652,11 +711,7 @@ class _PublicIdentificationScreenState
         _buildSearchCard(),
         const SizedBox(height: 16),
         _buildResultsCard(),
-        if (_faceResults.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          _buildFaceProfileResults(),
-        ],
-        if (_selected != null && _faceResults.isEmpty) ...[
+        if (_selected != null) ...[
           const SizedBox(height: 16),
           _buildProfileDetails(_selected!),
         ],
@@ -783,6 +838,30 @@ class _PublicIdentificationScreenState
               child: CameraPreview(_faceCamera!),
             ),
             const SizedBox(height: 8),
+            if (_availableFaceCameras
+                    .map((camera) => camera.lensDirection)
+                    .toSet()
+                    .length >
+                1)
+              Align(
+                alignment: Alignment.centerRight,
+                child: OutlinedButton.icon(
+                  onPressed: _switchingCamera ? null : _switchFaceCamera,
+                  icon: _switchingCamera
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.cameraswitch_outlined),
+                  label: Text(_switchingCamera
+                      ? 'Switching...'
+                      : _faceCamera!.description.lensDirection ==
+                              CameraLensDirection.back
+                          ? 'Use Front Camera'
+                          : 'Use Back Camera'),
+                ),
+              ),
+            const SizedBox(height: 8),
             const Text('Automatic detection active — look toward the camera.'),
           ],
           if (_faceResults.isNotEmpty) ...[
@@ -798,28 +877,33 @@ class _PublicIdentificationScreenState
 
   Widget _buildResultsCard() {
     return MeghaSectionCard(
-      title: 'Results (${_results.length})',
+      title:
+          'Results (${_faceResults.isNotEmpty ? _faceResults.length : _results.length})',
       icon: Icons.list_alt_outlined,
       child: _buildResultsBody(),
     );
   }
 
-  Widget _buildFaceProfileResults() {
-    return MeghaSectionCard(
-      title: 'Profile Detail (${_faceResults.length})',
-      icon: Icons.badge_outlined,
-      child: ListView.separated(
+  Widget _buildResultsBody() {
+    if (_faceResults.isNotEmpty) {
+      return ListView.separated(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         itemCount: _faceResults.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 12),
-        itemBuilder: (_, index) =>
-            _FaceRecognitionResultCard(result: _faceResults[index]),
-      ),
-    );
-  }
-
-  Widget _buildResultsBody() {
+        separatorBuilder: (_, __) => const SizedBox(height: 10),
+        itemBuilder: (_, index) {
+          final result = _faceResults[index];
+          return _FaceRecognitionResultCard(
+            result: result,
+            selected:
+                result.visitor != null && _selected?.id == result.visitor!.id,
+            onTap: result.visitor == null
+                ? null
+                : () => _selectVisitor(result.visitor!),
+          );
+        },
+      );
+    }
     if (_searching) {
       return const Padding(
         padding: EdgeInsets.all(28),
@@ -929,7 +1013,9 @@ class _PublicIdentificationScreenState
               ),
               const Divider(height: 26),
               _InfoRow('Phone', person.phoneNumber),
+              _InfoRow('Visitor ID', person.id.toString()),
               _InfoRow('EPIC', person.epicNumber),
+              _InfoRow('Address', person.address),
               _InfoRow('District', person.district),
               _InfoRow('Constituency', person.constituency),
               _InfoRow('Booth', person.booth),
@@ -1102,8 +1188,14 @@ class _PersonResultTile extends StatelessWidget {
 
 class _FaceRecognitionResultCard extends StatelessWidget {
   final _FaceRecognitionResult result;
+  final bool selected;
+  final VoidCallback? onTap;
 
-  const _FaceRecognitionResultCard({required this.result});
+  const _FaceRecognitionResultCard({
+    required this.result,
+    required this.selected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1118,121 +1210,145 @@ class _FaceRecognitionResultCard extends StatelessWidget {
       _FaceResultStatus.timeout => 'Search Timeout',
       _FaceResultStatus.unavailable => 'Service Unavailable',
     };
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-        borderRadius: BorderRadius.circular(10),
-        color: Colors.white,
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Column(children: [
-            const Text('Captured Face',
-                style: TextStyle(fontSize: 11, color: MeghaColors.muted)),
-            const SizedBox(height: 4),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.memory(_dataUriBytes(result.capturedImage),
-                  width: 72, height: 72, fit: BoxFit.cover),
-            ),
-            if (result.status == _FaceResultStatus.notRegistered) ...[
-              const SizedBox(height: 4),
-              const SizedBox(
-                width: 72,
-                child: Text('Not Registered',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        color: Color(0xFFB91C1C),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700)),
-              ),
-            ],
-          ]),
-          if (visitor != null) ...[
-            const SizedBox(width: 10),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: selected ? MeghaColors.primary : const Color(0xFFE5E7EB),
+            width: selected ? 2 : 1,
+          ),
+          borderRadius: BorderRadius.circular(10),
+          color: selected ? const Color(0xFFEFF6FF) : Colors.white,
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Column(children: [
-              const Text('Visitor Photo',
+              const Text('Captured Face',
                   style: TextStyle(fontSize: 11, color: MeghaColors.muted)),
               const SizedBox(height: 4),
-              _VisitorPhoto(
-                  name: visitor.fullName, source: visitor.photoSource),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.memory(_dataUriBytes(result.capturedImage),
+                    width: 72, height: 72, fit: BoxFit.cover),
+              ),
+              if (result.status == _FaceResultStatus.notRegistered) ...[
+                const SizedBox(height: 4),
+                const SizedBox(
+                  width: 72,
+                  child: Text('Not Registered',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          color: Color(0xFFB91C1C),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700)),
+                ),
+              ],
             ]),
-          ],
-          if (result.status == _FaceResultStatus.epicMatched &&
-              result.epicRecord != null) ...[
-            const SizedBox(width: 10),
+            if (visitor != null) ...[
+              const SizedBox(width: 10),
+              Column(children: [
+                const Text('Visitor Photo',
+                    style: TextStyle(fontSize: 11, color: MeghaColors.muted)),
+                const SizedBox(height: 4),
+                _VisitorPhoto(
+                    name: visitor.fullName, source: visitor.photoSource),
+              ]),
+            ],
+            if (result.status == _FaceResultStatus.epicMatched &&
+                result.epicRecord != null) ...[
+              const SizedBox(width: 10),
+              Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                    Text(_text(result.epicRecord!['name']),
+                        style: const TextStyle(fontWeight: FontWeight.w800)),
+                    Text('EPIC: ${_text(result.epicRecord!['epicNumber'])}'),
+                    Text(_text(result.epicRecord!['district'])),
+                    const SizedBox(height: 8),
+                    ElevatedButton(
+                        onPressed: () =>
+                            Navigator.of(context).push(MaterialPageRoute(
+                                builder: (_) => VisitorRegistrationScreen(
+                                      epicFacePrefill: result.epicRecord,
+                                      liveCapturedPhoto: result.capturedImage,
+                                    ))),
+                        child: const Text('Register Visitor')),
+                  ])),
+            ],
+            const SizedBox(width: 12),
             Expanded(
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                  Text(_text(result.epicRecord!['name']),
-                      style: const TextStyle(fontWeight: FontWeight.w800)),
-                  Text('EPIC: ${_text(result.epicRecord!['epicNumber'])}'),
-                  Text(_text(result.epicRecord!['district'])),
-                  const SizedBox(height: 8),
-                  ElevatedButton(
-                      onPressed: () =>
-                          Navigator.of(context).push(MaterialPageRoute(
-                              builder: (_) => VisitorRegistrationScreen(
-                                    epicFacePrefill: result.epicRecord,
-                                    liveCapturedPhoto: result.capturedImage,
-                                  ))),
-                      child: const Text('Register Visitor')),
+                  Text(result.trackingId,
+                      style: const TextStyle(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 4),
+                  Row(children: [
+                    if (loading)
+                      const SizedBox(
+                          width: 15,
+                          height: 15,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                    else
+                      Icon(
+                          result.status == _FaceResultStatus.matched
+                              ? Icons.check_circle
+                              : Icons.info_outline,
+                          size: 18,
+                          color: result.status == _FaceResultStatus.matched
+                              ? Colors.green
+                              : MeghaColors.muted),
+                    const SizedBox(width: 6),
+                    Expanded(child: Text(title)),
+                  ]),
                 ])),
+          ]),
+          if (visitor != null) ...[
+            const Divider(height: 20),
+            Wrap(spacing: 12, runSpacing: 4, children: [
+              Text(
+                visitor.epicNumber.isNotEmpty
+                    ? 'EPIC: ${visitor.epicNumber}'
+                    : _maskedPhone(visitor.phoneNumber),
+                style: const TextStyle(fontSize: 12, color: MeghaColors.muted),
+              ),
+              Text(
+                'Match: ${result.matchScore?.toStringAsFixed(2) ?? '-'}',
+                style: const TextStyle(fontSize: 12, color: MeghaColors.muted),
+              ),
+              Text(
+                _formatRecognitionTime(result.recognitionTime),
+                style: const TextStyle(fontSize: 12, color: MeghaColors.muted),
+              ),
+            ]),
+          ] else if (!loading) ...[
+            const SizedBox(height: 10),
+            Text(
+                result.message.isEmpty
+                    ? 'Visitor not found in system'
+                    : result.message,
+                style: const TextStyle(color: MeghaColors.muted)),
           ],
-          const SizedBox(width: 12),
-          Expanded(
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                Text(result.trackingId,
-                    style: const TextStyle(fontWeight: FontWeight.w700)),
-                const SizedBox(height: 4),
-                Row(children: [
-                  if (loading)
-                    const SizedBox(
-                        width: 15,
-                        height: 15,
-                        child: CircularProgressIndicator(strokeWidth: 2))
-                  else
-                    Icon(
-                        result.status == _FaceResultStatus.matched
-                            ? Icons.check_circle
-                            : Icons.info_outline,
-                        size: 18,
-                        color: result.status == _FaceResultStatus.matched
-                            ? Colors.green
-                            : MeghaColors.muted),
-                  const SizedBox(width: 6),
-                  Expanded(child: Text(title)),
-                ]),
-              ])),
         ]),
-        if (visitor != null) ...[
-          const Divider(height: 24),
-          _InfoRow('Enrollment ID', result.enrollmentId),
-          _InfoRow('EPIC', visitor.epicNumber),
-          _InfoRow('Mobile', visitor.phoneNumber),
-          _InfoRow('Department',
-              _firstText([visitor.raw['department'], visitor.designation])),
-          _InfoRow(
-              'Appointment Status', _text(visitor.raw['appointmentStatus'])),
-          _InfoRow(
-              'Face Match Score', result.matchScore?.toStringAsFixed(2) ?? ''),
-          _InfoRow(
-              'Recognition Time', result.recognitionTime.toLocal().toString()),
-        ] else if (!loading) ...[
-          const SizedBox(height: 10),
-          Text(
-              result.message.isEmpty
-                  ? 'Visitor not found in system'
-                  : result.message,
-              style: const TextStyle(color: MeghaColors.muted)),
-        ],
-      ]),
+      ),
     );
   }
+}
+
+String _maskedPhone(String value) {
+  final phone = value.trim();
+  if (phone.length < 4) return phone.isEmpty ? '-' : phone;
+  return '${'*' * (phone.length - 4)}${phone.substring(phone.length - 4)}';
+}
+
+String _formatRecognitionTime(DateTime value) {
+  final local = value.toLocal();
+  String two(int number) => number.toString().padLeft(2, '0');
+  return '${two(local.hour)}:${two(local.minute)}:${two(local.second)}';
 }
 
 Uint8List _dataUriBytes(String value) {

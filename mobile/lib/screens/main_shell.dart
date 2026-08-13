@@ -145,6 +145,18 @@ final _navTree = <_NavItem>[
         ],
       ),
       _NavItem(
+        label: 'Walk-in Appointments',
+        icon: Icons.format_list_bulleted_outlined,
+        route: 'walkin_appointments',
+        roles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.DEO,
+          UserRole.APPROVER,
+          UserRole.HCM,
+        ],
+      ),
+      _NavItem(
         label: 'Register Visitor',
         icon: Icons.person_add_alt_1_outlined,
         route: 'register_visitor',
@@ -268,6 +280,8 @@ class _MainShellState extends State<MainShell> {
       case 'new_appointment':
       case 'walkin':
         return NewAppointmentScreen(isWalkIn: route == 'walkin');
+      case 'walkin_appointments':
+        return const AppointmentsScreen(walkInOnly: true);
       case 'register_visitor':
         return const VisitorRegistrationScreen(
             openAppointmentAfterSubmit: true);
@@ -318,23 +332,6 @@ class _MainShellState extends State<MainShell> {
     if (user.role == UserRole.DEO) {
       return const DeoHomeScreen();
     }
-    if (user.role == UserRole.APPROVER) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Appointment List'),
-          actions: [
-            const _ConnectivityBadge(),
-            IconButton(
-              tooltip: i18n.t('LOGOUT'),
-              icon: const Icon(Icons.logout),
-              onPressed: () => auth.logout(),
-            ),
-          ],
-        ),
-        body: const AppointmentsScreen(forceApproverMode: true),
-      );
-    }
-
     return Scaffold(
       appBar: _buildAppBar(context, auth, user, i18n),
       drawer: _buildDrawer(context, auth, user),

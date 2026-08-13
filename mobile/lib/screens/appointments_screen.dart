@@ -6,8 +6,8 @@ import 'package:flutter/material.dart';
 import '../services/notification_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../models/user.dart';
 import '../services/api_service.dart';
@@ -198,8 +198,13 @@ class _AppointmentListSession {
 
 class AppointmentsScreen extends StatefulWidget {
   final bool forceApproverMode;
+  final bool walkInOnly;
 
-  const AppointmentsScreen({super.key, this.forceApproverMode = false});
+  const AppointmentsScreen({
+    super.key,
+    this.forceApproverMode = false,
+    this.walkInOnly = false,
+  });
 
   @override
   State<AppointmentsScreen> createState() => _AppointmentsScreenState();
@@ -209,17 +214,10 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   static const _pageSize = 100;
   static const _statusOptions = [
     '',
-    'SUBMITTED',
-    'APPROVED',
-    'CMO_REVIEW',
-    'APPROVER_REVIEW',
-    'FOLLOWUP',
-    'SCHEDULED_FOR_PUBLIC_DARBAR',
-    'HCM_PENDING',
-    'HCM_ACCEPTED',
-    'FORWARDED_TO_DEPARTMENT',
+    'PENDING',
     'SCHEDULED',
-    'COMPLETED',
+    // UI-only distinct value; maps to Angular's SCHEDULED backend value.
+    'RESCHEDULE_FILTER',
   ];
   static const _sourceOptions = ['', 'CITIZEN', 'GUEST'];
   static const _typeOptions = ['', 'A1', 'A2', 'A3', 'A4', 'B1', 'B2'];
@@ -415,10 +413,15 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
           a.applicationId.toLowerCase().contains(q) ||
           a.tokenNumber.toLowerCase().contains(q);
       final matchesStatus = _filterStatus.isEmpty ||
-          a.status.toUpperCase() == _filterStatus ||
+          a.status.toUpperCase() ==
+              (_filterStatus == 'RESCHEDULE_FILTER'
+                  ? 'SCHEDULED'
+                  : _filterStatus) ||
           (_filterStatus == 'APPROVED' && a.status == 'APPROVED');
       final matchesSource = _filterSource.isEmpty || a.source == _filterSource;
       final matchesType = _filterType.isEmpty || a.type == _filterType;
+      final matchesListMode =
+          widget.walkInOnly ? a.type == 'B2' : a.type != 'B2';
       final day = a.createdDate == null
           ? null
           : DateTime(
@@ -431,6 +434,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
           matchesStatus &&
           matchesSource &&
           matchesType &&
+          matchesListMode &&
           matchesFrom &&
           matchesTo;
     }).toList()
@@ -691,11 +695,18 @@ class _SearchAndFilters extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12),
               children: [
                 _FilterMenu(
-                  label: status.isEmpty ? 'All Statuses' : _label(status),
+                  label: status.isEmpty
+                      ? 'All Statuses'
+                      : status == 'RESCHEDULE_FILTER'
+                          ? 'Reschedule'
+                          : _label(status),
                   value: status,
                   values: _AppointmentsScreenState._statusOptions,
-                  labelFor: (value) =>
-                      value.isEmpty ? 'All Statuses' : _label(value),
+                  labelFor: (value) => value.isEmpty
+                      ? 'All Statuses'
+                      : value == 'RESCHEDULE_FILTER'
+                          ? 'Reschedule'
+                          : _label(value),
                   onChanged: onStatus,
                 ),
                 _FilterMenu(
@@ -1761,14 +1772,21 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
       _showMessage('Failed to download document.');
       return;
     }
-    final dir = await getApplicationDocumentsDirectory();
+    final dir = await getTemporaryDirectory();
     final fileName =
         _firstText([doc['fileName'], doc['originalFilename']], 'document-$id');
     final path = '${dir.path}${Platform.pathSeparator}$fileName';
     final file = await File(path).writeAsBytes(bytes);
     if (!mounted) return;
-    _showMessage('Document saved to ${file.path}');
-    await launchUrl(Uri.file(file.path));
+    final result = await OpenFilex.open(file.path);
+    if (!mounted) return;
+    if (result.type != ResultType.done) {
+      _showMessage(
+        result.type == ResultType.noAppToOpen
+            ? 'No installed app can open this document type.'
+            : 'Unable to open the downloaded document.',
+      );
+    }
   }
 
   Future<void> _regenerateAiNotes(Map<String, dynamic> note) async {

@@ -7,6 +7,7 @@ class AppRoutes {
   static const newAppointment = 'new_appointment';
   static const guestRegistration = 'guest_registration';
   static const walkIn = 'walkin';
+  static const walkInAppointments = 'walkin_appointments';
   static const calendar = 'calendar';
   static const approver = 'approver';
   static const schemes = 'schemes';
@@ -25,6 +26,7 @@ class AppRoutes {
     newAppointment,
     guestRegistration,
     walkIn,
+    walkInAppointments,
     calendar,
     approver,
     schemes,

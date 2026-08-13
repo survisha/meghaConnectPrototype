@@ -5,7 +5,8 @@ import '../services/auth_service.dart';
 import '../services/connectivity_service.dart';
 import 'appointments_screen.dart';
 import 'new_appointment_screen.dart';
-import 'pending_sync_screen.dart';
+import 'grievance_screen.dart';
+import 'public_identification_screen.dart';
 import 'visitor_registration_screen.dart';
 
 class DeoHomeScreen extends StatelessWidget {
@@ -79,22 +80,22 @@ class DeoHomeScreen extends StatelessWidget {
             const SizedBox(height: 12),
             _ActionCard(
               icon: Icons.add_circle_outline,
-              title: 'Create Appointment',
-              subtitle: 'Search an existing visitor and submit appointment.',
+              title: 'Walk-in Counter',
+              subtitle: 'Search a visitor and create a B2 walk-in appointment.',
               color: const Color(0xFF065F46),
               onTap: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (routeContext) => _DeoPageScaffold(
-                      title: 'Create Appointment',
+                      title: 'Walk-in Counter',
                       child: NewAppointmentScreen(
                         isWalkIn: true,
                         onViewAppointments: () {
                           Navigator.of(routeContext).pushReplacement(
                             MaterialPageRoute(
                               builder: (_) => const _DeoPageScaffold(
-                                title: 'Appointment List',
-                                child: AppointmentsScreen(),
+                                title: 'Walk-in Appointments',
+                                child: AppointmentsScreen(walkInOnly: true),
                               ),
                             ),
                           );
@@ -108,14 +109,14 @@ class DeoHomeScreen extends StatelessWidget {
             const SizedBox(height: 12),
             _ActionCard(
               icon: Icons.list_alt_outlined,
-              title: 'Appointment List',
-              subtitle: 'View DEO-created and assigned appointments.',
+              title: 'All Appointments',
+              subtitle: 'View appointments excluding B2 walk-ins.',
               color: const Color(0xFF1565C0),
               onTap: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => const _DeoPageScaffold(
-                      title: 'Appointment List',
+                      title: 'All Appointments',
                       child: AppointmentsScreen(),
                     ),
                   ),
@@ -124,21 +125,46 @@ class DeoHomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             _ActionCard(
-              icon: Icons.sync_problem_outlined,
-              title: 'Pending Sync',
-              subtitle:
-                  'Review offline visitors, appointments, photos, and notes.',
-              color: const Color(0xFFB45309),
+              icon: Icons.format_list_bulleted_outlined,
+              title: 'Walk-in Appointments',
+              subtitle: 'View only B2 walk-in appointments.',
+              color: const Color(0xFF7C3AED),
               onTap: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => const _DeoPageScaffold(
-                      title: 'Pending Sync',
-                      child: PendingSyncScreen(),
+                      title: 'Walk-in Appointments',
+                      child: AppointmentsScreen(walkInOnly: true),
                     ),
                   ),
                 );
               },
+            ),
+            const SizedBox(height: 12),
+            _ActionCard(
+              icon: Icons.badge_outlined,
+              title: 'Public Identification',
+              subtitle: 'Identify a visitor by face or search details.',
+              color: const Color(0xFF0369A1),
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => const _DeoPageScaffold(
+                  title: 'Public Identification',
+                  child: PublicIdentificationScreen(),
+                ),
+              )),
+            ),
+            const SizedBox(height: 12),
+            _ActionCard(
+              icon: Icons.comment_outlined,
+              title: 'Grievances',
+              subtitle: 'View and manage currently available grievances.',
+              color: const Color(0xFFB45309),
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => const _DeoPageScaffold(
+                  title: 'Grievances',
+                  child: GrievanceScreen(),
+                ),
+              )),
             ),
             const SizedBox(height: 12),
             _ActionCard(

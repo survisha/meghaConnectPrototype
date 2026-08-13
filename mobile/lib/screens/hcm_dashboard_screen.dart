@@ -196,14 +196,11 @@ class _HcmDashboardScreenState extends State<HcmDashboardScreen> {
       children: [
         _sectionTitle('Overview'),
         const SizedBox(height: 10),
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
-          childAspectRatio: 1.45,
-          children: [
+        LayoutBuilder(builder: (context, constraints) {
+          final columns = constraints.maxWidth >= 700 ? 3 : 2;
+          final textScale = MediaQuery.textScalerOf(context).scale(1);
+          final cardHeight = 138.0 + ((textScale - 1).clamp(0, 1) * 40);
+          final cards = <Widget>[
             _SummaryCard(
               label: 'Pending Scheduled',
               value: (_dashboardSummary['pendingScheduled'] as num?)?.toInt() ??
@@ -226,8 +223,20 @@ class _HcmDashboardScreenState extends State<HcmDashboardScreen> {
               icon: Icons.assignment_late_outlined,
               color: const Color(0xFF7C3AED),
             ),
-          ],
-        ),
+          ];
+          return GridView.builder(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: columns,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+              mainAxisExtent: cardHeight,
+            ),
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: cards.length,
+            itemBuilder: (_, index) => cards[index],
+          );
+        }),
         const SizedBox(height: 16),
         _hintCard(),
       ],

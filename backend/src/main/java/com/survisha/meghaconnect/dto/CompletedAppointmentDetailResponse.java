@@ -9,6 +9,9 @@ public class CompletedAppointmentDetailResponse {
     private Applicant applicant;
     private AppointmentInfo appointment;
     private String petitionSummary;
+    private String approverRemarks;
+    private String hcmRemarks;
+    private String forwardedDepartment;
     private List<DirectionItem> directions;
     private List<ActionItem> actionItems;
     private List<DocumentItem> documents;

@@ -49,7 +49,7 @@
         <button mat-stroked-button data-testid="public-identification-clear-search-btn" (click)="clearSearch()">
           <mat-icon>close</mat-icon> Clear
         </button>
-        <button mat-stroked-button (click)="startFaceIdentification()" [disabled]="faceSearching">
+        <button mat-stroked-button (click)="startFaceIdentification()" [disabled]="faceSearching || faceCameraActive">
           <mat-icon>camera_alt</mat-icon> Identify by Face
         </button>
         <label mat-stroked-button>
@@ -61,6 +61,9 @@
       <div *ngIf="faceCameraActive" class="camera-panel">
         <video id="publicFaceVideo" autoplay muted playsinline></video>
         <div class="inline-alert"><mat-icon>center_focus_strong</mat-icon> Automatic detection active — look toward the camera</div>
+        <button mat-stroked-button color="warn" type="button" (click)="closeIdentificationCamera()">
+          <mat-icon>videocam_off</mat-icon> Close Camera
+        </button>
       </div>
       <div *ngIf="facePhoto && !faceCameraActive" class="camera-panel">
         <img [src]="facePhoto" alt="Identification capture" />

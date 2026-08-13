@@ -99,6 +99,9 @@ public class ExecutiveAppointmentReportService {
             writer.field("Completed", d.getAppointment().getCompletedAt()); writer.field("Department", d.getAppointment().getDepartment());
             writer.field("Scheme", d.getAppointment().getScheme()); writer.field("Agenda", d.getAppointment().getAgendaType());
             writer.heading("PETITION SUMMARY"); writer.paragraph(d.getPetitionSummary());
+            writer.heading("APPROVER REMARKS"); writer.paragraph(d.getApproverRemarks());
+            writer.field("Forwarded Department", d.getForwardedDepartment());
+            writer.heading("HCM REMARKS / DIRECTIONS"); writer.paragraph(d.getHcmRemarks());
             writer.heading("CM / HCM DIRECTIONS");
             for (CompletedAppointmentDetailResponse.DirectionItem item : d.getDirections()) {
                 writer.paragraph(text(item.getDirectionId()) + " | " + text(item.getDirection()) + " | " + text(item.getDepartment()) + " | " + text(item.getOfficer()) + " | Due: " + text(item.getDueDate()) + " | " + text(item.getFollowUpStatus()));
@@ -142,7 +145,7 @@ public class ExecutiveAppointmentReportService {
         for (DirectionFollowUp f : actionItems) directionItems.add(CompletedAppointmentDetailResponse.DirectionItem.builder().directionId(f.getDirectionId()).date(f.getCreatedAt()).direction(f.getInstruction()).department(f.getDepartment().getDepartmentName()).officer(f.getResponsibleOfficerName()).dueDate(f.getDueDate()).followUpStatus(followStatus(f)).build());
         List<CompletedAppointmentDetailResponse.ActionItem> mapped = actionItems.stream().map(f -> CompletedAppointmentDetailResponse.ActionItem.builder().id(f.getId()).directionId(f.getDirectionId()).department(f.getDepartment().getDepartmentName()).officer(f.getResponsibleOfficerName()).instruction(f.getInstruction()).dueDate(f.getDueDate()).status(followStatus(f)).evidenceRequired(f.getEvidenceRequired()).escalated(f.getLastEscalatedAt()!=null).completedDate(f.getCompletedDate()).completionRemarks(f.getCompletionRemarks()).build()).toList();
         String scheme = schemeNames(List.of(a)).get(a.getId());
-        CompletedAppointmentDetailResponse detail = CompletedAppointmentDetailResponse.builder().applicant(applicant(a)).appointment(appointmentInfo(a, Map.of(a.getId(), text(scheme)))).petitionSummary(petition(a)).directions(directionItems).actionItems(mapped).documents(documentItems(documents.findByAppointmentId(a.getId()))).statusHistory(history(a.getId())).build();
+        CompletedAppointmentDetailResponse detail = CompletedAppointmentDetailResponse.builder().applicant(applicant(a)).appointment(appointmentInfo(a, Map.of(a.getId(), text(scheme)))).petitionSummary(petition(a)).approverRemarks(a.getApproverRemarks()).hcmRemarks(a.getHcmRemarks()).forwardedDepartment(routed(a)).directions(directionItems).actionItems(mapped).documents(documentItems(documents.findByAppointmentId(a.getId()))).statusHistory(history(a.getId())).build();
         detail.setAiSummary(aiSummary(detail)); return detail;
     }
 
@@ -197,19 +200,22 @@ public class ExecutiveAppointmentReportService {
     private void drawPhoto(PDDocument pdf,PdfWriter w,Visitor v)throws IOException{Optional<String>uri=fileStorage.loadImageDataUri(photoPath(v));if(uri.isEmpty()){w.line("Photo Not Available");return;}byte[]b=Base64.getDecoder().decode(uri.get().substring(uri.get().indexOf(',')+1));PDImageXObject image=PDImageXObject.createFromByteArray(pdf,b,"visitor-photo");w.image(image,90,110);}
     private static class Enrichment{final List<DirectionFollowUp>followUps=new ArrayList<>();final List<DocumentUpload>documents=new ArrayList<>();final List<SchemeApplication>schemes=new ArrayList<>();}
 
-    private static class PdfWriter {
-        private final PDDocument pdf; private PDPage page; private PDPageContentStream out; private float y; private final float margin=46;
+    static class PdfWriter {
+        private static final float MARGIN = 46;
+        private static final float BOTTOM_MARGIN = 45;
+        private final PDDocument pdf; private PDPage page; private PDPageContentStream out; private float y; private float contentWidth;
         PdfWriter(PDDocument pdf)throws IOException{this.pdf=pdf;newPage();}
-        void newPage()throws IOException{if(out!=null)out.close();page=new PDPage(PDRectangle.A4);pdf.addPage(page);out=new PDPageContentStream(pdf,page);y=page.getMediaBox().getHeight()-margin;}
-        void ensure(float needed)throws IOException{if(y-needed<45)newPage();}
+        void newPage()throws IOException{if(out!=null)out.close();page=new PDPage(PDRectangle.A4);pdf.addPage(page);out=new PDPageContentStream(pdf,page);contentWidth=page.getMediaBox().getWidth()-MARGIN-MARGIN;y=page.getMediaBox().getHeight()-MARGIN;}
+        void ensure(float needed)throws IOException{if(y-needed<BOTTOM_MARGIN)newPage();}
         void title(String a,String b)throws IOException{write(a,16,true);write(b,14,true);y-=8;}
-        void heading(String value)throws IOException{ensure(30);y-=8;write(value,11,true);lineRule();}
+        void heading(String value)throws IOException{ensure(52);y-=7;lineRule(y);y-=17;writeAt(value,11,true,y);y-=8;lineRule(y);y-=10;}
         void field(String label,Object value)throws IOException{paragraph(label+": "+text(value));}
         void line(String value)throws IOException{write(value,9,false);}
         void paragraph(String value)throws IOException{String clean=text(value);if(clean.isBlank())clean="—";for(String line:wrap(clean,92))write(line,9,false);y-=3;}
-        void write(String value,float size,boolean bold)throws IOException{ensure(size+6);out.beginText();out.setFont(bold?PDType1Font.HELVETICA_BOLD:PDType1Font.HELVETICA,size);out.newLineAtOffset(margin,y);out.showText(ascii(value));out.endText();y-=size+4;}
-        void lineRule()throws IOException{out.moveTo(margin,y+4);out.lineTo(page.getMediaBox().getWidth()-margin,y+4);out.stroke();}
-        void image(PDImageXObject image,float width,float height)throws IOException{ensure(height+8);float ratio=Math.min(width/image.getWidth(),height/image.getHeight());float w=image.getWidth()*ratio,h=image.getHeight()*ratio;out.drawImage(image,margin,y-h,w,h);y-=h+8;}
+        void write(String value,float size,boolean bold)throws IOException{ensure(size+6);writeAt(value,size,bold,y);y-=size+4;}
+        void writeAt(String value,float size,boolean bold,float baseline)throws IOException{out.beginText();out.setFont(bold?PDType1Font.HELVETICA_BOLD:PDType1Font.HELVETICA,size);out.newLineAtOffset(MARGIN,baseline);out.showText(ascii(value));out.endText();}
+        void lineRule(float lineY)throws IOException{out.setLineWidth(.6f);out.moveTo(MARGIN,lineY);out.lineTo(MARGIN+contentWidth,lineY);out.stroke();}
+        void image(PDImageXObject image,float width,float height)throws IOException{ensure(height+8);float ratio=Math.min(width/image.getWidth(),height/image.getHeight());float w=image.getWidth()*ratio,h=image.getHeight()*ratio;out.drawImage(image,MARGIN,y-h,w,h);y-=h+8;}
         void close()throws IOException{if(out!=null){out.close();out=null;}}
         void addPageNumbers()throws IOException{int total=pdf.getNumberOfPages();for(int i=0;i<total;i++){try(PDPageContentStream footer=new PDPageContentStream(pdf,pdf.getPage(i),PDPageContentStream.AppendMode.APPEND,true)){footer.beginText();footer.setFont(PDType1Font.HELVETICA,8);footer.newLineAtOffset(270,22);footer.showText("Page "+(i+1)+" of "+total);footer.endText();}}}
         static List<String>wrap(String s,int max){List<String>r=new ArrayList<>();StringBuilder line=new StringBuilder();for(String word:s.split("\\s+")){if(line.length()+word.length()+1>max){r.add(line.toString());line.setLength(0);}if(line.length()>0)line.append(' ');line.append(word);}if(line.length()>0)r.add(line.toString());return r.isEmpty()?List.of(""):r;} static String ascii(String s){return new String(text(s).getBytes(StandardCharsets.US_ASCII),StandardCharsets.US_ASCII);}

@@ -1,4 +1,4 @@
-import { of, Subject } from 'rxjs';
+import { of, Subject, Subscription } from 'rxjs';
 import { PublicIdentificationComponent } from './public-identification.component';
 import { FaceSearchResult } from '../services/face-recognition.service';
 import { AutoFaceDetection } from '../shared/camera-liveness.service';
@@ -119,5 +119,31 @@ describe('PublicIdentificationComponent face queue', () => {
     expect(component.getStatusClass('FAILED' as never)).toBe('face-status-error');
     expect(component.getStatusClass('TIMEOUT' as never)).toBe('face-status-timeout');
     expect(component.getStatusClass('UNAVAILABLE' as never)).toBe('face-status-unavailable');
+  });
+
+  it('closes the camera without clearing results or cancelling an in-flight face search', () => {
+    const stop = jasmine.createSpy('stop');
+    (component as any).cameraCapture = { captureCrop: () => 'photo-1', stop };
+    const stream = {} as MediaStream;
+    component.faceCameraStream = stream;
+    component.faceDetections = [{ trackingId: 'Face 1', capturedImage: 'photo', status: 'MATCHED' }] as never;
+    component.results = [{ id: 1, fullName: 'Existing Result' }] as never;
+    const pendingSearch = new Subscription();
+    (component as any).faceSearchSubscriptions.add(pendingSearch);
+
+    const video = document.createElement('video');
+    video.id = 'publicFaceVideo';
+    Object.defineProperty(video, 'srcObject', { value: stream, writable: true });
+    document.body.appendChild(video);
+
+    component.closeIdentificationCamera();
+
+    expect(stop).toHaveBeenCalledWith(stream);
+    expect(video.srcObject).toBeNull();
+    expect(component.faceCameraActive).toBeFalse();
+    expect(component.faceDetections.length).toBe(1);
+    expect(component.results.length).toBe(1);
+    expect(pendingSearch.closed).toBeFalse();
+    video.remove();
   });
 });

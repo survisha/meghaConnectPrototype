@@ -100,7 +100,7 @@ export class PublicIdentificationComponent implements OnDestroy {
   ) {}
 
   ngOnDestroy(): void {
-    this.stopFaceCamera();
+    this.stopFaceCamera(true);
     this.stopResultExpiryClock();
     this.historySubscription?.unsubscribe();
   }
@@ -171,16 +171,27 @@ export class PublicIdentificationComponent implements OnDestroy {
     this.facePhoto = '';
   }
 
-  private stopFaceCamera(): void {
+  closeIdentificationCamera(): void {
+    this.stopFaceCamera();
+  }
+
+  private stopFaceCamera(cancelPendingSearches = false): void {
     if (this.detectionTimer) clearTimeout(this.detectionTimer);
     this.detectionTimer = null;
     this.detectionRunning = false;
     this.faceQueue = [];
-    this.faceSearchSubscriptions.forEach(subscription => subscription.unsubscribe());
-    this.faceSearchSubscriptions.clear();
-    this.activeFaceSearches = 0;
+    if (cancelPendingSearches) {
+      this.faceSearchSubscriptions.forEach(subscription => subscription.unsubscribe());
+      this.faceSearchSubscriptions.clear();
+      this.activeFaceSearches = 0;
+    }
     this.trackedFaces.clear();
     this.cameraCapture.stop(this.faceCameraStream);
+    const video = document.getElementById('publicFaceVideo') as HTMLVideoElement | null;
+    if (video) {
+      video.pause();
+      video.srcObject = null;
+    }
     this.faceCameraStream = null;
     this.faceCameraActive = false;
     this.stopResultExpiryClock();

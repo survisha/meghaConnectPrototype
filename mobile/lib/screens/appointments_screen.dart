@@ -11,6 +11,7 @@ import 'package:provider/provider.dart';
 
 import '../models/user.dart';
 import '../services/api_service.dart';
+import '../widgets/authenticated_photo.dart';
 import '../services/auth_service.dart';
 import '../services/ai_notes_cache_service.dart';
 import '../services/connectivity_service.dart';
@@ -1830,12 +1831,13 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
     if (url.isNotEmpty) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(8),
-        child: Image.network(
-          url,
+        child: SizedBox(
           width: 82,
           height: 96,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _noPhoto(),
+          child: AuthenticatedPhoto(
+            source: url,
+            fallback: _noPhoto(),
+          ),
         ),
       );
     }

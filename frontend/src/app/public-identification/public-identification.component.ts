@@ -9,8 +9,9 @@ import {
   VisitorSearchService
 } from '../services/visitor-search.service';
 import { Visitor } from '../models';
-import { environment } from '../../environments/environment';
 import { apiErrorMessage } from '../shared/api-error.util';
+import { AuthenticatedPhotoComponent } from '../shared/authenticated-photo.component';
+import { resolvePhotoUrl } from '../shared/photo-url.util';
 import { CameraCaptureService } from '../shared/camera-capture.service';
 import { FaceRecognitionService } from '../services/face-recognition.service';
 import { from, interval, mergeMap, Subscription, toArray } from 'rxjs';
@@ -35,6 +36,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
     CommonModule, FormsModule,
     MatInputModule, MatSelectModule, MatChipsModule, MatDividerModule,
     MatTableModule, MatButtonModule, MatIconModule, MatFormFieldModule,
+    AuthenticatedPhotoComponent,
   ],
   templateUrl: './public-identification.component.html',
   styleUrls: ['./public-identification.component.scss'],
@@ -727,17 +729,7 @@ export class PublicIdentificationComponent implements OnDestroy {
   }
 
   private normalizePhotoSource(value: string): string {
-    const source = value.trim();
-    if (!source) {
-      return '';
-    }
-    if (source.startsWith('data:image/') || source.startsWith('blob:') || /^https?:\/\//i.test(source)) {
-      return source;
-    }
-
-    const origin = environment.apiUrl.replace(/\/api\/v1\/?$/i, '');
-    const path = source.replace(/^\/+/, '');
-    return `${origin}/${path.startsWith('uploads/') ? path : `uploads/${path}`}`;
+    return resolvePhotoUrl(value) || '';
   }
 
   private firstNonBlank(...values: Array<string | null | undefined>): string {

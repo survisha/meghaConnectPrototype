@@ -36,6 +36,8 @@ import autoTable from 'jspdf-autotable';
 import { apiErrorMessage } from '../../shared/api-error.util';
 import { CameraCaptureService, CameraDeviceOption, CameraFacingMode } from '../../shared/camera-capture.service';
 import { appointmentRemarkExportFields } from '../appointment-pdf-export.util';
+import { AuthenticatedPhotoComponent } from '../../shared/authenticated-photo.component';
+import { resolvePhotoUrl } from '../../shared/photo-url.util';
 
 type SortDirection = 'asc' | 'desc';
 type AppointmentSortColumn =
@@ -82,6 +84,7 @@ interface AppointmentExportOptions {
     MatTooltipModule,
     MatDividerModule,
     MatProgressSpinnerModule,
+    AuthenticatedPhotoComponent,
   ],
   providers: [provideNativeDateAdapter()],
   templateUrl: './appointment-list.component.html',
@@ -1787,7 +1790,8 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   }
 
   private resolveVisitorPhoto(visitor?: { photoUrl?: string; livePhotoBase64?: string; photoBase64?: string } | null) {
-    return visitor?.photoUrl || visitor?.livePhotoBase64 || visitor?.photoBase64 || '';
+    const source = visitor?.photoUrl || visitor?.livePhotoBase64 || visitor?.photoBase64 || '';
+    return resolvePhotoUrl(source) || '';
   }
 
   private clearVisitorPhotoState() {

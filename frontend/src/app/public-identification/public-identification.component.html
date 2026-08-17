@@ -102,6 +102,7 @@
             [ngClass]="getStatusClass(face.status)" [@faceResultLifecycle]
             (click)="selectFaceResult(face)">
             <img [src]="face.capturedImage" [alt]="face.trackingId + ' captured face'" />
+            <app-authenticated-photo *ngIf="face.visitor" [source]="face.visitor.photoUrl || face.visitor.photoBase64 || face.visitor.livePhotoBase64" [name]="face.visitor.fullName" alt="Matched visitor photo"></app-authenticated-photo>
             <span class="auto-face-result-content">
               <span class="face-result-heading">
                 <strong>{{ face.visitor?.fullName || face.trackingId }}</strong>
@@ -117,7 +118,7 @@
         </div>
         <ng-container *ngIf="!faceDetections.length">
           <div *ngFor="let p of results" class="result-row" [class.selected]="selected?.id===p.id" (click)="select(p)">
-            <div class="mini-avatar">{{ initial(p.fullName) }}</div>
+            <div class="mini-avatar"><app-authenticated-photo [source]="p.photoUrl" [name]="p.fullName"></app-authenticated-photo></div>
             <div style="flex:1">
               <div style="font-weight:600;font-size:0.9rem;color:#1f2937">{{ displayValue(p.fullName) }}</div>
               <div style="font-size:0.78rem;color:#6b7280">{{ displayValue(p.designation) }}</div>
@@ -152,14 +153,7 @@
                 [disabled]="!selectedPhotoUrl || selectedPhotoLoadFailed"
                 (click)="toggleSelectedPhotoPreview()"
                 title="View citizen photo">
-                <img
-                  *ngIf="selectedPhotoUrl && !selectedPhotoLoadFailed"
-                  [src]="selectedPhotoUrl"
-                  alt="Citizen photo"
-                  (error)="onSelectedPhotoError()" />
-                <span *ngIf="!selectedPhotoUrl || selectedPhotoLoadFailed" class="big-avatar">
-                  {{ initial(selected.fullName) }}
-                </span>
+                <app-authenticated-photo [source]="selectedPhotoUrl" [name]="selected.fullName" alt="Citizen photo"></app-authenticated-photo>
                 <span *ngIf="selectedPhotoUrl && !selectedPhotoLoadFailed" class="photo-view-label">View</span>
               </button>
               <div>
@@ -179,7 +173,7 @@
                   <mat-icon>close</mat-icon>
                 </button>
               </div>
-              <img [src]="selectedPhotoUrl" alt="Citizen photo preview" (error)="onSelectedPhotoError()" />
+              <app-authenticated-photo [source]="selectedPhotoUrl" [name]="selected.fullName" alt="Citizen photo preview"></app-authenticated-photo>
             </div>
             
             <mat-divider style="margin: 1rem 0"></mat-divider>

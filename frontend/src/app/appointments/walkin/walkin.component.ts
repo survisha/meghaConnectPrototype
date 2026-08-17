@@ -16,6 +16,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatRadioModule } from '@angular/material/radio';
+import { AuthenticatedPhotoComponent } from '../../shared/authenticated-photo.component';
 import { CameraCaptureService, CameraFacingMode } from '../../shared/camera-capture.service';
 import { FaceRecognitionService } from '../../services/face-recognition.service';
 import { EpicFaceResult, EpicFaceService } from '../../services/epic-face.service';
@@ -23,7 +24,7 @@ import { EpicFaceResult, EpicFaceService } from '../../services/epic-face.servic
 @Component({
   selector: 'app-walkin',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatChipsModule, MatIconModule, MatCardModule, MatTooltipModule, MatRadioModule],
+  imports: [CommonModule, FormsModule, RouterLink, MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatChipsModule, MatIconModule, MatCardModule, MatTooltipModule, MatRadioModule, AuthenticatedPhotoComponent],
   templateUrl: './walkin.component.html',
   styleUrls: ['./walkin.component.scss'],
 })
@@ -480,6 +481,14 @@ export class WalkinComponent implements OnDestroy {
       this.foundPerson?.livePhotoPath,
       this.foundPerson?.photoStoragePath,
       this.foundPerson?.photoPath
+    );
+  }
+
+  get existingVisitorPhotoSource(): string {
+    return this.firstNonBlank(
+      this.foundPerson?.photoUrl,
+      this.foundPerson?.livePhotoBase64,
+      this.foundPerson?.livePhotoPath,
     );
   }
 

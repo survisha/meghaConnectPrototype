@@ -158,7 +158,7 @@
           <div class="section-card-body found-layout">
             <div class="applicant-panel">
               <div class="person-card">
-                <div class="person-avatar">{{ visitorInitial(foundPerson) }}</div>
+                <div class="person-avatar"><app-authenticated-photo [source]="existingVisitorPhotoSource" [name]="foundPerson.fullName"></app-authenticated-photo></div>
                 <div>
                   <div class="person-name">{{ foundPerson.fullName }}</div>
                   <div class="muted-text">{{ foundPerson.designation || '—' }}</div>

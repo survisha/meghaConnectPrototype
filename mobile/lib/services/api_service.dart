@@ -1571,6 +1571,7 @@ class ApiService {
     return null;
   }
 
+
   static Future<Uint8List?> previewDocumentBytes(int documentId) async {
     try {
       final headers = await _authHeaders();

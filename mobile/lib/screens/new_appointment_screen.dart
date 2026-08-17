@@ -14,6 +14,7 @@ import '../services/navigation_service.dart';
 import '../services/offline_ai_notes_service.dart';
 import '../services/offline_repository.dart';
 import '../services/sync_service.dart';
+import '../widgets/authenticated_photo.dart';
 import 'visitor_registration_screen.dart';
 
 class NewAppointmentScreen extends StatefulWidget {
@@ -1650,6 +1651,10 @@ class _VisitorSummary extends StatelessWidget {
         '-';
     final kyc = visitor['kycStatus']?.toString() ??
         (visitor['kycVerified'] == true ? 'VERIFIED' : 'PENDING');
+    final photo = visitor['photoUrl']?.toString() ??
+        visitor['photoStoragePath']?.toString() ??
+        visitor['photoPath']?.toString() ??
+        visitor['livePhotoBase64']?.toString();
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -1663,10 +1668,18 @@ class _VisitorSummary extends StatelessWidget {
         children: [
           Row(
             children: [
-              CircleAvatar(
-                backgroundColor: const Color(0xFF1A237E),
-                foregroundColor: Colors.white,
-                child: Text(name.isEmpty ? 'V' : name[0].toUpperCase()),
+              ClipOval(
+                child: SizedBox.square(
+                  dimension: 42,
+                  child: AuthenticatedPhoto(
+                    source: photo,
+                    fallback: CircleAvatar(
+                      backgroundColor: const Color(0xFF1A237E),
+                      foregroundColor: Colors.white,
+                      child: Text(name.isEmpty ? 'V' : name[0].toUpperCase()),
+                    ),
+                  ),
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(

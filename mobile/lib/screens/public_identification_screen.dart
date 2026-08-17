@@ -9,8 +9,9 @@ import 'package:camera/camera.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:image/image.dart' as img;
 
-import '../core/config/app_config.dart';
 import '../services/api_service.dart';
+import '../utils/photo_url_resolver.dart';
+import '../widgets/authenticated_photo.dart';
 import 'visitor_registration_screen.dart';
 import '../widgets/megha_ui.dart';
 
@@ -1405,14 +1406,10 @@ Widget _photoWidget({required String name, required String source}) {
       return Image.memory(base64Decode(raw), fit: BoxFit.cover);
     } catch (_) {}
   }
-  if (source.startsWith('http')) {
-    return Image.network(
-      source,
-      fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => _AvatarFallback(name),
-    );
-  }
-  return _AvatarFallback(name);
+  return AuthenticatedPhoto(
+    source: source,
+    fallback: _AvatarFallback(name),
+  );
 }
 
 class _AvatarFallback extends StatelessWidget {
@@ -1984,9 +1981,7 @@ String _normalizePhotoSource(String value) {
       _looksBase64(source)) {
     return source;
   }
-  final origin = AppConfig.apiV1BaseUrl.replaceFirst(RegExp(r'/api/v1/?$'), '');
-  final path = source.replaceFirst(RegExp(r'^/+'), '');
-  return '$origin/${path.startsWith('uploads/') ? path : 'uploads/$path'}';
+  return resolvePhotoUrl(source) ?? '';
 }
 
 bool _looksBase64(String value) {

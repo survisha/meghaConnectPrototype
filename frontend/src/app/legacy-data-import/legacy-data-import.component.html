@@ -1,0 +1,41 @@
+<main class="legacy-page">
+  <header class="page-head"><div><h1>Legacy Data Import</h1><p>Analyze, validate and import every sheet in an Excel workbook.</p></div><button *ngIf="isAdmin" class="secondary" (click)="showDatasetForm=!showDatasetForm">Create dataset definition</button></header>
+  <div class="alert" *ngIf="error">{{error}}</div>
+
+  <section class="card upload-card">
+    <label class="file-picker"><input type="file" accept=".xls,.xlsx" (change)="choose($event)"><span>Select Excel workbook</span></label>
+    <div class="file-name">{{file?.name || 'No workbook selected'}} <small *ngIf="file">{{file.size/1024/1024 | number:'1.1-2'}} MB</small></div>
+    <button class="primary" [disabled]="!file||busy" (click)="upload()">{{busy?'Working…':'Upload & Analyze'}}</button>
+  </section>
+
+  <section class="card dataset-form" *ngIf="showDatasetForm&&isAdmin">
+    <h2>New approved dataset</h2><p>This creates a controlled definition backed by the approved legacy record store.</p>
+    <div class="form-grid"><label>Dataset code<input [(ngModel)]="newDataset.datasetCode" placeholder="HOUSING_BENEFICIARY"></label><label>Dataset name<input [(ngModel)]="newDataset.datasetName"></label><label>Category<input [(ngModel)]="newDataset.category"></label><label>Duplicate key fields<input [(ngModel)]="newDataset.duplicateKeyFields" placeholder="epic,scheme_code"></label></div>
+    <h3>Approved fields</h3><div class="form-grid field-row" *ngFor="let c of newDataset.columns; let i=index"><label>Target field<input [(ngModel)]="c.fieldName" placeholder="beneficiary_name"></label><label>Type<select [(ngModel)]="c.fieldType"><option>STRING</option><option>INTEGER</option><option>DECIMAL</option><option>DATE</option><option>BOOLEAN</option></select></label><label>Identifier<select [(ngModel)]="c.identifierType"><option>OTHER</option><option>EPIC</option><option>NAME</option><option>MOBILE</option><option>DISTRICT</option><option>CONSTITUENCY</option><option>SCHEME</option><option>ADDRESS</option></select></label><label>Aliases<input [(ngModel)]="c.aliases" placeholder="Beneficiary Name, Applicant Name"></label><label class="check"><input type="checkbox" [(ngModel)]="c.mandatory"> Mandatory</label><button class="link" type="button" (click)="removeDatasetColumn(i)">Remove</button></div><button class="secondary" type="button" (click)="addDatasetColumn()">Add field</button>
+    <button class="primary" [disabled]="busy" (click)="createDataset()">Create definition</button>
+  </section>
+
+  <ng-container *ngIf="batch as b">
+    <section class="summary-grid">
+      <article class="metric"><span>Workbook</span><strong>{{b.fileName}}</strong><small>{{b.status}}</small></article><article class="metric"><span>Sheets detected</span><strong>{{b.totalSheets}}</strong><small>{{b.importedSheets}} imported · {{b.mappingRequiredSheets}} mapping</small></article><article class="metric"><span>Total rows</span><strong>{{b.totalRows|number}}</strong><small>{{b.validRows|number}} valid</small></article><article class="metric"><span>Import result</span><strong>{{b.importedRows|number}}</strong><small>{{b.failedRows|number}} failed · {{b.duplicateRows|number}} duplicates</small></article>
+    </section>
+    <div class="actions"><button class="secondary" [disabled]="busy" (click)="validate()">Validate workbook</button><button class="primary" [disabled]="busy" (click)="execute()">Start import</button><button class="secondary" (click)="exportSummary()">Download summary</button><button class="secondary" [disabled]="!b.failedRows" (click)="exportErrors()">Download errors</button></div>
+
+    <section class="sheet-list"><article class="card sheet" *ngFor="let s of b.sheets">
+      <button class="sheet-head" (click)="toggle(s)"><div><h2>{{s.sheetName}} <span *ngIf="s.hidden" class="tag">Hidden</span></h2><p>{{s.dataset||'No dataset'}} · {{s.rowCount|number}} rows · {{s.columnCount}} columns</p></div><div class="sheet-state"><span *ngIf="s.confidence!=null">{{s.confidence|number:'1.0-1'}}%</span><span class="status" [ngClass]="statusClass(s.status)">{{s.status}}</span></div></button>
+      <div class="reason" *ngIf="s.statusReason">{{s.statusReason}}</div>
+      <div class="sheet-body" *ngIf="expanded.has(s.id)">
+        <div class="sheet-actions"><button class="secondary" (click)="showPreview(s)">Preview first 20 rows</button><button class="secondary" *ngIf="s.status==='FAILED'||s.status==='PARTIAL_SUCCESS'" (click)="retry(s)">Retry sheet</button><button class="secondary" *ngIf="s.status!=='COMPLETED'&&s.status!=='PARTIAL_SUCCESS'&&s.status!=='SKIPPED'" (click)="skip(s)">Skip sheet</button></div>
+        <label class="dataset-select">Dataset definition<select [ngModel]="s.confirmedDatasetId||s.detectedDatasetId" (ngModelChange)="selectDataset(s,$event)"><option [ngValue]="undefined">Select approved dataset</option><option *ngFor="let d of datasets" [ngValue]="d.id">{{d.code}} — {{d.name}}</option></select></label>
+        <div class="table-wrap"><table><thead><tr><th>Excel column</th><th>Normalized</th><th>Detected type</th><th>Target field</th><th>Identifier</th><th>Status</th></tr></thead><tbody><tr *ngFor="let c of s.columns"><td>{{c.sourceHeader}}</td><td><code>{{c.normalizedHeader}}</code></td><td>{{c.detectedType}}</td><td><select [(ngModel)]="c.targetField" (ngModelChange)="c.ignored=!$event"><option [ngValue]="undefined">Ignore</option><option *ngFor="let t of targetOptions(s)" [ngValue]="t.targetField">{{t.targetField}}{{t.mandatory?' *':''}}</option></select></td><td>{{c.identifierType||'OTHER'}}</td><td>{{c.ignored?'IGNORED':c.mappingStatus}}</td></tr></tbody></table></div>
+        <button class="primary" [disabled]="!s.confirmedDatasetId||busy" (click)="saveMapping(s)">Confirm mapping</button>
+        <div class="counts"><span>Valid <b>{{s.validRows|number}}</b></span><span>Imported <b>{{s.importedRows|number}}</b></span><span>Failed <b>{{s.failedRows|number}}</b></span><span>Duplicates <b>{{s.duplicateRows|number}}</b></span></div>
+      </div>
+    </article></section>
+
+    <section class="card" *ngIf="preview"><div class="section-head"><h2>Preview — {{preview.sheetName}}</h2><button class="link" (click)="preview=undefined">Close</button></div><div class="table-wrap"><table><thead><tr><th *ngFor="let c of preview.columns">{{c}}</th></tr></thead><tbody><tr *ngFor="let row of preview.rows"><td *ngFor="let value of row">{{value}}</td></tr></tbody></table></div></section>
+    <section class="card" *ngIf="errors.length"><div class="section-head"><h2>Failed rows</h2><button class="secondary" (click)="exportErrors()">Download error report</button></div><div class="table-wrap"><table><thead><tr><th>Sheet</th><th>Row</th><th>Column</th><th>Value</th><th>Code</th><th>Reason</th></tr></thead><tbody><tr *ngFor="let e of errors"><td>{{e.sheetName}}</td><td>{{e.rowNumber}}</td><td>{{e.columnName}}</td><td>{{e.rawValue}}</td><td>{{e.errorCode}}</td><td>{{e.errorMessage}}</td></tr></tbody></table></div></section>
+  </ng-container>
+
+  <section class="card history"><h2>Import history</h2><div *ngIf="!history.length" class="muted">No imports yet.</div><button class="history-row" *ngFor="let h of history" (click)="openHistory(h)"><span><b>{{h.fileName}}</b><small>{{h.uploadedAt|date:'medium'}} · {{h.uploadedBy}}</small></span><span>{{h.totalSheets}} sheets · {{h.totalRows|number}} rows</span><span class="status" [ngClass]="statusClass(h.status)">{{h.status}}</span></button></section>
+</main>

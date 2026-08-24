@@ -6,7 +6,7 @@ export type AppFeature =
   | 'dashboard' | 'userManagement' | 'auditTrail' | 'reports' | 'reportAnalytics'
   | 'calendar' | 'appointments' | 'appointmentTypes' | 'schemeManagement'
   | 'recentActivity' | 'walkIn' | 'registerVisitor' | 'publicIdentification'
-  | 'completedAppointments' | 'rejectedAppointments';
+  | 'completedAppointments' | 'rejectedAppointments' | 'legacyDataImport';
   
 
 @Injectable({ providedIn: 'root' })
@@ -36,6 +36,7 @@ export class AccessControlService {
         case 'publicIdentification':
         case 'completedAppointments':
         case 'rejectedAppointments':
+        case 'legacyDataImport':
           return false;
       }
     }
@@ -68,6 +69,8 @@ export class AccessControlService {
       case 'completedAppointments':
       case 'rejectedAppointments':
         return this.auth.hasRole('SUPER_ADMIN', 'APPROVER', 'HCM');
+      case 'legacyDataImport':
+        return this.auth.hasRole('ADMIN', 'DEO');
     }
   }
 
@@ -84,6 +87,7 @@ export class AccessControlService {
   canUsePublicIdentification(): boolean { return this.can('publicIdentification'); }
   canViewCompletedAppointments(): boolean { return this.can('completedAppointments'); }
   canViewRejectedAppointments(): boolean { return this.can('rejectedAppointments'); }
+  canUseLegacyDataImport(): boolean { return this.can('legacyDataImport'); }
 
   get isCmoDepartmentAdmin(): boolean {
     return this.role === 'DEPARTMENT_ADMIN' && this.departmentCode === 'CMO';

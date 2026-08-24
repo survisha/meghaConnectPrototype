@@ -35,6 +35,7 @@ import { authGuard } from './guards/auth.guard';
 import { roleGuard } from './guards/role.guard';
 import { passwordChangeGuard } from './guards/password-change.guard';
 import { featureAccessGuard } from './guards/feature-access.guard';
+import { LegacyDataImportComponent } from './legacy-data-import/legacy-data-import.component';
 
 import { UserRole } from './models';
 
@@ -71,6 +72,7 @@ export const routes: Routes = [
       { path: 'reports', component: ReportsComponent, canActivate: [featureAccessGuard('reports')] },
       { path: 'reports/heatmap', component: HeatmapComponent, canActivate: [featureAccessGuard('reportAnalytics')] },
       { path: 'reports/audit', component: AuditTrailComponent, canActivate: [featureAccessGuard('auditTrail')] },
+      { path: 'legacy-data-import', component: LegacyDataImportComponent, canActivate: [featureAccessGuard('legacyDataImport')] },
       { path: 'completed-appointments', component: CompletedAppointmentsComponent, canActivate: [roleGuard('SUPER_ADMIN', 'APPROVER', 'HCM')] },
       { path: 'rejected-appointments', component: RejectedAppointmentsComponent, canActivate: [roleGuard('SUPER_ADMIN', 'APPROVER', 'HCM')] },
       { path: 'admin/departments', component: DepartmentManagementComponent, canActivate: [roleGuard('SUPER_ADMIN')] },

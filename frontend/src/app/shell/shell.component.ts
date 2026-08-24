@@ -65,6 +65,8 @@ export class ShellComponent implements OnInit {
       feature: 'registerVisitor' },
     { labelKey: 'PUBLIC_IDENTIFICATION', icon: 'badge', route: '/identify',
       feature: 'publicIdentification' },
+    { labelKey: 'Legacy Data Import', icon: 'upload_file', route: '/legacy-data-import',
+      feature: 'legacyDataImport' },
     {
       labelKey: 'REPORTS', icon: 'bar_chart', expanded: false,
       feature: 'reports',

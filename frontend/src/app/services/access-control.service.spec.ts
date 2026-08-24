@@ -52,4 +52,16 @@ describe('AccessControlService', () => {
     expect(service.canRegisterVisitor()).toBeFalse();
     expect(service.canUsePublicIdentification()).toBeFalse();
   });
+
+  for (const role of ['ADMIN', 'DEO'] as const) {
+    it(`allows ${role} to use legacy data import`, () => {
+      currentUser = { username: role.toLowerCase(), fullName: role, role };
+      expect(service.canUseLegacyDataImport()).toBeTrue();
+    });
+  }
+
+  it('denies legacy data import to roles outside ADMIN and DEO', () => {
+    currentUser = { username: 'superadmin', fullName: 'Super Admin', role: 'SUPER_ADMIN' };
+    expect(service.canUseLegacyDataImport()).toBeFalse();
+  });
 });

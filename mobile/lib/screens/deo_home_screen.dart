@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/connectivity_service.dart';
 import 'appointments_screen.dart';
-import 'new_appointment_screen.dart';
 import 'grievance_screen.dart';
 import 'public_identification_screen.dart';
 import 'visitor_registration_screen.dart';
@@ -86,21 +85,9 @@ class DeoHomeScreen extends StatelessWidget {
               onTap: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (routeContext) => _DeoPageScaffold(
+                    builder: (_) => const _DeoPageScaffold(
                       title: 'Walk-in Counter',
-                      child: NewAppointmentScreen(
-                        isWalkIn: true,
-                        onViewAppointments: () {
-                          Navigator.of(routeContext).pushReplacement(
-                            MaterialPageRoute(
-                              builder: (_) => const _DeoPageScaffold(
-                                title: 'Walk-in Appointments',
-                                child: AppointmentsScreen(walkInOnly: true),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+                      child: PublicIdentificationScreen(walkInMode: true),
                     ),
                   ),
                 );

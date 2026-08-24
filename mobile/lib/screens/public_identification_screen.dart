@@ -13,6 +13,7 @@ import '../services/api_service.dart';
 import '../utils/photo_url_resolver.dart';
 import '../widgets/authenticated_photo.dart';
 import 'visitor_registration_screen.dart';
+import 'new_appointment_screen.dart';
 import '../widgets/megha_ui.dart';
 
 class _VisitorProfile {
@@ -152,15 +153,17 @@ class _CitizenHistory {
 }
 
 class PublicIdentificationScreen extends StatefulWidget {
-  const PublicIdentificationScreen({super.key});
+  final bool walkInMode;
+
+  const PublicIdentificationScreen({super.key, this.walkInMode = false});
 
   @override
   State<PublicIdentificationScreen> createState() =>
       _PublicIdentificationScreenState();
 }
 
-class _PublicIdentificationScreenState
-    extends State<PublicIdentificationScreen> {
+class _PublicIdentificationScreenState extends State<PublicIdentificationScreen>
+    with WidgetsBindingObserver {
   final _phoneCtrl = TextEditingController();
   final _epicCtrl = TextEditingController();
   final _nameCtrl = TextEditingController();
@@ -172,7 +175,6 @@ class _PublicIdentificationScreenState
     enableTracking: true,
     performanceMode: FaceDetectorMode.fast,
   ));
-  Timer? _faceTimer;
   bool _detectingFaces = false;
   int _activeFaceSearches = 0;
   final List<_PendingFace> _faceQueue = [];
@@ -182,6 +184,9 @@ class _PublicIdentificationScreenState
   int _faceSession = 0;
   static const _faceRetryTimeout = Duration(seconds: 15);
   static const _faceDisappearGrace = Duration(milliseconds: 2400);
+  static const _frameProcessingInterval = Duration(milliseconds: 800);
+  static const _maxConcurrentFaceSearches = 2;
+  DateTime _lastProcessedFrame = DateTime.fromMillisecondsSinceEpoch(0);
   String _district = '';
 
   List<_VisitorProfile> _results = [];
@@ -193,6 +198,12 @@ class _PublicIdentificationScreenState
   bool _fullHistoryOpen = false;
   String? _error;
   String? _historyError;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
 
   Future<void> _identifyByFace() async {
     if (_faceCamera != null) {
@@ -223,6 +234,9 @@ class _PublicIdentificationScreenState
       camera,
       ResolutionPreset.medium,
       enableAudio: false,
+      imageFormatGroup: Platform.isAndroid
+          ? ImageFormatGroup.nv21
+          : ImageFormatGroup.bgra8888,
     );
     await controller.initialize();
     if (!mounted) return controller.dispose();
@@ -232,7 +246,7 @@ class _PublicIdentificationScreenState
       _searched = true;
       _error = null;
     });
-    _scheduleFaceDetection();
+    await controller.startImageStream(_onCameraFrame);
   }
 
   Future<void> _switchFaceCamera() async {
@@ -249,10 +263,9 @@ class _PublicIdentificationScreenState
     if (matching.isEmpty) return;
 
     setState(() => _switchingCamera = true);
-    _faceTimer?.cancel();
-    _faceTimer = null;
     _faceCamera = null;
     _resetFaceSession();
+    if (current.value.isStreamingImages) await current.stopImageStream();
     await current.dispose();
     try {
       await _openFaceCamera(matching.first);
@@ -266,24 +279,26 @@ class _PublicIdentificationScreenState
     }
   }
 
-  void _scheduleFaceDetection() {
-    _faceTimer?.cancel();
-    _faceTimer = Timer(const Duration(milliseconds: 800), _detectAndQueueFaces);
+  void _onCameraFrame(CameraImage frame) {
+    final now = DateTime.now();
+    if (_detectingFaces ||
+        now.difference(_lastProcessedFrame) < _frameProcessingInterval) return;
+    _lastProcessedFrame = now;
+    unawaited(_detectAndQueueFaces(frame));
   }
 
-  Future<void> _detectAndQueueFaces() async {
+  Future<void> _detectAndQueueFaces(CameraImage frame) async {
     final controller = _faceCamera;
     if (controller == null ||
         !controller.value.isInitialized ||
         _detectingFaces) return;
     _detectingFaces = true;
     try {
-      final capture = await controller.takePicture();
-      final faces = await _faceDetector
-          .processImage(InputImage.fromFilePath(capture.path));
-      final bytes = await capture.readAsBytes();
-      final source = img.decodeImage(bytes);
-      if (source != null) {
+      final input = _inputImage(frame, controller.description);
+      final source = _cameraImage(frame, controller.description);
+      if (input == null || source == null) return;
+      final faces = await _faceDetector.processImage(input);
+      {
         final now = DateTime.now();
         final seenTrackIds = <int>{};
         for (final face in faces) {
@@ -353,10 +368,7 @@ class _PublicIdentificationScreenState
           }
         }
         _drainFaceQueue();
-      }
-      final temporaryCapture = File(capture.path);
-      if (await temporaryCapture.exists()) {
-        await temporaryCapture.delete();
+        if (mounted) setState(() {});
       }
     } catch (_) {
       if (mounted) {
@@ -365,7 +377,6 @@ class _PublicIdentificationScreenState
       }
     } finally {
       _detectingFaces = false;
-      if (_faceCamera != null) _scheduleFaceDetection();
     }
   }
 
@@ -379,8 +390,69 @@ class _PublicIdentificationScreenState
     return img.copyCrop(source, x: x, y: y, width: width, height: height);
   }
 
+  InputImage? _inputImage(CameraImage frame, CameraDescription description) {
+    final rotation =
+        InputImageRotationValue.fromRawValue(description.sensorOrientation);
+    final format = InputImageFormatValue.fromRawValue(frame.format.raw);
+    if (rotation == null || format == null || frame.planes.isEmpty) return null;
+    final bytes = frame.planes.length == 1
+        ? frame.planes.first.bytes
+        : Uint8List.fromList(
+            frame.planes.expand((plane) => plane.bytes).toList());
+    return InputImage.fromBytes(
+      bytes: bytes,
+      metadata: InputImageMetadata(
+        size: Size(frame.width.toDouble(), frame.height.toDouble()),
+        rotation: rotation,
+        format: format,
+        bytesPerRow: frame.planes.first.bytesPerRow,
+      ),
+    );
+  }
+
+  img.Image? _cameraImage(CameraImage frame, CameraDescription description) {
+    img.Image? raw;
+    if (frame.format.group == ImageFormatGroup.bgra8888) {
+      raw = img.Image.fromBytes(
+        width: frame.width,
+        height: frame.height,
+        bytes: frame.planes.first.bytes.buffer,
+        rowStride: frame.planes.first.bytesPerRow,
+        order: img.ChannelOrder.bgra,
+      );
+    } else if (frame.format.group == ImageFormatGroup.nv21 &&
+        frame.planes.isNotEmpty) {
+      raw = _nv21ToImage(frame);
+    }
+    if (raw == null) return null;
+    final angle = description.sensorOrientation % 360;
+    return angle == 0 ? raw : img.copyRotate(raw, angle: angle);
+  }
+
+  img.Image _nv21ToImage(CameraImage frame) {
+    final width = frame.width;
+    final height = frame.height;
+    final bytes = frame.planes.first.bytes;
+    final output = img.Image(width: width, height: height);
+    final frameSize = width * height;
+    for (var y = 0; y < height; y++) {
+      for (var x = 0; x < width; x++) {
+        final yValue = bytes[y * width + x] & 0xff;
+        final uv = frameSize + (y >> 1) * width + (x & ~1);
+        final v = uv < bytes.length ? (bytes[uv] & 0xff) - 128 : 0;
+        final u = uv + 1 < bytes.length ? (bytes[uv + 1] & 0xff) - 128 : 0;
+        final r = (yValue + 1.402 * v).round().clamp(0, 255);
+        final g = (yValue - .344136 * u - .714136 * v).round().clamp(0, 255);
+        final b = (yValue + 1.772 * u).round().clamp(0, 255);
+        output.setPixelRgb(x, y, r, g, b);
+      }
+    }
+    return output;
+  }
+
   void _drainFaceQueue() {
-    while (_activeFaceSearches < 1 && _faceQueue.isNotEmpty) {
+    while (_activeFaceSearches < _maxConcurrentFaceSearches &&
+        _faceQueue.isNotEmpty) {
       final pending = _faceQueue.removeAt(0);
       _activeFaceSearches++;
       if (mounted) {
@@ -473,11 +545,12 @@ class _PublicIdentificationScreenState
   }
 
   Future<void> _stopFaceIdentification() async {
-    _faceTimer?.cancel();
-    _faceTimer = null;
     final controller = _faceCamera;
     _faceCamera = null;
     _resetFaceSession();
+    if (controller?.value.isStreamingImages == true) {
+      await controller!.stopImageStream();
+    }
     await controller?.dispose();
     if (mounted) setState(() {});
   }
@@ -512,13 +585,29 @@ class _PublicIdentificationScreenState
 
   @override
   void dispose() {
-    _faceTimer?.cancel();
-    _faceCamera?.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    final controller = _faceCamera;
+    _faceCamera = null;
+    if (controller?.value.isStreamingImages == true) {
+      unawaited(
+          controller!.stopImageStream().then((_) => controller.dispose()));
+    } else {
+      unawaited(controller?.dispose() ?? Future<void>.value());
+    }
     _faceDetector.close();
     _phoneCtrl.dispose();
     _epicCtrl.dispose();
     _nameCtrl.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      unawaited(_stopFaceIdentification());
+    }
   }
 
   Future<void> _search() async {
@@ -715,6 +804,24 @@ class _PublicIdentificationScreenState
         if (_selected != null) ...[
           const SizedBox(height: 16),
           _buildProfileDetails(_selected!),
+          if (widget.walkInMode) ...[
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              onPressed: () async {
+                final navigator = Navigator.of(context);
+                await _stopFaceIdentification();
+                if (!mounted || _selected == null) return;
+                navigator.push(MaterialPageRoute(
+                  builder: (_) => NewAppointmentScreen(
+                    isWalkIn: true,
+                    initialVisitor: _selected!.raw,
+                  ),
+                ));
+              },
+              icon: const Icon(Icons.arrow_forward),
+              label: const Text('Continue to Walk-in Appointment'),
+            ),
+          ],
         ],
       ],
     );
@@ -896,6 +1003,7 @@ class _PublicIdentificationScreenState
           final result = _faceResults[index];
           return _FaceRecognitionResultCard(
             result: result,
+            continueToWalkIn: widget.walkInMode,
             selected:
                 result.visitor != null && _selected?.id == result.visitor!.id,
             onTap: result.visitor == null
@@ -1191,11 +1299,13 @@ class _FaceRecognitionResultCard extends StatelessWidget {
   final _FaceRecognitionResult result;
   final bool selected;
   final VoidCallback? onTap;
+  final bool continueToWalkIn;
 
   const _FaceRecognitionResultCard({
     required this.result,
     required this.selected,
     required this.onTap,
+    required this.continueToWalkIn,
   });
 
   @override
@@ -1274,6 +1384,8 @@ class _FaceRecognitionResultCard extends StatelessWidget {
                         onPressed: () =>
                             Navigator.of(context).push(MaterialPageRoute(
                                 builder: (_) => VisitorRegistrationScreen(
+                                      openAppointmentAfterSubmit:
+                                          continueToWalkIn,
                                       epicFacePrefill: result.epicRecord,
                                       liveCapturedPhoto: result.capturedImage,
                                     ))),
@@ -1333,6 +1445,20 @@ class _FaceRecognitionResultCard extends StatelessWidget {
                     ? 'Visitor not found in system'
                     : result.message,
                 style: const TextStyle(color: MeghaColors.muted)),
+            if (continueToWalkIn &&
+                result.status == _FaceResultStatus.notRegistered) ...[
+              const SizedBox(height: 8),
+              ElevatedButton.icon(
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => VisitorRegistrationScreen(
+                    openAppointmentAfterSubmit: true,
+                    liveCapturedPhoto: result.capturedImage,
+                  ),
+                )),
+                icon: const Icon(Icons.person_add_alt_1_outlined),
+                label: const Text('Register Visitor'),
+              ),
+            ],
           ],
         ]),
       ),

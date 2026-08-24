@@ -9,6 +9,10 @@ cache:
     enabled: ${REDIS_CACHE_ENABLED:false}
 
 spring:
+  servlet:
+    multipart:
+      max-file-size: ${MULTIPART_MAX_FILE_SIZE:50MB}
+      max-request-size: ${MULTIPART_MAX_REQUEST_SIZE:60MB}
   jackson:
     time-zone: Asia/Kolkata
     serialization:
@@ -141,7 +145,7 @@ legacy:
       minimum-idle: 0
   import:
     storage-path: ${LEGACY_IMPORT_STORAGE_PATH:${java.io.tmpdir}/meghaconnect-legacy-import/test}
-    max-file-size-mb: 25
+    max-file-size-mb: ${LEGACY_IMPORT_MAX_FILE_SIZE_MB:50}
     max-sheets: 20
     max-columns: 100
     max-rows-per-sheet: 10000

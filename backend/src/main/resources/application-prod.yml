@@ -24,6 +24,10 @@ cache:
     enabled: ${REDIS_CACHE_ENABLED:false}
 
 spring:
+  servlet:
+    multipart:
+      max-file-size: ${MULTIPART_MAX_FILE_SIZE:50MB}
+      max-request-size: ${MULTIPART_MAX_REQUEST_SIZE:60MB}
   data:
     redis:
       repositories:
@@ -250,7 +254,7 @@ legacy:
       minimum-idle: ${LEGACY_DB_POOL_MIN_IDLE:2}
   import:
     storage-path: ${LEGACY_IMPORT_STORAGE_PATH:/opt/meghaconnect/prod/uploads/legacy-import}
-    max-file-size-mb: ${LEGACY_IMPORT_MAX_FILE_SIZE_MB:100}
+    max-file-size-mb: ${LEGACY_IMPORT_MAX_FILE_SIZE_MB:50}
     max-sheets: ${LEGACY_IMPORT_MAX_SHEETS:100}
     max-columns: ${LEGACY_IMPORT_MAX_COLUMNS:300}
     max-rows-per-sheet: ${LEGACY_IMPORT_MAX_ROWS_PER_SHEET:1000000}

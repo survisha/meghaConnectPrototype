@@ -29,7 +29,13 @@ public class LegacyJpaConfig {
     @Bean
     public LocalContainerEntityManagerFactoryBean legacyEntityManagerFactory(EntityManagerFactoryBuilder builder,@Qualifier("legacyDataSource") HikariDataSource ds){
         return builder.dataSource(ds).packages("com.survisha.meghaconnect.legacy.entity").persistenceUnit("legacy")
-                .properties(Map.of("hibernate.hbm2ddl.auto","none","hibernate.jdbc.batch_size","500","hibernate.order_inserts","true")).build();
+                .properties(Map.of(
+                        "hibernate.hbm2ddl.auto", "none",
+                        "hibernate.jdbc.batch_size", "500",
+                        "hibernate.order_inserts", "true",
+                        "hibernate.physical_naming_strategy", "org.springframework.boot.orm.jpa.hibernate.SpringPhysicalNamingStrategy",
+                        "hibernate.implicit_naming_strategy", "org.springframework.boot.orm.jpa.hibernate.SpringImplicitNamingStrategy"
+                )).build();
     }
 
     @Bean

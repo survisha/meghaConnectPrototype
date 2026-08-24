@@ -1,4 +1,8 @@
 spring:
+  servlet:
+    multipart:
+      max-file-size: ${MULTIPART_MAX_FILE_SIZE:50MB}
+      max-request-size: ${MULTIPART_MAX_REQUEST_SIZE:60MB}
   data:
     redis:
       repositories:
@@ -16,4 +20,5 @@ legacy:
     password: ${LEGACY_DB_PASSWORD:${DATABASE_PASSWORD:${DB_PASSWORD:root}}}
   import:
     storage-path: ${LEGACY_IMPORT_STORAGE_PATH:${java.io.tmpdir}/meghaconnect-legacy-import/local}
+    max-file-size-mb: ${LEGACY_IMPORT_MAX_FILE_SIZE_MB:50}
     batch-size: ${LEGACY_IMPORT_BATCH_SIZE:500}

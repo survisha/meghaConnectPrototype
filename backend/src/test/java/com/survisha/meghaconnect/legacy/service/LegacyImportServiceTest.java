@@ -5,7 +5,6 @@ import com.survisha.meghaconnect.legacy.repository.*;
 import com.survisha.meghaconnect.service.AuditLogService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import javax.persistence.EntityManager;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 
@@ -19,7 +18,7 @@ class LegacyImportServiceTest {
                 mock(LegacyImportSheetRepository.class), mock(LegacyImportColumnRepository.class),
                 mock(LegacyImportErrorRepository.class), mock(LegacyDatasetRecordRepository.class),
                 mock(LegacyPersonIndexRepository.class), mock(AuditLogService.class),
-                new ObjectMapper(), mock(EntityManager.class));
+                new ObjectMapper());
     }
 
     @Test void normalizesWhitespaceCaseAndHarmlessPunctuation() {

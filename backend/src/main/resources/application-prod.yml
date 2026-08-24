@@ -239,3 +239,19 @@ integration:
     allowed-photo-formats:
       - image/jpeg
       - image/png
+
+legacy:
+  datasource:
+    url: ${LEGACY_DATABASE_URL:jdbc:mysql://${LEGACY_DB_HOST:${DB_HOST:127.0.0.1}}:${LEGACY_DB_PORT:${DB_PORT:3306}}/${LEGACY_DB_NAME:meghaconnect_legacy}?useSSL=false&connectionTimeZone=%2B05:30&forceConnectionTimeZoneToSession=true&allowPublicKeyRetrieval=true}
+    username: ${LEGACY_DB_USERNAME:}
+    password: ${LEGACY_DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: ${LEGACY_DB_POOL_MAX_SIZE:20}
+      minimum-idle: ${LEGACY_DB_POOL_MIN_IDLE:2}
+  import:
+    storage-path: ${LEGACY_IMPORT_STORAGE_PATH:/opt/meghaconnect/prod/uploads/legacy-import}
+    max-file-size-mb: ${LEGACY_IMPORT_MAX_FILE_SIZE_MB:100}
+    max-sheets: ${LEGACY_IMPORT_MAX_SHEETS:100}
+    max-columns: ${LEGACY_IMPORT_MAX_COLUMNS:300}
+    max-rows-per-sheet: ${LEGACY_IMPORT_MAX_ROWS_PER_SHEET:1000000}
+    batch-size: ${LEGACY_IMPORT_BATCH_SIZE:500}

@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
 import java.io.*;
 import java.math.*;
 import java.nio.file.*;
@@ -34,7 +35,7 @@ public class LegacyImportService {
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             "application/vnd.ms-excel", "application/octet-stream");
     private static final Set<String> TYPES = Set.of("STRING", "INTEGER", "DECIMAL", "DATE", "BOOLEAN");
-    private static final Set<String> IDENTIFIERS = Set.of("EPIC", "NAME", "MOBILE", "DISTRICT", "CONSTITUENCY", "SCHEME", "ADDRESS", "OTHER");
+    private static final Set<String> IDENTIFIERS = Set.of("EPIC", "NAME", "MOBILE", "VILLAGE", "DISTRICT", "CONSTITUENCY", "SCHEME", "ADDRESS", "OTHER");
     private static final Pattern SAFE_CODE = Pattern.compile("[A-Z][A-Z0-9_]{2,79}");
     private static final Pattern SAFE_FIELD = Pattern.compile("[a-z][a-z0-9_]{1,79}");
     private static final int PREVIEW_LIMIT = 20;
@@ -48,7 +49,8 @@ public class LegacyImportService {
     private final LegacyPersonIndexRepository personRepository;
     private final AuditLogService audit;
     private final ObjectMapper objectMapper;
-    private final EntityManager entityManager;
+    @PersistenceContext(unitName="legacy")
+    private EntityManager entityManager;
 
     @Value("${legacy.import.storage-path:${java.io.tmpdir}/meghaconnect-legacy-import}") private String storagePath;
     @Value("${legacy.import.max-file-size-mb:100}") private long maxFileSizeMb;
@@ -57,7 +59,7 @@ public class LegacyImportService {
     @Value("${legacy.import.max-rows-per-sheet:1000000}") private long maxRowsPerSheet;
     @Value("${legacy.import.batch-size:500}") private int chunkSize;
 
-    @Transactional
+    @Transactional(transactionManager="legacyTransactionManager")
     public BatchSummary uploadAndAnalyze(MultipartFile file, String actor) {
         validateUpload(file);
         String original = sanitizeFilename(file.getOriginalFilename());
@@ -119,15 +121,15 @@ public class LegacyImportService {
         }
     }
 
-    @Transactional(readOnly=true)
+    @Transactional(transactionManager="legacyTransactionManager", readOnly=true)
     public BatchSummary getBatch(Long id, String actor, boolean admin) { return summary(ownedBatch(id, actor, admin), true); }
 
-    @Transactional(readOnly=true)
+    @Transactional(transactionManager="legacyTransactionManager", readOnly=true)
     public List<SheetSummary> sheets(Long id, String actor, boolean admin) {
         ownedBatch(id, actor, admin); return sheetRepository.findByBatchIdOrderBySheetIndex(id).stream().map(s -> sheetDto(s, true)).collect(Collectors.toList());
     }
 
-    @Transactional(readOnly=true)
+    @Transactional(transactionManager="legacyTransactionManager", readOnly=true)
     public Preview preview(Long batchId, Long sheetId, int requestedLimit, String actor, boolean admin) {
         LegacyImportBatch batch = ownedBatch(batchId, actor, admin); LegacyImportSheet sheet = ownedSheet(batchId, sheetId);
         int limit = Math.min(Math.max(1, requestedLimit), PREVIEW_LIMIT);
@@ -139,7 +141,7 @@ public class LegacyImportService {
         } catch(IOException e){ throw new IllegalStateException("Unable to preview workbook.",e); }
     }
 
-    @Transactional
+    @Transactional(transactionManager="legacyTransactionManager")
     public SheetSummary applyMapping(Long batchId, Long sheetId, MappingRequest request, String actor, boolean admin) {
         ownedBatch(batchId, actor, admin); LegacyImportSheet sheet=ownedSheet(batchId,sheetId);
         LegacyDatasetDefinition dataset=datasetRepository.findById(request.getDatasetId()).filter(d->d.isActive()&&d.isApproved())
@@ -160,7 +162,7 @@ public class LegacyImportService {
         return sheetDto(sheet,true);
     }
 
-    @Transactional
+    @Transactional(transactionManager="legacyTransactionManager")
     public BatchSummary validate(Long batchId,String actor,boolean admin){
         LegacyImportBatch batch=ownedBatch(batchId,actor,admin);batch.setOverallStatus("VALIDATING");batchRepository.save(batch);
         for(LegacyImportSheet sheet:sheetRepository.findByBatchIdOrderBySheetIndex(batchId)){
@@ -171,7 +173,7 @@ public class LegacyImportService {
         return summary(batchRepository.findById(batchId).orElseThrow(),true);
     }
 
-    @Transactional
+    @Transactional(transactionManager="legacyTransactionManager")
     public BatchSummary execute(Long batchId,String actor,boolean admin){
         LegacyImportBatch batch=ownedBatch(batchId,actor,admin);batch.setOverallStatus("IMPORTING");batch.setStartedAt(now());batchRepository.save(batch);
         audit.log("LegacyImportBatch",batchId,"LEGACY_IMPORT_STARTED","Workbook import started",actor);
@@ -186,7 +188,7 @@ public class LegacyImportService {
         return summary(batch,true);
     }
 
-    @Transactional
+    @Transactional(transactionManager="legacyTransactionManager")
     public SheetSummary retry(Long batchId,Long sheetId,String actor,boolean admin){
         LegacyImportBatch batch=ownedBatch(batchId,actor,admin);LegacyImportSheet sheet=ownedSheet(batchId,sheetId);
         if(sheet.getConfirmedDataset()==null)throw new IllegalStateException("Confirm a dataset mapping before retry.");
@@ -194,7 +196,7 @@ public class LegacyImportService {
         validateSheet(batch,sheet,true);recalculateBatch(batchId);return sheetDto(sheet,true);
     }
 
-    @Transactional
+    @Transactional(transactionManager="legacyTransactionManager")
     public SheetSummary skip(Long batchId,Long sheetId,String actor,boolean admin){
         ownedBatch(batchId,actor,admin);LegacyImportSheet sheet=ownedSheet(batchId,sheetId);
         if(Set.of("COMPLETED","PARTIAL_SUCCESS").contains(sheet.getStatus()))throw new IllegalStateException("An imported sheet cannot be skipped.");
@@ -202,16 +204,16 @@ public class LegacyImportService {
         recalculateBatch(batchId);audit.log("LegacyImportSheet",sheetId,"LEGACY_SHEET_SKIPPED","Batch="+batchId+", sheet="+sheet.getSheetName(),actor);return sheetDto(sheet,true);
     }
 
-    @Transactional(readOnly=true)
+    @Transactional(transactionManager="legacyTransactionManager", readOnly=true)
     public Page<ErrorInfo> errors(Long batchId,Pageable pageable,String actor,boolean admin){ownedBatch(batchId,actor,admin);return errorRepository.findByImportBatchIdOrderByImportSheetIdAscSourceRowNumberAsc(batchId,pageable).map(this::errorDto);}
 
-    @Transactional(readOnly=true)
+    @Transactional(transactionManager="legacyTransactionManager", readOnly=true)
     public Page<BatchSummary> history(Pageable pageable,String actor,boolean admin){
         Page<LegacyImportBatch> page=admin?batchRepository.findAllByOrderByUploadedAtDesc(pageable):batchRepository.findByUploadedByOrderByUploadedAtDesc(actor,pageable);
         return page.map(b->summary(b,false));
     }
 
-    @Transactional(readOnly=true)
+    @Transactional(transactionManager="legacyTransactionManager", readOnly=true)
     public byte[] errorCsv(Long batchId,String actor,boolean admin){
         LegacyImportBatch batch=ownedBatch(batchId,actor,admin);List<LegacyImportError> errors=errorRepository.findByImportBatchIdOrderByImportSheetIdAscSourceRowNumberAsc(batchId,PageRequest.of(0,Integer.MAX_VALUE)).getContent();
         StringBuilder out=new StringBuilder("File Name,Sheet Name,Row Number,Column Name,Value,Error Code,Error Message,Import Batch ID\r\n");
@@ -219,13 +221,13 @@ public class LegacyImportService {
         return out.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
     }
 
-    @Transactional(readOnly=true)
+    @Transactional(transactionManager="legacyTransactionManager", readOnly=true)
     public byte[] summaryCsv(Long batchId,String actor,boolean admin){BatchSummary b=getBatch(batchId,actor,admin);StringBuilder out=new StringBuilder("Sheet,Dataset,Columns,Rows,Valid,Imported,Failed,Duplicates,Status\r\n");for(SheetSummary s:b.getSheets())out.append(csv(s.getSheetName())).append(',').append(csv(s.getDataset())).append(',').append(s.getColumnCount()).append(',').append(s.getRowCount()).append(',').append(s.getValidRows()).append(',').append(s.getImportedRows()).append(',').append(s.getFailedRows()).append(',').append(s.getDuplicateRows()).append(',').append(s.getStatus()).append("\r\n");return out.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);}
 
-    @Transactional(readOnly=true)
+    @Transactional(transactionManager="legacyTransactionManager", readOnly=true)
     public List<DatasetInfo> datasets(){return datasetRepository.findByActiveTrueAndApprovedTrueOrderByDatasetNameAsc().stream().map(this::datasetDto).collect(Collectors.toList());}
 
-    @Transactional
+    @Transactional(transactionManager="legacyTransactionManager")
     public DatasetInfo createDataset(DatasetRequest request,String actor){
         String code=upper(request.getDatasetCode());if(!SAFE_CODE.matcher(code).matches())throw new IllegalArgumentException("Dataset code must contain only uppercase letters, numbers and underscores.");
         if(datasetRepository.findByDatasetCodeIgnoreCase(code).isPresent())throw new IllegalArgumentException("Dataset code already exists.");
@@ -269,7 +271,7 @@ public class LegacyImportService {
     }
 
     private long persistChunk(List<LegacyDatasetRecord> records,Map<String,String> ids,LegacyImportBatch batch,LegacyImportSheet sheet){
-        List<LegacyDatasetRecord> saved=recordRepository.saveAll(records);recordRepository.flush();for(LegacyDatasetRecord record:saved){Map<String,String> data=readJson(record.getRecordData());String name=valueByIdentifier(data,ids,"NAME"),epic=normalizeEpic(valueByIdentifier(data,ids,"EPIC")),mobile=normalizeMobile(valueByIdentifier(data,ids,"MOBILE"));if(blank(name)&&blank(epic)&&blank(mobile))continue;personRepository.save(LegacyPersonIndex.builder().sourceDatasetCode(record.getDatasetCode()).sourceTable("legacy_dataset_record").sourceRecordId(record.getId()).name(name).normalizedName(normalizeName(name)).epic(epic).mobile(mobile).district(valueByIdentifier(data,ids,"DISTRICT")).constituency(valueByIdentifier(data,ids,"CONSTITUENCY")).schemeCode(valueByIdentifier(data,ids,"SCHEME")).identityBasis(!blank(epic)?"EPIC":!blank(mobile)?"MOBILE":"NAME_CANDIDATE").sourceFile(batch.getOriginalFileName()).sourceSheet(sheet.getSheetName()).sourceRowNumber(record.getSourceRowNumber()).importBatchId(batch.getId()).build());}return saved.size();
+        List<LegacyDatasetRecord> saved=recordRepository.saveAll(records);recordRepository.flush();for(LegacyDatasetRecord record:saved){Map<String,String> data=readJson(record.getRecordData());String name=valueByIdentifier(data,ids,"NAME"),epic=normalizeEpic(valueByIdentifier(data,ids,"EPIC")),mobile=normalizeMobile(valueByIdentifier(data,ids,"MOBILE")),village=valueByIdentifier(data,ids,"VILLAGE"),address=valueByIdentifier(data,ids,"ADDRESS");if(blank(name)&&blank(epic)&&blank(mobile))continue;personRepository.save(LegacyPersonIndex.builder().sourceDatasetCode(record.getDatasetCode()).sourceTable("legacy_dataset_record").sourceRecordId(record.getId()).name(name).normalizedName(normalizeName(name)).epic(epic).normalizedEpic(epic).mobile(mobile).normalizedMobile(mobile).village(village).normalizedVillage(normalizeText(village)).address(address).normalizedAddress(normalizeText(address)).district(valueByIdentifier(data,ids,"DISTRICT")).constituency(valueByIdentifier(data,ids,"CONSTITUENCY")).schemeCode(valueByIdentifier(data,ids,"SCHEME")).identityBasis(!blank(epic)?"EPIC":!blank(mobile)?"MOBILE":"NAME_CANDIDATE").sourceFile(batch.getOriginalFileName()).sourceSheet(sheet.getSheetName()).sourceRowNumber(record.getSourceRowNumber()).importBatchId(batch.getId()).build());}return saved.size();
     }
 
     private void persistColumns(LegacyImportSheet sheet,Sheet ps,Header header,LegacyDatasetDefinition dataset){for(int i=0;i<header.values.size();i++){String source=header.values.get(i),normalized=normalizeHeader(source);LegacyDatasetColumn mapped=findColumn(dataset,normalized);columnRepository.save(LegacyImportColumn.builder().sheet(sheet).sourceColumnIndex(i).sourceColumnName(source).normalizedColumnName(normalized).detectedDataType(inferType(ps,header.rowIndex,i)).mappedTargetField(mapped==null?null:mapped.getTargetFieldName()).mappedIdentifierType(mapped==null?null:mapped.getIdentifierType()).mandatory(mapped!=null&&mapped.isMandatory()).ignored(false).mappingStatus(mapped==null?"UNMAPPED":"MATCHED").build());}}
@@ -302,6 +304,7 @@ public class LegacyImportService {
     private long countDataRows(Sheet s,int h){long n=0;for(int r=h+1;r<=s.getLastRowNum();r++)if(!empty(s.getRow(r)))n++;return n;}
     public String normalizeHeader(String v){if(v==null)return"";return java.text.Normalizer.normalize(v,java.text.Normalizer.Form.NFKC).trim().toUpperCase(Locale.ROOT).replaceAll("[^A-Z0-9]+","_").replaceAll("^_+|_+$","").replaceAll("_+","_");}
     private String normalizeEpic(String v){return blank(v)?null:v.trim().toUpperCase(Locale.ROOT).replaceAll("\\s+","");}private String normalizeMobile(String v){if(blank(v))return null;String d=v.replaceAll("\\D","");return d.length()>10?d.substring(d.length()-10):d;}private String normalizeName(String v){return blank(v)?null:v.trim().replaceAll("\\s+"," ").toUpperCase(Locale.ROOT);}
+    private String normalizeText(String v){return blank(v)?null:v.trim().toUpperCase(Locale.ROOT).replaceAll("[^A-Z0-9 ]+"," ").replaceAll("\\s+"," ");}
     private String parseDate(String v){for(DateTimeFormatter f:List.of(DateTimeFormatter.ISO_LOCAL_DATE,DateTimeFormatter.ofPattern("d/M/uuuu"),DateTimeFormatter.ofPattern("d-M-uuuu"),DateTimeFormatter.ofPattern("d.M.uuuu"))){try{return LocalDate.parse(v,f).toString();}catch(Exception ignored){}}throw new IllegalArgumentException();}
     private String json(Map<String,String>v){try{return objectMapper.writeValueAsString(v);}catch(JsonProcessingException e){throw new IllegalStateException(e);}}@SuppressWarnings("unchecked")private Map<String,String>readJson(String v){try{return objectMapper.readValue(v,LinkedHashMap.class);}catch(Exception e){throw new IllegalStateException(e);}}
     private List<String>csvFields(String v){return blank(v)?List.of():Arrays.stream(v.split(",")).map(String::trim).filter(SAFE_FIELD.asPredicate()).collect(Collectors.toList());}private String csv(String v){String x=v==null?"":v;return"\""+x.replace("\"","\"\"")+"\"";}private String sanitizeFilename(String v){String n=v==null?"workbook.xlsx":Paths.get(v).getFileName().toString();return limit(n.replaceAll("[\\r\\n]","_"),255);}private String safeSheetName(String v){return limit(v==null?"Sheet":v.replaceAll("[\\r\\n]","_"),255);}private String limit(String v,int n){return v==null?null:v.substring(0,Math.min(v.length(),n));}private String safeMessage(Exception e){return limit(Optional.ofNullable(e.getMessage()).orElse("Sheet import failed."),255);}private String upper(String v){return v==null?"":v.trim().toUpperCase(Locale.ROOT);}private boolean blank(String v){return v==null||v.isBlank();}private String required(String v,String label){if(blank(v))throw new IllegalArgumentException(label+" is required.");return v.trim();}private LocalDateTime now(){return DateTimeUtil.nowIST();}

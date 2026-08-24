@@ -207,6 +207,21 @@
           </div>
         </div>
 
+        <div class="section-card" style="margin-bottom:1rem">
+          <div class="section-card-header"><mat-icon>inventory_2</mat-icon> Legacy / Historical Records</div>
+          <div class="section-card-body">
+            <div *ngIf="legacyLoading" class="history-loading"><mat-icon>hourglass_empty</mat-icon> Searching historical datasets...</div>
+            <div *ngIf="legacyUnavailable" class="inline-alert inline-alert-error"><mat-icon>cloud_off</mat-icon><span>Legacy historical data is temporarily unavailable. Current profile information remains available.</span></div>
+            <div *ngIf="!legacyLoading&&!legacyUnavailable&&!legacyMatches.length" class="empty-history">No legacy records found.</div>
+            <div *ngFor="let candidate of legacyMatches" class="history-card">
+              <div><strong>{{displayValue(candidate.legacyPerson.name)}}</strong><span class="role-badge" [ngClass]="candidate.manualVerificationRequired?'associate-role':'primary-role'">{{candidate.matchLevel==='EXACT_EPIC'?'Exact EPIC Match':candidate.matchLevel==='EXACT_MOBILE'?'Exact Mobile Match':candidate.matchLevel==='STRONG'?'Strong Possible Match':'Possible Legacy Match'}}</span></div>
+              <p>Matched on: {{candidate.matchedOn.join(', ')}} · Score {{candidate.matchScore}}</p>
+              <p *ngIf="candidate.manualVerificationRequired"><strong>Manual verification required.</strong> This candidate has not been linked to the current visitor.</p>
+              <div *ngFor="let record of candidate.datasets" class="history-subtext"><strong>{{record.datasetName}}</strong> — {{record.schemeName||record.datasetCode}}<br>Source: {{record.sourceFile}}, {{record.sourceSheet}}, row {{record.sourceRowNumber}}</div>
+            </div>
+          </div>
+        </div>
+
         <div class="section-card">
           <div class="section-card-header">
             <mat-icon>history</mat-icon> Scheme &amp; Meeting History

@@ -18,6 +18,7 @@ import { from, interval, mergeMap, Subscription, toArray } from 'rxjs';
 import { AutoFaceDetection, CameraLivenessService } from '../shared/camera-liveness.service';
 import { ToastService } from '../shared/toast/toast.service';
 import { AUTO_FACE_RESULT_EXPIRY_TICK_MS, AUTO_FACE_RESULT_TIMEOUT_MS } from '../config/public-identification.constants';
+import { LegacyPersonCandidate, LegacyPersonSearchService } from '../services/legacy-person-search.service';
 
 // Angular Material
 import { MatInputModule } from '@angular/material/input';
@@ -63,6 +64,9 @@ export class PublicIdentificationComponent implements OnDestroy {
   historyError = '';
   fullHistoryOpen = false;
   citizenHistory: PublicIdentificationHistory | null = null;
+  legacyMatches: LegacyPersonCandidate[] = [];
+  legacyLoading = false;
+  legacyUnavailable = false;
   faceCameraStream: MediaStream | null = null;
   faceCameraActive = false;
   facePhoto = '';
@@ -98,7 +102,8 @@ export class PublicIdentificationComponent implements OnDestroy {
     private cameraCapture: CameraCaptureService,
     private faceRecognition: FaceRecognitionService,
     private cameraLiveness: CameraLivenessService,
-    private toast: ToastService
+    private toast: ToastService,
+    private legacySearch: LegacyPersonSearchService
   ) {}
 
   ngOnDestroy(): void {
@@ -463,6 +468,15 @@ export class PublicIdentificationComponent implements OnDestroy {
     this.selectedPhotoPreviewOpen = false;
     this.populateHistory();
     this.loadCitizenHistory(p.id);
+    this.loadLegacyHistory(p);
+  }
+
+  private loadLegacyHistory(visitor: Visitor): void {
+    this.legacyMatches=[];this.legacyUnavailable=false;this.legacyLoading=true;
+    this.legacySearch.search({epic:visitor.epicNumber,name:visitor.fullName,mobile:visitor.phoneNumber,village:visitor.village,address:visitor.fullAddress||visitor.address||visitor.addressLine||visitor.address1,district:visitor.district,constituency:visitor.constituency}).subscribe({
+      next:r=>{this.legacyMatches=r.matches;this.legacyLoading=false;},
+      error:()=>{this.legacyLoading=false;this.legacyUnavailable=true;}
+    });
   }
 
   clearSearch() {
@@ -478,6 +492,8 @@ export class PublicIdentificationComponent implements OnDestroy {
     this.selectedPhotoLoadFailed = false;
     this.selectedPhotoPreviewOpen = false;
     this.populateHistory();
+    this.legacyMatches=[];
+    this.legacyUnavailable=false;
   }
 
   initial(name?: string | null): string {

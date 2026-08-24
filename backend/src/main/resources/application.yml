@@ -138,3 +138,20 @@ captcha:
 security:
   login:
     max-failed-attempts: ${SECURITY_LOGIN_MAX_FAILED_ATTEMPTS:3}
+
+legacy:
+  datasource:
+    url: ${LEGACY_DATABASE_URL:jdbc:mysql://${LEGACY_DB_HOST:localhost}:${LEGACY_DB_PORT:3306}/${LEGACY_DB_NAME:meghaconnect_legacy}?useSSL=false&connectionTimeZone=%2B05:30&forceConnectionTimeZoneToSession=true&allowPublicKeyRetrieval=true}
+    username: ${LEGACY_DB_USERNAME:${DATABASE_USERNAME:${DB_USERNAME:root}}}
+    password: ${LEGACY_DB_PASSWORD:${DATABASE_PASSWORD:${DB_PASSWORD:root}}}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: ${LEGACY_DB_POOL_MAX_SIZE:10}
+      minimum-idle: ${LEGACY_DB_POOL_MIN_IDLE:1}
+  import:
+    storage-path: ${LEGACY_IMPORT_STORAGE_PATH:${java.io.tmpdir}/meghaconnect-legacy-import}
+    max-file-size-mb: ${LEGACY_IMPORT_MAX_FILE_SIZE_MB:100}
+    max-sheets: ${LEGACY_IMPORT_MAX_SHEETS:100}
+    max-columns: ${LEGACY_IMPORT_MAX_COLUMNS:300}
+    max-rows-per-sheet: ${LEGACY_IMPORT_MAX_ROWS_PER_SHEET:1000000}
+    batch-size: ${LEGACY_IMPORT_BATCH_SIZE:500}

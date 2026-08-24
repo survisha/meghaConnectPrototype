@@ -13,7 +13,13 @@ public class LegacyPersonIndex {
     @Column private String name;
     @Column(name="normalized_name") private String normalizedName;
     @Column(length=50) private String epic;
+    @Column(name="normalized_epic", length=50) private String normalizedEpic;
     @Column(length=20) private String mobile;
+    @Column(name="normalized_mobile", length=20) private String normalizedMobile;
+    @Column(length=180) private String village;
+    @Column(name="normalized_village", length=180) private String normalizedVillage;
+    @Column(length=500) private String address;
+    @Column(name="normalized_address", length=500) private String normalizedAddress;
     @Column(length=120) private String district;
     @Column(length=120) private String constituency;
     @Column(name="scheme_code", length=80) private String schemeCode;

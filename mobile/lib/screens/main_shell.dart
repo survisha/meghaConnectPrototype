@@ -28,6 +28,7 @@ import 'approver_screen.dart';
 import 'guest_appointment_screen.dart';
 import 'pending_sync_screen.dart';
 import 'hcm_dashboard_screen.dart';
+import 'qr_scanner_screen.dart';
 
 class _NavItem {
   final String label;
@@ -181,6 +182,12 @@ final _navTree = <_NavItem>[
         icon: Icons.person_add_alt_1_outlined,
         route: 'register_visitor',
         roles: [UserRole.DEO, UserRole.APPROVER, UserRole.HCM],
+      ),
+      _NavItem(
+        label: 'QR Scanner',
+        icon: Icons.qr_code_scanner_outlined,
+        route: 'qr_scanner',
+        roles: [UserRole.DEO],
       ),
     ],
   ),
@@ -354,6 +361,8 @@ class _MainShellState extends State<MainShell> {
       case 'register_visitor':
         return const VisitorRegistrationScreen(
             openAppointmentAfterSubmit: true);
+      case 'qr_scanner':
+        return const QrScannerScreen();
       case 'guest_registration':
         return const GuestAppointmentScreen();
       case 'pending_sync':

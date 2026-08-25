@@ -29,7 +29,7 @@ public class QrScannerController {
     private final QrReportService qrReportService;
 
     @PostMapping("/validate")
-    @PreAuthorize("hasAnyRole('SECURITY','ADMIN','SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('DEO','SECURITY','ADMIN','SUPER_ADMIN')")
     public ApiResponse<QrValidationResponse> validate(@RequestBody QrScanRequest request,
                                                        Authentication authentication,
                                                        HttpServletRequest httpRequest) {

@@ -106,14 +106,7 @@ export class AppointmentFormComponent implements OnInit {
   // Document tracking
   visitorKycStatus: 'PENDING' | 'VERIFIED' | 'REJECTED' | null = null;
   documents: DocumentUpload[] = [
-    { type: 'APPLICATION_LETTER', label: 'Application Letter / Project Proposal', isRequired: false, isVisible: true },
-    { type: 'PLANS_ESTIMATES', label: 'Plans & Estimates (up to 3)', isRequired: false, isVisible: false },
-    { type: 'BANK_DETAILS', label: 'Bank Account Details', isRequired: false, isVisible: true },
-    { type: 'MLA_APPROVAL_LETTER', label: 'MLA/MDC/Community Leader Approval Letter', isRequired: false, isVisible: false },
-    { type: 'ORG_REGISTRATION_CERTIFICATE', label: 'Organisation Registration Certificate', isRequired: false, isVisible: false },
-    { type: 'CM_CARE_ELIGIBILITY', label: 'CM Care – Eligibility Proof', isRequired: false, isVisible: false },
-    { type: 'CM_CARE_HOSPITAL', label: 'CM Care – Hospital Documents', isRequired: false, isVisible: false },
-    { type: 'CM_CARE_SUPPORTING', label: 'CM Care – Supporting Documents', isRequired: false, isVisible: false },
+    { type: 'APPLICATION_LETTER', label: 'Application Letter / Project Proposal', isRequired: true, isVisible: true },
   ];
 
 

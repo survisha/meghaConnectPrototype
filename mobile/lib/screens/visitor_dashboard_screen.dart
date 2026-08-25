@@ -1,4 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
 import '../services/notification_service.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -23,11 +28,18 @@ class _SummaryCard {
 }
 
 class _MyAppointment {
+  final int backendId;
   final String id;
   final String agenda;
   final String status;
   final String date;
-  const _MyAppointment(this.id, this.agenda, this.status, this.date);
+  final bool isWalkIn;
+  const _MyAppointment(this.backendId, this.id, this.agenda, this.status,
+      this.date, this.isWalkIn);
+
+  bool get canDownloadPass => isWalkIn
+      ? status == 'PENDING'
+      : const ['SCHEDULED', 'RESCHEDULED'].contains(status);
 }
 
 class _MyScheme {
@@ -173,10 +185,13 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
       _appointments = ((apptPage['content'] as List<dynamic>?) ?? []).map((e) {
         final m = e as Map<String, dynamic>;
         return _MyAppointment(
+          (m['id'] as num?)?.toInt() ?? 0,
           m['applicationId'] as String? ?? m['id']?.toString() ?? '',
           m['agendaBrief'] as String? ?? '',
           m['status'] as String? ?? '',
           _fmtDate(m['scheduledDateTime'] as String?),
+          m['isWalkIn'] == true ||
+              m['appointmentType']?.toString().toUpperCase() == 'WALKIN',
         );
       }).toList();
       _schemes = ((schemePage['content'] as List<dynamic>?) ?? []).map((e) {
@@ -481,6 +496,12 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
                                       statusLabel:
                                           a.status.replaceAll('_', ' '),
                                       statusColor: _appointmentColor(a.status),
+                                      onDownloadPass: a.canDownloadPass
+                                          ? () => _downloadPass(a)
+                                          : null,
+                                      onView: a.status == 'PENDING_REQUEST'
+                                          ? () => _uploadSupportingDocument(a)
+                                          : null,
                                     ))
                                 .toList(),
                           ),
@@ -637,6 +658,62 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
     if (changed == true) {
       await _loadData();
     }
+  }
+
+  Future<void> _downloadPass(_MyAppointment appointment) async {
+    if (appointment.backendId <= 0) {
+      AppNotificationService.error('Appointment ID is unavailable.');
+      return;
+    }
+    final bytes = await ApiService.downloadVisitorPass(appointment.backendId);
+    if (!mounted) return;
+    if (bytes == null || bytes.isEmpty) {
+      AppNotificationService.error('Unable to download visitor pass.');
+      return;
+    }
+    try {
+      final directory = await getTemporaryDirectory();
+      final safeId = appointment.id.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
+      final file = File('${directory.path}/visitor-pass-$safeId.pdf');
+      await file.writeAsBytes(bytes, flush: true);
+      final result = await OpenFilex.open(file.path, type: 'application/pdf');
+      if (!mounted) return;
+      if (result.type != ResultType.done) {
+        AppNotificationService.error('Unable to open the visitor pass.');
+      } else {
+        AppNotificationService.success('Visitor pass downloaded.');
+        await _loadData();
+      }
+    } catch (_) {
+      AppNotificationService.error('Unable to open the visitor pass.');
+    }
+  }
+
+  Future<void> _uploadSupportingDocument(
+      _MyAppointment appointment) async {
+    if (appointment.backendId <= 0) {
+      AppNotificationService.error('Appointment ID is unavailable.');
+      return;
+    }
+    final picked = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png'],
+      withData: false,
+    );
+    final file = picked == null || picked.files.isEmpty ? null : picked.files.first;
+    if (file?.path == null) return;
+    final result = await ApiService.uploadSupportingDocument(
+      appointment.backendId,
+      file!.path!,
+      fileName: file.name,
+    );
+    if (!mounted) return;
+    if (result == null) {
+      AppNotificationService.error('Unable to upload supporting document.');
+      return;
+    }
+    AppNotificationService.success('Supporting document uploaded.');
+    await _loadData();
   }
 
   Future<void> _openKycRetrySheet(String fallbackName) async {
@@ -1121,13 +1198,15 @@ class _ItemRow extends StatelessWidget {
   final String statusLabel;
   final Color statusColor;
   final VoidCallback? onView;
+  final VoidCallback? onDownloadPass;
   const _ItemRow(
       {required this.id,
       required this.title,
       required this.subtitle,
       required this.statusLabel,
       required this.statusColor,
-      this.onView});
+      this.onView,
+      this.onDownloadPass});
 
   @override
   Widget build(BuildContext context) {
@@ -1175,6 +1254,14 @@ class _ItemRow extends StatelessWidget {
             TextButton(
               onPressed: onView,
               child: const Text('View', style: TextStyle(fontSize: 12)),
+            ),
+          ],
+          if (onDownloadPass != null) ...[
+            const SizedBox(width: 4),
+            IconButton(
+              tooltip: 'Download Pass',
+              onPressed: onDownloadPass,
+              icon: const Icon(Icons.download_outlined, size: 20),
             ),
           ],
         ],

@@ -3,6 +3,7 @@ import '../models/user.dart';
 class AccessControlService {
   static bool canAccessRoute(AuthUser user, String? route) {
     if (route == null) return true;
+    if (route == 'qr_scanner') return user.role == UserRole.DEO;
     if (route == 'walkin') {
       return const {
         UserRole.SUPER_ADMIN,

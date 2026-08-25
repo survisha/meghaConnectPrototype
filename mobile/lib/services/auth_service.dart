@@ -237,7 +237,8 @@ class AuthService extends ChangeNotifier {
       if (validateOnline && !await ApiService.validateStaffSession()) {
         await ApiService.clearToken();
         _user = null;
-        _lastError = 'Saved session is no longer valid. Use Staff ID and Password.';
+        _lastError =
+            'Saved session is no longer valid. Use Staff ID and Password.';
         return false;
       }
       await SecureAppStorage.writeUserJson(jsonEncode(_user!.toJson()));
@@ -282,7 +283,6 @@ class AuthService extends ChangeNotifier {
       return false;
     }
   }
-
 
   Future<bool> _hasEnrolledBiometrics() async {
     try {

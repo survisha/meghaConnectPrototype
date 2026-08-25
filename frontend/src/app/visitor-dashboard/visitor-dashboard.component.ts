@@ -247,11 +247,10 @@ export class VisitorDashboardComponent implements OnInit {
   }
 
   canDownloadPass(appointment: Appointment): boolean {
-    if (!appointment?.scheduledDateTime) {
-      return false;
-    }
-    return ['SCHEDULED', 'HCM_ACCEPTED', 'APPROVED', 'APPROVED_WITH_DATE_TIME', 'SCHEDULED_FOR_PUBLIC_DARBAR']
-      .includes(appointment.status);
+    if (!appointment) return false;
+    return appointment.isWalkIn === true
+      ? appointment.status === 'PENDING'
+      : ['SCHEDULED', 'RESCHEDULED'].includes(appointment.status);
   }
 
   viewAppointment(appointment: Appointment): void {

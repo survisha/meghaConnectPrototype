@@ -46,9 +46,7 @@ public class VisitorPassService {
 
     private static final Set<Appointment.AppointmentStatus> PASS_STATUSES = Set.of(
             Appointment.AppointmentStatus.SCHEDULED,
-            Appointment.AppointmentStatus.HCM_ACCEPTED,
-            Appointment.AppointmentStatus.APPROVED_WITH_DATE_TIME,
-            Appointment.AppointmentStatus.SCHEDULED_FOR_PUBLIC_DARBAR
+            Appointment.AppointmentStatus.RESCHEDULED
     );
     private static final int QR_IMAGE_SIZE = 320;
 
@@ -103,13 +101,16 @@ public class VisitorPassService {
     }
 
     private void ensurePassEligible(Appointment appointment) {
-        if (appointment == null || appointment.getScheduledDateTime() == null) {
+        if (appointment == null) {
             throw notEligible();
         }
-        if (appointment.getStatus() == Appointment.AppointmentStatus.APPROVED) {
+        if (Boolean.TRUE.equals(appointment.getIsWalkIn())
+                && appointment.getStatus() == Appointment.AppointmentStatus.PENDING) {
             return;
         }
-        if (!PASS_STATUSES.contains(appointment.getStatus())) {
+        if (Boolean.TRUE.equals(appointment.getIsWalkIn())
+                || appointment.getScheduledDateTime() == null
+                || !PASS_STATUSES.contains(appointment.getStatus())) {
             throw notEligible();
         }
     }
@@ -117,7 +118,7 @@ public class VisitorPassService {
     private MeghaConnectException notEligible() {
         return new MeghaConnectException(
                 ErrorCodeConstants.APPT_INVALID_STATUS,
-                "Visitor pass is available only after the appointment is scheduled.",
+                "Visitor pass is unavailable for the current appointment type or status.",
                 HttpStatus.CONFLICT.value()
         );
     }

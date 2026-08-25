@@ -71,7 +71,10 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Future<void> _biometricLogin() async {
-    setState(() { _staffLoading = true; _staffError = null; });
+    setState(() {
+      _staffLoading = true;
+      _staffError = null;
+    });
     final offline = context.read<ConnectivityService>().isOffline;
     final auth = context.read<AuthService>();
     final ok = await auth.loginWithCachedDeviceSession(

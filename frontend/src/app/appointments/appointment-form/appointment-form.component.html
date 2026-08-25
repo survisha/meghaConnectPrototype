@@ -431,47 +431,15 @@
           <button mat-stroked-button type="button" (click)="docFileInput.click()">
             <mat-icon>upload_file</mat-icon> 
             {{ doc.fileName ? 'Replace' : 'Upload' }}
-            <input #docFileInput type="file" 
-              [accept]="doc.type === 'PLANS_ESTIMATES' ? '.pdf' : '.pdf,.doc,.docx,.jpg,.png'" 
+            <input #docFileInput type="file"
+              accept=".pdf,.jpg,.jpeg,.png"
               (change)="onDocumentChange($event, doc)" 
               style="display:none"/>
           </button>
         </div>
-
-        <!-- Document Requirements Summary Table -->
-        <div style="margin-top:1.5rem;padding:1rem;background:#f3f4f6;border-radius:8px;border:1px solid #e5e7eb">
-          <div style="font-weight:600;font-size:0.9rem;color:#1f2937;margin-bottom:0.75rem">Document Requirements Summary</div>
-          <table style="width:100%;font-size:0.85rem;border-collapse:collapse">
-            <thead>
-              <tr style="border-bottom:2px solid #d1d5db">
-                <th style="padding:0.5rem;text-align:left;color:#374151">Document Type</th>
-                <th style="padding:0.5rem;text-align:center;color:#374151">Required</th>
-                <th style="padding:0.5rem;text-align:center;color:#374151">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let doc of documents; let odd = odd" [style.background]="odd ? '#ffffff' : '#f9fafb'" style="border-bottom:1px solid #e5e7eb">
-                <td style="padding:0.5rem;color:#1f2937">{{ doc.label }}</td>
-                <td style="padding:0.5rem;text-align:center">
-                  <span *ngIf="doc.isVisible">
-                    <span *ngIf="doc.isRequired" style="color:#dc2626;font-weight:600">●</span>
-                    <span *ngIf="!doc.isRequired" style="color:#6b7280">○</span>
-                  </span>
-                  <span *ngIf="!doc.isVisible" style="color:#d1d5db">-</span>
-                </td>
-                <td style="padding:0.5rem;text-align:center">
-                  <span *ngIf="doc.fileName" style="color:#059669;font-weight:600;display:inline-flex;align-items:center;gap:0.25rem">
-                    <mat-icon style="font-size:15px;width:15px;height:15px">check_circle</mat-icon>
-                    Uploaded
-                  </span>
-                  <span *ngIf="!doc.fileName && doc.isVisible && doc.isRequired" style="color:#dc2626">Pending</span>
-                  <span *ngIf="!doc.fileName && doc.isVisible && !doc.isRequired" style="color:#6b7280">Optional</span>
-                  <span *ngIf="!doc.isVisible" style="color:#d1d5db">Not Required</span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <p style="margin:0.75rem 0 0;color:#6b7280;font-size:0.82rem">
+          Upload the primary application letter or project proposal. Accepted formats: PDF, JPG, JPEG, or PNG.
+        </p>
       </div>
     </div>
 

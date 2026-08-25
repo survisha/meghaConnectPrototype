@@ -12,7 +12,8 @@ class SecureAppStorage {
   static const _userKey = 'meghaconnect.auth.user';
   static const _offlineSessionKey = 'meghaconnect.auth.offline_session';
   static const _biometricEnabledKey = 'meghaconnect.auth.biometric_enabled';
-  static const _biometricPromptDecisionKey = 'meghaconnect.auth.biometric_prompt_decision';
+  static const _biometricPromptDecisionKey =
+      'meghaconnect.auth.biometric_prompt_decision';
 
   static Future<void> writeToken(String token, {Duration? ttl}) async {
     await _storage.write(key: _tokenKey, value: token);
@@ -61,8 +62,9 @@ class SecureAppStorage {
   static Future<bool> isBiometricEnabled() async =>
       await _storage.read(key: _biometricEnabledKey) == 'true';
 
-  static Future<void> setBiometricPromptDecision(bool decided) => _storage.write(
-      key: _biometricPromptDecisionKey, value: decided ? 'true' : 'false');
+  static Future<void> setBiometricPromptDecision(bool decided) =>
+      _storage.write(
+          key: _biometricPromptDecisionKey, value: decided ? 'true' : 'false');
 
   static Future<bool> hasBiometricPromptDecision() async =>
       await _storage.read(key: _biometricPromptDecisionKey) == 'true';

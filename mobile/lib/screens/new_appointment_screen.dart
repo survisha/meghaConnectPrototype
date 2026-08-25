@@ -384,7 +384,11 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
   }
 
   Future<void> _pickDocument(_AppointmentDocument document) async {
-    final result = await FilePicker.platform.pickFiles(withData: false);
+    final result = await FilePicker.platform.pickFiles(
+      withData: false,
+      type: FileType.custom,
+      allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png'],
+    );
     if (result == null || result.files.isEmpty) return;
     setState(() => document.file = result.files.first);
   }
@@ -639,11 +643,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
   }
 
   List<_AppointmentDocument> _visibleDocuments() {
-    return _documents.where((document) {
-      if (document.schemeOnly && !_includeSchemeDetails) return false;
-      if (document.organizationOnly && !_isOrganisation) return false;
-      return true;
-    }).toList();
+    return _documents;
   }
 
   @override
@@ -1235,46 +1235,53 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
     final docs = _visibleDocuments();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: docs.map((document) {
-        final fileName = document.file?.name;
-        return Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            border: Border.all(color: const Color(0xFFE5E7EB)),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.attach_file, color: Color(0xFF1A237E)),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      document.required
-                          ? '${document.label} *'
-                          : document.label,
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    Text(
-                      fileName ?? 'No file selected',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 12, color: Colors.grey[700]),
-                    ),
-                  ],
+      children: [
+        const Text(
+          'Upload the primary application letter or project proposal. Accepted formats: PDF, JPG, JPEG, or PNG.',
+          style: TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+        ),
+        const SizedBox(height: 10),
+        ...docs.map((document) {
+          final fileName = document.file?.name;
+          return Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              border: Border.all(color: const Color(0xFFE5E7EB)),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.attach_file, color: Color(0xFF1A237E)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        document.required
+                            ? '${document.label} *'
+                            : document.label,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      Text(
+                        fileName ?? 'No file selected',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              TextButton(
-                onPressed: () => _pickDocument(document),
-                child: Text(fileName == null ? 'Upload' : 'Change'),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
+                TextButton(
+                  onPressed: () => _pickDocument(document),
+                  child: Text(fileName == null ? 'Upload' : 'Change'),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
     );
   }
 
@@ -1573,16 +1580,12 @@ class _AppointmentDocument {
   final String type;
   final String label;
   final bool required;
-  final bool schemeOnly;
-  final bool organizationOnly;
   PlatformFile? file;
 
   _AppointmentDocument({
     required this.type,
     required this.label,
     this.required = false,
-    this.schemeOnly = false,
-    this.organizationOnly = false,
   });
 }
 
@@ -1590,43 +1593,8 @@ List<_AppointmentDocument> _defaultDocuments() {
   return [
     _AppointmentDocument(
       type: 'APPLICATION_LETTER',
-      label: 'Application Letter',
+      label: 'Application Letter / Project Proposal',
       required: true,
-    ),
-    _AppointmentDocument(
-      type: 'PLANS_ESTIMATES',
-      label: 'Plans / Estimates',
-      schemeOnly: true,
-    ),
-    _AppointmentDocument(
-      type: 'BANK_DETAILS',
-      label: 'Bank Details',
-      schemeOnly: true,
-    ),
-    _AppointmentDocument(
-      type: 'MLA_APPROVAL_LETTER',
-      label: 'MLA Approval Letter',
-      schemeOnly: true,
-    ),
-    _AppointmentDocument(
-      type: 'ORG_REGISTRATION_CERTIFICATE',
-      label: 'Organisation Registration Certificate',
-      organizationOnly: true,
-    ),
-    _AppointmentDocument(
-      type: 'CM_CARE_ELIGIBILITY',
-      label: 'CM Care Eligibility',
-      schemeOnly: true,
-    ),
-    _AppointmentDocument(
-      type: 'CM_CARE_HOSPITAL',
-      label: 'CM Care Hospital Document',
-      schemeOnly: true,
-    ),
-    _AppointmentDocument(
-      type: 'CM_CARE_SUPPORTING',
-      label: 'CM Care Supporting Document',
-      schemeOnly: true,
     ),
   ];
 }

@@ -1636,6 +1636,64 @@ class ApiService {
     return null;
   }
 
+  static Future<Uint8List?> downloadVisitorPass(int appointmentId) async {
+    try {
+      final response = await http
+          .get(
+            _u('/appointments/$appointmentId/visitor-pass/download'),
+            headers: await _headers(),
+          )
+          .timeout(const Duration(seconds: 30));
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return response.bodyBytes;
+      }
+    } catch (error, stackTrace) {
+      _logError('downloadVisitorPass', error, stackTrace);
+    }
+    return null;
+  }
+
+  static Future<Map<String, dynamic>> validateQr({
+    required String qrToken,
+    required String deviceId,
+  }) async {
+    try {
+      final response = await http
+          .post(
+            _u('/qr/validate'),
+            headers: await _headers(),
+            body: jsonEncode({
+              'qrToken': qrToken,
+              'qrData': null,
+              'deviceId': deviceId,
+              'location': 'MeghaConnect Mobile',
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
+      final decoded = jsonDecode(response.body);
+      if (response.statusCode >= 200 &&
+          response.statusCode < 300 &&
+          decoded is Map<String, dynamic>) {
+        final data = decoded['data'];
+        return data is Map<String, dynamic>
+            ? {'success': true, ...data}
+            : {'success': false, 'message': 'QR validation returned no data.'};
+      }
+      return {
+        'success': false,
+        'message': decoded is Map
+            ? decoded['message']?.toString() ?? 'Unable to validate QR code.'
+            : 'Unable to validate QR code.',
+      };
+    } catch (error, stackTrace) {
+      _logError('validateQr', error, stackTrace);
+      return {
+        'success': false,
+        'message': 'QR validation service is unavailable. Please try again.',
+      };
+    }
+  }
+
   static Future<Uint8List?> previewDocumentBytes(int documentId) async {
     try {
       final headers = await _authHeaders();

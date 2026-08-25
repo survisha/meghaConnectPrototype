@@ -539,6 +539,9 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
             canViewAiNotes: _canViewAiNotes(role),
             onTap: () => _openDetails(rows[index]),
             onHistory: () => _openHistory(rows[index]),
+            onDownloadPass: _canDownloadPass(rows[index])
+                ? () => _downloadPass(rows[index])
+                : null,
           );
         },
       ),
@@ -571,6 +574,40 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         citizenId: citizenId,
         fallbackName: appointment.applicantName,
         fallbackPhotoUrl: appointment.photoUrl);
+  }
+
+  bool _canDownloadPass(_Appointment appointment) => appointment.isWalkIn
+      ? appointment.status == 'PENDING'
+      : const ['SCHEDULED', 'RESCHEDULED'].contains(appointment.status);
+
+  Future<void> _downloadPass(_Appointment appointment) async {
+    final id = appointment.backendId;
+    if (id == null) {
+      _showMessage('Appointment ID is missing.');
+      return;
+    }
+    final bytes = await ApiService.downloadVisitorPass(id);
+    if (!mounted) return;
+    if (bytes == null || bytes.isEmpty) {
+      AppNotificationService.error('Unable to download visitor pass.');
+      return;
+    }
+    try {
+      final directory = await getTemporaryDirectory();
+      final safeId =
+          appointment.applicationId.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
+      final file = File('${directory.path}/visitor-pass-$safeId.pdf');
+      await file.writeAsBytes(bytes, flush: true);
+      final result = await OpenFilex.open(file.path, type: 'application/pdf');
+      if (result.type != ResultType.done) {
+        AppNotificationService.error('Unable to open the visitor pass.');
+      } else {
+        AppNotificationService.success('Visitor pass downloaded.');
+        await _loadAppointments(refresh: true);
+      }
+    } catch (_) {
+      AppNotificationService.error('Unable to open the visitor pass.');
+    }
   }
 
   Widget _buildEmpty() {
@@ -858,12 +895,14 @@ class _AppointmentCard extends StatelessWidget {
   final bool canViewAiNotes;
   final VoidCallback onTap;
   final VoidCallback onHistory;
+  final VoidCallback? onDownloadPass;
 
   const _AppointmentCard({
     required this.appointment,
     required this.canViewAiNotes,
     required this.onTap,
     required this.onHistory,
+    this.onDownloadPass,
   });
 
   @override
@@ -983,6 +1022,12 @@ class _AppointmentCard extends StatelessWidget {
                         onPressed: onHistory,
                         icon: const Icon(Icons.history, size: 18),
                         label: const Text('History')),
+                    if (onDownloadPass != null)
+                      TextButton.icon(
+                        onPressed: onDownloadPass,
+                        icon: const Icon(Icons.download_outlined, size: 18),
+                        label: const Text('Download Pass'),
+                      ),
                     TextButton(onPressed: onTap, child: const Text('View')),
                   ],
                 ),
@@ -994,6 +1039,12 @@ class _AppointmentCard extends StatelessWidget {
                         onPressed: onHistory,
                         icon: const Icon(Icons.history, size: 18),
                         label: const Text('History')),
+                    if (onDownloadPass != null)
+                      TextButton.icon(
+                        onPressed: onDownloadPass,
+                        icon: const Icon(Icons.download_outlined, size: 18),
+                        label: const Text('Download Pass'),
+                      ),
                     TextButton(onPressed: onTap, child: const Text('View'))
                   ]),
                 ),

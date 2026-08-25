@@ -562,7 +562,8 @@ class _PublicIdentificationScreenState extends State<PublicIdentificationScreen>
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Select Appointment Type'),
-        content: const Text('Choose how this citizen\'s appointment should be created.'),
+        content: const Text(
+            'Choose how this citizen\'s appointment should be created.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),

@@ -31,9 +31,15 @@ class AppNotificationService {
     final messenger = messengerKey.currentState;
     if (messenger == null) return;
     final (icon, color) = switch (type) {
-      AppMessageType.success => (Icons.check_circle_outline, const Color(0xFF166534)),
+      AppMessageType.success => (
+          Icons.check_circle_outline,
+          const Color(0xFF166534)
+        ),
       AppMessageType.error => (Icons.error_outline, const Color(0xFFB91C1C)),
-      AppMessageType.warning => (Icons.warning_amber_rounded, const Color(0xFF92400E)),
+      AppMessageType.warning => (
+          Icons.warning_amber_rounded,
+          const Color(0xFF92400E)
+        ),
       AppMessageType.info => (Icons.info_outline, const Color(0xFF1D4ED8)),
     };
     messenger.hideCurrentSnackBar();
@@ -42,7 +48,9 @@ class AppNotificationService {
         children: [
           Icon(icon, color: Colors.white),
           const SizedBox(width: 12),
-          Expanded(child: Text(text, style: const TextStyle(fontWeight: FontWeight.w600))),
+          Expanded(
+              child: Text(text,
+                  style: const TextStyle(fontWeight: FontWeight.w600))),
         ],
       ),
       behavior: SnackBarBehavior.floating,

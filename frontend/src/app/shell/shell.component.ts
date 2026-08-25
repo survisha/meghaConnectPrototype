@@ -41,8 +41,10 @@ export class ShellComponent implements OnInit {
       children: [
         { labelKey: 'ALL_APPOINTMENTS', icon: 'list', route: '/appointments',
           feature: 'appointments' },
+        { labelKey: 'NEW_APPOINTMENT', icon: 'add_circle', route: '/appointments/walkin?entryMode=NEW_APPOINTMENT',
+          roles: ['SUPER_ADMIN','ADMIN','DEO','APPROVER','HCM'] },
         { labelKey: 'NEW_APPOINTMENT', icon: 'add_circle', route: '/appointments/new',
-          roles: ['ADMIN','APPROVER','PUBLIC'] },
+          roles: ['PUBLIC'] },
         { labelKey: 'WALKIN_COUNTER', icon: 'login', route: '/appointments/walkin',
           feature: 'walkIn' },
         { labelKey: 'WALKIN_APPOINTMENTS', icon: 'format_list_bulleted', route: '/walkin-appointments',

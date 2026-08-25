@@ -422,8 +422,8 @@ export class DashboardComponent implements OnInit {
   private buildQuickActions() {
     const role = this.auth.user()?.role;
     const all: (QuickAction & { roles?: string[]; feature?: 'walkIn' | 'registerVisitor' | 'publicIdentification' })[] = [
-      { label: 'New Appointment', matIcon: 'add', route: '/appointments/new', severity: '',
-        roles: ['SUPER_ADMIN', 'ADMIN', 'APPROVER'] },
+      { label: 'New Appointment', matIcon: 'add', route: '/appointments/walkin?entryMode=NEW_APPOINTMENT', severity: '',
+        roles: ['DEO', 'APPROVER', 'HCM'] },
       { label: 'Walk-in Counter', matIcon: 'login', route: '/appointments/walkin', severity: 'success',
         feature: 'walkIn' },
       { label: 'Register Visitor', matIcon: 'person_add', route: '/deo/register-visitor', severity: 'success',

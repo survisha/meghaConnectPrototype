@@ -63,7 +63,7 @@ final _allQuickActions = <_QuickAction>[
       Icons.add_circle_outline,
       'new_appointment',
       Color(0xFF1A237E),
-      [UserRole.ADMIN, UserRole.APPROVER, UserRole.DEO]),
+      [UserRole.ADMIN, UserRole.APPROVER, UserRole.DEO, UserRole.HCM]),
   const _QuickAction('Walk-in Counter', Icons.login_outlined, 'walkin',
       Color(0xFF2E7D32), [UserRole.ADMIN, UserRole.APPROVER, UserRole.DEO]),
   const _QuickAction(

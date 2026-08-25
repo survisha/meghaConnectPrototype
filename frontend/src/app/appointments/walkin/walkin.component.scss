@@ -591,3 +591,27 @@
     align-items: flex-start;
   }
 }
+.appointment-type-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.appointment-type-dialog {
+  width: min(520px, 100%);
+}
+
+.appointment-type-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+@media (max-width: 560px) {
+  .appointment-type-actions { grid-template-columns: 1fr; }
+}

@@ -555,6 +555,43 @@ class _PublicIdentificationScreenState extends State<PublicIdentificationScreen>
     if (mounted) setState(() {});
   }
 
+  Future<void> _chooseAppointmentType() async {
+    final selected = _selected;
+    if (selected == null) return;
+    final isWalkIn = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Select Appointment Type'),
+        content: const Text('Choose how this citizen\'s appointment should be created.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          OutlinedButton.icon(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            icon: const Icon(Icons.directions_walk),
+            label: const Text('Walk-in'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            icon: const Icon(Icons.event),
+            label: const Text('Appointment'),
+          ),
+        ],
+      ),
+    );
+    if (isWalkIn == null || !mounted) return;
+    await _stopFaceIdentification();
+    if (!mounted) return;
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => NewAppointmentScreen(
+        isWalkIn: isWalkIn,
+        initialVisitor: selected.raw,
+      ),
+    ));
+  }
+
   void _resetFaceSession() {
     _faceSession++;
     _faceQueue.clear();
@@ -807,19 +844,9 @@ class _PublicIdentificationScreenState extends State<PublicIdentificationScreen>
           if (widget.walkInMode) ...[
             const SizedBox(height: 12),
             ElevatedButton.icon(
-              onPressed: () async {
-                final navigator = Navigator.of(context);
-                await _stopFaceIdentification();
-                if (!mounted || _selected == null) return;
-                navigator.push(MaterialPageRoute(
-                  builder: (_) => NewAppointmentScreen(
-                    isWalkIn: true,
-                    initialVisitor: _selected!.raw,
-                  ),
-                ));
-              },
+              onPressed: _chooseAppointmentType,
               icon: const Icon(Icons.arrow_forward),
-              label: const Text('Continue to Walk-in Appointment'),
+              label: const Text('Create Appointment'),
             ),
           ],
         ],

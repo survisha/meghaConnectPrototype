@@ -1,9 +1,9 @@
 <div class="walkin-page">
   <div class="page-header">
-    <button mat-icon-button routerLink="/appointments" matTooltip="Back to Appointments">
+    <button mat-icon-button routerLink="/dashboard" matTooltip="Back to Dashboard">
       <mat-icon>arrow_back</mat-icon>
     </button>
-    <h2 class="page-title">DEO Counter</h2>
+    <h2 class="page-title">{{ pageTitle }}</h2>
   </div>
 
   <ng-container *ngIf="!checkedIn">
@@ -49,8 +49,21 @@
             <button mat-button type="button" *ngIf="facePhoto" (click)="clearFaceSearch()">Clear / Retake</button>
           </div>
           <div *ngIf="faceCameraActive" class="camera-panel">
+            <mat-form-field *ngIf="faceCameraOptions.length > 1" appearance="outline" class="full-width">
+              <mat-label>Camera</mat-label>
+              <mat-select [ngModel]="selectedFaceCameraDeviceId" (ngModelChange)="onFaceCameraDeviceChange($event)">
+                <mat-option *ngFor="let device of faceCameraOptions; let i = index" [value]="device.deviceId">
+                  {{ cameraDeviceLabel(device, i) }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
             <video id="walkinFaceVideo" autoplay muted playsinline></video>
-            <button mat-raised-button color="primary" type="button" (click)="captureFace()">Capture & Search</button>
+            <div class="visitor-result-actions">
+              <button mat-raised-button color="primary" type="button" (click)="captureFace()">Capture & Search</button>
+              <button mat-stroked-button type="button" (click)="stopFaceCamera()">
+                <mat-icon>videocam_off</mat-icon> Close Camera
+              </button>
+            </div>
           </div>
           <div *ngIf="facePhoto && !faceCameraActive" class="camera-panel">
             <img [src]="facePhoto" alt="Face search capture" />
@@ -411,5 +424,23 @@
       <mat-icon>add</mat-icon>
       Register Another
     </button>
+  </div>
+
+  <div *ngIf="showAppointmentTypeDialog" class="appointment-type-backdrop" (click)="showAppointmentTypeDialog=false">
+    <mat-card class="appointment-type-dialog" (click)="$event.stopPropagation()">
+      <mat-card-header><mat-card-title>Select Appointment Type</mat-card-title></mat-card-header>
+      <mat-card-content>
+        <p>Choose how this citizen's appointment should be created.</p>
+        <div class="appointment-type-actions">
+          <button mat-raised-button color="accent" type="button" (click)="continueToAppointmentForm(true)">
+            <mat-icon>directions_walk</mat-icon> Walk-in Appointment
+          </button>
+          <button mat-raised-button color="primary" type="button" (click)="continueToAppointmentForm(false)">
+            <mat-icon>event</mat-icon> Scheduled Appointment
+          </button>
+        </div>
+        <button mat-button type="button" (click)="showAppointmentTypeDialog=false">Cancel</button>
+      </mat-card-content>
+    </mat-card>
   </div>
 </div>

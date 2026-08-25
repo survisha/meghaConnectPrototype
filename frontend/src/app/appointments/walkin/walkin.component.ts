@@ -1,7 +1,7 @@
-import { Component, OnDestroy } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { VisitorSearchService } from '../../services/visitor-search.service';
 import { AppointmentService } from '../../services/appointment.service';
 import { VisitorKycService } from '../../services/visitor-kyc.service';
@@ -17,7 +17,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatRadioModule } from '@angular/material/radio';
 import { AuthenticatedPhotoComponent } from '../../shared/authenticated-photo.component';
-import { CameraCaptureService, CameraFacingMode } from '../../shared/camera-capture.service';
+import { CameraCaptureService, CameraDeviceOption, CameraFacingMode } from '../../shared/camera-capture.service';
 import { FaceRecognitionService } from '../../services/face-recognition.service';
 import { EpicFaceResult, EpicFaceService } from '../../services/epic-face.service';
 
@@ -28,7 +28,7 @@ import { EpicFaceResult, EpicFaceService } from '../../services/epic-face.servic
   templateUrl: './walkin.component.html',
   styleUrls: ['./walkin.component.scss'],
 })
-export class WalkinComponent implements OnDestroy {
+export class WalkinComponent implements OnInit, OnDestroy {
   phoneNumber = '';
   epicNumber = '';
   referenceId = '';
@@ -51,6 +51,10 @@ export class WalkinComponent implements OnDestroy {
   searching = false;
   faceCameraStream: MediaStream | null = null;
   faceCameraActive = false;
+  faceCameraOptions: CameraDeviceOption[] = [];
+  selectedFaceCameraDeviceId = '';
+  entryMode: 'WALKIN' | 'NEW_APPOINTMENT' = 'WALKIN';
+  showAppointmentTypeDialog = false;
   facePhoto = '';
   faceSearching = false;
   identificationState: 'IDLE' | 'SEARCHING_EXISTING_FACE' | 'FOUND_EXISTING_VISITOR' | 'SEARCHING_EPIC_FACE' | 'EPIC_MATCH_FOUND' | 'EPIC_FACE_NOT_FOUND' | 'ERROR' = 'IDLE';
@@ -86,10 +90,22 @@ export class WalkinComponent implements OnDestroy {
     private appointmentService: AppointmentService,
     private visitorKycService: VisitorKycService,
     private router: Router,
+    private route: ActivatedRoute,
     private cameraCapture: CameraCaptureService,
     private faceRecognition: FaceRecognitionService,
     private epicFace: EpicFaceService
   ) {}
+
+  ngOnInit(): void {
+    this.entryMode = this.route.snapshot.queryParamMap.get('entryMode') === 'NEW_APPOINTMENT'
+      ? 'NEW_APPOINTMENT'
+      : 'WALKIN';
+    void this.loadFaceCameraDevices();
+  }
+
+  get pageTitle(): string {
+    return this.entryMode === 'NEW_APPOINTMENT' ? 'New Appointment – Identify Citizen' : 'DEO Counter';
+  }
 
   ngOnDestroy() {
     this.stopVisitorCamera();
@@ -99,8 +115,10 @@ export class WalkinComponent implements OnDestroy {
   async startFaceCamera(): Promise<void> {
     this.errorMsg = '';
     try {
-      this.faceCameraStream = await this.cameraCapture.open('user');
+      this.stopFaceCamera();
+      this.faceCameraStream = await this.cameraCapture.open('user', this.selectedFaceCameraDeviceId || undefined);
       this.faceCameraActive = true;
+      await this.loadFaceCameraDevices();
       setTimeout(() => {
         const video = document.getElementById('walkinFaceVideo') as HTMLVideoElement | null;
         if (video && this.faceCameraStream) this.cameraCapture.attach(video, this.faceCameraStream);
@@ -180,6 +198,27 @@ export class WalkinComponent implements OnDestroy {
     this.cameraCapture.stop(this.faceCameraStream);
     this.faceCameraStream = null;
     this.faceCameraActive = false;
+  }
+
+  onFaceCameraDeviceChange(deviceId: string): void {
+    this.selectedFaceCameraDeviceId = deviceId;
+    if (this.faceCameraActive) void this.startFaceCamera();
+  }
+
+  cameraDeviceLabel(device: CameraDeviceOption, index: number): string {
+    return this.cameraCapture.deviceLabel(device, index);
+  }
+
+  private async loadFaceCameraDevices(): Promise<void> {
+    try {
+      this.faceCameraOptions = await this.cameraCapture.listVideoDevices();
+      if (!this.faceCameraOptions.some(device => device.deviceId === this.selectedFaceCameraDeviceId)) {
+        this.selectedFaceCameraDeviceId = this.faceCameraOptions[0]?.deviceId || '';
+      }
+    } catch {
+      this.faceCameraOptions = [];
+      this.selectedFaceCameraDeviceId = '';
+    }
   }
 
   continueNewRegistration(): void {
@@ -286,10 +325,10 @@ export class WalkinComponent implements OnDestroy {
     }
     this.hideActionPanels();
     this.foundPerson = this.selectedVisitor;
-    this.showAppointmentPanel = true;
+    this.showAppointmentTypeDialog = true;
   }
 
-  continueToAppointmentForm() {
+  continueToAppointmentForm(isWalkIn = true) {
     this.errorMsg = '';
     const visitor = this.selectedVisitor || this.foundPerson;
     if (!visitor?.id) {
@@ -302,9 +341,10 @@ export class WalkinComponent implements OnDestroy {
     this.router.navigate(['/appointments/new'], {
       queryParams: {
         visitorId: visitor.id,
-        source: 'walkin',
-        walkin: true,
-      }
+        source: isWalkIn ? 'walkin' : 'appointment',
+        walkin: isWalkIn,
+      },
+      state: { selectedVisitor: visitor, entryMode: this.entryMode, isWalkInFlow: isWalkIn }
     });
   }
 

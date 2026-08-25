@@ -6,8 +6,8 @@
               *ngIf="auth.hasRole('ADMIN') || auth.hasRole('DEO')">
         <mat-icon>login</mat-icon> Walk-in
       </button>
-      <button mat-raised-button color="primary" routerLink="/appointments/new"
-              *ngIf="auth.hasRole('ADMIN') || auth.hasRole('APPROVER') || auth.hasRole('DEO')">
+      <button mat-raised-button color="primary" routerLink="/appointments/walkin" [queryParams]="{ entryMode: 'NEW_APPOINTMENT' }"
+              *ngIf="auth.hasRole('ADMIN') || auth.hasRole('APPROVER') || auth.hasRole('DEO') || auth.hasRole('HCM')">
         <mat-icon>add</mat-icon> New Appointment
       </button>
     </div>

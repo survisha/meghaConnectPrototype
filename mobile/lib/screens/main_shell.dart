@@ -118,6 +118,7 @@ final _navTree = <_NavItem>[
           UserRole.ADMIN,
           UserRole.APPROVER,
           UserRole.DEO,
+          UserRole.HCM,
           UserRole.PUBLIC
         ],
       ),
@@ -278,8 +279,12 @@ class _MainShellState extends State<MainShell> {
       case 'appointments':
         return const AppointmentsScreen();
       case 'new_appointment':
+        if (context.read<AuthService>().user?.role == UserRole.PUBLIC) {
+          return const NewAppointmentScreen();
+        }
+        return const PublicIdentificationScreen(walkInMode: true);
       case 'walkin':
-        return NewAppointmentScreen(isWalkIn: route == 'walkin');
+        return const PublicIdentificationScreen(walkInMode: true);
       case 'walkin_appointments':
         return const AppointmentsScreen(walkInOnly: true);
       case 'register_visitor':

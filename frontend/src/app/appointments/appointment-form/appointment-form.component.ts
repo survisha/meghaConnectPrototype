@@ -169,12 +169,12 @@ export class AppointmentFormComponent implements OnInit {
   get backRoute() {
     if (this.isWalkInFlow) return '/appointments/walkin';
     if (this.isPublicUser) return '/visitor';
-    return '/appointments';
+    return '/dashboard';
   }
   get backLabel() {
     if (this.isWalkInFlow) return 'Back to Walk-in Counter';
     if (this.isPublicUser) return 'Back to Dashboard';
-    return 'Back to Appointments';
+    return 'Back to Dashboard';
   }
 
   get effectivePriority(): 'HIGH' | 'MEDIUM' | 'LOW' | '' {

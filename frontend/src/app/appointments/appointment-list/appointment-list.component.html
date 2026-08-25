@@ -580,6 +580,12 @@
       <div class="detail-row" *ngIf="selectedAppointment.scheduledDateTime"><span>Meeting Date / Time</span><strong>{{ selectedAppointment.scheduledDateTime | date:'medium' }}</strong></div>
       <div class="detail-row" *ngIf="selectedAppointment.completedAt"><span>Completed</span><strong>{{ selectedAppointment.completedAt | date:'medium' }}</strong></div>
     </section>
+    <section class="detail-section" *ngIf="selectedAppointment.status === 'CLOSED'">
+      <h3>Closure</h3>
+      <div class="detail-row"><span>Closed</span><strong>{{ selectedAppointment.closedAt ? (selectedAppointment.closedAt | date:'medium') : '—' }}</strong></div>
+      <div class="detail-row"><span>Closed By</span><strong>{{ selectedAppointment.closedBy || '—' }}</strong></div>
+      <div class="detail-row"><span>Final Remarks</span><strong>{{ selectedAppointment.finalRemarks || '—' }}</strong></div>
+    </section>
 
     <section class="detail-section"
              *ngIf="selectedAppointmentRemarksLoading || selectedAppointmentRemarksError || selectedAppointmentRemarks.length > 0">
@@ -1090,7 +1096,7 @@
     </div>
 
     <mat-form-field appearance="outline" class="full-width-field">
-      <mat-label>Missing fields or documents *</mat-label>
+      <mat-label>Missing fields or documents (optional)</mat-label>
       <textarea matInput
                 [(ngModel)]="cmoMissingInfoNote"
                 rows="5"

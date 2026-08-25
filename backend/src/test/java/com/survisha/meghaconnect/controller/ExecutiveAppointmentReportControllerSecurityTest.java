@@ -12,7 +12,7 @@ class ExecutiveAppointmentReportControllerSecurityTest {
         assertTrue(policy.value().contains("SUPER_ADMIN"));
         assertTrue(policy.value().contains("APPROVER"));
         assertTrue(policy.value().contains("HCM"));
-        assertFalse(policy.value().contains("DEO"));
+        assertTrue(policy.value().contains("DEO"));
         assertFalse(policy.value().contains("DEPARTMENT_ADMIN"));
         assertFalse(policy.value().contains("DEPARTMENT_PA"));
     }

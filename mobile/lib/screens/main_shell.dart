@@ -171,6 +171,12 @@ final _navTree = <_NavItem>[
         roles: [UserRole.SUPER_ADMIN, UserRole.APPROVER, UserRole.HCM],
       ),
       _NavItem(
+        label: 'Closed Appointments',
+        icon: Icons.verified_outlined,
+        route: 'closed_appointments',
+        roles: [UserRole.DEO, UserRole.APPROVER, UserRole.HCM],
+      ),
+      _NavItem(
         label: 'Register Visitor',
         icon: Icons.person_add_alt_1_outlined,
         route: 'register_visitor',
@@ -343,6 +349,8 @@ class _MainShellState extends State<MainShell> {
         return const AppointmentsScreen(reportMode: 'completed');
       case 'rejected_appointments':
         return const AppointmentsScreen(reportMode: 'rejected');
+      case 'closed_appointments':
+        return const AppointmentsScreen(reportMode: 'closed');
       case 'register_visitor':
         return const VisitorRegistrationScreen(
             openAppointmentAfterSubmit: true);

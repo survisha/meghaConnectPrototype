@@ -20,6 +20,7 @@ import { HeatmapComponent } from './reports/heatmap/heatmap.component';
 import { AuditTrailComponent } from './reports/audit-trail/audit-trail.component';
 import { CompletedAppointmentsComponent } from './completed-appointments/completed-appointments.component';
 import { RejectedAppointmentsComponent } from './rejected-appointments/rejected-appointments.component';
+import { ClosedAppointmentsComponent } from './closed-appointments/closed-appointments.component';
 import { UserManagementComponent } from './admin/user-management.component';
 import { DepartmentManagementComponent } from './admin/departments/department-management.component';
 import { DepartmentRequestsComponent } from './admin/department-requests/department-requests.component';
@@ -73,8 +74,9 @@ export const routes: Routes = [
       { path: 'reports/heatmap', component: HeatmapComponent, canActivate: [featureAccessGuard('reportAnalytics')] },
       { path: 'reports/audit', component: AuditTrailComponent, canActivate: [featureAccessGuard('auditTrail')] },
       { path: 'legacy-data-import', component: LegacyDataImportComponent, canActivate: [featureAccessGuard('legacyDataImport')] },
-      { path: 'completed-appointments', component: CompletedAppointmentsComponent, canActivate: [roleGuard('SUPER_ADMIN', 'APPROVER', 'HCM')] },
+      { path: 'completed-appointments', component: CompletedAppointmentsComponent, canActivate: [roleGuard('SUPER_ADMIN', 'DEO', 'APPROVER', 'HCM')] },
       { path: 'rejected-appointments', component: RejectedAppointmentsComponent, canActivate: [roleGuard('SUPER_ADMIN', 'APPROVER', 'HCM')] },
+      { path: 'closed-appointments', component: ClosedAppointmentsComponent, canActivate: [roleGuard('DEO', 'APPROVER', 'HCM')] },
       { path: 'admin/departments', component: DepartmentManagementComponent, canActivate: [roleGuard('SUPER_ADMIN')] },
       { path: 'admin/department-requests', component: DepartmentRequestsComponent, canActivate: [roleGuard('SUPER_ADMIN')] },
       { path: 'admin/users', component: UserManagementComponent, canActivate: [featureAccessGuard('userManagement')] },

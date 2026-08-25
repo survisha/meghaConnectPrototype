@@ -234,7 +234,7 @@ public class AppointmentController {
     }
 
     @PostMapping("/{id}/remarks")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','HCM','APPROVER','ADMIN','APPROVER_JT_SECY')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','HCM','APPROVER','ADMIN','DEO','APPROVER_JT_SECY')")
     public ResponseEntity<HcmActionDto> addRemark(@PathVariable Long id,
                                                   @RequestBody HcmActionDto body,
                                                   Authentication authentication) {
@@ -270,7 +270,7 @@ public class AppointmentController {
     }
 
     @PostMapping(value = "/{id}/supporting-documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','ADMIN','DEO','HCM')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','ADMIN','DEO','HCM','PUBLIC')")
     public ResponseEntity<AppointmentDocumentDto> uploadSupportingDocument(@PathVariable Long id,
                                                                            @RequestParam("file") MultipartFile file,
                                                                            @AuthenticationPrincipal UserDetails user) {
@@ -278,6 +278,29 @@ public class AppointmentController {
         String actor = user != null ? user.getUsername() : "system";
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(appointmentService.uploadSupportingDocument(id, file, actor));
+    }
+
+    @PostMapping("/{id}/request-missing-information")
+    @PreAuthorize("hasAnyRole('APPROVER','HCM')")
+    public ResponseEntity<AppointmentDto> requestMissingInformation(
+            @PathVariable Long id,
+            @RequestBody(required = false) Map<String, String> body,
+            Authentication authentication) {
+        String remarks = body != null ? body.get("remarks") : null;
+        return ResponseEntity.ok(appointmentService.toDto(
+            appointmentService.requestMissingInformation(id, remarks,
+                actor(authentication), role(authentication))));
+    }
+
+    @PostMapping("/{id}/close")
+    @PreAuthorize("hasAnyRole('DEO','APPROVER','HCM')")
+    public ResponseEntity<AppointmentDto> closeAppointment(
+            @PathVariable Long id,
+            @RequestBody(required = false) Map<String, String> body,
+            Authentication authentication) {
+        String remarks = body != null ? body.get("remarks") : null;
+        return ResponseEntity.ok(appointmentService.toDto(
+            appointmentService.close(id, remarks, actor(authentication), role(authentication))));
     }
 
     @Operation(summary = "Create appointment", description = "Create a new appointment")

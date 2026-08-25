@@ -395,6 +395,14 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   Future<Map<String, dynamic>> _pageForRole(UserRole? role, int page) {
     if (role == UserRole.PUBLIC) return ApiService.getMyAppointments();
     if (widget.reportMode != null) {
+      if (widget.reportMode == 'closed') {
+        return ApiService.getAppointments(
+          page: page,
+          size: _pageSize,
+          status: 'CLOSED',
+          sort: 'closedAt,desc',
+        );
+      }
       return ApiService.getAppointmentReport(
         report: '${widget.reportMode}-appointments',
         page: page,
@@ -404,7 +412,9 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     return ApiService.getAppointments(
       page: page,
       size: _pageSize,
-      status: widget.walkInOnly ? 'PENDING' : 'PENDING,SCHEDULED',
+      status: widget.walkInOnly
+          ? 'PENDING,PENDING_REQUEST'
+          : 'PENDING,PENDING_REQUEST,SCHEDULED,RESCHEDULED',
       appointmentType: widget.walkInOnly ? 'WALKIN' : 'NORMAL',
       sort: 'createdAt,desc',
     );
@@ -414,11 +424,14 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     final status = _text(row['status']).toUpperCase();
     if (widget.reportMode == 'completed') return status == 'COMPLETED';
     if (widget.reportMode == 'rejected') return status == 'REJECTED';
+    if (widget.reportMode == 'closed') return status == 'CLOSED';
     final appointmentType = _text(row['appointmentType']).toUpperCase();
     final walkIn = appointmentType.contains('WALK');
     return widget.walkInOnly
-        ? walkIn && status == 'PENDING'
-        : !walkIn && (status == 'PENDING' || status == 'SCHEDULED');
+        ? walkIn && (status == 'PENDING' || status == 'PENDING_REQUEST')
+        : !walkIn &&
+            const {'PENDING', 'PENDING_REQUEST', 'SCHEDULED', 'RESCHEDULED'}
+                .contains(status);
   }
 
   void _maybeLoadMore() {
@@ -1041,7 +1054,7 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
 
   Future<void> _load() async {
     final id = widget.appointment.backendId!;
-    final detail = widget.reportMode == null
+    final detail = widget.reportMode == null || widget.reportMode == 'closed'
         ? await ApiService.getAppointmentById(id)
         : await ApiService.getAppointmentReportDetail(
             report: '${widget.reportMode}-appointments', appointmentId: id);
@@ -1110,6 +1123,34 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
                       _DetailLine('Location', widget.appointment.location),
                       _DetailLine('Status', _label(widget.appointment.status)),
                       _DetailLine('Created At', widget.appointment.createdAt),
+                      if (widget.reportMode == 'closed')
+                        _DetailLine(
+                            'Completed Date',
+                            _fmtDateTime(_firstText([
+                              _details['completedAt'],
+                              widget.appointment.raw['completedAt']
+                            ]))),
+                      if (widget.reportMode == 'closed')
+                        _DetailLine(
+                            'Closed Date',
+                            _fmtDateTime(_firstText([
+                              _details['closedAt'],
+                              widget.appointment.raw['closedAt']
+                            ]))),
+                      if (widget.reportMode == 'closed')
+                        _DetailLine(
+                            'Closed By',
+                            _firstText([
+                              _details['closedBy'],
+                              widget.appointment.raw['closedBy']
+                            ], '—')),
+                      if (widget.reportMode == 'closed')
+                        _DetailLine(
+                            'Final Remarks',
+                            _firstText([
+                              _details['finalRemarks'],
+                              widget.appointment.raw['finalRemarks']
+                            ], '—')),
                       _DetailLine('Department', _departmentLabel()),
                       _DetailLine(
                           'CMO Remarks', _text(_details['cmoRemarks'], '-')),
@@ -1564,11 +1605,6 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
     }
     if (_canUseCmoActions(role)) {
       actions.add(_ActionButton(
-        label: 'Missing Info',
-        icon: Icons.assignment_late_outlined,
-        onPressed: _sendMissingInfo,
-      ));
-      actions.add(_ActionButton(
         label: 'Edit Category',
         icon: Icons.edit_outlined,
         onPressed: _editCmoCategory,
@@ -1578,6 +1614,20 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
         icon: Icons.send_outlined,
         onPressed: _forwardToApprover,
       ));
+    }
+    if (_canRequestMissingInfo(role)) {
+      actions.add(_ActionButton(
+          label: 'Missing Info',
+          icon: Icons.assignment_late_outlined,
+          onPressed: _sendMissingInfo));
+    }
+    if (widget.reportMode == 'completed' &&
+        [UserRole.DEO, UserRole.APPROVER, UserRole.HCM].contains(role)) {
+      actions.add(_ActionButton(
+          label: 'Close',
+          icon: Icons.verified_outlined,
+          color: const Color(0xFF15803D),
+          onPressed: _closeAppointment));
     }
     return actions;
   }
@@ -1701,15 +1751,50 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
       controller: _missingInfoCtrl,
       minLines: 4,
     );
-    if (note == null || note.trim().isEmpty) return;
-    await _submitCmoReview(
-      status: widget.appointment.status,
-      cmoRemarks: note.trim(),
-      pendingInformation: note.trim(),
-      notifyApplicant: true,
-      notifyDeo: true,
-      success: 'Missing information note sent.',
-    );
+    if (note == null) return;
+    final result = await ApiService.requestAppointmentMissingInformation(
+        widget.appointment.backendId!,
+        remarks: note.trim());
+    if (!mounted) return;
+    _showMessage(result == null
+        ? 'Unable to request additional information.'
+        : 'Additional information requested.');
+    if (result != null) await _load();
+  }
+
+  Future<void> _closeAppointment() async {
+    final remarks = await _textDialog(
+        title: 'Close Appointment',
+        controller: TextEditingController(),
+        minLines: 3);
+    if (remarks == null) return;
+    if (!mounted) return;
+    final confirmed = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+                    title: const Text('Confirm Close'),
+                    content: const Text(
+                        'This appointment will become a final historical record.'),
+                    actions: [
+                      TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text('Cancel')),
+                      FilledButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: const Text('Close'))
+                    ])) ??
+        false;
+    if (!confirmed) return;
+    final result = await ApiService.closeAppointment(
+        widget.appointment.backendId!,
+        remarks: remarks.trim());
+    if (!mounted) return;
+    if (result == null) {
+      _showMessage('Unable to close appointment.');
+      return;
+    }
+    _showMessage('Appointment closed successfully.');
+    Navigator.pop(context, true);
   }
 
   Future<void> _editCmoCategory() async {
@@ -2089,15 +2174,16 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
       [UserRole.HCM, UserRole.ADMIN, UserRole.APPROVER].contains(role) &&
       ['SUBMITTED', 'CMO_REVIEW'].contains(widget.appointment.status);
 
+  bool _canRequestMissingInfo(UserRole role) =>
+      [UserRole.HCM, UserRole.APPROVER].contains(role) &&
+      !['CLOSED', 'REJECTED'].contains(widget.appointment.status);
+
   bool _canUseJtSecForwarding(UserRole role) =>
       [UserRole.HCM, UserRole.ADMIN, UserRole.APPROVER].contains(role);
 
-  bool _canUploadDocuments(UserRole role) => [
-        UserRole.HCM,
-        UserRole.ADMIN,
-        UserRole.APPROVER,
-        UserRole.DEO
-      ].contains(role);
+  bool _canUploadDocuments(UserRole role) =>
+      widget.appointment.status == 'PENDING_REQUEST' &&
+      [UserRole.DEO, UserRole.PUBLIC].contains(role);
 
   String _applicantAddress() {
     final applicant = _map(_details['applicant']);
@@ -2407,9 +2493,12 @@ String _aiStatusLabel(String status) {
 
 Color _statusColor(String status) {
   final normalized = status.toUpperCase();
-  if (normalized.contains('ACCEPTED') ||
-      normalized == 'COMPLETED' ||
-      normalized == 'APPROVED') {
+  if (normalized == 'CLOSED') {
+    return const Color(0xFF15803D);
+  }
+  if (normalized == 'COMPLETED') return const Color(0xFFF9A825);
+  if (normalized == 'PENDING_REQUEST') return const Color(0xFF7C3AED);
+  if (normalized.contains('ACCEPTED') || normalized == 'APPROVED') {
     return const Color(0xFF15803D);
   }
   if (normalized.contains('PENDING') ||
@@ -2419,6 +2508,7 @@ Color _statusColor(String status) {
     return const Color(0xFFB45309);
   }
   if (normalized == 'SCHEDULED' ||
+      normalized == 'RESCHEDULED' ||
       normalized == 'SCHEDULED_FOR_PUBLIC_DARBAR') {
     return const Color(0xFF1D4ED8);
   }

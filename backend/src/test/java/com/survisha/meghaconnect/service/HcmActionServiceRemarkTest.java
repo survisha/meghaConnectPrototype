@@ -25,7 +25,8 @@ class HcmActionServiceRemarkTest {
     private final AppointmentRepository appointments = mock(AppointmentRepository.class);
     private final ReferenceDataRepository referenceData = mock(ReferenceDataRepository.class);
     private final AuditLogService audit = mock(AuditLogService.class);
-    private final HcmActionService service = new HcmActionService(actions, appointments, referenceData, audit, mock(JwtUtils.class));
+    private final AppointmentAuditService appointmentAudit = mock(AppointmentAuditService.class);
+    private final HcmActionService service = new HcmActionService(actions, appointments, referenceData, audit, appointmentAudit, mock(JwtUtils.class));
     private Appointment appointment;
 
     @BeforeEach

@@ -325,6 +325,14 @@ export class AppointmentService {
       .pipe(map(res => this.normalizeDocument(this.unwrapData(res))));
   }
 
+  requestMissingInformation(appointmentId: number, remarks = ''): Observable<Appointment> {
+    return this.http.post<Appointment>(`${this.baseUrl}/${appointmentId}/request-missing-information`, { remarks }).pipe(map(item => this.normalizeAppointment(item)));
+  }
+
+  closeAppointment(appointmentId: number, remarks = ''): Observable<Appointment> {
+    return this.http.post<Appointment>(`${this.baseUrl}/${appointmentId}/close`, { remarks }).pipe(map(item => this.normalizeAppointment(item)));
+  }
+
   downloadVisitorPass(appointmentId: number): Observable<Blob> {
     return this.http.get(`${this.baseUrl}/${appointmentId}/visitor-pass/download`, {
       responseType: 'blob',

@@ -1725,6 +1725,33 @@ class ApiService {
     return null;
   }
 
+  static Future<Map<String, dynamic>?> requestAppointmentMissingInformation(
+          int appointmentId,
+          {String remarks = ''}) =>
+      _postAppointmentAction(
+          '/appointments/$appointmentId/request-missing-information',
+          {'remarks': remarks});
+
+  static Future<Map<String, dynamic>?> closeAppointment(int appointmentId,
+          {String remarks = ''}) =>
+      _postAppointmentAction(
+          '/appointments/$appointmentId/close', {'remarks': remarks});
+
+  static Future<Map<String, dynamic>?> _postAppointmentAction(
+      String path, Map<String, dynamic> body) async {
+    try {
+      final response = await http
+          .post(_u(path), headers: await _headers(), body: jsonEncode(body))
+          .timeout(const Duration(seconds: 20));
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return _unwrapObject(jsonDecode(response.body));
+      }
+    } catch (error, stackTrace) {
+      _logError('appointmentAction', error, stackTrace);
+    }
+    return null;
+  }
+
   static Future<Map<String, dynamic>?> updateAppointmentRemark(
     int appointmentId,
     int remarkId, {

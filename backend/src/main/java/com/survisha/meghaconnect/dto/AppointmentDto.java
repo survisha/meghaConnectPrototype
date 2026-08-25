@@ -46,6 +46,10 @@ public class AppointmentDto {
     private Appointment.MeetingLocation requestedLocation;
     private LocalDateTime scheduledDateTime;
     private Integer scheduledDurationMinutes;
+    private String scheduledBy;
+    private LocalDateTime scheduledAt;
+    private String rescheduledBy;
+    private LocalDateTime rescheduledAt;
     private Boolean mlaMdcApproved;
     private String cmoRemarks;
     private String approverRemarks;
@@ -60,6 +64,9 @@ public class AppointmentDto {
     private String meetingOutcome;
     private LocalDateTime completedAt;
     private String completedBy;
+    private String closedBy;
+    private LocalDateTime closedAt;
+    private String finalRemarks;
     private Boolean followUpRequired;
     private Boolean isWalkIn;
     private String walkInTokenNumber;
@@ -67,4 +74,6 @@ public class AppointmentDto {
     private List<AssociateVisitorDto> associates;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String createdBy;
+    private String updatedBy;
 }

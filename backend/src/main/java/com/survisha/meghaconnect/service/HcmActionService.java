@@ -37,6 +37,7 @@ public class HcmActionService {
     private final AppointmentRepository appointmentRepository;
     private final ReferenceDataRepository referenceDataRepository;
     private final AuditLogService auditLogService;
+    private final AppointmentAuditService appointmentAuditService;
     private final JwtUtils jwtUtils;
     
     /**
@@ -110,10 +111,6 @@ public class HcmActionService {
     public HcmActionDto addRemark(Long appointmentId, HcmActionDto actionDto, String actor, String actorRole) {
         Appointment appointment = appointmentRepository.findById(appointmentId)
             .orElseThrow(() -> new IllegalArgumentException("Appointment not found: " + appointmentId));
-        if (isHcmOrOsd(actorRole) && appointment.getScheduledDateTime() == null && appointment.getStatus() != Appointment.AppointmentStatus.SCHEDULED) {
-            throw new IllegalArgumentException("HCM/APPROVER remarks can be added only for scheduled appointments.");
-        }
-
         String departmentCode = trimToNull(actionDto != null ? actionDto.getDepartmentCode() : null);
         String departmentName = resolveDepartmentName(departmentCode);
         String remarks = trimToNull(actionDto != null ? actionDto.getHcmRemarks() : null);
@@ -143,14 +140,20 @@ public class HcmActionService {
         } else if (remarks != null) {
             appointment.setHcmRemarks(remarks);
         }
+        Appointment.AppointmentStatus oldStatus = appointment.getStatus();
         if (departmentCode != null) {
             appointment.setDepartment(departmentName != null ? departmentName : departmentCode);
-            appointment.setStatus(Appointment.AppointmentStatus.FORWARDED_TO_DEPARTMENT);
-        } else if (decision != null && !isRemarkType(decision)) {
-            appointment.setStatus(Appointment.AppointmentStatus.COMPLETED);
+        }
+        appointment.setStatus(Appointment.AppointmentStatus.COMPLETED);
+        if (oldStatus != Appointment.AppointmentStatus.COMPLETED) {
+            appointment.setCompletedBy(actor);
+            appointment.setCompletedAt(DateTimeUtil.nowIST());
         }
         appointment.setUpdatedBy(actor);
         appointmentRepository.save(appointment);
+        appointmentAuditService.recordStatusChange(appointment, oldStatus,
+            Appointment.AppointmentStatus.COMPLETED,
+            isRemarkType(decision) ? decision : "REMARK_ADDED", remarks, actor, actorRole);
         auditLogService.log("Appointment", appointmentId, "REMARK_ADDED",
             actorRole + " remarks added" + (departmentCode != null ? " and forwarded to " + (departmentName != null ? departmentName : departmentCode) : ""),
             actor);

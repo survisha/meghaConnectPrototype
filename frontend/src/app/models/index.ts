@@ -16,7 +16,8 @@ export type AppointmentStatus =
   | 'FOLLOWUP' | 'SELECTED_FOR_PUBLIC_DARBAR' | 'PUBLIC_DARBAR_DATE_CREATED'
   | 'SCHEDULED_FOR_PUBLIC_DARBAR' | 'APPROVED_WITH_DATE_TIME'
   | 'REJECTED' | 'SCHEDULED' | 'FORWARDED_TO_DEPARTMENT'
-  | 'SUPPORTING_DOCUMENT_REQUIRED' | 'COMPLETED' | 'CANCELLED';
+  | 'SUPPORTING_DOCUMENT_REQUIRED' | 'PENDING_REQUEST' | 'RESCHEDULED'
+  | 'COMPLETED' | 'CLOSED' | 'CANCELLED';
 
 export type AppointmentCategory = 'SCHEDULED' | 'WALK_IN' | 'PUBLIC_DARBAR';
 
@@ -126,6 +127,13 @@ export interface Appointment {
   meetingOutcome?: string;
   completedAt?: string;
   completedBy?: string;
+  closedBy?: string;
+  closedAt?: string;
+  finalRemarks?: string;
+  scheduledBy?: string;
+  scheduledAt?: string;
+  rescheduledBy?: string;
+  rescheduledAt?: string;
   followUpRequired?: boolean;
   directions?: Direction[];
   associates?: AssociateCitizen[];

@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/reports")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','HCM')")
+@PreAuthorize("hasAnyRole('SUPER_ADMIN','DEO','APPROVER','HCM')")
 public class ExecutiveAppointmentReportController {
     private final ExecutiveAppointmentReportService service;
 

@@ -234,6 +234,7 @@
   "WALKIN_APPOINTMENTS": "Walk-in Appointments",
   "COMPLETED_APPOINTMENTS": "Completed Appointments",
   "REJECTED_APPOINTMENTS": "Rejected Appointments",
+  "CLOSED_APPOINTMENTS": "Closed Appointments",
   "PENDING_APPOINTMENTS": "Pending Appointments",
   "WARNING_MOBILE_EXISTS": "This mobile number is already registered. You can change the mobile number or continue if you want to register another visitor using the same number.",
   "WELCOME_BACK": "Welcome Back",

@@ -53,6 +53,8 @@ export class ShellComponent implements OnInit {
           feature: 'completedAppointments' },
         { labelKey: 'REJECTED_APPOINTMENTS', icon: 'cancel', route: '/rejected-appointments',
           feature: 'rejectedAppointments' },
+        { labelKey: 'CLOSED_APPOINTMENTS', icon: 'verified', route: '/closed-appointments',
+          roles: ['DEO','APPROVER','HCM'] },
       ]
     },
     {

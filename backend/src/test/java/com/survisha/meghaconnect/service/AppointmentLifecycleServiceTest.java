@@ -18,10 +18,16 @@ class AppointmentLifecycleServiceTest {
                 Appointment.AppointmentStatus.REJECTED);
         assertAllowed(Appointment.AppointmentCategory.SCHEDULED, Appointment.AppointmentStatus.PENDING,
                 Appointment.AppointmentStatus.ROUTED_TO_OFFICIAL);
-        assertAllowed(Appointment.AppointmentCategory.SCHEDULED, Appointment.AppointmentStatus.SCHEDULED,
-                Appointment.AppointmentStatus.HCM_MET_COMPLETED);
-        assertAllowed(Appointment.AppointmentCategory.SCHEDULED, Appointment.AppointmentStatus.SCHEDULED,
+        assertAllowed(Appointment.AppointmentCategory.SCHEDULED, Appointment.AppointmentStatus.PENDING,
+                Appointment.AppointmentStatus.PENDING_REQUEST);
+        assertAllowed(Appointment.AppointmentCategory.SCHEDULED, Appointment.AppointmentStatus.PENDING,
+                Appointment.AppointmentStatus.COMPLETED);
+        assertAllowed(Appointment.AppointmentCategory.SCHEDULED, Appointment.AppointmentStatus.PENDING_REQUEST,
                 Appointment.AppointmentStatus.PENDING);
+        assertAllowed(Appointment.AppointmentCategory.SCHEDULED, Appointment.AppointmentStatus.SCHEDULED,
+                Appointment.AppointmentStatus.RESCHEDULED);
+        assertAllowed(Appointment.AppointmentCategory.SCHEDULED, Appointment.AppointmentStatus.COMPLETED,
+                Appointment.AppointmentStatus.CLOSED);
     }
 
     @Test
@@ -30,8 +36,8 @@ class AppointmentLifecycleServiceTest {
                 Appointment.AppointmentStatus.SCHEDULED);
         assertRejected(Appointment.AppointmentCategory.SCHEDULED, Appointment.AppointmentStatus.HCM_MET_COMPLETED,
                 Appointment.AppointmentStatus.PENDING);
-        assertRejected(Appointment.AppointmentCategory.SCHEDULED, Appointment.AppointmentStatus.PENDING,
-                Appointment.AppointmentStatus.COMPLETED);
+        assertRejected(Appointment.AppointmentCategory.SCHEDULED, Appointment.AppointmentStatus.CLOSED,
+                Appointment.AppointmentStatus.PENDING);
     }
 
     @Test
@@ -44,6 +50,8 @@ class AppointmentLifecycleServiceTest {
                 Appointment.AppointmentStatus.REJECTED);
         assertRejected(Appointment.AppointmentCategory.WALK_IN, Appointment.AppointmentStatus.COMPLETED,
                 Appointment.AppointmentStatus.COMPLETED);
+        assertAllowed(Appointment.AppointmentCategory.WALK_IN, Appointment.AppointmentStatus.COMPLETED,
+                Appointment.AppointmentStatus.CLOSED);
     }
 
     @Test

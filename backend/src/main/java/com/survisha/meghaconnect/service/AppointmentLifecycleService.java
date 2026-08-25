@@ -19,18 +19,38 @@ public class AppointmentLifecycleService {
             transitions(
                     transition(Appointment.AppointmentStatus.PENDING,
                             Appointment.AppointmentStatus.SCHEDULED,
+                            Appointment.AppointmentStatus.PENDING_REQUEST,
+                            Appointment.AppointmentStatus.COMPLETED,
                             Appointment.AppointmentStatus.REJECTED,
                             Appointment.AppointmentStatus.ROUTED_TO_OFFICIAL),
+                    transition(Appointment.AppointmentStatus.PENDING_REQUEST,
+                            Appointment.AppointmentStatus.PENDING,
+                            Appointment.AppointmentStatus.REJECTED),
                     transition(Appointment.AppointmentStatus.SCHEDULED,
-                            Appointment.AppointmentStatus.HCM_MET_COMPLETED,
-                            Appointment.AppointmentStatus.PENDING)
+                            Appointment.AppointmentStatus.RESCHEDULED,
+                            Appointment.AppointmentStatus.PENDING_REQUEST,
+                            Appointment.AppointmentStatus.COMPLETED,
+                            Appointment.AppointmentStatus.REJECTED),
+                    transition(Appointment.AppointmentStatus.RESCHEDULED,
+                            Appointment.AppointmentStatus.RESCHEDULED,
+                            Appointment.AppointmentStatus.PENDING_REQUEST,
+                            Appointment.AppointmentStatus.COMPLETED,
+                            Appointment.AppointmentStatus.REJECTED),
+                    transition(Appointment.AppointmentStatus.COMPLETED,
+                            Appointment.AppointmentStatus.CLOSED)
             );
 
     private static final Map<Appointment.AppointmentStatus, Set<Appointment.AppointmentStatus>> WALK_IN_TRANSITIONS =
             transitions(
                     transition(Appointment.AppointmentStatus.PENDING,
                             Appointment.AppointmentStatus.COMPLETED,
-                            Appointment.AppointmentStatus.REJECTED)
+                            Appointment.AppointmentStatus.PENDING_REQUEST,
+                            Appointment.AppointmentStatus.REJECTED),
+                    transition(Appointment.AppointmentStatus.PENDING_REQUEST,
+                            Appointment.AppointmentStatus.PENDING,
+                            Appointment.AppointmentStatus.REJECTED),
+                    transition(Appointment.AppointmentStatus.COMPLETED,
+                            Appointment.AppointmentStatus.CLOSED)
             );
 
     public void transition(Appointment appointment, Appointment.AppointmentStatus targetStatus) {

@@ -114,6 +114,12 @@ public class Appointment extends BaseEntity {
 
     private LocalDateTime scheduledDateTime;
     private Integer scheduledDurationMinutes;
+    @Column(length = 100)
+    private String scheduledBy;
+    private LocalDateTime scheduledAt;
+    @Column(length = 100)
+    private String rescheduledBy;
+    private LocalDateTime rescheduledAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "public_darbar_id")
@@ -154,6 +160,12 @@ public class Appointment extends BaseEntity {
 
     @Column(length = 100)
     private String completedBy;
+
+    @Column(length = 100)
+    private String closedBy;
+    private LocalDateTime closedAt;
+    @Column(columnDefinition = "TEXT")
+    private String finalRemarks;
 
     @Builder.Default
     @Column(nullable = false)
@@ -229,6 +241,6 @@ public class Appointment extends BaseEntity {
         SUBMITTED, DEO_PROCESSED, CMO_REVIEW, APPROVER_REVIEW,
         HCM_PENDING, HCM_ACCEPTED, HCM_SNOOZED, HCM_REJECTED,
         SCHEDULED, FORWARDED_TO_DEPARTMENT, SUPPORTING_DOCUMENT_REQUIRED,
-        COMPLETED, CANCELLED
+        COMPLETED, PENDING_REQUEST, RESCHEDULED, CLOSED, CANCELLED
     }
 }

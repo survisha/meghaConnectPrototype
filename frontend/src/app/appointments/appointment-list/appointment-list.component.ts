@@ -92,7 +92,7 @@ interface AppointmentExportOptions {
   styleUrls: ['./appointment-list.component.scss'],
 })
 export class AppointmentListComponent implements OnInit, OnDestroy {
-  @Input() listMode: 'appointments' | 'walkin' = 'appointments';
+  @Input() listMode: 'appointments' | 'walkin' | 'closed' = 'appointments';
   @ViewChild('appointmentDetailsDialog') appointmentDetailsDialog!: TemplateRef<unknown>;
   @ViewChild('documentPreviewDialog') documentPreviewDialog!: TemplateRef<unknown>;
   @ViewChild('appointmentRemarksDialog') appointmentRemarksDialog!: TemplateRef<unknown>;
@@ -328,12 +328,17 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   }
 
   private appointmentPageSource(serverPage: number, size: number) {
+    const status = this.listMode === 'walkin'
+      ? 'PENDING,PENDING_REQUEST'
+      : this.listMode === 'closed'
+        ? 'CLOSED'
+        : 'PENDING,PENDING_REQUEST,SCHEDULED,RESCHEDULED';
     return this.appointmentService.getAllAppointments(
       serverPage,
       size,
-      this.listMode === 'walkin' ? 'PENDING' : 'PENDING,SCHEDULED',
+      status,
       {
-      appointmentType: this.listMode === 'walkin' ? 'WALKIN' : 'NORMAL',
+      appointmentType: this.listMode === 'walkin' ? 'WALKIN' : this.listMode === 'appointments' ? 'NORMAL' : undefined,
       sort: 'createdAt,desc',
     });
   }
@@ -378,7 +383,9 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
           a.applicantName?.toLowerCase().includes(searchValue) ||
           a.applicationId?.toLowerCase().includes(searchValue) ||
           a.applicant?.phoneNumber?.includes(searchValue)) &&
-        (this.listMode === 'walkin' ? a.eventType === 'B2' : a.eventType !== 'B2') &&
+        (this.listMode === 'closed' || (this.listMode === 'walkin'
+          ? (a.appointmentType || '').toUpperCase().includes('WALK')
+          : !(a.appointmentType || '').toUpperCase().includes('WALK'))) &&
         (!this.filterStatus || this.matchesStatusFilter(a.status, this.filterStatus)) &&
         (!this.filterSource || (a.appointmentSource || 'CITIZEN') === this.filterSource) &&
         (!this.filterEventType || a.eventType === this.filterEventType) &&
@@ -492,7 +499,8 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     const m: Record<string,'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' | undefined> = {
       SUBMITTED: 'info', DEO_PROCESSED: 'info', CMO_REVIEW: 'warn',
       APPROVER_REVIEW: 'warn', HCM_PENDING: 'danger', HCM_ACCEPTED: 'success',
-      SCHEDULED: 'success', COMPLETED: 'success', HCM_REJECTED: 'danger',
+      PENDING: 'warn', PENDING_REQUEST: 'info', SCHEDULED: 'info', RESCHEDULED: 'contrast',
+      COMPLETED: 'warn', CLOSED: 'success', HCM_REJECTED: 'danger',
       FOLLOWUP: 'warn',
       HCM_SNOOZED: 'secondary', CANCELLED: 'secondary',
       SELECTED_FOR_PUBLIC_DARBAR: 'warn', SCHEDULED_FOR_PUBLIC_DARBAR: 'success',
@@ -914,27 +922,16 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   sendCmoMissingInfoNote() {
     const note = this.cmoMissingInfoNote.trim();
     if (!this.selectedAppointment || !this.canUseCmoActions(this.selectedAppointment)) return;
-    if (!note) {
-      this.snackBar.open('Please enter the missing information note.', 'Close', { duration: 3000, panelClass: ['error-snackbar'] });
-      return;
-    }
-
     const appointment = this.selectedAppointment;
     this.cmoActionUpdating = true;
-    this.appointmentService.submitCmoReview({
-      appointmentId: appointment.id,
-      cmoRemarks: note,
-      pendingInformation: note,
-      status: 'CMO_REVIEW',
-      notifyApplicant: true,
-      notifyDeo: true,
-    }).pipe(finalize(() => this.cmoActionUpdating = false))
+    this.appointmentService.requestMissingInformation(appointment.id, note)
+      .pipe(finalize(() => this.cmoActionUpdating = false))
       .subscribe({
         next: updated => {
           this.selectedAppointment = updated;
           this.replaceAppointment(updated);
           this.cmoMissingInfoDialogRef?.close();
-          this.snackBar.open(`Missing information note sent for ${updated.applicationId}.`, 'Close', { duration: 5000, panelClass: ['success-snackbar'] });
+          this.snackBar.open('Additional information requested.', 'Close', { duration: 5000, panelClass: ['success-snackbar'] });
         },
         error: error => this.snackBar.open(apiErrorMessage(error, 'Failed to send missing information note.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] })
       });
@@ -1115,8 +1112,11 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     this.appointmentService.addRemark(appointment.id, payload).pipe(finalize(() => this.actionUpdating = false))
       .subscribe({
         next: _note => {
+          if (type === 'APPROVER_REMARK') this.approverRemarksText = '';
+          else this.hcmRemarksText = '';
           this.loadAppointmentRemarks(appointment.id);
           this.loadAppointmentById(appointment.id);
+          this.loadAppointments();
           this.snackBar.open(type === 'APPROVER_REMARK' ? 'Approver remarks saved.' : 'HCM remarks saved.', 'Close', { duration: 5000, panelClass: ['success-snackbar'] });
         },
         error: error => this.snackBar.open(apiErrorMessage(error, 'Failed to save remarks.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] })
@@ -1137,7 +1137,9 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
         next: document => {
           this.documents = [document, ...this.documents];
           this.selectedSupportingDocument = null;
-          this.snackBar.open('Supporting document uploaded.', 'Close', { duration: 5000, panelClass: ['success-snackbar'] });
+          this.loadAppointmentById(this.selectedAppointment!.id);
+          this.loadAppointments();
+          this.snackBar.open('Supporting document uploaded. Appointment moved to Pending.', 'Close', { duration: 5000, panelClass: ['success-snackbar'] });
         },
         error: error => this.snackBar.open(apiErrorMessage(error, 'Unable to upload supporting document.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] })
       });

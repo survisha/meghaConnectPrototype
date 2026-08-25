@@ -62,21 +62,27 @@ public class AppointmentService {
 
     private static final List<Appointment.AppointmentStatus> DEO_VISIBLE_STATUSES = Arrays.asList(
         Appointment.AppointmentStatus.PENDING,
+        Appointment.AppointmentStatus.PENDING_REQUEST,
         Appointment.AppointmentStatus.SCHEDULED,
+        Appointment.AppointmentStatus.RESCHEDULED,
         Appointment.AppointmentStatus.REJECTED,
         Appointment.AppointmentStatus.HCM_MET_COMPLETED,
         Appointment.AppointmentStatus.ROUTED_TO_OFFICIAL,
         Appointment.AppointmentStatus.COMPLETED,
+        Appointment.AppointmentStatus.CLOSED,
         Appointment.AppointmentStatus.SELECTED_FOR_PUBLIC_DARBAR
     );
 
     private static final List<Appointment.AppointmentStatus> APPROVER_VISIBLE_STATUSES = Arrays.asList(
         Appointment.AppointmentStatus.PENDING,
+        Appointment.AppointmentStatus.PENDING_REQUEST,
         Appointment.AppointmentStatus.SCHEDULED,
+        Appointment.AppointmentStatus.RESCHEDULED,
         Appointment.AppointmentStatus.REJECTED,
         Appointment.AppointmentStatus.HCM_MET_COMPLETED,
         Appointment.AppointmentStatus.ROUTED_TO_OFFICIAL,
         Appointment.AppointmentStatus.COMPLETED,
+        Appointment.AppointmentStatus.CLOSED,
         Appointment.AppointmentStatus.SELECTED_FOR_PUBLIC_DARBAR
     );
     private static final List<Appointment.AppointmentStatus> KNOWN_APPOINTMENT_STATUSES =
@@ -414,6 +420,8 @@ public class AppointmentService {
             throw new IllegalStateException("Walk-in appointments cannot be scheduled or rescheduled.");
         }
         LocalDateTime scheduledDateTime = parseScheduleDateTime(body);
+        LocalDateTime previousScheduledDateTime = appt.getScheduledDateTime();
+        Appointment.AppointmentStatus previousStatus = appt.getStatus();
         if (scheduledDateTime.isBefore(DateTimeUtil.nowIST())) {
             throw new MeghaConnectException(ErrorCodeConstants.APPT_INVALID_SCHEDULE_DATE_TIME,
                 "Appointments cannot be scheduled or rescheduled to a past date/time.", HttpStatus.BAD_REQUEST.value());
@@ -430,14 +438,30 @@ public class AppointmentService {
         if (appt.getScheduledDurationMinutes() == null) {
             appt.setScheduledDurationMinutes(durationMinutes);
         }
-        appt.setStatus(Appointment.AppointmentStatus.SCHEDULED);
+        boolean isReschedule = previousScheduledDateTime != null
+            || previousStatus == Appointment.AppointmentStatus.SCHEDULED
+            || previousStatus == Appointment.AppointmentStatus.RESCHEDULED;
+        Appointment.AppointmentStatus targetStatus = isReschedule
+            ? Appointment.AppointmentStatus.RESCHEDULED
+            : Appointment.AppointmentStatus.SCHEDULED;
+        lifecycleService.transition(appt, targetStatus);
+        LocalDateTime changedAt = DateTimeUtil.nowIST();
+        if (isReschedule) {
+            appt.setRescheduledBy(updatedBy);
+            appt.setRescheduledAt(changedAt);
+        } else {
+            appt.setScheduledBy(updatedBy);
+            appt.setScheduledAt(changedAt);
+        }
         appt.setUpdatedBy(updatedBy);
         Appointment saved = appointmentRepository.save(appt);
-        appointmentAuditService.recordStatusChange(saved, Appointment.AppointmentStatus.SCHEDULED,
-            Appointment.AppointmentStatus.SCHEDULED, "RESCHEDULED", "Meeting date/time changed", updatedBy, "API");
+        String scheduleAudit = (previousScheduledDateTime != null ? previousScheduledDateTime : "null")
+            + " -> " + scheduledDateTime;
+        appointmentAuditService.recordStatusChange(saved, previousStatus, targetStatus,
+            isReschedule ? "RESCHEDULED" : "SCHEDULED", scheduleAudit, updatedBy, "API");
         generateQrIfApproved(saved, updatedBy);
-        auditLogService.log("Appointment", saved.getId(), "RESCHEDULED",
-            "Rescheduled for: " + scheduledDateTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME), updatedBy);
+        auditLogService.log("Appointment", saved.getId(), isReschedule ? "RESCHEDULED" : "SCHEDULED",
+            scheduleAudit, updatedBy);
         return saved;
     }
 
@@ -472,11 +496,59 @@ public class AppointmentService {
                 .updatedAt(now)
                 .build();
             DocumentUpload saved = documentUploadRepository.save(document);
+            if (appointment.getStatus() == Appointment.AppointmentStatus.PENDING_REQUEST) {
+                Appointment.AppointmentStatus oldStatus = appointment.getStatus();
+                lifecycleService.transition(appointment, Appointment.AppointmentStatus.PENDING);
+                appointment.setRequiredInformation(null);
+                appointment.setUpdatedBy(actor);
+                appointmentRepository.save(appointment);
+                appointmentAuditService.recordStatusChange(appointment, oldStatus,
+                    Appointment.AppointmentStatus.PENDING, "DOCUMENT_UPLOADED",
+                    "Supporting document uploaded: " + storedFile.getOriginalFileName(), actor, "API");
+            }
             queueAiNotes(saved, actor);
             return toDocumentDto(saved);
         } catch (IOException e) {
             throw new IllegalArgumentException("Failed to store supporting document.", e);
         }
+    }
+
+    @Transactional
+    public Appointment requestMissingInformation(Long id, String remarks, String actor, String actorRole) {
+        Appointment appointment = appointmentRepository.findById(id)
+            .orElseThrow(() -> new AppointmentNotFoundException(id));
+        Appointment.AppointmentStatus oldStatus = appointment.getStatus();
+        if (oldStatus == Appointment.AppointmentStatus.CLOSED || oldStatus == Appointment.AppointmentStatus.REJECTED) {
+            throw new IllegalStateException("Missing information cannot be requested for a final appointment.");
+        }
+        if (oldStatus != Appointment.AppointmentStatus.PENDING_REQUEST) {
+            lifecycleService.transition(appointment, Appointment.AppointmentStatus.PENDING_REQUEST);
+        }
+        appointment.setRequiredInformation(trimToNull(remarks));
+        appointment.setUpdatedBy(actor);
+        Appointment saved = appointmentRepository.save(appointment);
+        appointmentAuditService.recordStatusChange(saved, oldStatus,
+            Appointment.AppointmentStatus.PENDING_REQUEST, "REQUEST_MISSING_INFORMATION",
+            remarks, actor, actorRole);
+        auditLogService.log("Appointment", id, "REQUEST_MISSING_INFORMATION", remarks, actor);
+        return saved;
+    }
+
+    @Transactional
+    public Appointment close(Long id, String finalRemarks, String actor, String actorRole) {
+        Appointment appointment = appointmentRepository.findById(id)
+            .orElseThrow(() -> new AppointmentNotFoundException(id));
+        Appointment.AppointmentStatus oldStatus = appointment.getStatus();
+        lifecycleService.transition(appointment, Appointment.AppointmentStatus.CLOSED);
+        appointment.setClosedBy(actor);
+        appointment.setClosedAt(DateTimeUtil.nowIST());
+        appointment.setFinalRemarks(trimToNull(finalRemarks));
+        appointment.setUpdatedBy(actor);
+        Appointment saved = appointmentRepository.save(appointment);
+        appointmentAuditService.recordStatusChange(saved, oldStatus,
+            Appointment.AppointmentStatus.CLOSED, "CLOSED", finalRemarks, actor, actorRole);
+        auditLogService.log("Appointment", id, "CLOSED", finalRemarks, actor);
+        return saved;
     }
 
     @Transactional
@@ -717,6 +789,13 @@ public class AppointmentService {
             .meetingOutcome(appointment.getMeetingOutcome())
             .completedAt(appointment.getCompletedAt())
             .completedBy(appointment.getCompletedBy())
+            .scheduledBy(appointment.getScheduledBy())
+            .scheduledAt(appointment.getScheduledAt())
+            .rescheduledBy(appointment.getRescheduledBy())
+            .rescheduledAt(appointment.getRescheduledAt())
+            .closedBy(appointment.getClosedBy())
+            .closedAt(appointment.getClosedAt())
+            .finalRemarks(appointment.getFinalRemarks())
             .followUpRequired(appointment.getFollowUpRequired())
             .isWalkIn(appointment.getIsWalkIn())
             .walkInTokenNumber(walkInRepository.findByAppointment_Id(appointment.getId())
@@ -726,6 +805,8 @@ public class AppointmentService {
             .associates(toAssociateDtos(appointment))
             .createdAt(appointment.getCreatedAt())
             .updatedAt(appointment.getUpdatedAt())
+            .createdBy(appointment.getCreatedBy())
+            .updatedBy(appointment.getUpdatedBy())
             .build();
     }
 

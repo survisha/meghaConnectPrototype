@@ -37,6 +37,7 @@ import { apiErrorMessage } from '../../shared/api-error.util';
 import { CameraCaptureService, CameraDeviceOption, CameraFacingMode } from '../../shared/camera-capture.service';
 import { appointmentRemarkExportFields } from '../appointment-pdf-export.util';
 import { AuthenticatedPhotoComponent } from '../../shared/authenticated-photo.component';
+import { VisitorHistoryDialogComponent } from '../../shared/visitor-history-dialog.component';
 import { resolvePhotoUrl } from '../../shared/photo-url.util';
 
 type SortDirection = 'asc' | 'desc';
@@ -327,13 +328,12 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   }
 
   private appointmentPageSource(serverPage: number, size: number) {
-    if (this.auth.hasRole('DEO')) {
-      return this.appointmentService.getDeoAppointments(serverPage, size);
-    }
-    if (this.auth.hasRole('APPROVER', 'HCM') && !this.auth.hasRole('ADMIN')) {
-      return this.appointmentService.getApproverAppointments(serverPage, size);
-    }
-    return this.appointmentService.getAllAppointments(serverPage, size, undefined, {
+    return this.appointmentService.getAllAppointments(
+      serverPage,
+      size,
+      this.listMode === 'walkin' ? 'PENDING' : 'PENDING,SCHEDULED',
+      {
+      appointmentType: this.listMode === 'walkin' ? 'WALKIN' : 'NORMAL',
       sort: 'createdAt,desc',
     });
   }
@@ -461,7 +461,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
       case 'agenda':
         return appointment.agendaType || appointment.subject || '';
       case 'appointmentSource':
-        return appointment.appointmentSource || '';
+        return appointment.appointmentType || '';
       case 'location':
         return appointment.requestedLocation || '';
       case 'status':
@@ -1686,6 +1686,12 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
       autoFocus: false,
       panelClass: 'appointment-details-dialog-panel'
     });
+  }
+
+  viewVisitorHistory(appointment: Appointment): void {
+    const citizenId = appointment.applicantId || appointment.applicant?.id;
+    if (!citizenId) return;
+    this.dialog.open(VisitorHistoryDialogComponent, { width: '760px', maxWidth: '96vw', data: { citizenId, name: appointment.applicant?.fullName || appointment.applicantName } });
   }
 
   associateCount(appointment: Appointment | null = this.selectedAppointment) {

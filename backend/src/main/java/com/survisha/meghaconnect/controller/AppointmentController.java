@@ -70,11 +70,12 @@ public class AppointmentController {
     @PreAuthorize("hasAnyRole('ADMIN','APPROVER','DEO','HCM','SUPER_ADMIN','DEPARTMENT_PA')")
     public ResponseEntity<Page<AppointmentDto>> getAll(@RequestParam(required = false) String status,
                                                        @RequestParam(required = false) String source,
+                                                       @RequestParam(required = false) String appointmentType,
                                                        @RequestParam(required = false) String referredOffice,
                                                        Authentication authentication,
                                                        Pageable pageable) {
         logEndpoint("/api/v1/appointments");
-        return ResponseEntity.ok(appointmentService.findAllDtosForActor(actor(authentication), status, source, referredOffice, pageable));
+        return ResponseEntity.ok(appointmentService.findAllDtosForActor(actor(authentication), status, source, appointmentType, referredOffice, pageable));
     }
 
     @Operation(summary = "Get appointment by ID", description = "Retrieve a specific appointment by its ID")

@@ -184,7 +184,7 @@
               </button>
             </th>
             <td mat-cell *matCellDef="let appt">
-              <span class="event-badge">{{ appt.appointmentSource || '—' }}</span>
+              <span class="event-badge">{{ appt.appointmentType || '—' }}</span>
             </td>
           </ng-container>
 
@@ -284,6 +284,7 @@
                       matTooltip="View Details">
                 <mat-icon>visibility</mat-icon>
               </button>
+              <button mat-icon-button color="primary" (click)="viewVisitorHistory(appt)" matTooltip="View History"><mat-icon>history</mat-icon></button>
 
             </td>
           </ng-container>
@@ -425,7 +426,7 @@
       <mat-chip [class]="'status-chip status-' + getStatusSeverity(selectedAppointment.status)">
         {{ getStatusLabel(selectedAppointment.status) }}
       </mat-chip>
-      <span class="event-badge">{{ selectedAppointment.appointmentSource || '—' }}</span>
+      <span class="event-badge">{{ selectedAppointment.appointmentType || '—' }}</span>
       <span class="associate-count-chip" *ngIf="associateCount(selectedAppointment) > 0">
         <mat-icon>groups</mat-icon>
         {{ associateCount(selectedAppointment) }} associate{{ associateCount(selectedAppointment) === 1 ? '' : 's' }}
@@ -907,7 +908,7 @@
     <div *ngIf="selectedAppointment" class="dialog-appt-summary">
       <strong>{{ selectedAppointment.applicationId }}</strong>
       <span>{{ selectedAppointment.applicant.fullName || selectedAppointment.applicantName || '—' }}</span>
-      <span class="event-badge">{{ selectedAppointment.appointmentSource || '—' }}</span>
+      <span class="event-badge">{{ selectedAppointment.appointmentType || '—' }}</span>
     </div>
 
     <mat-form-field appearance="outline" class="full-width-field">

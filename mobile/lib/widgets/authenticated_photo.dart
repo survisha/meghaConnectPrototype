@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../utils/photo_url_resolver.dart';
+import '../services/api_service.dart';
 
 class AuthenticatedPhoto extends StatelessWidget {
   final String? source;
@@ -18,7 +19,6 @@ class AuthenticatedPhoto extends StatelessWidget {
   });
 
   @override
-  @override
   Widget build(BuildContext context) {
     final resolved = resolvePhotoUrl(source);
     if (resolved == null) return fallback;
@@ -29,8 +29,18 @@ class AuthenticatedPhoto extends StatelessWidget {
           : Image.memory(bytes,
               fit: fit, errorBuilder: (_, __, ___) => fallback);
     }
-    return Image.network(resolved,
-        fit: fit, errorBuilder: (_, __, ___) => fallback);
+    return FutureBuilder<Map<String, String>>(
+      future: ApiService.authenticatedMediaHeaders(),
+      builder: (_, snapshot) {
+        if (!snapshot.hasData) return fallback;
+        return Image.network(
+          resolved,
+          headers: snapshot.data,
+          fit: fit,
+          errorBuilder: (_, __, ___) => fallback,
+        );
+      },
+    );
   }
 }
 

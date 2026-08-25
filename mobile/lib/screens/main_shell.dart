@@ -159,6 +159,18 @@ final _navTree = <_NavItem>[
         ],
       ),
       _NavItem(
+        label: 'Completed Appointments',
+        icon: Icons.task_alt_outlined,
+        route: 'completed_appointments',
+        roles: [UserRole.SUPER_ADMIN, UserRole.APPROVER, UserRole.HCM],
+      ),
+      _NavItem(
+        label: 'Rejected Appointments',
+        icon: Icons.cancel_outlined,
+        route: 'rejected_appointments',
+        roles: [UserRole.SUPER_ADMIN, UserRole.APPROVER, UserRole.HCM],
+      ),
+      _NavItem(
         label: 'Register Visitor',
         icon: Icons.person_add_alt_1_outlined,
         route: 'register_visitor',
@@ -327,6 +339,10 @@ class _MainShellState extends State<MainShell> {
         return const PublicIdentificationScreen(walkInMode: true);
       case 'walkin_appointments':
         return const AppointmentsScreen(walkInOnly: true);
+      case 'completed_appointments':
+        return const AppointmentsScreen(reportMode: 'completed');
+      case 'rejected_appointments':
+        return const AppointmentsScreen(reportMode: 'rejected');
       case 'register_visitor':
         return const VisitorRegistrationScreen(
             openAppointmentAfterSubmit: true);

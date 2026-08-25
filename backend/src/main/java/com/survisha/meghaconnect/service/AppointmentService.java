@@ -48,6 +48,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -129,17 +130,23 @@ public class AppointmentService {
     }
 
     public Page<AppointmentDto> findAllDtosForActor(String actor, Pageable pageable) {
-        return findAllDtosForActor(actor, null, null, null, pageable);
+        return findAllDtosForActor(actor, null, null, null, null, pageable);
     }
 
     @MonitoredOperation(value = "appointment_search", category = MonitoredOperation.Category.DATABASE)
     public Page<AppointmentDto> findAllDtosForActor(String actor, String status, String source, String referredOffice, Pageable pageable) {
+        return findAllDtosForActor(actor, status, source, null, referredOffice, pageable);
+    }
+
+    @MonitoredOperation(value = "appointment_search", category = MonitoredOperation.Category.DATABASE)
+    public Page<AppointmentDto> findAllDtosForActor(String actor, String status, String source, String appointmentType, String referredOffice, Pageable pageable) {
         Long departmentId = scopedDepartmentId(actor);
         if (departmentId == null) {
-            return findAllDtos(status, source, referredOffice, pageable);
+            return findAllDtos(status, source, appointmentType, referredOffice, pageable);
         }
         List<Appointment.AppointmentStatus> statuses = parseStatuses(status);
         String sourceValue = normalizeSource(source);
+        String appointmentTypeValue = normalizeAppointmentTypeFilter(appointmentType);
         String referredOfficeValue = trimToNull(referredOffice);
         Specification<Appointment> spec = (root, query, cb) -> {
             javax.persistence.criteria.Predicate predicate = cb.equal(root.get("tenantDepartment").get("id"), departmentId);
@@ -150,6 +157,7 @@ public class AppointmentService {
             if (sourceValue != null) {
                 predicate = cb.and(predicate, cb.equal(cb.upper(root.get("appointmentSource")), sourceValue));
             }
+            predicate = applyAppointmentTypeFilter(root, cb, predicate, appointmentTypeValue);
             if (referredOfficeValue != null) {
                 predicate = cb.and(predicate, cb.equal(cb.upper(root.get("referredOffice")), referredOfficeValue.toUpperCase()));
             }
@@ -159,14 +167,15 @@ public class AppointmentService {
     }
 
     public Page<AppointmentDto> findAllDtos(String status, Pageable pageable) {
-        return findAllDtos(status, null, null, pageable);
+        return findAllDtos(status, null, null, null, pageable);
     }
 
-    public Page<AppointmentDto> findAllDtos(String status, String source, String referredOffice, Pageable pageable) {
+    public Page<AppointmentDto> findAllDtos(String status, String source, String appointmentType, String referredOffice, Pageable pageable) {
         List<Appointment.AppointmentStatus> statuses = parseStatuses(status);
         String sourceValue = normalizeSource(source);
+        String appointmentTypeValue = normalizeAppointmentTypeFilter(appointmentType);
         String referredOfficeValue = trimToNull(referredOffice);
-        if (statuses.isEmpty() && sourceValue == null && referredOfficeValue == null) {
+        if (statuses.isEmpty() && sourceValue == null && appointmentTypeValue == null && referredOfficeValue == null) {
             return findAllDtos(pageable);
         }
         Specification<Appointment> spec = (root, query, cb) -> {
@@ -185,12 +194,39 @@ public class AppointmentService {
             if (sourceValue != null) {
                 predicate = cb.and(predicate, cb.equal(cb.upper(root.get("appointmentSource")), sourceValue));
             }
+            predicate = applyAppointmentTypeFilter(root, cb, predicate, appointmentTypeValue);
             if (referredOfficeValue != null) {
                 predicate = cb.and(predicate, cb.equal(cb.upper(root.get("referredOffice")), referredOfficeValue.toUpperCase()));
             }
             return predicate;
         };
         return appointmentRepository.findAll(spec, pageable).map(this::toDto);
+    }
+
+    public Page<AppointmentDto> findAllDtos(String status, String source, String referredOffice, Pageable pageable) {
+        return findAllDtos(status, source, null, referredOffice, pageable);
+    }
+
+    private String normalizeAppointmentTypeFilter(String appointmentType) {
+        String value = trimToNull(appointmentType);
+        if (value == null) return null;
+        value = value.toUpperCase(Locale.ROOT);
+        if (!"NORMAL".equals(value) && !"WALKIN".equals(value)) {
+            throw new MeghaConnectException("INVALID_APPOINTMENT_TYPE_FILTER",
+                    "appointmentType must be NORMAL or WALKIN", 400);
+        }
+        return value;
+    }
+
+    private javax.persistence.criteria.Predicate applyAppointmentTypeFilter(
+            javax.persistence.criteria.Root<Appointment> root,
+            javax.persistence.criteria.CriteriaBuilder cb,
+            javax.persistence.criteria.Predicate predicate,
+            String appointmentType) {
+        if (appointmentType == null) return predicate;
+        javax.persistence.criteria.Expression<String> type = cb.lower(root.get("appointmentType"));
+        javax.persistence.criteria.Predicate walkIn = cb.like(type, "%walk-in%");
+        return cb.and(predicate, "WALKIN".equals(appointmentType) ? walkIn : cb.not(walkIn));
     }
 
     public Optional<Appointment> findById(Long id) {

@@ -12,6 +12,7 @@ import 'package:provider/provider.dart';
 import '../models/user.dart';
 import '../services/api_service.dart';
 import '../widgets/authenticated_photo.dart';
+import '../widgets/visitor_history_sheet.dart';
 import '../services/auth_service.dart';
 import '../services/ai_notes_cache_service.dart';
 import '../services/connectivity_service.dart';
@@ -32,6 +33,7 @@ class _Appointment {
   final String agenda;
   final String agendaBrief;
   final String type;
+  final String appointmentType;
   final String source;
   final String status;
   final String location;
@@ -53,6 +55,7 @@ class _Appointment {
     required this.agenda,
     required this.agendaBrief,
     required this.type,
+    required this.appointmentType,
     required this.source,
     required this.status,
     required this.location,
@@ -127,7 +130,9 @@ class _Appointment {
         applicant['briefDescription'],
         raw['description'],
       ]),
+      // eventType remains the workflow category used by existing actions.
       type: _firstText([raw['eventType']], 'A4'),
+      appointmentType: _firstText([raw['appointmentType']], 'NORMAL'),
       source: source,
       status: _text(raw['status'], 'SUBMITTED'),
       location: _text(raw['requestedLocation'], '-'),
@@ -137,9 +142,15 @@ class _Appointment {
       aiNotesStatus: aiStatus,
       aiNotesPreview: _text(completedNote['aiSummary']),
       raw: raw,
-      isWalkIn: raw['isWalkIn'] == true,
+      isWalkIn: raw['isWalkIn'] == true ||
+          _firstText([raw['appointmentType']]).toUpperCase().contains('WALK'),
     );
   }
+
+  int? get citizenId => _asInt(
+      raw['applicantId'] ?? raw['citizenId'] ?? _map(raw['applicant'])['id']);
+  String get photoUrl =>
+      _firstText([_map(raw['applicant'])['photoUrl'], raw['photoUrl']]);
 }
 
 class _AppointmentListSession {
@@ -201,11 +212,13 @@ class _AppointmentListSession {
 class AppointmentsScreen extends StatefulWidget {
   final bool forceApproverMode;
   final bool walkInOnly;
+  final String? reportMode;
 
   const AppointmentsScreen({
     super.key,
     this.forceApproverMode = false,
     this.walkInOnly = false,
+    this.reportMode,
   });
 
   @override
@@ -213,7 +226,7 @@ class AppointmentsScreen extends StatefulWidget {
 }
 
 class _AppointmentsScreenState extends State<AppointmentsScreen> {
-  static const _pageSize = 100;
+  static const _pageSize = 20;
   static const _statusOptions = [
     '',
     'PENDING',
@@ -253,6 +266,10 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   }
 
   void _restoreSessionOrLoad() {
+    if (widget.walkInOnly || widget.reportMode != null) {
+      _loadAppointments(refresh: true);
+      return;
+    }
     final session = _AppointmentListSession.instance;
     if (session.hasData) {
       _appointments
@@ -278,6 +295,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   }
 
   void _saveSession() {
+    if (widget.walkInOnly || widget.reportMode != null) return;
     _AppointmentListSession.instance.save(
       appointments: _appointments,
       searchQuery: _searchQuery,
@@ -315,7 +333,9 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         context.read<ConnectivityService>().isOffline) {
       final cached = await OfflineRepository().cachedAppointments();
       if (!mounted) return;
-      if (cached.isNotEmpty && refresh) rows = cached;
+      if (cached.isNotEmpty && refresh) {
+        rows = cached.where(_matchesCurrentQueue).toList();
+      }
     } else {
       for (final row in rows) {
         await OfflineRepository().cacheAppointment(row);
@@ -374,27 +394,31 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
 
   Future<Map<String, dynamic>> _pageForRole(UserRole? role, int page) {
     if (role == UserRole.PUBLIC) return ApiService.getMyAppointments();
-    if (role == UserRole.DEO) {
-      return ApiService.getDeoAppointments(page: page, size: _pageSize);
-    }
-    if (widget.forceApproverMode ||
-        role == UserRole.APPROVER ||
-        role == UserRole.HCM) {
-      return ApiService.getApproverAppointments(page: page, size: _pageSize);
-    }
-    if (role == UserRole.APPROVER) {
-      return ApiService.getAppointments(
+    if (widget.reportMode != null) {
+      return ApiService.getAppointmentReport(
+        report: '${widget.reportMode}-appointments',
         page: page,
         size: _pageSize,
-        status: 'SUBMITTED,CMO_REVIEW',
-        sort: 'createdAt,desc',
       );
     }
     return ApiService.getAppointments(
       page: page,
       size: _pageSize,
+      status: widget.walkInOnly ? 'PENDING' : 'PENDING,SCHEDULED',
+      appointmentType: widget.walkInOnly ? 'WALKIN' : 'NORMAL',
       sort: 'createdAt,desc',
     );
+  }
+
+  bool _matchesCurrentQueue(Map<String, dynamic> row) {
+    final status = _text(row['status']).toUpperCase();
+    if (widget.reportMode == 'completed') return status == 'COMPLETED';
+    if (widget.reportMode == 'rejected') return status == 'REJECTED';
+    final appointmentType = _text(row['appointmentType']).toUpperCase();
+    final walkIn = appointmentType.contains('WALK');
+    return widget.walkInOnly
+        ? walkIn && status == 'PENDING'
+        : !walkIn && (status == 'PENDING' || status == 'SCHEDULED');
   }
 
   void _maybeLoadMore() {
@@ -422,8 +446,6 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
           (_filterStatus == 'APPROVED' && a.status == 'APPROVED');
       final matchesSource = _filterSource.isEmpty || a.source == _filterSource;
       final matchesType = _filterType.isEmpty || a.type == _filterType;
-      final matchesListMode =
-          widget.walkInOnly ? a.type == 'B2' : a.type != 'B2';
       final day = a.createdDate == null
           ? null
           : DateTime(
@@ -436,7 +458,6 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
           matchesStatus &&
           matchesSource &&
           matchesType &&
-          matchesListMode &&
           matchesFrom &&
           matchesTo;
     }).toList()
@@ -450,11 +471,12 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   @override
   Widget build(BuildContext context) {
     final role = context.watch<AuthService>().user!.role;
-    final canAddNew = [
-      UserRole.ADMIN,
-      UserRole.APPROVER,
-      UserRole.DEO,
-    ].contains(role);
+    final canAddNew = widget.reportMode == null &&
+        [
+          UserRole.ADMIN,
+          UserRole.APPROVER,
+          UserRole.DEO,
+        ].contains(role);
 
     return Column(
       children: [
@@ -503,6 +525,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
             appointment: rows[index],
             canViewAiNotes: _canViewAiNotes(role),
             onTap: () => _openDetails(rows[index]),
+            onHistory: () => _openHistory(rows[index]),
           );
         },
       ),
@@ -516,10 +539,25 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     }
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => _AppointmentDetailsPage(appointment: appointment),
+        builder: (_) => _AppointmentDetailsPage(
+          appointment: appointment,
+          reportMode: widget.reportMode,
+        ),
       ),
     );
     _saveSession();
+  }
+
+  Future<void> _openHistory(_Appointment appointment) async {
+    final citizenId = appointment.citizenId;
+    if (citizenId == null) {
+      _showMessage('Visitor history is unavailable for this appointment.');
+      return;
+    }
+    await VisitorHistorySheet.show(context,
+        citizenId: citizenId,
+        fallbackName: appointment.applicantName,
+        fallbackPhotoUrl: appointment.photoUrl);
   }
 
   Widget _buildEmpty() {
@@ -806,11 +844,13 @@ class _AppointmentCard extends StatelessWidget {
   final _Appointment appointment;
   final bool canViewAiNotes;
   final VoidCallback onTap;
+  final VoidCallback onHistory;
 
   const _AppointmentCard({
     required this.appointment,
     required this.canViewAiNotes,
     required this.onTap,
+    required this.onHistory,
   });
 
   @override
@@ -830,6 +870,16 @@ class _AppointmentCard extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  ClipOval(
+                      child: SizedBox(
+                          width: 46,
+                          height: 46,
+                          child: AuthenticatedPhoto(
+                              source: appointment.photoUrl,
+                              fallback: const ColoredBox(
+                                  color: Color(0xFFE8EAF6),
+                                  child: Icon(Icons.person_outline))))),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       appointment.applicantName,
@@ -854,8 +904,8 @@ class _AppointmentCard extends StatelessWidget {
                 runSpacing: 6,
                 children: [
                   _Chip(
-                      label: appointment.type,
-                      color: _typeColor(appointment.type)),
+                      label: appointment.appointmentType,
+                      color: _typeColor(appointment.appointmentType)),
                   if (appointment.isWalkIn)
                     const _Chip(label: 'Walk-in', color: Color(0xFF006064)),
                   _MetaText(
@@ -916,19 +966,23 @@ class _AppointmentCard extends StatelessWidget {
                         style: const TextStyle(fontSize: 12),
                       ),
                     ),
-                    TextButton(
-                      onPressed: onTap,
-                      child: const Text('Actions'),
-                    ),
+                    TextButton.icon(
+                        onPressed: onHistory,
+                        icon: const Icon(Icons.history, size: 18),
+                        label: const Text('History')),
+                    TextButton(onPressed: onTap, child: const Text('View')),
                   ],
                 ),
               ] else
                 Align(
                   alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: onTap,
-                    child: const Text('Actions'),
-                  ),
+                  child: Wrap(children: [
+                    TextButton.icon(
+                        onPressed: onHistory,
+                        icon: const Icon(Icons.history, size: 18),
+                        label: const Text('History')),
+                    TextButton(onPressed: onTap, child: const Text('View'))
+                  ]),
                 ),
             ],
           ),
@@ -940,8 +994,9 @@ class _AppointmentCard extends StatelessWidget {
 
 class _AppointmentDetailsPage extends StatefulWidget {
   final _Appointment appointment;
+  final String? reportMode;
 
-  const _AppointmentDetailsPage({required this.appointment});
+  const _AppointmentDetailsPage({required this.appointment, this.reportMode});
 
   @override
   State<_AppointmentDetailsPage> createState() =>
@@ -986,7 +1041,10 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
 
   Future<void> _load() async {
     final id = widget.appointment.backendId!;
-    final detail = await ApiService.getAppointmentById(id);
+    final detail = widget.reportMode == null
+        ? await ApiService.getAppointmentById(id)
+        : await ApiService.getAppointmentReportDetail(
+            report: '${widget.reportMode}-appointments', appointmentId: id);
     final results = await Future.wait([
       ApiService.getAppointmentDocuments(id),
       ApiService.getAppointmentRemarks(id),
@@ -1045,7 +1103,10 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
                       _DetailLine('Agenda', widget.appointment.agenda),
                       _DetailLine(
                           'Description', widget.appointment.agendaBrief),
-                      _DetailLine('Type', widget.appointment.type),
+                      _DetailLine('Appointment Type',
+                          widget.appointment.appointmentType),
+                      _DetailLine(
+                          'Appointment Source', widget.appointment.source),
                       _DetailLine('Location', widget.appointment.location),
                       _DetailLine('Status', _label(widget.appointment.status)),
                       _DetailLine('Created At', widget.appointment.createdAt),
@@ -1058,6 +1119,7 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
                           _text(_details['hcmRemarks'], '-')),
                     ],
                   ),
+                  if (widget.reportMode == 'rejected') _rejectionSection(),
                   _documentsSection(role),
                   if (_canViewAiNotes(role)) _aiNotesSection(role),
                   _remarksSection(role),
@@ -1099,8 +1161,8 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
                         color: _statusColor(widget.appointment.status),
                       ),
                       _Chip(
-                        label: widget.appointment.type,
-                        color: _typeColor(widget.appointment.type),
+                        label: widget.appointment.appointmentType,
+                        color: _typeColor(widget.appointment.appointmentType),
                       ),
                     ],
                   ),
@@ -1112,6 +1174,12 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(color: Color(0xFF475569)),
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed: _viewHistory,
+                    icon: const Icon(Icons.history),
+                    label: const Text('View History'),
                   ),
                 ],
               ),
@@ -1143,6 +1211,60 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
         children: children,
       ),
     );
+  }
+
+  Widget _rejectionSection() => _section(
+        title: 'Rejection',
+        icon: Icons.cancel_outlined,
+        children: [
+          _DetailLine(
+              'Rejection Reason',
+              _firstText([
+                _details['rejectionReason'],
+                _details['rejectReason'],
+                widget.appointment.raw['rejectionReason'],
+              ], '—')),
+          _DetailLine(
+              'Remarks',
+              _firstText([
+                _details['approverRemarks'],
+                _details['remarks'],
+                widget.appointment.raw['remarks'],
+              ], '—')),
+          _DetailLine(
+              'Rejected By',
+              _firstText([
+                _details['rejectedBy'],
+                widget.appointment.raw['rejectedBy'],
+              ], '—')),
+          _DetailLine(
+              'Rejected Date',
+              _fmtDateTime(_firstText([
+                _details['rejectedAt'],
+                widget.appointment.raw['rejectedAt'],
+                widget.appointment.raw['updatedAt'],
+              ]))),
+        ],
+      );
+
+  Future<void> _viewHistory() async {
+    final applicant = _map(_details['applicant']);
+    final citizenId = _asInt(_details['applicantId'] ??
+        _details['citizenId'] ??
+        applicant['id'] ??
+        widget.appointment.citizenId);
+    if (citizenId == null) {
+      _showMessage('Visitor history is unavailable for this appointment.');
+      return;
+    }
+    await VisitorHistorySheet.show(context,
+        citizenId: citizenId,
+        fallbackName: widget.appointment.applicantName,
+        fallbackPhotoUrl: _firstText([
+          applicant['photoUrl'],
+          _details['photoUrl'],
+          widget.appointment.photoUrl,
+        ]));
   }
 
   Widget _documentsSection(UserRole role) {
@@ -1809,9 +1931,8 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
     final id = _asInt(doc['id']);
     final fileName =
         _firstText([doc['fileName'], doc['originalFilename']], 'document');
-    final extension = fileName.contains('.')
-        ? fileName.split('.').last.toLowerCase()
-        : '';
+    final extension =
+        fileName.contains('.') ? fileName.split('.').last.toLowerCase() : '';
     if (!{'jpg', 'jpeg', 'png', 'webp', 'pdf'}.contains(extension)) {
       AppNotificationService.warning(
           'Preview is not available for this file type.');

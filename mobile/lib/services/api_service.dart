@@ -86,6 +86,10 @@ class ApiService {
     return headers;
   }
 
+  /// Headers for authenticated media widgets (for example stored visitor photos).
+  static Future<Map<String, String>> authenticatedMediaHeaders() =>
+      _authHeaders();
+
   static Future<Map<String, dynamic>> extractVisitorForm(
       String imagePath) async {
     try {
@@ -689,6 +693,7 @@ class ApiService {
     int size = 50,
     String? status,
     String? source,
+    String? appointmentType,
     String? referredOffice,
     String? sort,
   }) async {
@@ -705,6 +710,7 @@ class ApiService {
 
       addParam('status', status);
       addParam('source', source);
+      addParam('appointmentType', appointmentType);
       addParam('referredOffice', referredOffice);
       addParam('sort', sort);
       final resp = await http
@@ -726,6 +732,51 @@ class ApiService {
       _logError('getAppointments', error, stackTrace);
     }
     return _listError(message: 'No internet connection. Please try again.');
+  }
+
+  static Future<Map<String, dynamic>> getAppointmentReport({
+    required String report,
+    int page = 0,
+    int size = 20,
+  }) async {
+    try {
+      final response = await http
+          .get(
+            _u('/reports/$report').replace(queryParameters: {
+              'page': '$page',
+              'size': '$size',
+              'sort': report == 'completed-appointments'
+                  ? 'completedAt,desc'
+                  : 'rejectedAt,desc',
+            }),
+            headers: await _headers(),
+          )
+          .timeout(const Duration(seconds: 20));
+      if (response.statusCode == 200) {
+        return _normalizePageResponse(jsonDecode(response.body));
+      }
+      return _listError(message: 'Unable to load appointment report.');
+    } catch (error, stackTrace) {
+      _logError('getAppointmentReport', error, stackTrace);
+      return _listError(message: 'Unable to load appointment report.');
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getAppointmentReportDetail({
+    required String report,
+    required int appointmentId,
+  }) async {
+    try {
+      final response = await http
+          .get(_u('/reports/$report/$appointmentId'), headers: await _headers())
+          .timeout(const Duration(seconds: 20));
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return _unwrapObject(jsonDecode(response.body));
+      }
+    } catch (error, stackTrace) {
+      _logError('getAppointmentReportDetail', error, stackTrace);
+    }
+    return null;
   }
 
   static Future<Map<String, dynamic>> getMyAppointments() async {
@@ -1584,7 +1635,6 @@ class ApiService {
     }
     return null;
   }
-
 
   static Future<Uint8List?> previewDocumentBytes(int documentId) async {
     try {

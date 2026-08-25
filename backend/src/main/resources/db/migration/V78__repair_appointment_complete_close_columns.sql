@@ -1,10 +1,10 @@
--- Appointment scheduling and close metadata. MySQL 8.0 does not support the
--- ADD COLUMN IF NOT EXISTS form used by some other database engines, so use
--- the same information_schema guard pattern as the surrounding migrations.
+-- Repair environments where the appointment complete/close lifecycle entity
+-- fields are present but the corresponding V77 schema changes are missing.
+-- Every operation is conditional so partially migrated databases are safe.
 
 DELIMITER //
 
-CREATE PROCEDURE add_v77_appointment_column_if_missing(
+CREATE PROCEDURE add_v78_appointment_column_if_missing(
     IN p_column_name VARCHAR(64),
     IN p_column_definition TEXT
 )
@@ -28,7 +28,7 @@ BEGIN
     END IF;
 END//
 
-CREATE PROCEDURE add_v77_appointment_index_if_missing(
+CREATE PROCEDURE add_v78_appointment_index_if_missing(
     IN p_index_name VARCHAR(64),
     IN p_index_columns TEXT
 )
@@ -55,18 +55,18 @@ END//
 
 DELIMITER ;
 
-CALL add_v77_appointment_column_if_missing('scheduled_by', 'VARCHAR(100) NULL');
-CALL add_v77_appointment_column_if_missing('scheduled_at', 'TIMESTAMP NULL');
-CALL add_v77_appointment_column_if_missing('rescheduled_by', 'VARCHAR(100) NULL');
-CALL add_v77_appointment_column_if_missing('rescheduled_at', 'TIMESTAMP NULL');
-CALL add_v77_appointment_column_if_missing('closed_by', 'VARCHAR(100) NULL');
-CALL add_v77_appointment_column_if_missing('closed_at', 'TIMESTAMP NULL');
-CALL add_v77_appointment_column_if_missing('final_remarks', 'TEXT NULL');
+CALL add_v78_appointment_column_if_missing('scheduled_by', 'VARCHAR(100) NULL');
+CALL add_v78_appointment_column_if_missing('scheduled_at', 'TIMESTAMP NULL');
+CALL add_v78_appointment_column_if_missing('rescheduled_by', 'VARCHAR(100) NULL');
+CALL add_v78_appointment_column_if_missing('rescheduled_at', 'TIMESTAMP NULL');
+CALL add_v78_appointment_column_if_missing('closed_by', 'VARCHAR(100) NULL');
+CALL add_v78_appointment_column_if_missing('closed_at', 'TIMESTAMP NULL');
+CALL add_v78_appointment_column_if_missing('final_remarks', 'TEXT NULL');
 
-CALL add_v77_appointment_index_if_missing(
+CALL add_v78_appointment_index_if_missing(
     'idx_appt_status_closed_at',
     'status, closed_at'
 );
 
-DROP PROCEDURE add_v77_appointment_index_if_missing;
-DROP PROCEDURE add_v77_appointment_column_if_missing;
+DROP PROCEDURE add_v78_appointment_index_if_missing;
+DROP PROCEDURE add_v78_appointment_column_if_missing;

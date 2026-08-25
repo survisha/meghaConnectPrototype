@@ -1,6 +1,7 @@
 package com.survisha.meghaconnect.config;
 
 import com.zaxxer.hikari.HikariDataSource;
+import org.flywaydb.core.Flyway;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -23,7 +24,19 @@ public class PrimaryJpaConfig {
     @Bean @Primary @ConfigurationProperties("spring.datasource.hikari")
     public HikariDataSource dataSource(@Qualifier("dataSourceProperties") DataSourceProperties p){return p.initializeDataSourceBuilder().type(HikariDataSource.class).build();}
 
+    @Bean(name = "primaryFlyway", initMethod = "migrate")
+    @Primary
+    public Flyway primaryFlyway(@Qualifier("dataSource") HikariDataSource dataSource) {
+        return Flyway.configure()
+                .dataSource(dataSource)
+                .locations("classpath:db/migration")
+                .baselineOnMigrate(true)
+                .validateOnMigrate(false)
+                .load();
+    }
+
     @Bean @Primary
+    @DependsOn("primaryFlyway")
     public LocalContainerEntityManagerFactoryBean entityManagerFactory(EntityManagerFactoryBuilder builder,@Qualifier("dataSource") DataSource ds){
         return builder.dataSource(ds)
                 .packages("com.survisha.meghaconnect.entity")

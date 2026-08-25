@@ -52,6 +52,20 @@ class ApiService {
     await SecureAppStorage.clearToken();
   }
 
+  /// Verifies the saved staff JWT against an existing staff-authorized API.
+  /// Biometrics only unlock local credentials; this call keeps the backend
+  /// authoritative for session validity and account authorization.
+  static Future<bool> validateStaffSession() async {
+    try {
+      final response = await http
+          .get(_u('/appointments?page=0&size=1'), headers: await _headers())
+          .timeout(const Duration(seconds: 20));
+      return response.statusCode >= 200 && response.statusCode < 300;
+    } catch (_) {
+      return false;
+    }
+  }
+
   static Future<Map<String, String>> _headers() async {
     final token = await getToken();
     final headers = <String, String>{

@@ -30,21 +30,31 @@ class AppNotificationService {
 
     final messenger = messengerKey.currentState;
     if (messenger == null) return;
+    final (icon, color) = switch (type) {
+      AppMessageType.success => (Icons.check_circle_outline, const Color(0xFF166534)),
+      AppMessageType.error => (Icons.error_outline, const Color(0xFFB91C1C)),
+      AppMessageType.warning => (Icons.warning_amber_rounded, const Color(0xFF92400E)),
+      AppMessageType.info => (Icons.info_outline, const Color(0xFF1D4ED8)),
+    };
+    messenger.hideCurrentSnackBar();
     messenger.showSnackBar(SnackBar(
-      content: Text(text),
+      content: Row(
+        children: [
+          Icon(icon, color: Colors.white),
+          const SizedBox(width: 12),
+          Expanded(child: Text(text, style: const TextStyle(fontWeight: FontWeight.w600))),
+        ],
+      ),
       behavior: SnackBarBehavior.floating,
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       duration: Duration(
           seconds: type == AppMessageType.error
               ? 6
               : type == AppMessageType.warning
                   ? 5
                   : 3),
-      backgroundColor: switch (type) {
-        AppMessageType.success => const Color(0xFF166534),
-        AppMessageType.error => const Color(0xFFB91C1C),
-        AppMessageType.warning => const Color(0xFF92400E),
-        AppMessageType.info => const Color(0xFF1D4ED8),
-      },
+      backgroundColor: color,
       showCloseIcon: true,
       closeIconColor: Colors.white,
     ));

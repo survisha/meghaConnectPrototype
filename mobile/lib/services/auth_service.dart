@@ -24,6 +24,12 @@ class AuthService extends ChangeNotifier {
   bool get offlineMode => _offlineMode;
   bool get isLoggedIn => _user != null;
 
+  Future<bool> get isBiometricLoginEnabled =>
+      SecureAppStorage.isBiometricEnabled();
+
+  Future<bool> get hasBiometricPromptDecision =>
+      SecureAppStorage.hasBiometricPromptDecision();
+
   Future<void> init() async {
     final token = await ApiService.getToken();
     if (token == null || token.isEmpty) {
@@ -99,6 +105,32 @@ class AuthService extends ChangeNotifier {
     return true;
   }
 
+  Future<bool> enableBiometricLogin() async {
+    _lastError = null;
+    if (_user == null || _user!.role == UserRole.PUBLIC) {
+      _lastError = 'Biometric login is available for staff accounts only.';
+      return false;
+    }
+    final supported = await _hasEnrolledBiometrics();
+    if (!supported) {
+      _lastError = 'No enrolled device biometrics are available.';
+      return false;
+    }
+    if (!await _authenticateDevice()) {
+      _lastError = 'Biometric authentication was cancelled or failed.';
+      return false;
+    }
+    await SecureAppStorage.setBiometricEnabled(true);
+    await SecureAppStorage.setBiometricPromptDecision(true);
+    await _cacheOfflineSession(_user!, token: await ApiService.getToken());
+    return true;
+  }
+
+  Future<void> declineBiometricLogin() async {
+    await SecureAppStorage.setBiometricEnabled(false);
+    await SecureAppStorage.setBiometricPromptDecision(true);
+  }
+
   Future<bool> changeTemporaryPassword(
       String currentPassword, String newPassword) async {
     _lastError = null;
@@ -143,7 +175,10 @@ class AuthService extends ChangeNotifier {
     return true;
   }
 
-  Future<bool> loginWithCachedDeviceSession({String? username}) async {
+  Future<bool> loginWithCachedDeviceSession({
+    String? username,
+    bool validateOnline = false,
+  }) async {
     _lastError = null;
     final raw = await SecureAppStorage.readOfflineSessionJson();
     if (raw == null || raw.isEmpty) {
@@ -159,8 +194,9 @@ class AuthService extends ChangeNotifier {
       return false;
     }
 
-    if (session['offlineLoginEnabled'] != true) {
-      _lastError = 'Offline login not available on this device.';
+    if (!await SecureAppStorage.isBiometricEnabled() ||
+        session['offlineLoginEnabled'] != true) {
+      _lastError = 'Biometric login is not enabled on this device.';
       return false;
     }
     final requestedUsername = username?.trim();
@@ -198,9 +234,15 @@ class AuthService extends ChangeNotifier {
       if (cachedToken != null && cachedToken.isNotEmpty) {
         await ApiService.setToken(cachedToken);
       }
+      if (validateOnline && !await ApiService.validateStaffSession()) {
+        await ApiService.clearToken();
+        _user = null;
+        _lastError = 'Saved session is no longer valid. Use Staff ID and Password.';
+        return false;
+      }
       await SecureAppStorage.writeUserJson(jsonEncode(_user!.toJson()));
       await _repository.saveSession(_user!.toJson());
-      _offlineMode = true;
+      _offlineMode = !validateOnline;
       notifyListeners();
       return true;
     } catch (_) {
@@ -211,8 +253,9 @@ class AuthService extends ChangeNotifier {
 
   Future<void> _cacheOfflineSession(AuthUser user, {String? token}) async {
     final now = DateTime.now().toUtc();
+    final biometricEnabled = await SecureAppStorage.isBiometricEnabled();
     final session = {
-      'offlineLoginEnabled': true,
+      'offlineLoginEnabled': biometricEnabled && user.role != UserRole.PUBLIC,
       'userId': user.visitorId?.toString() ?? user.username,
       'username': user.username,
       'role': user.role.name,
@@ -227,16 +270,26 @@ class AuthService extends ChangeNotifier {
 
   Future<bool> _authenticateDevice() async {
     try {
-      final supported = await _localAuth.isDeviceSupported();
-      final canCheck = await _localAuth.canCheckBiometrics;
-      if (!supported && !canCheck) return true;
+      if (!await _hasEnrolledBiometrics()) return false;
       return _localAuth.authenticate(
         localizedReason: 'Unlock your saved MeghaConnect session.',
         options: const AuthenticationOptions(
-          biometricOnly: false,
+          biometricOnly: true,
           stickyAuth: true,
         ),
       );
+    } catch (_) {
+      return false;
+    }
+  }
+
+
+  Future<bool> _hasEnrolledBiometrics() async {
+    try {
+      final supported = await _localAuth.isDeviceSupported();
+      final canCheck = await _localAuth.canCheckBiometrics;
+      if (!supported || !canCheck) return false;
+      return (await _localAuth.getAvailableBiometrics()).isNotEmpty;
     } catch (_) {
       return false;
     }

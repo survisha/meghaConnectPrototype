@@ -20,6 +20,7 @@ import '../services/offline_ai_notes_service.dart';
 import '../services/offline_repository.dart';
 import '../services/sync_service.dart';
 import 'new_appointment_screen.dart';
+import 'document_viewer_screen.dart';
 
 class _Appointment {
   final int? backendId;
@@ -965,6 +966,8 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
   bool _saving = false;
   bool _uploading = false;
   String? _error;
+  int? _expandedSection;
+  int _sectionSequence = 0;
 
   @override
   void initState() {
@@ -1009,6 +1012,7 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
+    _sectionSequence = 0;
     final role = context.watch<AuthService>().user!.role;
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6FB),
@@ -1123,10 +1127,16 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
     required IconData icon,
     required List<Widget> children,
   }) {
+    final sectionIndex = _sectionSequence++;
+    final expanded = _expandedSection == sectionIndex;
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       child: ExpansionTile(
-        initiallyExpanded: true,
+        key: ValueKey('appointment-section-$sectionIndex-$expanded'),
+        initiallyExpanded: expanded,
+        onExpansionChanged: (isExpanded) {
+          setState(() => _expandedSection = isExpanded ? sectionIndex : null);
+        },
         leading: Icon(icon),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
         childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
@@ -1195,6 +1205,11 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
                 ),
               ],
             ),
+          ),
+          IconButton(
+            tooltip: 'View',
+            icon: const Icon(Icons.visibility_outlined),
+            onPressed: () => _viewDocument(doc),
           ),
           IconButton(
             tooltip: 'Download',
@@ -1788,6 +1803,34 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
             : 'Unable to open the downloaded document.',
       );
     }
+  }
+
+  Future<void> _viewDocument(Map<String, dynamic> doc) async {
+    final id = _asInt(doc['id']);
+    final fileName =
+        _firstText([doc['fileName'], doc['originalFilename']], 'document');
+    final extension = fileName.contains('.')
+        ? fileName.split('.').last.toLowerCase()
+        : '';
+    if (!{'jpg', 'jpeg', 'png', 'webp', 'pdf'}.contains(extension)) {
+      AppNotificationService.warning(
+          'Preview is not available for this file type.');
+      return;
+    }
+    if (id == null) {
+      AppNotificationService.error('Unable to load document.');
+      return;
+    }
+    AppNotificationService.info('Loading document...');
+    final bytes = await ApiService.downloadDocumentBytes(id);
+    if (!mounted || bytes == null) {
+      AppNotificationService.error('Unable to load document.');
+      return;
+    }
+    AppNotificationService.clear();
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => DocumentViewerScreen(fileName: fileName, bytes: bytes),
+    ));
   }
 
   Future<void> _regenerateAiNotes(Map<String, dynamic> note) async {

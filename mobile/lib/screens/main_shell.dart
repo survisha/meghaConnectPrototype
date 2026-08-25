@@ -1,10 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
 import '../services/connectivity_service.dart';
 import '../services/navigation_service.dart';
+import '../services/notification_service.dart';
 import '../services/access_control_service.dart';
 import '../core/i18n/app_i18n.dart';
 import '../widgets/megha_ui.dart';
@@ -24,7 +26,6 @@ import 'grievance_screen.dart';
 import 'visitor_dashboard_screen.dart';
 import 'approver_screen.dart';
 import 'guest_appointment_screen.dart';
-import 'deo_home_screen.dart';
 import 'pending_sync_screen.dart';
 import 'hcm_dashboard_screen.dart';
 
@@ -258,8 +259,47 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   String _currentRoute = 'dashboard';
   final Set<String> _expandedItems = {};
+  bool _biometricPromptScheduled = false;
 
   static const _primaryBlue = Color(0xFF1A237E);
+
+  void _scheduleBiometricPrompt(AuthService auth) {
+    if (_biometricPromptScheduled) return;
+    _biometricPromptScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted || await auth.hasBiometricPromptDecision) return;
+      if (!mounted) return;
+      final enable = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Enable biometric login?'),
+          content: const Text(
+              'Use fingerprint, Face ID, or another enrolled device biometric to unlock your securely saved staff session.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Not Now'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Enable'),
+            ),
+          ],
+        ),
+      );
+      if (enable != true) {
+        await auth.declineBiometricLogin();
+        return;
+      }
+      final enabled = await auth.enableBiometricLogin();
+      if (enabled) {
+        AppNotificationService.success('Biometric login enabled successfully.');
+      } else {
+        AppNotificationService.warning(
+            auth.lastError ?? 'Unable to enable biometric login.');
+      }
+    });
+  }
 
   Widget _buildBody(String route) {
     final user = context.read<AuthService>().user!;
@@ -334,10 +374,9 @@ class _MainShellState extends State<MainShell> {
     if (user.role == UserRole.PUBLIC) {
       return const VisitorDashboardScreen();
     }
-    if (user.role == UserRole.DEO) {
-      return const DeoHomeScreen();
-    }
+    _scheduleBiometricPrompt(auth);
     return Scaffold(
+      backgroundColor: const Color(0xFFF4F6FB),
       appBar: _buildAppBar(context, auth, user, i18n),
       drawer: _buildDrawer(context, auth, user),
       body: Column(
@@ -362,7 +401,10 @@ class _MainShellState extends State<MainShell> {
     return AppBar(
       toolbarHeight: 72,
       elevation: 2,
-      backgroundColor: Colors.transparent,
+      backgroundColor: MeghaColors.primary,
+      systemOverlayStyle: SystemUiOverlayStyle.light.copyWith(
+        statusBarColor: MeghaColors.primary,
+      ),
       foregroundColor: Colors.white,
       titleSpacing: 0,
       flexibleSpace: const DecoratedBox(

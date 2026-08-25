@@ -37,6 +37,7 @@ class _LoginScreenState extends State<LoginScreen>
   bool _staffObscure = true;
   bool _staffLoading = false;
   String? _staffError;
+  bool _biometricEnabled = false;
 
   // Public login fields
   final _publicFormKey = GlobalKey<FormState>();
@@ -61,6 +62,32 @@ class _LoginScreenState extends State<LoginScreen>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _refreshCaptcha(focus: false);
+    _loadBiometricPreference();
+  }
+
+  Future<void> _loadBiometricPreference() async {
+    final enabled = await context.read<AuthService>().isBiometricLoginEnabled;
+    if (mounted) setState(() => _biometricEnabled = enabled);
+  }
+
+  Future<void> _biometricLogin() async {
+    setState(() { _staffLoading = true; _staffError = null; });
+    final offline = context.read<ConnectivityService>().isOffline;
+    final auth = context.read<AuthService>();
+    final ok = await auth.loginWithCachedDeviceSession(
+      username: _usernameCtrl.text,
+      validateOnline: !offline,
+    );
+    if (!mounted) return;
+    setState(() => _staffLoading = false);
+    if (!ok) {
+      final message = auth.lastError ?? 'Biometric login failed.';
+      setState(() => _staffError = message);
+      AppNotificationService.error(message);
+    } else if (offline) {
+      AppNotificationService.warning(
+          "You're offline. Some features are unavailable.");
+    }
   }
 
   @override
@@ -123,22 +150,6 @@ class _LoginScreenState extends State<LoginScreen>
           'Unable to refresh CAPTCHA. Please try again.');
     }
     if (focus) _captchaFocus.requestFocus();
-  }
-
-  Future<void> _offlineSessionLogin() async {
-    setState(() {
-      _staffLoading = true;
-      _staffError = null;
-    });
-    final auth = context.read<AuthService>();
-    final ok =
-        await auth.loginWithCachedDeviceSession(username: _usernameCtrl.text);
-    if (!mounted) return;
-    setState(() => _staffLoading = false);
-    if (!ok) {
-      setState(
-          () => _staffError = auth.lastError ?? 'Offline login not available.');
-    }
   }
 
   Future<void> _sendOtp() async {
@@ -626,12 +637,12 @@ class _LoginScreenState extends State<LoginScreen>
                         style: const TextStyle(fontSize: 16)),
               ),
             ),
-            if (context.watch<ConnectivityService>().isOffline) ...[
+            if (_biometricEnabled) ...[
               const SizedBox(height: 10),
               OutlinedButton.icon(
-                onPressed: _staffLoading ? null : _offlineSessionLogin,
+                onPressed: _staffLoading ? null : _biometricLogin,
                 icon: const Icon(Icons.fingerprint),
-                label: const Text('Use Saved Device Session'),
+                label: const Text('Login with Biometrics'),
               ),
             ],
             const SizedBox(height: 24),

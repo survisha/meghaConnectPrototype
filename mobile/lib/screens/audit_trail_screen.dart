@@ -55,6 +55,7 @@ class _AuditTrailScreenState extends State<AuditTrailScreen> {
   DateTimeRange? _range;
   bool _loading = true;
   String _error = '';
+  int? _expandedEntry;
 
   static const _roles = [
     'ADMIN',
@@ -188,6 +189,9 @@ class _AuditTrailScreenState extends State<AuditTrailScreen> {
                             itemBuilder: (_, i) => _AuditCard(
                               entry: _logs[i],
                               color: _actionColor(_logs[i].action),
+                              expanded: _expandedEntry == i,
+                              onExpansionChanged: (expanded) => setState(
+                                  () => _expandedEntry = expanded ? i : null),
                             ),
                           ),
                         ),
@@ -413,13 +417,23 @@ class _DropdownFilter extends StatelessWidget {
 class _AuditCard extends StatelessWidget {
   final _AuditEntry entry;
   final Color color;
+  final bool expanded;
+  final ValueChanged<bool> onExpansionChanged;
 
-  const _AuditCard({required this.entry, required this.color});
+  const _AuditCard({
+    required this.entry,
+    required this.color,
+    required this.expanded,
+    required this.onExpansionChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Card(
       child: ExpansionTile(
+        key: ValueKey('${entry.requestId}-$expanded'),
+        initiallyExpanded: expanded,
+        onExpansionChanged: onExpansionChanged,
         leading: CircleAvatar(
           backgroundColor: color.withAlpha(26),
           child: Icon(Icons.history, color: color, size: 18),

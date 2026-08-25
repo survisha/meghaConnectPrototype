@@ -13,6 +13,7 @@ import '../services/connectivity_service.dart';
 import 'pending_sync_screen.dart';
 import '../core/i18n/app_i18n.dart';
 import '../widgets/megha_ui.dart';
+import '../widgets/app_footer.dart';
 import 'new_appointment_screen.dart';
 import 'guest_appointment_screen.dart';
 import 'scheme_form_screen.dart';
@@ -585,6 +586,7 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
+                  const AppFooter(),
                 ],
               ),
             ),
@@ -689,8 +691,7 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
     }
   }
 
-  Future<void> _uploadSupportingDocument(
-      _MyAppointment appointment) async {
+  Future<void> _uploadSupportingDocument(_MyAppointment appointment) async {
     if (appointment.backendId <= 0) {
       AppNotificationService.error('Appointment ID is unavailable.');
       return;
@@ -700,7 +701,8 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
       allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png'],
       withData: false,
     );
-    final file = picked == null || picked.files.isEmpty ? null : picked.files.first;
+    final file =
+        picked == null || picked.files.isEmpty ? null : picked.files.first;
     if (file?.path == null) return;
     final result = await ApiService.uploadSupportingDocument(
       appointment.backendId,

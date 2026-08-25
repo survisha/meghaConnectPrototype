@@ -7,13 +7,14 @@ import { TranslateModule } from '@ngx-translate/core';
 import { LanguageSelectorComponent } from '../shared/language-selector/language-selector.component';
 import { MatIconModule } from '@angular/material/icon';
 import { AccessControlService, AppFeature } from '../services/access-control.service';
+import { AppFooterComponent } from '../shared/app-footer/app-footer.component';
 
 interface MenuItem { labelKey: string; icon: string; route?: string; externalUrl?: string; children?: MenuItem[]; expanded?: boolean; roles?: UserRole[]; feature?: AppFeature; }
 
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterOutlet, TranslateModule, LanguageSelectorComponent, MatIconModule],
+  imports: [CommonModule, RouterLink, RouterOutlet, TranslateModule, LanguageSelectorComponent, MatIconModule, AppFooterComponent],
   templateUrl: './shell.component.html',
   styleUrls: ['./shell.component.scss'],
 })

@@ -10,6 +10,7 @@ import '../services/notification_service.dart';
 import '../services/access_control_service.dart';
 import '../core/i18n/app_i18n.dart';
 import '../widgets/megha_ui.dart';
+import '../widgets/app_footer.dart';
 import 'dashboard_screen.dart';
 import 'appointments_screen.dart';
 import 'new_appointment_screen.dart';
@@ -417,6 +418,7 @@ class _MainShellState extends State<MainShell> {
           if (context.watch<ConnectivityService>().isOffline)
             const _OfflineWorkBanner(),
           Expanded(child: _buildBody(_currentRoute)),
+          const AppFooter(),
         ],
       ),
     );

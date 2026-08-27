@@ -104,7 +104,7 @@ export class AppointmentApprovalService {
    * CMO rejects appointment
    */
   rejectAppointment(appointmentId: number, rejectReason: string): Observable<any> {
-    return this.http.put(`${this.apiUrl}/${appointmentId}/reject`, { rejectReason });
+    return this.http.post(`${this.apiUrl}/approver/${appointmentId}/reject`, { reason: rejectReason });
   }
 
   /**

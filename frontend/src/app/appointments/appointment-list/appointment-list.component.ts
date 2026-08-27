@@ -384,8 +384,8 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
           a.applicationId?.toLowerCase().includes(searchValue) ||
           a.applicant?.phoneNumber?.includes(searchValue)) &&
         (this.listMode === 'closed' || (this.listMode === 'walkin'
-          ? (a.appointmentType || '').toUpperCase().includes('WALK')
-          : !(a.appointmentType || '').toUpperCase().includes('WALK'))) &&
+          ? (a.appointmentSource || '').toUpperCase() === 'WALKIN'
+          : (a.appointmentSource || 'CITIZEN').toUpperCase() !== 'WALKIN')) &&
         (!this.filterStatus || this.matchesStatusFilter(a.status, this.filterStatus)) &&
         (!this.filterSource || (a.appointmentSource || 'CITIZEN') === this.filterSource) &&
         (!this.filterEventType || a.eventType === this.filterEventType) &&

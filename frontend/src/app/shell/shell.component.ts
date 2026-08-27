@@ -6,19 +6,23 @@ import { UserRole } from '../models';
 import { TranslateModule } from '@ngx-translate/core';
 import { LanguageSelectorComponent } from '../shared/language-selector/language-selector.component';
 import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
 import { AccessControlService, AppFeature } from '../services/access-control.service';
-import { AppFooterComponent } from '../shared/app-footer/app-footer.component';
 
 interface MenuItem { labelKey: string; icon: string; route?: string; externalUrl?: string; children?: MenuItem[]; expanded?: boolean; roles?: UserRole[]; feature?: AppFeature; }
 
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterOutlet, TranslateModule, LanguageSelectorComponent, MatIconModule, AppFooterComponent],
+  imports: [CommonModule, RouterLink, RouterOutlet, TranslateModule, LanguageSelectorComponent, MatIconModule, MatButtonModule],
   templateUrl: './shell.component.html',
   styleUrls: ['./shell.component.scss'],
 })
 export class ShellComponent implements OnInit {
+  get showDashboardBack(): boolean {
+    const path = this.router.url.split('?')[0];
+    return path !== '/dashboard' && path !== '/appointments/walkin';
+  }
   sidebarOpen = false;
   private sidebarHoverOpen = false;
   menu: MenuItem[] = [];
@@ -34,8 +38,6 @@ export class ShellComponent implements OnInit {
       roles: ['PUBLIC'] },
     { labelKey: 'CALENDAR_SCHEDULE', icon: 'event', route: '/scheduling',
       feature: 'calendar' },
-    { labelKey: 'HCM_ACTIONS', icon: 'task_alt', route: '/hcm/appointments',
-      roles: ['HCM','APPROVER','ADMIN'] },
     {
       labelKey: 'APPOINTMENTS', icon: 'groups', expanded: false,
       feature: 'appointments',

@@ -15,7 +15,7 @@ import { apiErrorMessage } from '../shared/api-error.util';
 import { AccessControlService } from '../services/access-control.service';
 
 
-interface QuickAction { label: string; matIcon: string; route: string; severity: string; }
+interface QuickAction { label: string; matIcon: string; route: string; severity: string; queryParams?: Record<string, string>; }
 
 interface DashboardKpi {
   label: string;
@@ -422,7 +422,7 @@ export class DashboardComponent implements OnInit {
   private buildQuickActions() {
     const role = this.auth.user()?.role;
     const all: (QuickAction & { roles?: string[]; feature?: 'walkIn' | 'registerVisitor' | 'publicIdentification' })[] = [
-      { label: 'New Appointment', matIcon: 'add', route: '/appointments/walkin?entryMode=NEW_APPOINTMENT', severity: '',
+      { label: 'New Appointment', matIcon: 'add', route: '/appointments/walkin', queryParams: { entryMode: 'NEW_APPOINTMENT' }, severity: 'success',
         roles: ['DEO', 'APPROVER', 'HCM'] },
       { label: 'Walk-in Counter', matIcon: 'login', route: '/appointments/walkin', severity: 'success',
         feature: 'walkIn' },

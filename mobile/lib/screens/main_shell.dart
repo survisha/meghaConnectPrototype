@@ -28,7 +28,6 @@ import 'visitor_dashboard_screen.dart';
 import 'approver_screen.dart';
 import 'guest_appointment_screen.dart';
 import 'pending_sync_screen.dart';
-import 'hcm_dashboard_screen.dart';
 import 'qr_scanner_screen.dart';
 
 class _NavItem {
@@ -335,10 +334,6 @@ class _MainShellState extends State<MainShell> {
     }
     switch (route) {
       case 'dashboard':
-        final role = context.read<AuthService>().user?.role;
-        if (role == UserRole.HCM || role == UserRole.APPROVER) {
-          return const HcmDashboardScreen();
-        }
         return const DashboardScreen();
       case 'visitor':
         return const VisitorDashboardScreen();
@@ -434,6 +429,15 @@ class _MainShellState extends State<MainShell> {
     final showSubtitle = width >= 420;
     final showRole = width >= 360;
     return AppBar(
+      automaticallyImplyLeading: _currentRoute == 'dashboard',
+      leading: _currentRoute == 'dashboard'
+          ? null
+          : IconButton(
+              tooltip: 'Back to Dashboard',
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () =>
+                  context.read<NavigationService>().navigateTo('dashboard'),
+            ),
       toolbarHeight: 72,
       elevation: 2,
       backgroundColor: MeghaColors.primary,

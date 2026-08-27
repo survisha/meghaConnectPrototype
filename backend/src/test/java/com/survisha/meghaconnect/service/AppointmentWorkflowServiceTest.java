@@ -17,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -38,6 +39,9 @@ class AppointmentWorkflowServiceTest {
 
     @Mock
     private QrTokenService qrTokenService;
+
+    @Mock
+    private AppointmentLifecycleService lifecycleService;
 
     @InjectMocks
     private AppointmentWorkflowService appointmentWorkflowService;
@@ -90,5 +94,39 @@ class AppointmentWorkflowServiceTest {
 
         assertEquals(ErrorCodeConstants.APPT_REJECTION_REASON_REQUIRED, exception.getErrorCode());
         verifyNoInteractions(appointmentRepository);
+    }
+
+    @Test
+    void rejectPersistsServerControlledMetadataAndAuditHistory() {
+        Appointment appointment = Appointment.builder()
+                .applicationId("MC-2026-000042")
+                .applicant(Visitor.builder().id(7L).fullName("Citizen").phoneNumber("9876543210").build())
+                .status(Appointment.AppointmentStatus.PENDING)
+                .build();
+        appointment.setId(42L);
+        when(appointmentRepository.findById(42L)).thenReturn(Optional.of(appointment));
+        when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        doAnswer(invocation -> {
+            appointment.setStatus(invocation.getArgument(1));
+            return null;
+        }).when(lifecycleService).transition(eq(appointment), eq(Appointment.AppointmentStatus.REJECTED));
+
+        appointmentWorkflowService.reject(
+                42L,
+                RejectAppointmentRequest.builder().reason("Required information was not supplied").build(),
+                "approver.user",
+                "APPROVER"
+        );
+
+        assertEquals(Appointment.AppointmentStatus.REJECTED, appointment.getStatus());
+        assertEquals("approver.user", appointment.getRejectedBy());
+        assertEquals("approver.user", appointment.getUpdatedBy());
+        assertEquals("Required information was not supplied", appointment.getRejectionReason());
+        assertNotNull(appointment.getRejectedAt());
+        verify(appointmentAuditService).recordStatusChange(
+                eq(appointment), eq(Appointment.AppointmentStatus.PENDING),
+                eq(Appointment.AppointmentStatus.REJECTED), eq("REJECTED"),
+                eq("Required information was not supplied"), eq("approver.user"), eq("APPROVER"));
+        verify(notificationService).appointmentRejected(appointment);
     }
 }

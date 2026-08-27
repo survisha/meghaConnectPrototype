@@ -27,7 +27,6 @@ import { DepartmentRequestsComponent } from './admin/department-requests/departm
 import { DepartmentAccessRequestFormComponent } from './department-access-request/department-access-request-form.component';
 import { SchemeManagementComponent } from './admin/scheme-management/scheme-management.component';
 import { AppointmentTypeManagementComponent } from './admin/appointment-type-management/appointment-type-management.component';
-import { HcmDashboardComponent } from './admin/hcm-dashboard/hcm-dashboard.component';
 import { GrievancesComponent } from './grievances/grievances.component';
 import { VisitorDashboardComponent } from './visitor-dashboard/visitor-dashboard.component';
 import { ApproverInboxComponent } from './approver-workflow/approver-inbox.component';
@@ -82,7 +81,7 @@ export const routes: Routes = [
       { path: 'admin/users', component: UserManagementComponent, canActivate: [featureAccessGuard('userManagement')] },
       { path: 'admin/schemes', component: SchemeManagementComponent, canActivate: [featureAccessGuard('schemeManagement')] },
       { path: 'admin/appointment-types', component: AppointmentTypeManagementComponent, canActivate: [featureAccessGuard('appointmentTypes')] },
-      { path: 'hcm/appointments', component: HcmDashboardComponent, canActivate: [roleGuard('SUPER_ADMIN', 'HCM', 'APPROVER', 'ADMIN')] },
+      { path: 'hcm/appointments', redirectTo: 'dashboard', pathMatch: 'full' },
     ]
   },
   { path: '**', redirectTo: '' }

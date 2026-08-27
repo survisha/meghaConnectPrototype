@@ -425,8 +425,8 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     if (widget.reportMode == 'completed') return status == 'COMPLETED';
     if (widget.reportMode == 'rejected') return status == 'REJECTED';
     if (widget.reportMode == 'closed') return status == 'CLOSED';
-    final appointmentType = _text(row['appointmentType']).toUpperCase();
-    final walkIn = appointmentType.contains('WALK');
+    final appointmentSource = _text(row['appointmentSource']).toUpperCase();
+    final walkIn = appointmentSource == 'WALKIN';
     return widget.walkInOnly
         ? walkIn && (status == 'PENDING' || status == 'PENDING_REQUEST')
         : !walkIn &&

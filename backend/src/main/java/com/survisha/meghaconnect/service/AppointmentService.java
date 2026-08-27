@@ -187,15 +187,7 @@ public class AppointmentService {
         Specification<Appointment> spec = (root, query, cb) -> {
             javax.persistence.criteria.Predicate predicate = root.get("status").in(KNOWN_APPOINTMENT_STATUSES);
             if (!statuses.isEmpty()) {
-                javax.persistence.criteria.Predicate statusPredicate = root.get("status").in(statuses);
-                javax.persistence.criteria.Predicate walkInSourcePredicate =
-                        cb.equal(cb.upper(root.get("appointmentSource")), "WALKIN");
-                if ("WALKIN".equals(sourceValue)) {
-                    statusPredicate = cb.conjunction();
-                } else if (sourceValue == null) {
-                    statusPredicate = cb.or(statusPredicate, walkInSourcePredicate);
-                }
-                predicate = cb.and(predicate, statusPredicate);
+                predicate = cb.and(predicate, root.get("status").in(statuses));
             }
             if (sourceValue != null) {
                 predicate = cb.and(predicate, cb.equal(cb.upper(root.get("appointmentSource")), sourceValue));
@@ -230,8 +222,8 @@ public class AppointmentService {
             javax.persistence.criteria.Predicate predicate,
             String appointmentType) {
         if (appointmentType == null) return predicate;
-        javax.persistence.criteria.Expression<String> type = cb.lower(root.get("appointmentType"));
-        javax.persistence.criteria.Predicate walkIn = cb.like(type, "%walk-in%");
+        javax.persistence.criteria.Predicate walkIn =
+                cb.equal(cb.upper(root.get("appointmentSource")), "WALKIN");
         return cb.and(predicate, "WALKIN".equals(appointmentType) ? walkIn : cb.not(walkIn));
     }
 

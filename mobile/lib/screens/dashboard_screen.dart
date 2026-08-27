@@ -4,7 +4,6 @@ import '../models/user.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
 import '../services/navigation_service.dart';
-import 'hcm_dashboard_screen.dart';
 
 class _Kpi {
   final String label;
@@ -62,7 +61,7 @@ final _allQuickActions = <_QuickAction>[
       'New Appointment',
       Icons.add_circle_outline,
       'new_appointment',
-      Color(0xFF1A237E),
+      Color(0xFF2E7D32),
       [UserRole.ADMIN, UserRole.APPROVER, UserRole.DEO, UserRole.HCM]),
   const _QuickAction('Walk-in Counter', Icons.login_outlined, 'walkin',
       Color(0xFF2E7D32), [UserRole.ADMIN, UserRole.APPROVER, UserRole.DEO]),
@@ -127,10 +126,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
     final role = auth.user!.role;
-    if (role == UserRole.HCM || role == UserRole.APPROVER) {
-      return const HcmDashboardScreen();
-    }
-
     final kpis = _allKpis.where((k) => k.roles.contains(role)).toList();
     final actions =
         _allQuickActions.where((a) => a.roles.contains(role)).toList();

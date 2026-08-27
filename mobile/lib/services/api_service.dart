@@ -1512,8 +1512,8 @@ class ApiService {
 
   static Future<Map<String, dynamic>?> rejectPendingAppointment(
       int id, String reason) async {
-    return _appointmentJsonPut('/appointments/$id/reject',
-        {'rejectReason': reason}, 'rejectPendingAppointment');
+    return _appointmentJsonPost('/appointments/approver/$id/reject',
+        {'reason': reason}, 'rejectPendingAppointment');
   }
 
   static Future<Map<String, dynamic>?> routePendingAppointment(int id,
@@ -1550,9 +1550,9 @@ class ApiService {
     int id, {
     String? remarks,
   }) async {
-    return _appointmentJsonPut(
-      '/appointments/$id/reject',
-      {'remarks': remarks},
+    return _appointmentJsonPost(
+      '/appointments/approver/$id/reject',
+      {'reason': remarks},
       'rejectAppointment',
     );
   }
@@ -1720,6 +1720,31 @@ class ApiService {
         ..removeWhere((_, value) => value == null);
       final resp = await http
           .put(
+            _u(path),
+            headers: headers,
+            body: jsonEncode(sanitized),
+          )
+          .timeout(const Duration(seconds: 20));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        return _unwrapObject(jsonDecode(resp.body));
+      }
+    } catch (error, stackTrace) {
+      _logError(action, error, stackTrace);
+    }
+    return null;
+  }
+
+  static Future<Map<String, dynamic>?> _appointmentJsonPost(
+    String path,
+    Map<String, dynamic> body,
+    String action,
+  ) async {
+    try {
+      final headers = await _headers();
+      final sanitized = Map<String, dynamic>.from(body)
+        ..removeWhere((_, value) => value == null);
+      final resp = await http
+          .post(
             _u(path),
             headers: headers,
             body: jsonEncode(sanitized),

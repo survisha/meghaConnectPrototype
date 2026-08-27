@@ -66,10 +66,15 @@
 
     <!-- Main -->
     <main class="main-content" id="shell_mainContent">
+      <div class="shell-back-row" *ngIf="showDashboardBack">
+        <a mat-icon-button routerLink="/dashboard" aria-label="Back to Dashboard" title="Back to Dashboard">
+          <mat-icon>arrow_back</mat-icon>
+        </a>
+        <span>Back to Dashboard</span>
+      </div>
       <div class="page-content">
         <router-outlet></router-outlet>
       </div>
-      <app-footer></app-footer>
     </main>
   </div>
 </div>

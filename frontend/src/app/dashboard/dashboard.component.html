@@ -104,7 +104,7 @@
       <span>Quick Actions</span>
     </div>
     <div class="section-card-body" style="display:flex;gap:0.75rem;flex-wrap:wrap">
-      <button mat-raised-button *ngFor="let a of quickActions; let i = index" [id]="'dashboard_quickAction_' + i" [routerLink]="a.route"
+      <button mat-raised-button *ngFor="let a of quickActions; let i = index" [id]="'dashboard_quickAction_' + i" [routerLink]="a.route" [queryParams]="a.queryParams || null"
         [color]="a.severity === 'success' ? 'primary' : a.severity === 'warning' ? 'accent' : undefined"
         style="min-width: 180px;">
         <mat-icon style="margin-right: 0.5rem;">{{a.matIcon}}</mat-icon>

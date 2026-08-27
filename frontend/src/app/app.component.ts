@@ -4,11 +4,12 @@ import { RouterOutlet } from '@angular/router';
 import { LanguageService } from './i18n/language.service';
 import { BrandLogoComponent } from './shared/brand-logo/brand-logo.component';
 import { ToastComponent } from './shared/toast/toast.component';
+import { AppFooterComponent } from './shared/app-footer/app-footer.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, BrandLogoComponent, ToastComponent],
+  imports: [CommonModule, RouterOutlet, BrandLogoComponent, ToastComponent, AppFooterComponent],
   template: `
     <app-toast></app-toast>
     <div *ngIf="showWelcome" class="welcome-screen">
@@ -18,7 +19,10 @@ import { ToastComponent } from './shared/toast/toast.component';
       <div *ngIf="welcomeLoading" class="welcome-spinner" aria-label="Loading"></div>
       
     </div>
-    <router-outlet *ngIf="!showWelcome"></router-outlet>
+    <div class="application-layout" *ngIf="!showWelcome">
+      <main class="application-content"><router-outlet></router-outlet></main>
+      <app-footer></app-footer>
+    </div>
   `,
   styles: [`
     .welcome-screen {
@@ -37,6 +41,8 @@ import { ToastComponent } from './shared/toast/toast.component';
       text-align: center;
       overflow: hidden;
     }
+    .application-layout { min-height: 100vh; display: flex; flex-direction: column; }
+    .application-content { flex: 1 1 auto; min-width: 0; }
     .welcome-top {
       display: flex;
       flex-direction: column;

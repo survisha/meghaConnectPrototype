@@ -164,7 +164,7 @@ export class AppointmentService {
       .pipe(map(res => this.normalizePage(res)));
   }
 
-  getAllAppointments(page = 0, size = 20, status?: string, options?: { source?: string; appointmentType?: 'NORMAL' | 'WALKIN'; referredOffice?: string; sort?: string }): Observable<AppointmentPage> {
+  getAllAppointments(page = 0, size = 20, status?: string, options?: { source?: string; appointmentType?: 'APPOINTMENT' | 'WALKIN' | 'B2 Walk-in'; referredOffice?: string; sort?: string }): Observable<AppointmentPage> {
     let params = new HttpParams()
       .set('page', page.toString())
       .set('size', size.toString());
@@ -268,8 +268,13 @@ export class AppointmentService {
   }
 
   updateStatus(id: number, status: string, remarks?: string): Observable<Appointment> {
-    return this.http.patch<unknown>(`${this.baseUrl}/${id}/status`, { status, remarks })
+    const body = status === 'REJECTED' ? { status, remarks, rejectionReason: remarks } : { status, remarks };
+    return this.http.patch<unknown>(`${this.baseUrl}/${id}/status`, body)
       .pipe(map(res => this.normalizeAppointment(this.unwrapData(res))));
+  }
+
+  completeAppointment(id: number): Observable<Appointment> {
+    return this.updateStatus(id, 'COMPLETED');
   }
 
   assignAppointmentsToEvent(eventId: number, appointmentIds: number[], remarks = 'Scheduled'): Observable<ScheduleEvent> {

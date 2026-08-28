@@ -60,6 +60,9 @@ import java.util.LinkedHashSet;
 @Slf4j
 public class AppointmentService {
 
+    private static final String WALK_IN_APPOINTMENT_TYPE = "B2 Walk-in";
+    private static final String STANDARD_APPOINTMENT_TYPE = "APPOINTMENT";
+
     private static final List<Appointment.AppointmentStatus> DEO_VISIBLE_STATUSES = Arrays.asList(
         Appointment.AppointmentStatus.PENDING,
         Appointment.AppointmentStatus.PENDING_REQUEST,
@@ -208,10 +211,11 @@ public class AppointmentService {
     private String normalizeAppointmentTypeFilter(String appointmentType) {
         String value = trimToNull(appointmentType);
         if (value == null) return null;
-        value = value.toUpperCase(Locale.ROOT);
-        if (!"NORMAL".equals(value) && !"WALKIN".equals(value)) {
+        if (WALK_IN_APPOINTMENT_TYPE.equalsIgnoreCase(value) || "WALKIN".equalsIgnoreCase(value)) return "WALKIN";
+        if (STANDARD_APPOINTMENT_TYPE.equalsIgnoreCase(value)) return STANDARD_APPOINTMENT_TYPE;
+        if (!STANDARD_APPOINTMENT_TYPE.equals(value) && !"WALKIN".equals(value)) {
             throw new MeghaConnectException("INVALID_APPOINTMENT_TYPE_FILTER",
-                    "appointmentType must be NORMAL or WALKIN", 400);
+                    "appointmentType must be APPOINTMENT, WALKIN, or B2 Walk-in", 400);
         }
         return value;
     }
@@ -223,8 +227,15 @@ public class AppointmentService {
             String appointmentType) {
         if (appointmentType == null) return predicate;
         javax.persistence.criteria.Predicate walkIn =
-                cb.equal(cb.upper(root.get("appointmentSource")), "WALKIN");
-        return cb.and(predicate, "WALKIN".equals(appointmentType) ? walkIn : cb.not(walkIn));
+                cb.equal(cb.upper(root.get("appointmentType")), "B2 WALK-IN");
+        if ("WALKIN".equals(appointmentType)) {
+            return cb.and(predicate, walkIn);
+        }
+        // Include historical normal appointments whose type predates the canonical APPOINTMENT value.
+        javax.persistence.criteria.Predicate standardAppointment = cb.or(
+                cb.equal(cb.upper(root.get("appointmentType")), STANDARD_APPOINTMENT_TYPE),
+                cb.isNull(root.get("appointmentType")));
+        return cb.and(predicate, standardAppointment);
     }
 
     public Optional<Appointment> findById(Long id) {
@@ -510,12 +521,9 @@ public class AppointmentService {
         Appointment appointment = appointmentRepository.findById(id)
             .orElseThrow(() -> new AppointmentNotFoundException(id));
         Appointment.AppointmentStatus oldStatus = appointment.getStatus();
-        if (oldStatus == Appointment.AppointmentStatus.CLOSED || oldStatus == Appointment.AppointmentStatus.REJECTED) {
-            throw new IllegalStateException("Missing information cannot be requested for a final appointment.");
-        }
-        if (oldStatus != Appointment.AppointmentStatus.PENDING_REQUEST) {
-            lifecycleService.transition(appointment, Appointment.AppointmentStatus.PENDING_REQUEST);
-        }
+        if (!lifecycleService.canRequestMissingInformation(oldStatus))
+            throw new IllegalStateException("Missing information can only be requested for an active appointment.");
+        lifecycleService.transition(appointment, Appointment.AppointmentStatus.PENDING_REQUEST);
         appointment.setRequiredInformation(trimToNull(remarks));
         appointment.setUpdatedBy(actor);
         Appointment saved = appointmentRepository.save(appointment);
@@ -565,7 +573,8 @@ public class AppointmentService {
             .eventType(dto.getEventType())
             .subject(dto.getSubject())
             .department(dto.getDepartment())
-            .appointmentType(dto.getAppointmentType())
+            .appointmentType(Boolean.TRUE.equals(dto.getIsWalkIn())
+                ? WALK_IN_APPOINTMENT_TYPE : STANDARD_APPOINTMENT_TYPE)
             .appointmentCategory(Boolean.TRUE.equals(dto.getIsWalkIn())
                 ? Appointment.AppointmentCategory.WALK_IN
                 : Appointment.AppointmentCategory.SCHEDULED)
@@ -633,7 +642,7 @@ public class AppointmentService {
             .agendaType(agendaTypeValue)
             .agendaBrief(safeForm.getAgendaBrief())
             .appointmentSource(walkIn ? "WALKIN" : "CITIZEN")
-            .appointmentType(walkIn ? "B2 Walk-in" : null)
+            .appointmentType(walkIn ? WALK_IN_APPOINTMENT_TYPE : STANDARD_APPOINTMENT_TYPE)
             .appointmentCategory(walkIn
                 ? Appointment.AppointmentCategory.WALK_IN
                 : Appointment.AppointmentCategory.SCHEDULED)
@@ -781,6 +790,9 @@ public class AppointmentService {
             .meetingOutcome(appointment.getMeetingOutcome())
             .completedAt(appointment.getCompletedAt())
             .completedBy(appointment.getCompletedBy())
+            .rejectedAt(appointment.getRejectedAt())
+            .rejectedBy(appointment.getRejectedBy())
+            .rejectionReason(appointment.getRejectionReason())
             .scheduledBy(appointment.getScheduledBy())
             .scheduledAt(appointment.getScheduledAt())
             .rescheduledBy(appointment.getRescheduledBy())
@@ -839,22 +851,36 @@ public class AppointmentService {
 
     @Transactional
     public Appointment updateStatus(Long id, Map<String, String> body, String updatedBy) {
+        return updateStatus(id, body, updatedBy, "API");
+    }
+
+    @Transactional
+    public Appointment updateStatus(Long id, Map<String, String> body, String updatedBy, String actorRole) {
         Appointment.AppointmentStatus status = validationService.requireEnum(
                 body != null ? body.get(ValidationConstants.FIELD_STATUS) : null,
                 Appointment.AppointmentStatus.class,
                 ValidationConstants.FIELD_STATUS
         );
-        String remarks = body != null ? body.get("remarks") : null;
-        return updateStatus(id, status, remarks, updatedBy);
+        String remarks = body != null ? firstNonBlank(body.get("rejectionReason"), body.get("reason"), body.get("remarks")) : null;
+        return updateStatus(id, status, remarks, updatedBy, actorRole);
     }
 
     @Transactional
     public Appointment updateStatus(Long id, Appointment.AppointmentStatus newStatus,
                                     String remarks, String updatedBy) {
+        return updateStatus(id, newStatus, remarks, updatedBy, "API");
+    }
+
+    @Transactional
+    public Appointment updateStatus(Long id, Appointment.AppointmentStatus newStatus,
+                                    String remarks, String updatedBy, String actorRole) {
         Appointment appt = appointmentRepository.findById(id)
             .orElseThrow(() -> new AppointmentNotFoundException(id));
 
         Appointment.AppointmentStatus oldStatus = appt.getStatus();
+        if (newStatus == Appointment.AppointmentStatus.COMPLETED && !lifecycleService.canComplete(appt)) {
+            throw new IllegalStateException("Appointment cannot be completed from status " + oldStatus + ".");
+        }
         if (appt.getAppointmentCategory() == Appointment.AppointmentCategory.SCHEDULED
                 || appt.getAppointmentCategory() == Appointment.AppointmentCategory.WALK_IN) {
             lifecycleService.transition(appt, newStatus);
@@ -869,11 +895,21 @@ public class AppointmentService {
                 appt.setApproverRemarks(remarks);
             }
         }
+        LocalDateTime changedAt = DateTimeUtil.nowIST();
+        if (newStatus == Appointment.AppointmentStatus.REJECTED) {
+            String rejectionReason = validationService.requireText(remarks, "rejectionReason");
+            appt.setRejectedAt(changedAt);
+            appt.setRejectedBy(updatedBy);
+            appt.setRejectionReason(rejectionReason);
+        } else if (newStatus == Appointment.AppointmentStatus.COMPLETED) {
+            appt.setCompletedAt(changedAt);
+            appt.setCompletedBy(updatedBy);
+        }
         appt.setUpdatedBy(updatedBy);
 
         Appointment saved = appointmentRepository.save(appt);
         appointmentAuditService.recordStatusChange(saved, oldStatus, newStatus, "STATUS_CHANGE",
-            remarks, updatedBy, "API");
+            remarks, updatedBy, actorRole);
         generateQrIfApproved(saved, updatedBy);
         auditLogService.log("Appointment", saved.getId(), "STATUS_CHANGE",
             "Status: " + oldStatus + " → " + newStatus, updatedBy);

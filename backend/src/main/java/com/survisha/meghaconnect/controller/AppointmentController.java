@@ -349,9 +349,9 @@ public class AppointmentController {
     public ResponseEntity<AppointmentDto> updateStatus(
             @PathVariable Long id,
             @RequestBody Map<String, String> body,
-            @AuthenticationPrincipal UserDetails user) {
+            Authentication authentication) {
         logEndpoint("/api/v1/appointments/{id}/status");
-        return ResponseEntity.ok(appointmentService.toDto(appointmentService.updateStatus(id, body, user.getUsername())));
+        return ResponseEntity.ok(appointmentService.toDto(appointmentService.updateStatus(id, body, actor(authentication), role(authentication))));
     }
 
     @PutMapping("/{id}/status")
@@ -359,9 +359,9 @@ public class AppointmentController {
     public ResponseEntity<AppointmentDto> putStatus(
             @PathVariable Long id,
             @RequestBody Map<String, String> body,
-            @AuthenticationPrincipal UserDetails user) {
+            Authentication authentication) {
         logEndpoint("/api/v1/appointments/{id}/status");
-        return ResponseEntity.ok(appointmentService.toDto(appointmentService.updateStatus(id, body, user.getUsername())));
+        return ResponseEntity.ok(appointmentService.toDto(appointmentService.updateStatus(id, body, actor(authentication), role(authentication))));
     }
 
     @Operation(summary = "Submit CMO review", description = "Persist CMO category/location review, missing information note, and forwarding status")

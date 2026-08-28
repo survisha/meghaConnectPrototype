@@ -20,7 +20,7 @@ class AppointmentLifecycleServiceTest {
                 Appointment.AppointmentStatus.ROUTED_TO_OFFICIAL);
         assertAllowed(Appointment.AppointmentCategory.SCHEDULED, Appointment.AppointmentStatus.PENDING,
                 Appointment.AppointmentStatus.PENDING_REQUEST);
-        assertAllowed(Appointment.AppointmentCategory.SCHEDULED, Appointment.AppointmentStatus.PENDING,
+        assertRejected(Appointment.AppointmentCategory.SCHEDULED, Appointment.AppointmentStatus.PENDING,
                 Appointment.AppointmentStatus.COMPLETED);
         assertAllowed(Appointment.AppointmentCategory.SCHEDULED, Appointment.AppointmentStatus.PENDING_REQUEST,
                 Appointment.AppointmentStatus.PENDING);
@@ -60,6 +60,20 @@ class AppointmentLifecycleServiceTest {
                 service.initialStatus(Appointment.AppointmentCategory.SCHEDULED));
         assertEquals(Appointment.AppointmentStatus.PENDING,
                 service.initialStatus(Appointment.AppointmentCategory.WALK_IN));
+    }
+
+    @Test
+    void completionAndMissingInformationHelpersUseCurrentStatusMatrix() {
+        Appointment walkIn = Appointment.builder().appointmentCategory(Appointment.AppointmentCategory.WALK_IN)
+                .appointmentType("B2 Walk-in").status(Appointment.AppointmentStatus.PENDING).build();
+        Appointment scheduled = Appointment.builder().appointmentCategory(Appointment.AppointmentCategory.SCHEDULED)
+                .appointmentType("A1 Appointment").status(Appointment.AppointmentStatus.SCHEDULED).build();
+        assertEquals(true, service.canComplete(walkIn));
+        assertEquals(true, service.canComplete(scheduled));
+        scheduled.setStatus(Appointment.AppointmentStatus.PENDING);
+        assertEquals(false, service.canComplete(scheduled));
+        assertEquals(true, service.canRequestMissingInformation(Appointment.AppointmentStatus.RESCHEDULED));
+        assertEquals(false, service.canRequestMissingInformation(Appointment.AppointmentStatus.COMPLETED));
     }
 
     private void assertAllowed(Appointment.AppointmentCategory category,

@@ -64,6 +64,9 @@ public class AppointmentDto {
     private String meetingOutcome;
     private LocalDateTime completedAt;
     private String completedBy;
+    private LocalDateTime rejectedAt;
+    private String rejectedBy;
+    private String rejectionReason;
     private String closedBy;
     private LocalDateTime closedAt;
     private String finalRemarks;

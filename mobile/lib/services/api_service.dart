@@ -1479,7 +1479,10 @@ class ApiService {
     try {
       final headers = await _headers();
       final body = <String, dynamic>{'status': status};
-      if (remarks != null) body['remarks'] = remarks;
+      if (remarks != null) {
+        body['remarks'] = remarks;
+        if (status == 'REJECTED') body['rejectionReason'] = remarks;
+      }
       final resp = await http
           .patch(
             _u('/appointments/$id/status'),

@@ -415,7 +415,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
       status: widget.walkInOnly
           ? 'PENDING,PENDING_REQUEST'
           : 'PENDING,PENDING_REQUEST,SCHEDULED,RESCHEDULED',
-      appointmentType: widget.walkInOnly ? 'WALKIN' : 'NORMAL',
+      appointmentType: widget.walkInOnly ? 'B2 Walk-in' : 'APPOINTMENT',
       sort: 'createdAt,desc',
     );
   }
@@ -425,8 +425,8 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     if (widget.reportMode == 'completed') return status == 'COMPLETED';
     if (widget.reportMode == 'rejected') return status == 'REJECTED';
     if (widget.reportMode == 'closed') return status == 'CLOSED';
-    final appointmentSource = _text(row['appointmentSource']).toUpperCase();
-    final walkIn = appointmentSource == 'WALKIN';
+    final appointmentType = _text(row['appointmentType']).toUpperCase();
+    final walkIn = appointmentType == 'B2 WALK-IN';
     return widget.walkInOnly
         ? walkIn && (status == 'PENDING' || status == 'PENDING_REQUEST')
         : !walkIn &&
@@ -1672,6 +1672,13 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
           icon: Icons.assignment_late_outlined,
           onPressed: _sendMissingInfo));
     }
+    if (_canComplete(role)) {
+      actions.add(_ActionButton(
+          label: 'Complete',
+          icon: Icons.task_alt_outlined,
+          color: const Color(0xFF15803D),
+          onPressed: _completeAppointment));
+    }
     if (widget.reportMode == 'completed' &&
         [UserRole.DEO, UserRole.APPROVER, UserRole.HCM].contains(role)) {
       actions.add(_ActionButton(
@@ -1845,6 +1852,21 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
       return;
     }
     _showMessage('Appointment closed successfully.');
+    Navigator.pop(context, true);
+  }
+
+  Future<void> _completeAppointment() async {
+    final id = widget.appointment.backendId;
+    if (id == null) return;
+    setState(() => _saving = true);
+    final result = await ApiService.updateAppointmentStatus(id, 'COMPLETED');
+    if (!mounted) return;
+    setState(() => _saving = false);
+    if (result == null) {
+      _showMessage('Unable to complete appointment.');
+      return;
+    }
+    _showMessage('Appointment completed successfully.');
     Navigator.pop(context, true);
   }
 
@@ -2227,7 +2249,16 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
 
   bool _canRequestMissingInfo(UserRole role) =>
       [UserRole.HCM, UserRole.APPROVER].contains(role) &&
-      !['CLOSED', 'REJECTED'].contains(widget.appointment.status);
+      const {'PENDING', 'SCHEDULED', 'RESCHEDULED'}
+          .contains(widget.appointment.status);
+
+  bool _canComplete(UserRole role) {
+    if (![UserRole.HCM, UserRole.APPROVER].contains(role)) return false;
+    return widget.appointment.isWalkIn
+        ? widget.appointment.status == 'PENDING'
+        : const {'SCHEDULED', 'RESCHEDULED'}
+            .contains(widget.appointment.status);
+  }
 
   bool _canUseJtSecForwarding(UserRole role) =>
       [UserRole.HCM, UserRole.ADMIN, UserRole.APPROVER].contains(role);

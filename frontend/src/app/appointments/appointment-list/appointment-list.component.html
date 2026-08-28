@@ -184,7 +184,7 @@
               </button>
             </th>
             <td mat-cell *matCellDef="let appt">
-              <span class="event-badge">{{ appt.appointmentType || '—' }}</span>
+              <span class="event-badge">{{ appt.appointmentSource || '—' }}</span>
             </td>
           </ng-container>
 
@@ -862,8 +862,9 @@
 
       </div>
 
-      <div class="details-action-buttons cmo-action-buttons" *ngIf="canUseCmoActions(appointment)">
+      <div class="details-action-buttons cmo-action-buttons" *ngIf="canUseCmoActions(appointment) || canRequestMissingInformation(appointment) || canComplete(appointment)">
         <button mat-icon-button
+                *ngIf="canRequestMissingInformation(appointment)"
                 type="button"
                 class="cmo-info-action"
                 [disabled]="cmoActionUpdating"
@@ -871,6 +872,14 @@
                 matTooltip="Request missing information"
                 matTooltipPosition="above">
           <mat-icon>assignment_late</mat-icon>
+        </button>
+
+        <button mat-flat-button color="primary" type="button"
+                *ngIf="canComplete(appointment)"
+                [disabled]="actionUpdating"
+                (click)="completeAppointment(appointment)">
+          <mat-icon>task_alt</mat-icon>
+          Complete
         </button>
 
         <button mat-icon-button

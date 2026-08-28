@@ -338,7 +338,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
       size,
       status,
       {
-      appointmentType: this.listMode === 'walkin' ? 'WALKIN' : this.listMode === 'appointments' ? 'NORMAL' : undefined,
+      appointmentType: this.listMode === 'walkin' ? 'B2 Walk-in' : this.listMode === 'appointments' ? 'APPOINTMENT' : undefined,
       sort: 'createdAt,desc',
     });
   }
@@ -468,7 +468,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
       case 'agenda':
         return appointment.agendaType || appointment.subject || '';
       case 'appointmentSource':
-        return appointment.appointmentType || '';
+        return appointment.appointmentSource || '';
       case 'location':
         return appointment.requestedLocation || '';
       case 'status':
@@ -857,6 +857,37 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
       this.cmoQueueStatuses.has(appointment.status);
   }
 
+  isWalkIn(appointment: Appointment | null) {
+    return !!appointment && (appointment.appointmentType || '').trim().toLowerCase() === 'b2 walk-in';
+  }
+
+  canRequestMissingInformation(appointment: Appointment | null) {
+    return !!appointment && this.auth.hasRole('APPROVER', 'HCM') &&
+      ['PENDING', 'SCHEDULED', 'RESCHEDULED'].includes(appointment.status);
+  }
+
+  canComplete(appointment: Appointment | null) {
+    if (!appointment || !this.auth.hasRole('APPROVER', 'HCM')) return false;
+    return this.isWalkIn(appointment)
+      ? appointment.status === 'PENDING'
+      : ['SCHEDULED', 'RESCHEDULED'].includes(appointment.status);
+  }
+
+  completeAppointment(appointment: Appointment) {
+    if (!this.canComplete(appointment) || this.actionUpdating) return;
+    this.actionUpdating = true;
+    this.appointmentService.completeAppointment(appointment.id)
+      .pipe(finalize(() => this.actionUpdating = false))
+      .subscribe({
+        next: updated => {
+          this.selectedAppointment = updated;
+          this.replaceAppointment(updated);
+          this.snackBar.open('Appointment completed.', 'Close', { duration: 4000, panelClass: ['success-snackbar'] });
+        },
+        error: error => this.snackBar.open(apiErrorMessage(error, 'Unable to complete appointment.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] })
+      });
+  }
+
   openCmoModify(appointment: Appointment) {
     if (!this.canUseCmoActions(appointment)) return;
     this.selectedAppointment = appointment;
@@ -875,7 +906,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   }
 
   openCmoMissingInfo(appointment: Appointment) {
-    if (!this.canUseCmoActions(appointment)) return;
+    if (!this.canRequestMissingInformation(appointment)) return;
     this.selectedAppointment = appointment;
     this.cmoMissingInfoNote = appointment.cmoRemarks ?? '';
     this.cmoMissingInfoDialogRef = this.dialog.open(this.cmoMissingInfoDialog, {
@@ -921,7 +952,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
 
   sendCmoMissingInfoNote() {
     const note = this.cmoMissingInfoNote.trim();
-    if (!this.selectedAppointment || !this.canUseCmoActions(this.selectedAppointment)) return;
+    if (!this.selectedAppointment || !this.canRequestMissingInformation(this.selectedAppointment)) return;
     const appointment = this.selectedAppointment;
     this.cmoActionUpdating = true;
     this.appointmentService.requestMissingInformation(appointment.id, note)

@@ -20,7 +20,6 @@ public class AppointmentLifecycleService {
                     transition(Appointment.AppointmentStatus.PENDING,
                             Appointment.AppointmentStatus.SCHEDULED,
                             Appointment.AppointmentStatus.PENDING_REQUEST,
-                            Appointment.AppointmentStatus.COMPLETED,
                             Appointment.AppointmentStatus.REJECTED,
                             Appointment.AppointmentStatus.ROUTED_TO_OFFICIAL),
                     transition(Appointment.AppointmentStatus.PENDING_REQUEST,
@@ -86,6 +85,25 @@ public class AppointmentLifecycleService {
             throw new IllegalArgumentException("A scheduled or walk-in category is required.");
         }
         return Appointment.AppointmentStatus.PENDING;
+    }
+
+    public boolean isWalkIn(Appointment appointment) {
+        return appointment != null && (appointment.getAppointmentCategory() == Appointment.AppointmentCategory.WALK_IN
+                || "B2 Walk-in".equalsIgnoreCase(appointment.getAppointmentType()));
+    }
+
+    public boolean canRequestMissingInformation(Appointment.AppointmentStatus status) {
+        return status == Appointment.AppointmentStatus.PENDING
+                || status == Appointment.AppointmentStatus.SCHEDULED
+                || status == Appointment.AppointmentStatus.RESCHEDULED;
+    }
+
+    public boolean canComplete(Appointment appointment) {
+        if (appointment == null) return false;
+        return isWalkIn(appointment)
+                ? appointment.getStatus() == Appointment.AppointmentStatus.PENDING
+                : appointment.getStatus() == Appointment.AppointmentStatus.SCHEDULED
+                    || appointment.getStatus() == Appointment.AppointmentStatus.RESCHEDULED;
     }
 
     @SafeVarargs

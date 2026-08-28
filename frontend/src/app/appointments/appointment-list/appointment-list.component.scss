@@ -76,13 +76,29 @@
 
 .actions-header,
 .actions-cell {
-  width: 56px;
+  width: 104px;
+  min-width: 104px;
   text-align: center;
   white-space: nowrap;
 }
 
-.actions-cell button {
-  margin: 0 2px;
+.row-action-buttons {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 100px;
+  overflow: visible;
+}
+
+.row-action-buttons button {
+  flex: 0 0 48px;
+  margin: 0;
+}
+
+.row-action-buttons mat-icon {
+  display: block;
+  overflow: visible;
 }
 
 .sort-header-button {

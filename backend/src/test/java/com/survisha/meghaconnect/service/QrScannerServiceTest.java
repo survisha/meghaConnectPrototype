@@ -84,6 +84,38 @@ class QrScannerServiceTest {
     }
 
     @Test
+    void validateAllowsDeoToLoadAuthorizedQrDetails() {
+        AppointmentQrToken token = activeToken();
+        when(appointmentQrTokenRepository.findByTokenHashForUpdate(eq("hashed-token"), anyCollection(), anyCollection()))
+                .thenReturn(Optional.of(token));
+
+        QrValidationResponse response = qrScannerService.validate(
+                request(),
+                "deo1",
+                "ROLE_DEO",
+                "10.0.0.1",
+                "meghaconnect-mobile-deo1"
+        );
+
+        assertTrue(response.isValid());
+        assertEquals(101L, response.getAppointmentId());
+        assertEquals(501L, response.getVisitorId());
+        verify(qrScanAuditService).record(
+                eq("hashed-token"),
+                eq(101L),
+                eq(501L),
+                eq("deo1"),
+                eq("device-1"),
+                eq("Main Gate"),
+                eq(QrScanAuditLog.ScanAction.VALIDATE),
+                eq(QrScanAuditLog.ScanStatus.SUCCESS),
+                isNull(),
+                eq("10.0.0.1"),
+                eq("meghaconnect-mobile-deo1")
+        );
+    }
+
+    @Test
     void validateRejectsExpiredQrAndMarksTokenExpired() {
         AppointmentQrToken token = activeToken();
         token.setValidTo(DateTimeUtil.nowIST().minusMinutes(1));

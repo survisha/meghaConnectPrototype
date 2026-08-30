@@ -397,7 +397,7 @@ public class QrScannerService {
     }
 
     private void ensureScannerRole(String actorRole) {
-        if (!hasRole(actorRole, "SECURITY", "ADMIN")) {
+        if (!hasRole(actorRole, "DEO", "SECURITY", "ADMIN")) {
             throw qrException(
                     ErrorCodeConstants.INSUFFICIENT_PERMISSIONS,
                     ErrorCodeConstants.INSUFFICIENT_PERMISSIONS_MSG,

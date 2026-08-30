@@ -13,7 +13,7 @@ export const canReturnToPending = (a: Appointment | null): boolean =>
   !!a && a.status === 'SCHEDULED';
 
 export const canScheduleOrReschedule = (a: Appointment | null): boolean =>
-  isScheduledAppointment(a) && !!a && ['PENDING', 'SCHEDULED'].includes(a.status);
+  isScheduledAppointment(a) && !!a && ['PENDING', 'SCHEDULED', 'RESCHEDULED'].includes(a.status);
 
 export const isLiveWalkIn = (a: Appointment | null): boolean =>
   isWalkInAppointment(a) && a?.status === 'PENDING';

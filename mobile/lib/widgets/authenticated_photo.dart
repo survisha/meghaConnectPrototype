@@ -22,7 +22,7 @@ class AuthenticatedPhoto extends StatelessWidget {
   Widget build(BuildContext context) {
     final resolved = resolvePhotoUrl(source);
     if (resolved == null) return fallback;
-    if (resolved.startsWith('data:image/')) {
+    if (resolved.toLowerCase().startsWith('data:image/')) {
       final bytes = _decodeDataUrl(resolved);
       return bytes == null
           ? fallback

@@ -144,15 +144,10 @@ public class HcmActionService {
         if (departmentCode != null) {
             appointment.setDepartment(departmentName != null ? departmentName : departmentCode);
         }
-        appointment.setStatus(Appointment.AppointmentStatus.COMPLETED);
-        if (oldStatus != Appointment.AppointmentStatus.COMPLETED) {
-            appointment.setCompletedBy(actor);
-            appointment.setCompletedAt(DateTimeUtil.nowIST());
-        }
         appointment.setUpdatedBy(actor);
         appointmentRepository.save(appointment);
         appointmentAuditService.recordStatusChange(appointment, oldStatus,
-            Appointment.AppointmentStatus.COMPLETED,
+            oldStatus,
             isRemarkType(decision) ? decision : "REMARK_ADDED", remarks, actor, actorRole);
         auditLogService.log("Appointment", appointmentId, "REMARK_ADDED",
             actorRole + " remarks added" + (departmentCode != null ? " and forwarded to " + (departmentName != null ? departmentName : departmentCode) : ""),

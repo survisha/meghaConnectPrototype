@@ -872,7 +872,7 @@
 
       </div>
 
-      <div class="details-action-buttons cmo-action-buttons" *ngIf="canUseCmoActions(appointment) || canRequestMissingInformation(appointment) || canComplete(appointment)">
+      <div class="details-action-buttons cmo-action-buttons" *ngIf="canRequestMissingInformation(appointment) || canComplete(appointment)">
         <button mat-icon-button
                 *ngIf="canRequestMissingInformation(appointment)"
                 type="button"
@@ -892,25 +892,6 @@
           Complete
         </button>
 
-        <button mat-icon-button
-                type="button"
-                class="cmo-edit-action"
-                [disabled]="cmoActionUpdating"
-                (click)="openCmoModify(appointment)"
-                matTooltip="Edit category and location"
-                matTooltipPosition="above">
-          <mat-icon>edit</mat-icon>
-        </button>
-
-        <button mat-icon-button
-                type="button"
-                class="cmo-forward-action"
-                [disabled]="cmoActionUpdating"
-                (click)="forwardToApprover(appointment)"
-                matTooltip="Send to approver"
-                matTooltipPosition="above">
-          <mat-icon>send</mat-icon>
-        </button>
       </div>
     </ng-container>
 
@@ -1041,58 +1022,6 @@
             (click)="confirmReschedule()">
       <mat-icon>event</mat-icon>
       Confirm Schedule
-    </button>
-  </mat-dialog-actions>
-</ng-template>
-
-<ng-template #cmoModifyDialog>
-  <div class="action-dialog-title" mat-dialog-title>
-    <div>
-      <span class="eyebrow">CMO Category</span>
-      <h2>{{ selectedAppointment?.applicationId }}</h2>
-    </div>
-    <button mat-icon-button aria-label="Close CMO category dialog" (click)="closeCmoActionDialog()">
-      <mat-icon>close</mat-icon>
-    </button>
-  </div>
-
-  <mat-dialog-content class="action-dialog-content">
-    <div *ngIf="selectedAppointment" class="dialog-appt-summary">
-      <strong>{{ selectedAppointment.applicant.fullName || selectedAppointment.applicantName || '—' }}</strong>
-      <span>{{ selectedAppointment.agendaBrief || 'No description provided.' }}</span>
-    </div>
-
-    <div class="cmo-form-grid">
-      <mat-form-field appearance="outline">
-        <mat-label>Appointment Category</mat-label>
-        <mat-select [(ngModel)]="cmoModifyEventType">
-          <mat-option *ngFor="let opt of cmoEventTypeOptions" [value]="opt.value">{{ opt.label }}</mat-option>
-        </mat-select>
-      </mat-form-field>
-
-      <mat-form-field appearance="outline">
-        <mat-label>Location</mat-label>
-        <mat-select [(ngModel)]="cmoModifyLocation">
-          <mat-option *ngFor="let opt of cmoLocationOptions" [value]="opt.value">{{ opt.label }}</mat-option>
-        </mat-select>
-      </mat-form-field>
-
-      <mat-form-field appearance="outline" class="full-width-field">
-        <mat-label>CMO Remarks</mat-label>
-        <textarea matInput [(ngModel)]="cmoModifyRemarks" rows="3" placeholder="Add verification notes or comments"></textarea>
-      </mat-form-field>
-    </div>
-  </mat-dialog-content>
-
-  <mat-dialog-actions align="end" class="action-dialog-actions">
-    <button mat-stroked-button type="button" (click)="closeCmoActionDialog()">Cancel</button>
-    <button mat-raised-button
-            type="button"
-            color="primary"
-            [disabled]="cmoActionUpdating"
-            (click)="saveCmoModify()">
-      <mat-icon>send</mat-icon>
-      Save &amp; Forward
     </button>
   </mat-dialog-actions>
 </ng-template>

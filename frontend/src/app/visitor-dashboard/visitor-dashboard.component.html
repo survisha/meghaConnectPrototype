@@ -318,6 +318,10 @@
         <span>Agenda Brief</span>
         <p>{{ selectedAppointment.agendaBrief || selectedAppointment.subject || '—' }}</p>
       </div>
+      <div class="details-brief" *ngIf="selectedAppointment.status === 'PENDING_REQUEST'">
+        <span>Request for Additional Information</span>
+        <p>{{ selectedAppointment.approverRemarks || selectedAppointment.cmoRemarks || '—' }}</p>
+      </div>
       <div class="details-actions">
         <button
           type="button"

@@ -14,4 +14,17 @@ void main() {
         'https://files.example/photo.jpg');
     expect(resolvePhotoUrl(' '), isNull);
   });
+
+  test('normalizes raw JPEG and PNG base64 as in-memory data images', () {
+    const jpeg = '/9j/4AAQSkZJRgABAQAAAQABAAD/2w==';
+    const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB';
+    expect(resolvePhotoUrl(jpeg), 'data:image/jpeg;base64,$jpeg');
+    expect(resolvePhotoUrl(png), 'data:image/png;base64,$png');
+  });
+
+  test('preserves data image values and treats malformed values as URLs', () {
+    const dataImage = 'data:image/png;base64,iVBORw0KGgo=';
+    expect(resolvePhotoUrl(dataImage), dataImage);
+    expect(resolvePhotoUrl('not-base64'), contains('/not-base64'));
+  });
 }

@@ -8,6 +8,11 @@ class AppRoutes {
   static const guestRegistration = 'guest_registration';
   static const walkIn = 'walkin';
   static const walkInAppointments = 'walkin_appointments';
+  static const completedAppointments = 'completed_appointments';
+  static const rejectedAppointments = 'rejected_appointments';
+  static const closedAppointments = 'closed_appointments';
+  static const registerVisitor = 'register_visitor';
+  static const qrScanner = 'qr_scanner';
   static const calendar = 'calendar';
   static const approver = 'approver';
   static const schemes = 'schemes';
@@ -27,6 +32,11 @@ class AppRoutes {
     guestRegistration,
     walkIn,
     walkInAppointments,
+    completedAppointments,
+    rejectedAppointments,
+    closedAppointments,
+    registerVisitor,
+    qrScanner,
     calendar,
     approver,
     schemes,

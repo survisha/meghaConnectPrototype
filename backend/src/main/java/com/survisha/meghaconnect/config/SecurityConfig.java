@@ -80,8 +80,12 @@ public class SecurityConfig {
                 .requestMatchers(publicEndpoints).permitAll()
                 .antMatchers(
                     "/error",
+                    "/actuator/health",
                     "/actuator/health/**",
                     "/actuator/info",
+                    "/api/actuator/health",
+                    "/api/actuator/health/**",
+                    "/api/actuator/info",
                     "/swagger-ui.html",
                     "/swagger-ui/**",
                     "/v3/api-docs/**",

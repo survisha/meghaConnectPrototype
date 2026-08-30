@@ -29,7 +29,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
-        boolean skip = request.getRequestURI().startsWith("/actuator/") || publicEndpoints.matches(request);
+        String requestUri = request.getRequestURI();
+        String contextPath = request.getContextPath();
+        String applicationPath = contextPath != null && !contextPath.isEmpty() && requestUri.startsWith(contextPath)
+                ? requestUri.substring(contextPath.length()) : requestUri;
+        boolean skip = applicationPath.startsWith("/actuator/") || publicEndpoints.matches(request);
         if (skip) {
             log.debug("[SECURITY] JWT skipped method={} path={} publicEndpoint=true",
                 request.getMethod(), request.getRequestURI());

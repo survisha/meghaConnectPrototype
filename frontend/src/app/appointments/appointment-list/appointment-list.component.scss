@@ -78,14 +78,14 @@
 .actions-cell {
   width: 104px;
   min-width: 104px;
-  text-align: center;
+  text-align: left;
   white-space: nowrap;
 }
 
 .row-action-buttons {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 4px;
   min-width: 100px;
   overflow: visible;
@@ -200,7 +200,9 @@
   }
 
   .mat-column-actions {
-    width: 68px;
+    width: 104px;
+    min-width: 104px;
+    overflow: visible;
   }
 
   td.mat-mdc-cell,
@@ -827,17 +829,6 @@
     border-color: #fde68a;
   }
 
-  .cmo-edit-action {
-    color: #1d4ed8;
-    background: #dbeafe;
-    border-color: #bfdbfe;
-  }
-
-  .cmo-forward-action {
-    color: #047857;
-    background: #d1fae5;
-    border-color: #a7f3d0;
-  }
 }
 
 .cmo-action-buttons {

@@ -53,4 +53,26 @@ class MonitoringEndpointAuthenticationFilterTest {
 
         assertThat(invoked).isTrue();
     }
+
+    @Test
+    void recognizesActuatorEndpointsBehindApiContextPath() throws Exception {
+        var filter = new MonitoringEndpointAuthenticationFilter("test-monitoring-token");
+        var health = new MockHttpServletRequest("GET", "/api/actuator/health");
+        health.setContextPath("/api");
+        var healthInvoked = new AtomicBoolean();
+
+        filter.doFilter(health, new MockHttpServletResponse(), (req, res) -> healthInvoked.set(true));
+
+        assertThat(healthInvoked).isTrue();
+
+        var metrics = new MockHttpServletRequest("GET", "/api/actuator/metrics");
+        metrics.setContextPath("/api");
+        var metricsResponse = new MockHttpServletResponse();
+        var metricsInvoked = new AtomicBoolean();
+
+        filter.doFilter(metrics, metricsResponse, (req, res) -> metricsInvoked.set(true));
+
+        assertThat(metricsResponse.getStatus()).isEqualTo(401);
+        assertThat(metricsInvoked).isFalse();
+    }
 }

@@ -28,9 +28,16 @@ public class MonitoringEndpointAuthenticationFilter extends OncePerRequestFilter
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getRequestURI();
+        String path = pathWithinApplication(request);
         return !(path.equals("/actuator/prometheus") || path.equals("/actuator/metrics")
                 || path.startsWith("/actuator/metrics/"));
+    }
+
+    private String pathWithinApplication(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        String contextPath = request.getContextPath();
+        return contextPath != null && !contextPath.isEmpty() && path.startsWith(contextPath)
+                ? path.substring(contextPath.length()) : path;
     }
 
     @Override

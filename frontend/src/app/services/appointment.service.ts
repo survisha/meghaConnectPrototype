@@ -256,7 +256,7 @@ export class AppointmentService {
   }
 
   rescheduleAppointment(id: number, request: RescheduleRequest): Observable<Appointment> {
-    return this.http.post<unknown>(`${this.baseUrl}/${id}/schedule`, {
+    return this.http.post<unknown>(`${this.baseUrl}/${id}/reschedule`, {
       scheduledDateTime: request.scheduledDateTime,
       durationMinutes: request.durationMinutes,
     }).pipe(map(res => this.normalizeAppointment(this.unwrapData(res))));

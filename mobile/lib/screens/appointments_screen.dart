@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
@@ -1207,6 +1206,17 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
                           'CMO Remarks', _text(_details['cmoRemarks'], '-')),
                       _DetailLine('Approver Remarks',
                           _text(_details['approverRemarks'], '-')),
+                      if (widget.appointment.status == 'PENDING_REQUEST' &&
+                          [UserRole.DEO, UserRole.PUBLIC].contains(role))
+                        _DetailLine(
+                          'Request for Additional Information',
+                          _firstText([
+                            _details['approverRemarks'],
+                            widget.appointment.raw['approverRemarks'],
+                            _details['cmoRemarks'],
+                            widget.appointment.raw['cmoRemarks'],
+                          ], '—'),
+                        ),
                       _DetailLine('HCM / APPROVER Remarks',
                           _text(_details['hcmRemarks'], '-')),
                     ],
@@ -2127,37 +2137,24 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
 
   Widget _photo() {
     final applicant = _map(_details['applicant']);
-    final base64Photo = _firstText([
+    final source = _firstText([
       applicant['livePhotoBase64'],
       applicant['photoBase64'],
       _details['livePhotoBase64'],
       _details['photoBase64'],
-    ]);
-    final url = _firstText([
       applicant['photoUrl'],
       _details['photoUrl'],
       _details['livePhotoUrl'],
+      widget.appointment.photoUrl,
     ]);
-    if (base64Photo.isNotEmpty) {
-      try {
-        final raw = base64Photo.contains(',')
-            ? base64Photo.split(',').last
-            : base64Photo;
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Image.memory(base64Decode(raw),
-              width: 82, height: 96, fit: BoxFit.cover),
-        );
-      } catch (_) {}
-    }
-    if (url.isNotEmpty) {
+    if (source.isNotEmpty) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(8),
         child: SizedBox(
           width: 82,
           height: 96,
           child: AuthenticatedPhoto(
-            source: url,
+            source: source,
             fallback: _noPhoto(),
           ),
         ),
@@ -2241,7 +2238,8 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
   bool _canReschedule(UserRole role) =>
       _canUseApproverActions(role) &&
       !widget.appointment.isWalkIn &&
-      ['PENDING', 'SCHEDULED'].contains(widget.appointment.status);
+      ['PENDING', 'SCHEDULED', 'RESCHEDULED']
+          .contains(widget.appointment.status);
 
   bool _canUseCmoActions(UserRole role) =>
       [UserRole.HCM, UserRole.ADMIN, UserRole.APPROVER].contains(role) &&

@@ -10,6 +10,11 @@ describe('appointment action policy', () => {
     expect(canScheduleOrReschedule(appt('SCHEDULED', 'PENDING'))).toBeTrue();
   });
 
+  it('allows an existing scheduled appointment to be rescheduled again', () => {
+    expect(canScheduleOrReschedule(appt('SCHEDULED', 'SCHEDULED'))).toBeTrue();
+    expect(canScheduleOrReschedule(appt('SCHEDULED', 'RESCHEDULED'))).toBeTrue();
+  });
+
   it('allows rejecting a pending walk-in without exposing schedule', () => {
     const walkIn = appt('WALK_IN', 'PENDING');
     expect(isLiveWalkIn(walkIn)).toBeTrue();

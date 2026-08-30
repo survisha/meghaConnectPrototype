@@ -50,7 +50,24 @@ class HcmActionServiceRemarkTest {
 
         assertEquals("Approver original", appointment.getApproverRemarks());
         assertEquals("HCM direction recorded by Approver", appointment.getHcmRemarks());
+        assertEquals(Appointment.AppointmentStatus.SCHEDULED, appointment.getStatus());
         verify(audit).log("Appointment", 10L, "REMARK_ADDED", "APPROVER remarks added", "approver01");
+    }
+
+    @Test
+    void savingRemarksDoesNotCompleteAppointment() {
+        service.addRemark(10L, HcmActionDto.builder()
+                .decision("APPROVER_REMARK").hcmRemarks("Please bring the original document").build(),
+                "approver01", "APPROVER");
+
+        assertEquals(Appointment.AppointmentStatus.SCHEDULED, appointment.getStatus());
+        assertEquals("Please bring the original document", appointment.getApproverRemarks());
+        assertEquals(null, appointment.getCompletedAt());
+        assertEquals(null, appointment.getCompletedBy());
+        verify(appointmentAudit).recordStatusChange(appointment,
+                Appointment.AppointmentStatus.SCHEDULED,
+                Appointment.AppointmentStatus.SCHEDULED,
+                "APPROVER_REMARK", "Please bring the original document", "approver01", "APPROVER");
     }
 
     @Test

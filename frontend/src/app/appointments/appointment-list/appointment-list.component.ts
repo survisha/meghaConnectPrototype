@@ -99,7 +99,6 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   @ViewChild('appointmentRescheduleDialog') appointmentRescheduleDialog!: TemplateRef<unknown>;
   @ViewChild('appointmentExportDialog') appointmentExportDialog!: TemplateRef<unknown>;
   @ViewChild('aiNotesDialog') aiNotesDialog!: TemplateRef<unknown>;
-  @ViewChild('cmoModifyDialog') cmoModifyDialog!: TemplateRef<unknown>;
   @ViewChild('cmoMissingInfoDialog') cmoMissingInfoDialog!: TemplateRef<unknown>;
 
   appointments: Appointment[] = [];
@@ -151,9 +150,6 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   rescheduleDate: Date | null = null;
   rescheduleTime = '10:00';
   pendingAction: 'APPROVE' | 'REJECT' | 'RETURN_PENDING' | null = null;
-  cmoModifyEventType: EventType = 'A4';
-  cmoModifyLocation: Location = 'SHILLONG';
-  cmoModifyRemarks = '';
   cmoMissingInfoNote = '';
   aiNotesByAppointmentId = new Map<number, AppointmentDocumentAiNotes[]>();
   aiNotesLoadingAppointmentIds = new Set<number>();
@@ -212,16 +208,11 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   private appointmentRescheduleDialogRef?: MatDialogRef<unknown>;
   private appointmentExportDialogRef?: MatDialogRef<unknown>;
   private aiNotesDialogRef?: MatDialogRef<unknown>;
-  private cmoModifyDialogRef?: MatDialogRef<unknown>;
   private cmoMissingInfoDialogRef?: MatDialogRef<unknown>;
   private aiNotesPollTimers = new Map<number, number>();
   private readonly handleProofCameraDeviceChange = () => {
     void this.loadProofCameraDevices(true);
   };
-  private readonly cmoQueueStatuses = new Set<AppointmentStatus>([
-    'SUBMITTED',
-    'CMO_REVIEW',
-  ]);
   private readonly followUpStatuses: AppointmentStatus[] = ['FOLLOWUP'];
   exportOptions: AppointmentExportOptions = {
     basic: true,
@@ -851,12 +842,6 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     return this.canUseApproverActions(appointment) && canReturnToPending(appointment);
   }
 
-  canUseCmoActions(appointment: Appointment | null) {
-    return !!appointment &&
-      this.auth.hasRole('HCM', 'ADMIN', 'APPROVER') &&
-      this.cmoQueueStatuses.has(appointment.status);
-  }
-
   isWalkIn(appointment: Appointment | null) {
     return !!appointment && (appointment.appointmentType || '').trim().toLowerCase() === 'b2 walk-in';
   }
@@ -888,23 +873,6 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
       });
   }
 
-  openCmoModify(appointment: Appointment) {
-    if (!this.canUseCmoActions(appointment)) return;
-    this.selectedAppointment = appointment;
-    this.cmoModifyEventType = appointment.eventType;
-    this.cmoModifyLocation = appointment.requestedLocation;
-    this.cmoModifyRemarks = appointment.cmoRemarks ?? '';
-    this.cmoModifyDialogRef = this.dialog.open(this.cmoModifyDialog, {
-      width: '620px',
-      maxWidth: '94vw',
-      autoFocus: false,
-      panelClass: 'appointment-action-dialog-panel'
-    });
-    this.cmoModifyDialogRef.afterClosed().subscribe(() => {
-      this.cmoModifyDialogRef = undefined;
-    });
-  }
-
   openCmoMissingInfo(appointment: Appointment) {
     if (!this.canRequestMissingInformation(appointment)) return;
     this.selectedAppointment = appointment;
@@ -922,32 +890,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   }
 
   closeCmoActionDialog() {
-    this.cmoModifyDialogRef?.close();
     this.cmoMissingInfoDialogRef?.close();
-  }
-
-  saveCmoModify() {
-    if (!this.selectedAppointment || !this.canUseCmoActions(this.selectedAppointment) || this.cmoActionUpdating) return;
-    const appointment = this.selectedAppointment;
-    this.cmoActionUpdating = true;
-    this.appointmentService.submitCmoReview({
-      appointmentId: appointment.id,
-      eventType: this.cmoModifyEventType,
-      requestedLocation: this.cmoModifyLocation,
-      cmoRemarks: this.cmoModifyRemarks,
-      status: 'APPROVER_REVIEW',
-      notifyApplicant: false,
-      notifyDeo: false,
-    }).pipe(finalize(() => this.cmoActionUpdating = false))
-      .subscribe({
-        next: updated => {
-          this.selectedAppointment = updated;
-          this.replaceAppointment(updated);
-          this.cmoModifyDialogRef?.close();
-          this.snackBar.open(`${updated.applicationId} forwarded to Approver.`, 'Close', { duration: 5000, panelClass: ['success-snackbar'] });
-        },
-        error: error => this.snackBar.open(apiErrorMessage(error, 'Failed to update appointment.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] })
-      });
   }
 
   sendCmoMissingInfoNote() {
@@ -965,28 +908,6 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
           this.snackBar.open('Additional information requested.', 'Close', { duration: 5000, panelClass: ['success-snackbar'] });
         },
         error: error => this.snackBar.open(apiErrorMessage(error, 'Failed to send missing information note.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] })
-      });
-  }
-
-  forwardToApprover(appointment: Appointment) {
-    if (!this.canUseCmoActions(appointment) || this.cmoActionUpdating) return;
-    this.cmoActionUpdating = true;
-    this.appointmentService.submitCmoReview({
-      appointmentId: appointment.id,
-      eventType: appointment.eventType,
-      requestedLocation: appointment.requestedLocation,
-      cmoRemarks: appointment.cmoRemarks,
-      status: 'APPROVER_REVIEW',
-      notifyApplicant: false,
-      notifyDeo: false,
-    }).pipe(finalize(() => this.cmoActionUpdating = false))
-      .subscribe({
-        next: updated => {
-          this.selectedAppointment = updated;
-          this.replaceAppointment(updated);
-          this.snackBar.open(`${updated.applicationId} forwarded to Approver.`, 'Close', { duration: 5000, panelClass: ['success-snackbar'] });
-        },
-        error: error => this.snackBar.open(apiErrorMessage(error, 'Failed to forward appointment.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] })
       });
   }
 

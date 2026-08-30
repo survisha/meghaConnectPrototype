@@ -26,4 +26,7 @@ public class EpicVerificationRequest {
     private String epicNumber;           // EPIC number (e.g., BCV0259184)
     private String visitorName;          // Name on voter card (for matching)
     private String phoneNumber;          // Optional: mobile for OTP sending
+    private Boolean consentGranted;
+    private String consentVersion;
+    private String consentChannel;
 }

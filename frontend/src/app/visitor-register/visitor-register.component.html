@@ -97,6 +97,13 @@
 
         <!-- STEP 1: ID Entry -->
         <ng-container *ngIf="currentStep === 'id-entry'">
+          <section class="citizen-consent-panel">
+            <h3>Citizen Consent</h3>
+            <p>{{ citizenConsentText }}</p>
+            <mat-checkbox [(ngModel)]="citizenConsentGranted" [ngModelOptions]="{standalone: true}">
+              I have read and consent to the above.
+            </mat-checkbox>
+          </section>
           <section *ngIf="isDeoMode" class="form-extraction-panel">
             <div class="form-extraction-header">
               <div>

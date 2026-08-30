@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
@@ -175,6 +176,7 @@ class _PublicIdentificationScreenState extends State<PublicIdentificationScreen>
     enableTracking: true,
     performanceMode: FaceDetectorMode.fast,
   ));
+  Timer? _faceTimer;
   bool _detectingFaces = false;
   int _activeFaceSearches = 0;
   final List<_PendingFace> _faceQueue = [];
@@ -184,9 +186,8 @@ class _PublicIdentificationScreenState extends State<PublicIdentificationScreen>
   int _faceSession = 0;
   static const _faceRetryTimeout = Duration(seconds: 15);
   static const _faceDisappearGrace = Duration(milliseconds: 2400);
-  static const _frameProcessingInterval = Duration(milliseconds: 800);
-  static const _maxConcurrentFaceSearches = 2;
-  DateTime _lastProcessedFrame = DateTime.fromMillisecondsSinceEpoch(0);
+  static const _faceDetectionInterval = Duration(milliseconds: 800);
+  static const _maxConcurrentFaceSearches = 1;
   String _district = '';
 
   List<_VisitorProfile> _results = [];
@@ -203,6 +204,9 @@ class _PublicIdentificationScreenState extends State<PublicIdentificationScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(_identifyByFace());
+    });
   }
 
   Future<void> _identifyByFace() async {
@@ -211,6 +215,7 @@ class _PublicIdentificationScreenState extends State<PublicIdentificationScreen>
       return;
     }
     try {
+      _logFaceState('camera initialization started');
       final cameras = await availableCameras();
       if (cameras.isEmpty) {
         throw CameraException('noCamera', 'No camera is available.');
@@ -221,7 +226,8 @@ class _PublicIdentificationScreenState extends State<PublicIdentificationScreen>
         orElse: () => cameras.first,
       );
       await _openFaceCamera(selected);
-    } catch (_) {
+    } catch (error) {
+      _logFaceState('camera initialization failed: ${error.runtimeType}');
       if (mounted) {
         setState(() =>
             _error = 'Unable to open camera. Please check camera permission.');
@@ -234,9 +240,6 @@ class _PublicIdentificationScreenState extends State<PublicIdentificationScreen>
       camera,
       ResolutionPreset.medium,
       enableAudio: false,
-      imageFormatGroup: Platform.isAndroid
-          ? ImageFormatGroup.nv21
-          : ImageFormatGroup.bgra8888,
     );
     await controller.initialize();
     if (!mounted) return controller.dispose();
@@ -246,7 +249,8 @@ class _PublicIdentificationScreenState extends State<PublicIdentificationScreen>
       _searched = true;
       _error = null;
     });
-    await controller.startImageStream(_onCameraFrame);
+    _logFaceState('camera initialized');
+    _scheduleFaceDetection();
   }
 
   Future<void> _switchFaceCamera() async {
@@ -263,9 +267,10 @@ class _PublicIdentificationScreenState extends State<PublicIdentificationScreen>
     if (matching.isEmpty) return;
 
     setState(() => _switchingCamera = true);
+    _faceTimer?.cancel();
+    _faceTimer = null;
     _faceCamera = null;
     _resetFaceSession();
-    if (current.value.isStreamingImages) await current.stopImageStream();
     await current.dispose();
     try {
       await _openFaceCamera(matching.first);
@@ -279,26 +284,24 @@ class _PublicIdentificationScreenState extends State<PublicIdentificationScreen>
     }
   }
 
-  void _onCameraFrame(CameraImage frame) {
-    final now = DateTime.now();
-    if (_detectingFaces ||
-        now.difference(_lastProcessedFrame) < _frameProcessingInterval) return;
-    _lastProcessedFrame = now;
-    unawaited(_detectAndQueueFaces(frame));
+  void _scheduleFaceDetection() {
+    _faceTimer?.cancel();
+    _faceTimer = Timer(_faceDetectionInterval, _detectAndQueueFaces);
   }
 
-  Future<void> _detectAndQueueFaces(CameraImage frame) async {
+  Future<void> _detectAndQueueFaces() async {
     final controller = _faceCamera;
     if (controller == null ||
         !controller.value.isInitialized ||
         _detectingFaces) return;
     _detectingFaces = true;
     try {
-      final input = _inputImage(frame, controller.description);
-      final source = _cameraImage(frame, controller.description);
-      if (input == null || source == null) return;
-      final faces = await _faceDetector.processImage(input);
-      {
+      final capture = await controller.takePicture();
+      final faces = await _faceDetector
+          .processImage(InputImage.fromFilePath(capture.path));
+      final bytes = await capture.readAsBytes();
+      final source = img.decodeImage(bytes);
+      if (source != null) {
         final now = DateTime.now();
         final seenTrackIds = <int>{};
         for (final face in faces) {
@@ -345,6 +348,7 @@ class _PublicIdentificationScreenState extends State<PublicIdentificationScreen>
               (face.headEulerAngleZ ?? 0).abs() <= 12;
           if (!qualityOk || track.captured) continue;
           track.captured = true;
+          _logFaceState('face detected; automatic capture started');
           final crop = _cropFace(source, face.boundingBox);
           final trackingId = 'Face ${track.id}';
           final photo =
@@ -370,13 +374,19 @@ class _PublicIdentificationScreenState extends State<PublicIdentificationScreen>
         _drainFaceQueue();
         if (mounted) setState(() {});
       }
-    } catch (_) {
+      final temporaryCapture = File(capture.path);
+      if (await temporaryCapture.exists()) {
+        await temporaryCapture.delete();
+      }
+    } catch (error) {
+      _logFaceState('automatic face detection failed: ${error.runtimeType}');
       if (mounted) {
         setState(() =>
             _error = 'Automatic face detection is temporarily unavailable.');
       }
     } finally {
       _detectingFaces = false;
+      if (_faceCamera != null) _scheduleFaceDetection();
     }
   }
 
@@ -388,66 +398,6 @@ class _PublicIdentificationScreenState extends State<PublicIdentificationScreen>
     final width = math.min(source.width - x, (box.width + padX * 2).round());
     final height = math.min(source.height - y, (box.height + padY * 2).round());
     return img.copyCrop(source, x: x, y: y, width: width, height: height);
-  }
-
-  InputImage? _inputImage(CameraImage frame, CameraDescription description) {
-    final rotation =
-        InputImageRotationValue.fromRawValue(description.sensorOrientation);
-    final format = InputImageFormatValue.fromRawValue(frame.format.raw);
-    if (rotation == null || format == null || frame.planes.isEmpty) return null;
-    final bytes = frame.planes.length == 1
-        ? frame.planes.first.bytes
-        : Uint8List.fromList(
-            frame.planes.expand((plane) => plane.bytes).toList());
-    return InputImage.fromBytes(
-      bytes: bytes,
-      metadata: InputImageMetadata(
-        size: Size(frame.width.toDouble(), frame.height.toDouble()),
-        rotation: rotation,
-        format: format,
-        bytesPerRow: frame.planes.first.bytesPerRow,
-      ),
-    );
-  }
-
-  img.Image? _cameraImage(CameraImage frame, CameraDescription description) {
-    img.Image? raw;
-    if (frame.format.group == ImageFormatGroup.bgra8888) {
-      raw = img.Image.fromBytes(
-        width: frame.width,
-        height: frame.height,
-        bytes: frame.planes.first.bytes.buffer,
-        rowStride: frame.planes.first.bytesPerRow,
-        order: img.ChannelOrder.bgra,
-      );
-    } else if (frame.format.group == ImageFormatGroup.nv21 &&
-        frame.planes.isNotEmpty) {
-      raw = _nv21ToImage(frame);
-    }
-    if (raw == null) return null;
-    final angle = description.sensorOrientation % 360;
-    return angle == 0 ? raw : img.copyRotate(raw, angle: angle);
-  }
-
-  img.Image _nv21ToImage(CameraImage frame) {
-    final width = frame.width;
-    final height = frame.height;
-    final bytes = frame.planes.first.bytes;
-    final output = img.Image(width: width, height: height);
-    final frameSize = width * height;
-    for (var y = 0; y < height; y++) {
-      for (var x = 0; x < width; x++) {
-        final yValue = bytes[y * width + x] & 0xff;
-        final uv = frameSize + (y >> 1) * width + (x & ~1);
-        final v = uv < bytes.length ? (bytes[uv] & 0xff) - 128 : 0;
-        final u = uv + 1 < bytes.length ? (bytes[uv + 1] & 0xff) - 128 : 0;
-        final r = (yValue + 1.402 * v).round().clamp(0, 255);
-        final g = (yValue - .344136 * u - .714136 * v).round().clamp(0, 255);
-        final b = (yValue + 1.772 * u).round().clamp(0, 255);
-        output.setPixelRgb(x, y, r, g, b);
-      }
-    }
-    return output;
   }
 
   void _drainFaceQueue() {
@@ -466,6 +416,7 @@ class _PublicIdentificationScreenState extends State<PublicIdentificationScreen>
   Future<void> _searchQueuedFace(_PendingFace pending) async {
     _VisitorProfile? visitorToAutoSelect;
     try {
+      _logFaceState('face search started');
       final response = await ApiService.searchVisitorByFace(pending.photo);
       final visitor = response['visitor'];
       if (!mounted || pending.session != _faceSession) return;
@@ -497,6 +448,7 @@ class _PublicIdentificationScreenState extends State<PublicIdentificationScreen>
         }
       });
       if (visitorToAutoSelect != null) {
+        _logFaceState('face search completed; match found=true');
         await _selectVisitor(visitorToAutoSelect!);
       }
       if (response['success'] == true && response['matched'] != true) {
@@ -545,12 +497,11 @@ class _PublicIdentificationScreenState extends State<PublicIdentificationScreen>
   }
 
   Future<void> _stopFaceIdentification() async {
+    _faceTimer?.cancel();
+    _faceTimer = null;
     final controller = _faceCamera;
     _faceCamera = null;
     _resetFaceSession();
-    if (controller?.value.isStreamingImages == true) {
-      await controller!.stopImageStream();
-    }
     await controller?.dispose();
     if (mounted) setState(() {});
   }
@@ -593,6 +544,21 @@ class _PublicIdentificationScreenState extends State<PublicIdentificationScreen>
     ));
   }
 
+  Future<void> _openFaceRegistration(
+      String capturedImage, Map<String, dynamic>? epicRecord) async {
+    final navigator = Navigator.of(context);
+    await _stopFaceIdentification();
+    if (!mounted) return;
+    _logFaceState('opening existing registration fallback');
+    await navigator.push(MaterialPageRoute(
+      builder: (_) => VisitorRegistrationScreen(
+        openAppointmentAfterSubmit: widget.walkInMode,
+        epicFacePrefill: epicRecord,
+        liveCapturedPhoto: capturedImage,
+      ),
+    ));
+  }
+
   void _resetFaceSession() {
     _faceSession++;
     _faceQueue.clear();
@@ -624,14 +590,10 @@ class _PublicIdentificationScreenState extends State<PublicIdentificationScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _faceTimer?.cancel();
     final controller = _faceCamera;
     _faceCamera = null;
-    if (controller?.value.isStreamingImages == true) {
-      unawaited(
-          controller!.stopImageStream().then((_) => controller.dispose()));
-    } else {
-      unawaited(controller?.dispose() ?? Future<void>.value());
-    }
+    unawaited(controller?.dispose() ?? Future<void>.value());
     _faceDetector.close();
     _phoneCtrl.dispose();
     _epicCtrl.dispose();
@@ -762,6 +724,7 @@ class _PublicIdentificationScreenState extends State<PublicIdentificationScreen>
   }
 
   Future<void> _selectVisitor(_VisitorProfile visitor) async {
+    _logFaceState('loading citizen history');
     setState(() {
       _selected = visitor;
       _history = null;
@@ -788,6 +751,13 @@ class _PublicIdentificationScreenState extends State<PublicIdentificationScreen>
         _history = _CitizenHistory.fromJson(raw);
       }
     });
+  }
+
+  void _logFaceState(String message) {
+    if (kDebugMode) {
+      debugPrint(
+          'PublicIdentification mode=${widget.walkInMode ? 'walkIn' : 'identification'} $message');
+    }
   }
 
   void _clear() {
@@ -1032,6 +1002,7 @@ class _PublicIdentificationScreenState extends State<PublicIdentificationScreen>
           return _FaceRecognitionResultCard(
             result: result,
             continueToWalkIn: widget.walkInMode,
+            onRegister: _openFaceRegistration,
             selected:
                 result.visitor != null && _selected?.id == result.visitor!.id,
             onTap: result.visitor == null
@@ -1328,12 +1299,15 @@ class _FaceRecognitionResultCard extends StatelessWidget {
   final bool selected;
   final VoidCallback? onTap;
   final bool continueToWalkIn;
+  final Future<void> Function(
+      String capturedImage, Map<String, dynamic>? epicRecord) onRegister;
 
   const _FaceRecognitionResultCard({
     required this.result,
     required this.selected,
     required this.onTap,
     required this.continueToWalkIn,
+    required this.onRegister,
   });
 
   @override
@@ -1410,13 +1384,7 @@ class _FaceRecognitionResultCard extends StatelessWidget {
                     const SizedBox(height: 8),
                     ElevatedButton(
                         onPressed: () =>
-                            Navigator.of(context).push(MaterialPageRoute(
-                                builder: (_) => VisitorRegistrationScreen(
-                                      openAppointmentAfterSubmit:
-                                          continueToWalkIn,
-                                      epicFacePrefill: result.epicRecord,
-                                      liveCapturedPhoto: result.capturedImage,
-                                    ))),
+                            onRegister(result.capturedImage, result.epicRecord),
                         child: const Text('Register Visitor')),
                   ])),
             ],
@@ -1477,12 +1445,7 @@ class _FaceRecognitionResultCard extends StatelessWidget {
                 result.status == _FaceResultStatus.notRegistered) ...[
               const SizedBox(height: 8),
               ElevatedButton.icon(
-                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => VisitorRegistrationScreen(
-                    openAppointmentAfterSubmit: true,
-                    liveCapturedPhoto: result.capturedImage,
-                  ),
-                )),
+                onPressed: () => onRegister(result.capturedImage, null),
                 icon: const Icon(Icons.person_add_alt_1_outlined),
                 label: const Text('Register Visitor'),
               ),

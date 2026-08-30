@@ -31,7 +31,7 @@ class AppConfig {
   );
   static const String consentVersion = String.fromEnvironment(
     'MEGHA_CONSENT_VERSION',
-    defaultValue: '2026-05-25',
+    defaultValue: 'MC_REG_CONSENT_V1',
   );
 
   static String get apiBaseUrl {

@@ -916,3 +916,13 @@ mat-radio-group {
     height: 72px;
   }
 }
+.citizen-consent-panel {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+
+  h3 { margin: 0 0 .5rem; }
+  p { margin: 0 0 .75rem; line-height: 1.5; }
+}

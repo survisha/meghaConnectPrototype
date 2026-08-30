@@ -1,8 +1,10 @@
 package com.survisha.meghaconnect.service;
 
 import com.survisha.meghaconnect.entity.Visitor;
+import com.survisha.meghaconnect.entity.CitizenConsent;
 import com.survisha.meghaconnect.entity.MobileOtpVerificationStatus;
 import com.survisha.meghaconnect.repository.VisitorRepository;
+import com.survisha.meghaconnect.repository.CitizenConsentRepository;
 import com.survisha.meghaconnect.dto.AssociateVisitorDto;
 import com.survisha.meghaconnect.dto.EpicVerificationData;
 import com.survisha.meghaconnect.dto.PublicRegistrationDto;
@@ -33,7 +35,11 @@ import java.util.stream.Collectors;
 @Slf4j
 public class VisitorService {
 
+    public static final String REGISTRATION_CONSENT_VERSION = "MC_REG_CONSENT_V1";
+    public static final String REGISTRATION_CONSENT_TEXT = "I consent to the capture and use of my photograph for identification and visitor/appointment management purposes. I also consent to the use of my provided voter/EPIC details for searching and verifying my identity for this registration.";
+
     private final VisitorRepository visitorRepository;
+    private final CitizenConsentRepository citizenConsentRepository;
     private final FileStorageService fileStorageService;
     private final AuditLogService auditLogService;
     private final ApplicationEventPublisher eventPublisher;
@@ -352,6 +358,7 @@ public class VisitorService {
         return registerVisitor(dto, MobileOtpVerificationStatus.NOT_VERIFIED);
     }
 
+    @Transactional
     public Visitor registerVisitor(PublicRegistrationDto dto, MobileOtpVerificationStatus mobileOtpStatus) {
         // Validate required fields
         if (dto.getFullName() == null || dto.getFullName().trim().isEmpty()) {
@@ -535,6 +542,22 @@ public class VisitorService {
                 .build();
 
         Visitor saved = visitorRepository.save(visitor);
+        String consentChannel = dto.getConsentChannel().trim().toUpperCase();
+        String consentActor = "MOBILE".equals(consentChannel) ? "mobile_registration" : "web_registration";
+        citizenConsentRepository.save(CitizenConsent.builder()
+                .visitor(saved)
+                .consentPurposes("PHOTO_CAPTURE,VOTER_EPIC_SEARCH")
+                .consentVersion(REGISTRATION_CONSENT_VERSION)
+                .consentText(REGISTRATION_CONSENT_TEXT)
+                .consentGranted(true)
+                .consentedAt(parseDateTime(dto.getConsentTimestamp()))
+                .channel(consentChannel)
+                .recordedBy(consentActor)
+                .createdAt(DateTimeUtil.nowIST())
+                .build());
+        auditLogService.log("CITIZEN_REGISTRATION", saved.getId(), "CITIZEN_CONSENT_RECORDED",
+                "channel=" + consentChannel + ", purposes=PHOTO_CAPTURE,VOTER_EPIC_SEARCH, version=" + REGISTRATION_CONSENT_VERSION + ", result=GRANTED",
+                consentActor);
         eventPublisher.publishEvent(new VisitorRegisteredForFaceEnrollmentEvent(
                 saved.getId(), saved.getEpicNumber(), saved.getFullName(), dto.getLivePhotoBase64(),
                 dto.getLatitude(), dto.getLongitude()));
@@ -577,10 +600,13 @@ public class VisitorService {
                     "Consent is required before collecting identity, photo, document, and appointment data."
             );
         }
-        if (trimToNull(dto.getConsentVersion()) == null || trimToNull(dto.getConsentTimestamp()) == null) {
+        if (!REGISTRATION_CONSENT_VERSION.equals(trimToNull(dto.getConsentVersion()))
+                || trimToNull(dto.getConsentTimestamp()) == null
+                || !("WEB".equalsIgnoreCase(trimToNull(dto.getConsentChannel()))
+                || "MOBILE".equalsIgnoreCase(trimToNull(dto.getConsentChannel())))) {
             throw new VisitorRegistrationValidationException(
                     ErrorCodeConstants.MISSING_REQUIRED_FIELD,
-                    "Consent version and timestamp are required."
+                    "A valid consent version, timestamp, and WEB or MOBILE channel are required."
             );
         }
     }

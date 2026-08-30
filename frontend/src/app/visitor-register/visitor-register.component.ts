@@ -154,6 +154,9 @@ interface VerifiedKycData {
   styleUrls: ['./visitor-register.component.scss'],
 })
 export class VisitorRegisterComponent implements OnInit, OnDestroy {
+  readonly citizenConsentText = 'I consent to the capture and use of my photograph for identification and visitor/appointment management purposes. I also consent to the use of my provided voter/EPIC details for searching and verifying my identity for this registration.';
+  readonly consentVersion = 'MC_REG_CONSENT_V1';
+  citizenConsentGranted = false;
   @ViewChild('visitorNameInput') visitorNameInput?: ElementRef<HTMLInputElement>;
 
   private readonly epicPattern = /^[A-Z]{3}[0-9]{7}$/;
@@ -450,10 +453,11 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   }
 
   private lookupExtractedEpicOnce(epic: string): void {
+    if (!this.requireCitizenConsent()) return;
     if (this.extractionEpicLookupInFlight || this.lastExtractionEpicLookup === epic || !this.form.visitorName.trim()) return;
     this.extractionEpicLookupInFlight = true;
     this.lastExtractionEpicLookup = epic;
-    this.kycService.verifyEpic({ epicNumber: epic, visitorName: this.form.visitorName, phoneNumber: this.manualPhone || undefined })
+    this.kycService.verifyEpic({ epicNumber: epic, visitorName: this.form.visitorName, phoneNumber: this.manualPhone || undefined, consentGranted: this.citizenConsentGranted, consentVersion: this.consentVersion, consentChannel: 'WEB' })
       .pipe(finalize(() => { this.extractionEpicLookupInFlight = false; }))
       .subscribe({
         next: response => {
@@ -617,6 +621,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   }
 
   validateId() {
+    if (this.form.idType === 'EPIC' && !this.requireCitizenConsent()) return;
     if (!this.canValidateId) {
       this.markIdStepTouched();
       this.errorMsg = this.primaryValidationMessage || this.t('ERROR_INVALID_ID_AND_NAME');
@@ -653,6 +658,10 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
    * Verify EPIC number against Election Commission API
    */
   verifyEpic() {
+    if (!this.requireCitizenConsent()) {
+      this.loading = false;
+      return;
+    }
     const requestId = ++this.registrationOtpRequestId;
     this.errorMsg = '';
     this.successMsg = '';
@@ -662,7 +671,10 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     const epicRequest = {
       epicNumber: this.form.epicNumber,
       visitorName: this.form.visitorName.toUpperCase(),
-      phoneNumber: this.manualPhone || ''
+      phoneNumber: this.manualPhone || '',
+      consentGranted: this.citizenConsentGranted,
+      consentVersion: this.consentVersion,
+      consentChannel: 'WEB' as const,
     };
 
     this.kycService.verifyEpic(epicRequest).subscribe({
@@ -1295,6 +1307,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   // ── STEP 3: LIVE PHOTO CAPTURE ──────────────────────────────────────────
 
   async openCamera() {
+    if (!this.requireCitizenConsent()) return;
     try {
       this.errorMsg = '';
       this.faceLivenessMetadata = null;
@@ -1491,6 +1504,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   // ── FINAL SUBMISSION ────────────────────────────────────────────────────
 
   submitRegistration() {
+    if (!this.requireCitizenConsent()) return;
     if (this.duplicateRegistrationBlocked) {
       this.errorMsg = this.t('USER_ALREADY_REGISTERED');
       return;
@@ -1561,9 +1575,10 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
       aadhaarAppId: this.form.aadhaarAppId,
       agendaType: this.form.agendaType,
       briefDescription: this.form.briefDescription,
-      consentAccepted: true,
-      consentVersion: '2026-05-25',
+      consentAccepted: this.citizenConsentGranted,
+      consentVersion: this.consentVersion,
       consentTimestamp: new Date().toISOString(),
+      consentChannel: 'WEB',
       privacyPolicyUrl: 'https://www.meghaconnect.com/privacy-policy',
       termsUrl: 'https://www.meghaconnect.com/terms',
     };
@@ -1622,6 +1637,12 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   }
 
   // ── NAVIGATION ──────────────────────────────────────────────────────────
+
+  private requireCitizenConsent(): boolean {
+    if (this.citizenConsentGranted) return true;
+    this.errorMsg = 'Citizen consent is required before photo capture and voter/EPIC verification.';
+    return false;
+  }
 
   goToLogin() {
     if (this.isDeoMode) {
@@ -2179,6 +2200,7 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
   resetForm() {
     this.invalidatePendingRegistrationOtp();
     this.currentStep = 'id-entry';
+    this.citizenConsentGranted = false;
     this.idValidated = false;
     this.otpSent = false;
     this.otpVerified = false;

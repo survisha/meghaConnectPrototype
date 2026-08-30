@@ -3,6 +3,9 @@ package com.survisha.meghaconnect.controller;
 import com.survisha.meghaconnect.dto.*;
 import com.survisha.meghaconnect.service.EpicVerificationService;
 import com.survisha.meghaconnect.service.RequestValidationService;
+import com.survisha.meghaconnect.service.VisitorService;
+import com.survisha.meghaconnect.exception.VisitorRegistrationValidationException;
+import com.survisha.meghaconnect.exception.ErrorCodeConstants;
 import com.survisha.meghaconnect.util.ValidationConstants;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -80,6 +83,15 @@ public class KycController {
     })
     public ResponseEntity<EpicVerificationResponse> verifyEpic(
             @RequestBody EpicVerificationRequest request) {
+
+        if (request == null || !Boolean.TRUE.equals(request.getConsentGranted())
+                || !VisitorService.REGISTRATION_CONSENT_VERSION.equals(request.getConsentVersion())
+                || !("WEB".equalsIgnoreCase(request.getConsentChannel())
+                || "MOBILE".equalsIgnoreCase(request.getConsentChannel()))) {
+            throw new VisitorRegistrationValidationException(
+                    ErrorCodeConstants.MISSING_REQUIRED_FIELD,
+                    "Citizen consent is required before photo capture and voter/EPIC verification.");
+        }
 
         String epicNumber = validationService.requireText(
                 request != null ? request.getEpicNumber() : null,

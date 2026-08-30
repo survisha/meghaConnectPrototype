@@ -14,6 +14,9 @@ export interface EpicVerificationRequest {
   epicNumber: string;           // EPIC voter ID (e.g., BCV0259184)
   visitorName: string;          // Name as on voter card (for matching)
   phoneNumber?: string;         // Optional: mobile for OTP
+  consentGranted: boolean;
+  consentVersion: string;
+  consentChannel: 'WEB' | 'MOBILE';
 }
 
 export interface PollingDetailsResponse {

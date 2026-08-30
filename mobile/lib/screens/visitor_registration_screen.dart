@@ -36,6 +36,8 @@ class VisitorRegistrationScreen extends StatefulWidget {
 }
 
 class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
+  static const _citizenConsentText =
+      'I consent to the capture and use of my photograph for identification and visitor/appointment management purposes. I also consent to the use of my provided voter/EPIC details for searching and verifying my identity for this registration.';
   final _idFormKey = GlobalKey<FormState>();
   final _otpFormKey = GlobalKey<FormState>();
   final _detailsFormKey = GlobalKey<FormState>();
@@ -276,7 +278,8 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
               ? 'Manual review required. Please verify the extracted details before continuing.'
               : 'EPIC was not available in the form. Please verify the details and continue using No ID.';
     });
-    if (validEpic &&
+    if (_consentAccepted &&
+        validEpic &&
         _idType == 'EPIC' &&
         _lastExtractedEpicLookup != epic &&
         _visitorNameCtrl.text.trim().isNotEmpty) {
@@ -443,6 +446,7 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
   }
 
   Future<void> _startEpicFlow() async {
+    if (!_requireCitizenConsent()) return;
     final i18n = context.read<AppI18n>();
     if (!_idFormKey.currentState!.validate()) return;
     if (context.read<ConnectivityService>().isOffline) {
@@ -606,6 +610,7 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
   }
 
   Future<void> _capturePhoto() async {
+    if (!_requireCitizenConsent()) return;
     final i18n = context.read<AppI18n>();
     if (!await _confirmSensitiveAction(
       title: 'Camera access',
@@ -679,8 +684,7 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
       return;
     }
     if (!_consentAccepted) {
-      setState(() => _error =
-          'Please provide consent for identity, photo, document, and appointment data processing.');
+      _requireCitizenConsent();
       return;
     }
 
@@ -728,6 +732,7 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
       'consentAccepted': _consentAccepted,
       'consentVersion': AppConfig.consentVersion,
       'consentTimestamp': DateTime.now().toUtc().toIso8601String(),
+      'consentChannel': 'MOBILE',
       'privacyPolicyUrl': AppConfig.privacyPolicyUrl,
       'termsUrl': AppConfig.termsUrl,
     };
@@ -843,6 +848,13 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
             i18n.t('ERROR_REGISTRATION_FAILED');
       });
     }
+  }
+
+  bool _requireCitizenConsent() {
+    if (_consentAccepted) return true;
+    setState(() => _error =
+        'Citizen consent is required before photo capture and voter/EPIC verification.');
+    return false;
   }
 
   Map<String, dynamic> _extractRegisteredVisitor(
@@ -1027,6 +1039,8 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            _buildConsentNotice(),
+            const SizedBox(height: 12),
             OutlinedButton.icon(
               onPressed: _extractingForm ? null : _captureAndExtractForm,
               icon: _extractingForm
@@ -1756,7 +1770,6 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
               textInputAction: TextInputAction.newline,
             ),
             const SizedBox(height: 18),
-            _buildConsentNotice(),
             const SizedBox(height: 18),
             Row(
               children: [
@@ -1797,12 +1810,12 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Privacy consent',
+            'Citizen Consent',
             style: TextStyle(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 6),
           const Text(
-            'MeghaConnect will collect and process your name, mobile number, EPIC reference, photo, address, appointment details, and uploaded documents only for citizen service, appointment, KYC, security, audit, and governance workflow purposes. Data may be shared with authorized government staff and approved service providers such as SMS, KYC, OCR, and notification services.',
+            _citizenConsentText,
             style: TextStyle(fontSize: 12, height: 1.35),
           ),
           const SizedBox(height: 8),
@@ -1824,7 +1837,7 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
             },
             controlAffinity: ListTileControlAffinity.leading,
             title: const Text(
-              'I agree to the Privacy Policy and Terms & Conditions.',
+              'I have read and consent to the above.',
               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             ),
           ),

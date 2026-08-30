@@ -101,6 +101,7 @@ public class PublicRegistrationDto {
     private Boolean consentAccepted;
     private String consentVersion;
     private String consentTimestamp;
+    private String consentChannel;
     private String privacyPolicyUrl;
     private String termsUrl;
 

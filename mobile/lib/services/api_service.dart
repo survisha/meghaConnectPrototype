@@ -448,6 +448,9 @@ class ApiService {
       final body = <String, dynamic>{
         'epicNumber': epicNumber.trim().toUpperCase(),
         'visitorName': visitorName.trim().toUpperCase(),
+        'consentGranted': true,
+        'consentVersion': AppConfig.consentVersion,
+        'consentChannel': 'MOBILE',
       };
       final phone = (phoneNumber ?? '').trim();
       if (phone.isNotEmpty) body['phoneNumber'] = phone;

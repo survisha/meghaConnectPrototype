@@ -19,6 +19,7 @@ import '../services/navigation_service.dart';
 import '../services/offline_ai_notes_service.dart';
 import '../services/offline_repository.dart';
 import '../services/sync_service.dart';
+import '../services/scanned_document_pdf_service.dart';
 import 'new_appointment_screen.dart';
 import 'document_viewer_screen.dart';
 
@@ -1391,6 +1392,12 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
           ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
+            onPressed: _uploading ? null : _scanSupportingDocument,
+            icon: const Icon(Icons.document_scanner_outlined),
+            label: const Text('Scan Document'),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
             onPressed: _uploading ? null : _captureMeetingProof,
             icon: const Icon(Icons.photo_camera_outlined),
             label: const Text('Capture Meeting Proof'),
@@ -2006,6 +2013,96 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
     await _uploadFile(file!.path!, fileName: file.name);
   }
 
+  Future<void> _scanSupportingDocument() async {
+    final capturedPaths = <String>[];
+    File? generatedPdf;
+    try {
+      var captureAnother = true;
+      while (captureAnother &&
+          capturedPaths.length < ScannedDocumentPdfService.maxPages) {
+        final image = await _picker.pickImage(
+          source: ImageSource.camera,
+          imageQuality: 90,
+          maxWidth: 2200,
+          maxHeight: 2200,
+          requestFullMetadata: false,
+        );
+        if (image == null) {
+          if (capturedPaths.isEmpty) return;
+          break;
+        }
+        capturedPaths.add(image.path);
+        if (!mounted) return;
+        if (capturedPaths.length >= ScannedDocumentPdfService.maxPages) break;
+        final action = await showDialog<String>(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogContext) => AlertDialog(
+            title: Text(
+                '${capturedPaths.length} page${capturedPaths.length == 1 ? '' : 's'} captured'),
+            content: Image.file(File(image.path), fit: BoxFit.contain),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, 'cancel'),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, 'retake'),
+                child: const Text('Delete / Retake'),
+              ),
+              OutlinedButton(
+                onPressed: () => Navigator.pop(dialogContext, 'next'),
+                child: const Text('Add Page'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(dialogContext, 'finish'),
+                child: const Text('Finish'),
+              ),
+            ],
+          ),
+        );
+        if (action == 'cancel') return;
+        if (action == 'retake') {
+          final removed = capturedPaths.removeLast();
+          await _deleteIfExists(removed);
+          continue;
+        }
+        captureAnother = action == 'next';
+      }
+      if (capturedPaths.isEmpty) return;
+      if (mounted) {
+        setState(() => _uploading = true);
+        _showMessage('Processing document...');
+      }
+      generatedPdf = await ScannedDocumentPdfService.create(capturedPaths);
+      if (!mounted) return;
+      setState(() => _uploading = false);
+      _showMessage('Uploading document...');
+      final uploaded = await _uploadFile(generatedPdf.path,
+          fileName: generatedPdf.uri.pathSegments.last);
+      if (uploaded) await _deleteIfExists(generatedPdf.path);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _uploading = false);
+        _showMessage(
+            'Camera permission is required to scan a document, or PDF generation failed. You can upload an existing PDF.');
+      }
+    } finally {
+      for (final path in capturedPaths) {
+        await _deleteIfExists(path);
+      }
+    }
+  }
+
+  Future<void> _deleteIfExists(String path) async {
+    try {
+      final file = File(path);
+      if (await file.exists()) await file.delete();
+    } catch (_) {
+      // Best-effort cleanup of sensitive temporary captures.
+    }
+  }
+
   Future<void> _captureMeetingProof() async {
     try {
       final image =
@@ -2035,7 +2132,7 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
     }
   }
 
-  Future<void> _uploadFile(String path, {String? fileName}) async {
+  Future<bool> _uploadFile(String path, {String? fileName}) async {
     setState(() => _uploading = true);
     final offline = context.read<ConnectivityService>().isOffline;
     final result = offline
@@ -2045,7 +2142,7 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
             path,
             fileName: fileName,
           );
-    if (!mounted) return;
+    if (!mounted) return false;
     setState(() => _uploading = false);
     if (result == null) {
       await OfflineRepository().enqueue(
@@ -2058,13 +2155,14 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
           'fileName': fileName,
         },
       );
-      if (!mounted) return;
+      if (!mounted) return false;
       context.read<SyncService>().syncNow();
       _showMessage('No internet connection. Upload queued for sync.');
-      return;
+      return false;
     }
     _showMessage('Document uploaded successfully.');
     await _load();
+    return true;
   }
 
   Future<void> _downloadDocument(Map<String, dynamic> doc) async {

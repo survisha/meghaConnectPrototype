@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -21,6 +21,8 @@ import { AssociateCitizen, VisitorSearchService } from '../../services/visitor-s
 import { AuthService } from '../../services/auth.service';
 import { apiErrorMessage } from '../../shared/api-error.util';
 import { ReferenceDataService } from '../../services/reference-data.service';
+import { CameraCaptureService } from '../../shared/camera-capture.service';
+import { jsPDF } from 'jspdf';
 
 interface DocumentUpload {
   type: 'APPLICATION_LETTER' | 'PLANS_ESTIMATES' | 'BANK_DETAILS' | 'MLA_APPROVAL_LETTER' | 'ORG_REGISTRATION_CERTIFICATE' | 'CM_CARE_ELIGIBILITY' | 'CM_CARE_HOSPITAL' | 'CM_CARE_SUPPORTING';
@@ -52,7 +54,13 @@ interface DocumentUpload {
   templateUrl: './appointment-form.component.html',
   styleUrls: ['./appointment-form.component.scss'],
 })
-export class AppointmentFormComponent implements OnInit {
+export class AppointmentFormComponent implements OnInit, OnDestroy {
+  readonly maxScanPages = 10;
+  scanningDocument: DocumentUpload | null = null;
+  scannedPages: string[] = [];
+  scanProcessing = false;
+  scanMessage = '';
+  private documentCameraStream: MediaStream | null = null;
   step = 0;
   submitted = false;
   loading = false;
@@ -373,6 +381,97 @@ export class AppointmentFormComponent implements OnInit {
     }
   }
 
+  async startDocumentScan(docType: DocumentUpload): Promise<void> {
+    if (this.scanProcessing) return;
+    this.cancelDocumentScan();
+    this.errorMsg = '';
+    this.scanMessage = '';
+    try {
+      this.documentCameraStream = await this.cameraCapture.open('environment');
+      this.scanningDocument = docType;
+      setTimeout(() => {
+        const video = document.getElementById('appointmentDocumentScanVideo') as HTMLVideoElement | null;
+        if (video && this.documentCameraStream) this.cameraCapture.attach(video, this.documentCameraStream);
+      });
+    } catch {
+      this.errorMsg = 'Camera permission is required to scan a document. You can enable camera permission or upload an existing PDF.';
+      this.stopDocumentCamera();
+    }
+  }
+
+  captureDocumentPage(): void {
+    if (!this.scanningDocument || this.scanProcessing || this.scannedPages.length >= this.maxScanPages) return;
+    const video = document.getElementById('appointmentDocumentScanVideo') as HTMLVideoElement | null;
+    if (!video?.videoWidth || !video.videoHeight) {
+      this.errorMsg = 'Camera is not ready. Please wait and try again.';
+      return;
+    }
+    const maxDimension = 1800;
+    const scale = Math.min(1, maxDimension / Math.max(video.videoWidth, video.videoHeight));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(video.videoWidth * scale);
+    canvas.height = Math.round(video.videoHeight * scale);
+    const context = canvas.getContext('2d');
+    if (!context) {
+      this.errorMsg = 'Unable to capture the document page.';
+      return;
+    }
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    this.scannedPages.push(canvas.toDataURL('image/jpeg', 0.82));
+    this.scanMessage = `Page ${this.scannedPages.length} captured.`;
+  }
+
+  removeScannedPage(index: number): void {
+    if (!this.scanProcessing) this.scannedPages.splice(index, 1);
+  }
+
+  async finishDocumentScan(): Promise<void> {
+    const target = this.scanningDocument;
+    if (!target || !this.scannedPages.length || this.scanProcessing) return;
+    this.scanProcessing = true;
+    this.scanMessage = 'Processing document...';
+    try {
+      const pdf = new jsPDF({ unit: 'pt', format: 'a4', compress: true });
+      for (let index = 0; index < this.scannedPages.length; index++) {
+        if (index > 0) pdf.addPage();
+        const properties = pdf.getImageProperties(this.scannedPages[index]);
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const margin = 24;
+        const scale = Math.min((pageWidth - margin * 2) / properties.width, (pageHeight - margin * 2) / properties.height);
+        const width = properties.width * scale;
+        const height = properties.height * scale;
+        pdf.addImage(this.scannedPages[index], 'JPEG', (pageWidth - width) / 2, (pageHeight - height) / 2, width, height, undefined, 'FAST');
+      }
+      const blob = pdf.output('blob');
+      if (!blob.size) throw new Error('Empty PDF');
+      const fileName = `appointment-document-${Date.now()}.pdf`;
+      target.file = new File([blob], fileName, { type: 'application/pdf' });
+      target.fileName = fileName;
+      this.scanMessage = 'Document ready and attached. It will upload automatically when the appointment is submitted.';
+      this.stopDocumentCamera();
+      this.scanningDocument = null;
+      this.scannedPages = [];
+    } catch {
+      this.errorMsg = 'PDF generation failed. Your captured pages are still available; please retry or cancel.';
+    } finally {
+      this.scanProcessing = false;
+    }
+  }
+
+  cancelDocumentScan(): void {
+    this.stopDocumentCamera();
+    this.scanningDocument = null;
+    this.scannedPages = [];
+    this.scanProcessing = false;
+    this.scanMessage = '';
+  }
+
+  private stopDocumentCamera(): void {
+    this.cameraCapture.stop(this.documentCameraStream);
+    this.documentCameraStream = null;
+  }
+
   onAgendaTypeChange() {
     this.updateDocumentVisibility();
     if (this.isScheme) {
@@ -398,8 +497,13 @@ export class AppointmentFormComponent implements OnInit {
     private visitorSearchService: VisitorSearchService,
     private auth: AuthService,
     private route: ActivatedRoute,
-    private referenceDataService: ReferenceDataService
+    private referenceDataService: ReferenceDataService,
+    private cameraCapture: CameraCaptureService
   ) {}
+
+  ngOnDestroy(): void {
+    this.cancelDocumentScan();
+  }
 
   ngOnInit() {
     this.isWalkInFlow = this.route.snapshot.queryParamMap.get('source') === 'walkin'

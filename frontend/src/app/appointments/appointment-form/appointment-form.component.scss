@@ -2,6 +2,13 @@
 .form-group { label { display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem; color: #374151; } }
 .info-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.85rem; color: #1e40af; }
 .doc-row { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem; border-bottom: 1px solid #f3f4f6; flex-wrap: wrap; gap: 0.5rem; }
+.doc-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.document-scanner-panel { margin: 0.75rem 0; padding: 1rem; border: 1px solid #dbe4ea; border-radius: 10px; background: #f8fafc; }
+.document-scanner-panel video { display: block; width: min(100%, 680px); max-height: 55vh; margin: 0.75rem 0; border-radius: 8px; background: #111827; object-fit: contain; }
+.scan-page-list { display: flex; gap: 0.5rem; overflow-x: auto; padding: 0.5rem 0; }
+.scan-page { min-width: 96px; display: grid; justify-items: center; gap: 0.25rem; font-size: 0.75rem; }
+.scan-page img { width: 88px; height: 112px; object-fit: cover; border: 1px solid #cbd5e1; border-radius: 4px; }
+.scan-message { color: #047857; font-size: 0.85rem; }
 .doc-label { font-size: 0.88rem; font-weight: 500; color: #374151; }
 .req { color: #dc2626; }
 .review-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.88rem; color: #1f2937; }

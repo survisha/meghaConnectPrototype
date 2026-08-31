@@ -428,15 +428,38 @@
               Uploaded: {{ doc.fileName }}
             </small>
           </div>
-          <button mat-stroked-button type="button" (click)="docFileInput.click()">
-            <mat-icon>upload_file</mat-icon> 
-            {{ doc.fileName ? 'Replace' : 'Upload' }}
-            <input #docFileInput type="file"
-              accept=".pdf,.jpg,.jpeg,.png"
-              (change)="onDocumentChange($event, doc)" 
-              style="display:none"/>
-          </button>
+          <div class="doc-actions">
+            <button mat-stroked-button type="button" (click)="docFileInput.click()" [disabled]="scanProcessing">
+              <mat-icon>upload_file</mat-icon>
+              {{ doc.fileName ? 'Replace' : 'Upload PDF' }}
+              <input #docFileInput type="file"
+                accept=".pdf,.jpg,.jpeg,.png"
+                (change)="onDocumentChange($event, doc)"
+                style="display:none"/>
+            </button>
+            <button mat-stroked-button type="button" (click)="startDocumentScan(doc)" [disabled]="scanProcessing">
+              <mat-icon>document_scanner</mat-icon> Scan Document
+            </button>
+          </div>
         </div>
+        <div *ngIf="scanningDocument" class="document-scanner-panel">
+          <strong>Scanning: {{ scanningDocument.label }}</strong>
+          <video id="appointmentDocumentScanVideo" autoplay muted playsinline></video>
+          <div class="scan-page-list" *ngIf="scannedPages.length">
+            <div *ngFor="let page of scannedPages; let i = index" class="scan-page">
+              <img [src]="page" [alt]="'Captured page ' + (i + 1)" />
+              <span>Page {{ i + 1 }}</span>
+              <button mat-icon-button type="button" (click)="removeScannedPage(i)" [disabled]="scanProcessing" aria-label="Delete captured page"><mat-icon>delete</mat-icon></button>
+            </div>
+          </div>
+          <p>{{ scannedPages.length }} / {{ maxScanPages }} pages captured</p>
+          <div class="doc-actions">
+            <button mat-raised-button color="primary" type="button" (click)="captureDocumentPage()" [disabled]="scanProcessing || scannedPages.length >= maxScanPages"><mat-icon>camera_alt</mat-icon> Capture Page</button>
+            <button mat-raised-button color="primary" type="button" (click)="finishDocumentScan()" [disabled]="scanProcessing || !scannedPages.length"><mat-icon>picture_as_pdf</mat-icon> {{ scanProcessing ? 'Processing...' : 'Finish & Attach PDF' }}</button>
+            <button mat-button type="button" (click)="cancelDocumentScan()" [disabled]="scanProcessing">Cancel</button>
+          </div>
+        </div>
+        <p *ngIf="scanMessage" class="scan-message">{{ scanMessage }}</p>
         <p style="margin:0.75rem 0 0;color:#6b7280;font-size:0.82rem">
           Upload the primary application letter or project proposal. Accepted formats: PDF, JPG, JPEG, or PNG.
         </p>

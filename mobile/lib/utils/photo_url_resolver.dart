@@ -18,9 +18,11 @@ String? resolvePhotoUrl(String? value) {
 
   final api = Uri.parse(AppConfig.apiV1BaseUrl);
   final origin = api.replace(path: '', query: null, fragment: null);
-  return origin
-      .resolve('/${source.replaceFirst(RegExp(r'^/+'), '')}')
-      .toString();
+  final relativePath = source.replaceFirst(RegExp(r'^/+'), '');
+  final uploadPath = relativePath.startsWith('uploads/')
+      ? relativePath
+      : 'uploads/$relativePath';
+  return origin.resolve('/$uploadPath').toString();
 }
 
 bool _looksLikeBase64Image(String value) {

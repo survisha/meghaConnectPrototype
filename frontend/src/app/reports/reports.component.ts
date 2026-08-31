@@ -6,6 +6,7 @@ import { TableModule } from 'primeng/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../services/auth.service';
+import { ReportAnalytics, ReportAnalyticsService } from '../services/report-analytics.service';
 
 @Component({
   selector: 'app-reports',
@@ -20,15 +21,11 @@ export class ReportsComponent implements OnInit {
   schemeWise: any;
   chartOpts: any;
   barChartOpts: any;
+  loading = true;
+  errorMsg = '';
 
-  topConstituencies = [
-    { name: 'Ampati', total: 12, approved: 8, rejected: 2 },
-    { name: 'Shillong East', total: 9, approved: 6, rejected: 1 },
-    { name: 'Baghmara', total: 8, approved: 5, rejected: 2 },
-    { name: 'Umsning', total: 7, approved: 4, rejected: 1 },
-    { name: 'Tura', total: 11, approved: 7, rejected: 2 },
-  ];
-  constructor(public readonly auth: AuthService) {}
+  topConstituencies: Array<{ name: string; total: number; approved: number; rejected: number }> = [];
+  constructor(public readonly auth: AuthService, private readonly analytics: ReportAnalyticsService) {}
 
   get showAnalytics(): boolean {
     return !this.auth.hasRole('DEPARTMENT_ADMIN');
@@ -38,26 +35,37 @@ export class ReportsComponent implements OnInit {
     this.chartOpts = { plugins: { legend: { position: 'bottom' } }, responsive: true };
     this.barChartOpts = { ...this.chartOpts, scales: { x: { stacked: false }, y: { beginAtZero: true } } };
 
+    this.analytics.load().subscribe({
+      next: data => { this.applyAnalytics(data); this.loading = false; },
+      error: () => { this.errorMsg = 'Unable to load report data.'; this.applyAnalytics({ meetingDates: [], statusCounts: [], topConstituencies: [], schemeDistricts: [] }); this.loading = false; }
+    });
+  }
+
+  private applyAnalytics(data: ReportAnalytics): void {
     this.meetingsPerDay = {
-      labels: ['Mon','Tue','Wed','Thu','Fri','Sat'],
+      labels: data.meetingDates.map(row => row.meetingDate),
       datasets: [
-        { label: 'Scheduled', data: [4,6,3,8,5,2], backgroundColor: '#1a237e' },
-        { label: 'Completed', data: [3,5,3,7,4,2], backgroundColor: '#16a34a' },
+        { label: 'Scheduled', data: data.meetingDates.map(row => Number(row.scheduled)), backgroundColor: '#1a237e' },
+        { label: 'Completed', data: data.meetingDates.map(row => Number(row.completed)), backgroundColor: '#16a34a' },
       ]
     };
-
     this.approvalRatio = {
-      labels: ['HCM Accepted','HCM Rejected','Snoozed','Pending','CMO Rejected'],
-      datasets: [{ data: [62, 18, 10, 7, 3], backgroundColor: ['#16a34a','#dc2626','#f59e0b','#6b7280','#b45309'] }]
+      labels: data.statusCounts.map(row => row.status.replaceAll('_', ' ')),
+      datasets: [{ data: data.statusCounts.map(row => Number(row.total)), backgroundColor: data.statusCounts.map((_, index) => ['#16a34a','#dc2626','#f59e0b','#6b7280','#b45309'][index % 5]) }]
     };
-
+    const schemes = [...new Set(data.schemeDistricts.map(row => row.scheme))];
     this.schemeWise = {
-      labels: ['CMSDF','CMSG','CM Care','CM Connect','CM Elevate','Focus+'],
+      labels: schemes.map(code => code.replaceAll('_', ' ')),
       datasets: [
-        { label: 'Approved', data: [28,18,22,10,8,14], backgroundColor: '#16a34a' },
-        { label: 'Pending', data: [12,10,4,7,5,6], backgroundColor: '#f59e0b' },
-        { label: 'Rejected', data: [5,4,2,2,2,2], backgroundColor: '#dc2626' },
+        { label: 'Approved', data: schemes.map(code => this.schemeTotal(data, code, 'approved')), backgroundColor: '#16a34a' },
+        { label: 'Pending', data: schemes.map(code => this.schemeTotal(data, code, 'total') - this.schemeTotal(data, code, 'approved') - this.schemeTotal(data, code, 'rejected')), backgroundColor: '#f59e0b' },
+        { label: 'Rejected', data: schemes.map(code => this.schemeTotal(data, code, 'rejected')), backgroundColor: '#dc2626' },
       ]
     };
+    this.topConstituencies = data.topConstituencies;
+  }
+
+  private schemeTotal(data: ReportAnalytics, scheme: string, field: 'total' | 'approved' | 'rejected'): number {
+    return data.schemeDistricts.filter(row => row.scheme === scheme).reduce((sum, row) => sum + Number(row[field]), 0);
   }
 }

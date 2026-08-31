@@ -9,6 +9,11 @@ void main() {
         resolved, contains('/uploads/visitor-photos/2026-08-12/7c1c1158.jpg'));
     expect(resolved, isNot(contains('/api/v1/uploads/')));
   });
+
+  test('resolves backend storage keys through the secured uploads route', () {
+    final resolved = resolvePhotoUrl('visitor-photos/2026-08-12/photo.jpg');
+    expect(resolved, contains('/uploads/visitor-photos/2026-08-12/photo.jpg'));
+  });
   test('preserves absolute URL and handles blank', () {
     expect(resolvePhotoUrl('https://files.example/photo.jpg'),
         'https://files.example/photo.jpg');

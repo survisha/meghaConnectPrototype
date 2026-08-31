@@ -149,8 +149,21 @@ class _Appointment {
 
   int? get citizenId => _asInt(
       raw['applicantId'] ?? raw['citizenId'] ?? _map(raw['applicant'])['id']);
-  String get photoUrl =>
-      _firstText([_map(raw['applicant'])['photoUrl'], raw['photoUrl']]);
+  String get photoUrl {
+    final applicant = _map(raw['applicant']);
+    return _firstText([
+      applicant['photoUrl'],
+      applicant['livePhotoBase64'],
+      applicant['photoBase64'],
+      applicant['livePhotoPath'],
+      applicant['photoStoragePath'],
+      applicant['photoPath'],
+      raw['photoUrl'],
+      raw['livePhotoPath'],
+      raw['photoStoragePath'],
+      raw['photoPath'],
+    ]);
+  }
 }
 
 class _AppointmentListSession {
@@ -2241,8 +2254,14 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
       _details['livePhotoBase64'],
       _details['photoBase64'],
       applicant['photoUrl'],
+      applicant['livePhotoPath'],
+      applicant['photoStoragePath'],
+      applicant['photoPath'],
       _details['photoUrl'],
       _details['livePhotoUrl'],
+      _details['livePhotoPath'],
+      _details['photoStoragePath'],
+      _details['photoPath'],
       widget.appointment.photoUrl,
     ]);
     if (source.isNotEmpty) {

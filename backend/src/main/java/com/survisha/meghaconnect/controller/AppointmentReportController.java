@@ -8,6 +8,7 @@ import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/reports/appointments")
@@ -20,6 +21,11 @@ public class AppointmentReportController {
     public Page<AppointmentReportRow> search(@ModelAttribute AppointmentReportFilter filter,
                                              Pageable pageable, Authentication auth) {
         return service.search(filter, pageable, auth.getName());
+    }
+
+    @GetMapping("/analytics")
+    public Map<String, Object> analytics(Authentication auth) {
+        return service.analytics(auth.getName());
     }
 
     @GetMapping(value = "/export.xlsx", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")

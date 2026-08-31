@@ -12,6 +12,8 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 import javax.persistence.criteria.*;
 import java.io.*;
@@ -29,6 +31,51 @@ public class AppointmentReportService {
     private final SchemeApplicationRepository schemeRepository;
     private final UserRepository userRepository;
     private final AuditLogService auditLogService;
+    private final NamedParameterJdbcTemplate jdbc;
+
+    public Map<String, Object> analytics(String actor) {
+        Long departmentId = scopedDepartment(actor);
+        MapSqlParameterSource parameters = new MapSqlParameterSource();
+        String appointmentScope = "";
+        String schemeScope = "";
+        if (departmentId != null) {
+            parameters.addValue("departmentId", departmentId);
+            appointmentScope = " WHERE (a.department_id = :departmentId OR a.routed_department_id = :departmentId) ";
+            schemeScope = " WHERE (a.department_id = :departmentId OR a.routed_department_id = :departmentId) ";
+        }
+
+        List<Map<String, Object>> statusCounts = jdbc.queryForList(
+                "SELECT a.status AS status, COUNT(*) AS total FROM appointments a " + appointmentScope + " GROUP BY a.status ORDER BY a.status",
+                parameters);
+        List<Map<String, Object>> meetingDates = jdbc.queryForList(
+                "SELECT CAST(COALESCE(a.scheduled_date_time, a.created_at) AS DATE) AS date, " +
+                        "SUM(CASE WHEN a.status IN ('SCHEDULED','APPROVED_WITH_DATE_TIME','RESCHEDULED') THEN 1 ELSE 0 END) AS scheduled, " +
+                        "SUM(CASE WHEN a.status IN ('COMPLETED','HCM_MET_COMPLETED','CLOSED') THEN 1 ELSE 0 END) AS completed " +
+                        "FROM appointments a " + appointmentScope +
+                        " GROUP BY CAST(COALESCE(a.scheduled_date_time, a.created_at) AS DATE) ORDER BY date DESC LIMIT 7",
+                parameters);
+        Collections.reverse(meetingDates);
+        List<Map<String, Object>> constituencies = jdbc.queryForList(
+                "SELECT COALESCE(NULLIF(v.constituency,''),'Not specified') AS constituency, COUNT(*) AS total, " +
+                        "SUM(CASE WHEN a.status IN ('APPROVED','HCM_ACCEPTED','SCHEDULED','APPROVED_WITH_DATE_TIME','COMPLETED','HCM_MET_COMPLETED','CLOSED') THEN 1 ELSE 0 END) AS approved, " +
+                        "SUM(CASE WHEN a.status IN ('REJECTED','HCM_REJECTED','CANCELLED') THEN 1 ELSE 0 END) AS rejected " +
+                        "FROM appointments a JOIN visitors v ON v.id = a.applicant_id " + appointmentScope +
+                        " GROUP BY COALESCE(NULLIF(v.constituency,''),'Not specified') ORDER BY total DESC LIMIT 5",
+                parameters);
+        List<Map<String, Object>> schemeRows = jdbc.queryForList(
+                "SELECT s.scheme_type AS scheme, COALESCE(NULLIF(v.district,''),'Not specified') AS district, COUNT(*) AS total, " +
+                        "SUM(CASE WHEN UPPER(COALESCE(s.status,'')) IN ('APPROVED','HCM_ACCEPTED','COMPLETED','CLOSED') OR s.hcm_decision IN ('APPROVED','APPROVED_WITH_CHANGES') THEN 1 ELSE 0 END) AS approved, " +
+                        "SUM(CASE WHEN UPPER(COALESCE(s.status,'')) IN ('REJECTED','HCM_REJECTED') OR s.hcm_decision = 'REJECTED' THEN 1 ELSE 0 END) AS rejected " +
+                        "FROM scheme_applications s JOIN visitors v ON v.id = s.applicant_id LEFT JOIN appointments a ON a.id = s.appointment_id " + schemeScope +
+                        " GROUP BY s.scheme_type, COALESCE(NULLIF(v.district,''),'Not specified') ORDER BY s.scheme_type, district",
+                parameters);
+        return Map.of(
+                "meetingDates", meetingDates,
+                "statusCounts", statusCounts,
+                "topConstituencies", constituencies,
+                "schemeDistricts", schemeRows
+        );
+    }
 
     public Page<AppointmentReportRow> search(AppointmentReportFilter filter, Pageable pageable, String actor) {
         Page<Appointment> page = appointmentRepository.findAll(specification(filter, actor), pageable);

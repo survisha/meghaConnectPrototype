@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ReferenceDataDto, SchemeService } from '../../services/scheme.service';
-import { MockDataService } from '../../services/mock-data.service';
+import { ReportAnalyticsService } from '../../services/report-analytics.service';
 import { VisitorService } from '../../services/visitor.service';
 import { SchemeApplication, SchemeType } from '../../models';
 import { apiErrorMessage } from '../../shared/api-error.util';
@@ -79,7 +79,7 @@ export class SchemeListComponent implements OnInit {
 
   constructor(
     private schemeService: SchemeService,
-    private mockDataService: MockDataService,
+    private reportAnalytics: ReportAnalyticsService,
     private visitorService: VisitorService,
     public auth: AuthService,
     private snackBar: ToastService,
@@ -88,6 +88,7 @@ export class SchemeListComponent implements OnInit {
   ngOnInit() {
     this.loadSchemeOptions();
     this.loadApplications();
+    this.loadStatistics();
   }
 
   private loadApplications(): void {
@@ -96,22 +97,13 @@ export class SchemeListComponent implements OnInit {
       next: (res: any) => {
         const content = res.content ?? res ?? [];
         
-        // If API returns empty or no data, use dummy data for demo
-        if (!content || content.length === 0) {
-          this.schemes = this.mockDataService.schemeApplications;
-        } else {
-          this.schemes = content;
-        }
-        
-        this.calculateStats();
+        this.schemes = content || [];
         this.errorMsg = '';
         this.loading = false;
       },
       error: (err) => { 
-        console.error('[SchemeListComponent] API call failed, using dummy data for demo:', err);
-        this.errorMsg = apiErrorMessage(err, 'Unable to load scheme applications. Showing demo data.');
-        this.schemes = this.mockDataService.schemeApplications;
-        this.calculateStats();
+        this.errorMsg = apiErrorMessage(err, 'Unable to load scheme applications.');
+        this.schemes = [];
         this.loading = false;
       }
     });
@@ -126,12 +118,10 @@ export class SchemeListComponent implements OnInit {
         if (this.filterScheme && !referenceOptions.some(option => option.value === this.filterScheme)) {
           this.filterScheme = '';
         }
-        this.calculateStats();
         this.schemeOptionsLoading = false;
       },
       error: (err) => {
         console.warn('[SchemeListComponent] Failed to load CM_SCHEME reference data:', err);
-        this.calculateStats();
         this.schemeOptionsLoading = false;
       }
     });
@@ -150,40 +140,21 @@ export class SchemeListComponent implements OnInit {
     return Array.from(unique.values());
   }
 
-  calculateStats() {
-    // Calculate statistics from schemes data
-    const stats = new Map<string, { total: number; approved: number; pending: number; rejected: number; totalCost: number }>();
-    
-    this.schemes.forEach(scheme => {
-      if (!stats.has(scheme.schemeType)) {
-        stats.set(scheme.schemeType, { total: 0, approved: 0, pending: 0, rejected: 0, totalCost: 0 });
-      }
-      
-      const stat = stats.get(scheme.schemeType)!;
-      stat.total++;
-      
-      if (scheme.status === 'APPROVED' || scheme.hcmDecision === 'APPROVED') {
-        stat.approved++;
-        stat.totalCost += scheme.hcmApprovedCost || scheme.estimatedCost;
-      } else if (scheme.status === 'REJECTED' || scheme.hcmDecision === 'REJECTED') {
-        stat.rejected++;
-      } else {
-        stat.pending++;
-      }
-    });
-    
-    const schemeCodes = this.getStatsSchemeCodes(stats);
-    this.schemeStats = schemeCodes.map(code => {
-      const data = stats.get(code) ?? { total: 0, approved: 0, pending: 0, rejected: 0, totalCost: 0 };
-      return {
-        code,
-        name: this.formatSchemeName(code),
-        total: data.total,
-        approved: data.approved,
-        pending: data.pending,
-        rejected: data.rejected,
-        budget: data.totalCost > 0 ? `₹${(data.totalCost / 10000000).toFixed(2)}Cr` : '–',
-      };
+  private loadStatistics(): void {
+    this.reportAnalytics.load().subscribe({
+      next: analytics => {
+        const grouped = new Map<string, { total: number; approved: number; rejected: number }>();
+        analytics.schemeDistricts.forEach(row => {
+          const value = grouped.get(row.scheme) ?? { total: 0, approved: 0, rejected: 0 };
+          value.total += Number(row.total); value.approved += Number(row.approved); value.rejected += Number(row.rejected);
+          grouped.set(row.scheme, value);
+        });
+        this.schemeStats = [...grouped.entries()].map(([code, value]) => ({
+          name: this.formatSchemeName(code), code, total: value.total, approved: value.approved,
+          rejected: value.rejected, pending: value.total - value.approved - value.rejected, budget: ''
+        }));
+      },
+      error: () => { this.schemeStats = []; }
     });
   }
 
@@ -193,14 +164,6 @@ export class SchemeListComponent implements OnInit {
     if (schemeType === 'CM_ELEVATE') return 'CM Elevate';
     if (schemeType === 'FOCUS_PLUS') return 'Focus+';
     return schemeType;
-  }
-
-  private getStatsSchemeCodes(stats: Map<string, unknown>): string[] {
-    const referenceCodes = this.schemeOptions
-      .filter(option => option.value)
-      .map(option => option.value.toString());
-    const dataCodes = Array.from(stats.keys());
-    return Array.from(new Set([...referenceCodes, ...dataCodes]));
   }
 
   get filtered() {
@@ -371,7 +334,7 @@ export class SchemeListComponent implements OnInit {
         next: updated => {
           this.replaceScheme(updated);
           this.selected = updated;
-          this.calculateStats();
+          this.loadStatistics();
           this.snackBar.open(successMessage, 'Close', { duration: 4000, panelClass: ['success-snackbar'] });
         },
         error: error => this.snackBar.open(apiErrorMessage(error, 'Unable to update scheme application.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] })

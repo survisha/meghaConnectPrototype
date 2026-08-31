@@ -1,40 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-
-const _meetingSeries = [
-  _MeetingDay('Mon', 4, 3),
-  _MeetingDay('Tue', 6, 5),
-  _MeetingDay('Wed', 3, 3),
-  _MeetingDay('Thu', 8, 7),
-  _MeetingDay('Fri', 5, 4),
-  _MeetingDay('Sat', 2, 2),
-];
-
-const _approvalRatio = [
-  _ChartSlice('HCM Accepted', 62, Color(0xFF16A34A)),
-  _ChartSlice('HCM Rejected', 18, Color(0xFFDC2626)),
-  _ChartSlice('Snoozed', 10, Color(0xFFF59E0B)),
-  _ChartSlice('Pending', 7, Color(0xFF6B7280)),
-  _ChartSlice('CMO Rejected', 3, Color(0xFFB45309)),
-];
-
-const _schemeWise = [
-  _SchemeStatus('CMSDF', 28, 12, 5),
-  _SchemeStatus('CMSG', 18, 10, 4),
-  _SchemeStatus('CM Care', 22, 4, 2),
-  _SchemeStatus('CM Connect', 10, 7, 2),
-  _SchemeStatus('CM Elevate', 8, 5, 2),
-  _SchemeStatus('Focus+', 14, 6, 2),
-];
-
-const _topConstituencies = [
-  _ConstituencyStat('Ampati', 12, 8, 2),
-  _ConstituencyStat('Shillong East', 9, 6, 1),
-  _ConstituencyStat('Baghmara', 8, 5, 2),
-  _ConstituencyStat('Umsning', 7, 4, 1),
-  _ConstituencyStat('Tura', 11, 7, 2),
-];
+import '../services/api_service.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -48,11 +15,16 @@ class _ReportsScreenState extends State<ReportsScreen>
   late final TabController _tabCtrl;
   bool _loading = false;
   String? _error;
+  List<_MeetingDay> _meetingSeries = const [];
+  List<_ChartSlice> _approvalRatio = const [];
+  List<_SchemeStatus> _schemeWise = const [];
+  List<_ConstituencyStat> _topConstituencies = const [];
 
   @override
   void initState() {
     super.initState();
     _tabCtrl = TabController(length: 3, vsync: this);
+    _refresh();
   }
 
   @override
@@ -66,10 +38,79 @@ class _ReportsScreenState extends State<ReportsScreen>
       _loading = true;
       _error = null;
     });
-    await Future<void>.delayed(const Duration(milliseconds: 200));
-    if (!mounted) return;
-    setState(() => _loading = false);
+    try {
+      final analytics = await ApiService.getAppointmentAnalytics();
+      if (!mounted) return;
+      final statuses = List<Map<String, dynamic>>.from(
+        analytics['statusCounts'] as List? ?? const [],
+      );
+      final total =
+          statuses.fold<int>(0, (sum, row) => sum + _int(row['total']));
+      setState(() {
+        _meetingSeries = List<Map<String, dynamic>>.from(
+          analytics['meetingDates'] as List? ?? const [],
+        )
+            .map((row) => _MeetingDay(
+                  (row['date'] ?? '').toString(),
+                  _int(row['scheduled']),
+                  _int(row['completed']),
+                ))
+            .toList();
+        _approvalRatio = statuses.asMap().entries.map((entry) {
+          final count = _int(entry.value['total']);
+          return _ChartSlice(
+            (entry.value['status'] ?? 'Unknown').toString(),
+            total == 0 ? 0 : ((count * 100) / total).round(),
+            _chartColors[entry.key % _chartColors.length],
+          );
+        }).toList();
+        final schemes = <String, _SchemeStatus>{};
+        for (final row in List<Map<String, dynamic>>.from(
+          analytics['schemeDistricts'] as List? ?? const [],
+        )) {
+          final name = (row['scheme'] ?? 'Unknown').toString();
+          final current = schemes[name] ?? _SchemeStatus(name, 0, 0, 0);
+          final approved = _int(row['approved']);
+          final rejected = _int(row['rejected']);
+          schemes[name] = _SchemeStatus(
+            name,
+            current.approved + approved,
+            current.pending + _int(row['total']) - approved - rejected,
+            current.rejected + rejected,
+          );
+        }
+        _schemeWise = schemes.values.toList();
+        _topConstituencies = List<Map<String, dynamic>>.from(
+          analytics['topConstituencies'] as List? ?? const [],
+        )
+            .map((row) => _ConstituencyStat(
+                  (row['constituency'] ?? 'Unknown').toString(),
+                  _int(row['total']),
+                  _int(row['approved']),
+                  _int(row['rejected']),
+                ))
+            .toList();
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = 'Failed to load reports.';
+      });
+    }
   }
+
+  int _int(dynamic value) =>
+      value is num ? value.toInt() : int.tryParse('$value') ?? 0;
+
+  static const _chartColors = [
+    Color(0xFF16A34A),
+    Color(0xFFDC2626),
+    Color(0xFFF59E0B),
+    Color(0xFF6B7280),
+    Color(0xFF1A237E),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -139,7 +180,8 @@ class _ReportsScreenState extends State<ReportsScreen>
               ),
               _MiniKpi(
                 label: 'Accepted',
-                value: '${_approvalRatio.first.value}%',
+                value:
+                    '${_approvalRatio.isEmpty ? 0 : _approvalRatio.first.value}%',
                 icon: Icons.done_all_outlined,
               ),
               _MiniKpi(
@@ -157,19 +199,19 @@ class _ReportsScreenState extends State<ReportsScreen>
   Widget _buildOverview() {
     return ListView(
       padding: const EdgeInsets.all(12),
-      children: const [
+      children: [
         _ReportCard(
           title: 'Meetings Per Day (This Week)',
           icon: Icons.bar_chart,
           child: _GroupedMeetingChart(data: _meetingSeries),
         ),
-        SizedBox(height: 12),
+        const SizedBox(height: 12),
         _ReportCard(
           title: 'Approval vs Rejection Ratio',
           icon: Icons.pie_chart_outline,
           child: _PieChartCard(slices: _approvalRatio),
         ),
-        SizedBox(height: 12),
+        const SizedBox(height: 12),
         _ReportCard(
           title: 'Appointment Status Breakdown',
           icon: Icons.fact_check_outlined,
@@ -183,7 +225,7 @@ class _ReportsScreenState extends State<ReportsScreen>
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
-        const _ReportCard(
+        _ReportCard(
           title: 'Scheme-wise Application Status',
           icon: Icons.stacked_bar_chart_outlined,
           child: _SchemeBarChart(data: _schemeWise),

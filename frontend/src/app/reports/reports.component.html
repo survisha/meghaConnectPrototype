@@ -13,7 +13,10 @@
     </div>
   </div>
 
-  <div *ngIf="showAnalytics" style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+  <div *ngIf="loading" class="section-card" style="padding:2rem;text-align:center">Loading report data...</div>
+  <div *ngIf="errorMsg" class="section-card" style="padding:1rem;color:#b91c1c">{{ errorMsg }}</div>
+
+  <div *ngIf="showAnalytics && !loading" style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
     <div class="section-card">
       <div class="section-card-header" style="display:flex;align-items:center;gap:0.5rem">
         <mat-icon style="font-size:1.2rem;width:1.2rem;height:1.2rem">bar_chart</mat-icon>

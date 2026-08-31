@@ -1,368 +1,110 @@
-import { Component, OnInit, AfterViewInit, ElementRef, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-
-// Angular Material
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { ReferenceDataDto, SchemeService } from '../../services/scheme.service';
+import { ReportAnalyticsService } from '../../services/report-analytics.service';
 
 declare const L: any;
+interface SchemeOption { label: string; value: string; }
+interface DistrictRow { name: string; applications: number; approved: number; approvalRate: number; color: string; }
 
-interface SchemeOption {
-  label: string;
-  value: string;
-}
+// Geographic reference coordinates are presentation configuration, not business statistics.
+const DISTRICT_COORDINATES: Record<string, [number, number]> = {
+  'East Khasi Hills': [25.57, 91.88], 'West Garo Hills': [25.51, 90.22],
+  'East Garo Hills': [25.58, 90.65], 'West Khasi Hills': [25.38, 91.28],
+  'Ri Bhoi': [25.80, 91.85], 'South Garo Hills': [25.19, 90.41],
+  'West Jaintia Hills': [25.48, 92.20], 'East Jaintia Hills': [25.32, 92.47],
+  'North Garo Hills': [25.73, 90.44], 'South West Khasi Hills': [25.10, 91.45],
+  'Eastern West Khasi Hills': [25.47, 91.60],
+};
 
 @Component({
-  selector: 'app-heatmap',
-  standalone: true,
-  imports: [
-    CommonModule, FormsModule, RouterLink,
-    MatSelectModule, MatFormFieldModule, MatButtonModule, MatIconModule
-  ],
-  templateUrl: './heatmap.component.html',
-  styleUrls: ['./heatmap.component.scss'],
+  selector: 'app-heatmap', standalone: true,
+  imports: [CommonModule, FormsModule, RouterLink, MatSelectModule, MatFormFieldModule, MatButtonModule, MatIconModule],
+  templateUrl: './heatmap.component.html', styleUrls: ['./heatmap.component.scss'],
 })
 export class HeatmapComponent implements OnInit, AfterViewInit {
   @ViewChild('mapContainer') mapContainer!: ElementRef;
   private map: any;
+  private rows: Array<{ scheme: string; district: string; total: number; approved: number }> = [];
   mapLoading = true;
   leafletAvailable = false;
-
+  errorMsg = '';
   selectedScheme = 'ALL';
   schemeOptionsLoading = false;
   schemeOptions: SchemeOption[] = [{ label: 'All Schemes', value: 'ALL' }];
+  districtData: DistrictRow[] = [];
 
-  // Comprehensive district data with scheme-wise breakdown
-  private allDistrictData = [
-    { 
-      name: 'East Khasi Hills', 
-      lat: 25.57, 
-      lng: 91.88, 
-      schemes: {
-        ALL: { applications: 142, approved: 98 },
-        CMSDF: { applications: 45, approved: 32 },
-        CMSG: { applications: 38, approved: 27 },
-        CM_CARE: { applications: 22, approved: 15 },
-        CM_CONNECT: { applications: 18, approved: 12 },
-        CM_ELEVATE: { applications: 12, approved: 8 },
-        FOCUS_PLUS: { applications: 7, approved: 4 }
-      }
-    },
-    { 
-      name: 'West Garo Hills', 
-      lat: 25.51, 
-      lng: 90.22, 
-      schemes: {
-        ALL: { applications: 118, approved: 79 },
-        CMSDF: { applications: 38, approved: 25 },
-        CMSG: { applications: 32, approved: 22 },
-        CM_CARE: { applications: 19, approved: 13 },
-        CM_CONNECT: { applications: 15, approved: 10 },
-        CM_ELEVATE: { applications: 9, approved: 6 },
-        FOCUS_PLUS: { applications: 5, approved: 3 }
-      }
-    },
-    { 
-      name: 'East Garo Hills', 
-      lat: 25.58, 
-      lng: 90.65, 
-      schemes: {
-        ALL: { applications: 87, approved: 61 },
-        CMSDF: { applications: 28, approved: 20 },
-        CMSG: { applications: 24, approved: 17 },
-        CM_CARE: { applications: 14, approved: 10 },
-        CM_CONNECT: { applications: 11, approved: 8 },
-        CM_ELEVATE: { applications: 7, approved: 4 },
-        FOCUS_PLUS: { applications: 3, approved: 2 }
-      }
-    },
-    { 
-      name: 'West Khasi Hills', 
-      lat: 25.38, 
-      lng: 91.28, 
-      schemes: {
-        ALL: { applications: 64, approved: 43 },
-        CMSDF: { applications: 20, approved: 14 },
-        CMSG: { applications: 17, approved: 12 },
-        CM_CARE: { applications: 11, approved: 7 },
-        CM_CONNECT: { applications: 8, approved: 5 },
-        CM_ELEVATE: { applications: 5, approved: 3 },
-        FOCUS_PLUS: { applications: 3, approved: 2 }
-      }
-    },
-    { 
-      name: 'Ri Bhoi', 
-      lat: 25.80, 
-      lng: 91.85, 
-      schemes: {
-        ALL: { applications: 56, approved: 39 },
-        CMSDF: { applications: 18, approved: 13 },
-        CMSG: { applications: 15, approved: 11 },
-        CM_CARE: { applications: 9, approved: 6 },
-        CM_CONNECT: { applications: 7, approved: 5 },
-        CM_ELEVATE: { applications: 5, approved: 3 },
-        FOCUS_PLUS: { applications: 2, approved: 1 }
-      }
-    },
-    { 
-      name: 'South Garo Hills', 
-      lat: 25.19, 
-      lng: 90.41, 
-      schemes: {
-        ALL: { applications: 48, approved: 32 },
-        CMSDF: { applications: 15, approved: 10 },
-        CMSG: { applications: 13, approved: 9 },
-        CM_CARE: { applications: 8, approved: 5 },
-        CM_CONNECT: { applications: 6, approved: 4 },
-        CM_ELEVATE: { applications: 4, approved: 3 },
-        FOCUS_PLUS: { applications: 2, approved: 1 }
-      }
-    },
-    { 
-      name: 'West Jaintia Hills', 
-      lat: 25.48, 
-      lng: 92.20, 
-      schemes: {
-        ALL: { applications: 39, approved: 26 },
-        CMSDF: { applications: 12, approved: 8 },
-        CMSG: { applications: 10, approved: 7 },
-        CM_CARE: { applications: 7, approved: 5 },
-        CM_CONNECT: { applications: 5, approved: 3 },
-        CM_ELEVATE: { applications: 3, approved: 2 },
-        FOCUS_PLUS: { applications: 2, approved: 1 }
-      }
-    },
-    { 
-      name: 'East Jaintia Hills', 
-      lat: 25.32, 
-      lng: 92.47, 
-      schemes: {
-        ALL: { applications: 35, approved: 24 },
-        CMSDF: { applications: 11, approved: 8 },
-        CMSG: { applications: 9, approved: 6 },
-        CM_CARE: { applications: 6, approved: 4 },
-        CM_CONNECT: { applications: 5, approved: 3 },
-        CM_ELEVATE: { applications: 3, approved: 2 },
-        FOCUS_PLUS: { applications: 1, approved: 1 }
-      }
-    },
-    { 
-      name: 'North Garo Hills', 
-      lat: 25.73, 
-      lng: 90.44, 
-      schemes: {
-        ALL: { applications: 31, approved: 21 },
-        CMSDF: { applications: 10, approved: 7 },
-        CMSG: { applications: 8, approved: 6 },
-        CM_CARE: { applications: 5, approved: 3 },
-        CM_CONNECT: { applications: 4, approved: 3 },
-        CM_ELEVATE: { applications: 3, approved: 2 },
-        FOCUS_PLUS: { applications: 1, approved: 0 }
-      }
-    },
-    { 
-      name: 'South West Khasi Hills', 
-      lat: 25.10, 
-      lng: 91.45, 
-      schemes: {
-        ALL: { applications: 24, approved: 16 },
-        CMSDF: { applications: 8, approved: 5 },
-        CMSG: { applications: 6, approved: 4 },
-        CM_CARE: { applications: 4, approved: 3 },
-        CM_CONNECT: { applications: 3, approved: 2 },
-        CM_ELEVATE: { applications: 2, approved: 1 },
-        FOCUS_PLUS: { applications: 1, approved: 1 }
-      }
-    },
-    { 
-      name: 'Eastern West Khasi Hills', 
-      lat: 25.47, 
-      lng: 91.60, 
-      schemes: {
-        ALL: { applications: 18, approved: 12 },
-        CMSDF: { applications: 6, approved: 4 },
-        CMSG: { applications: 5, approved: 3 },
-        CM_CARE: { applications: 3, approved: 2 },
-        CM_CONNECT: { applications: 2, approved: 2 },
-        CM_ELEVATE: { applications: 1, approved: 1 },
-        FOCUS_PLUS: { applications: 1, approved: 0 }
-      }
-    },
-  ];
+  constructor(private schemeService: SchemeService, private analytics: ReportAnalyticsService) {}
+  get totalApplications() { return this.districtData.reduce((sum, row) => sum + row.applications, 0); }
+  get totalApproved() { return this.districtData.reduce((sum, row) => sum + row.approved, 0); }
+  get totalPending() { return this.totalApplications - this.totalApproved; }
+  get approvalRate() { return this.totalApplications ? this.totalApproved / this.totalApplications * 100 : 0; }
 
-  districtData: any[] = [];
-
-  constructor(private schemeService: SchemeService) {}
-
-  // Computed properties for statistics
-  get totalApplications(): number {
-    return this.districtData.reduce((sum, d) => sum + d.applications, 0);
-  }
-
-  get totalApproved(): number {
-    return this.districtData.reduce((sum, d) => sum + d.approved, 0);
-  }
-
-  get totalPending(): number {
-    return this.districtData.reduce((sum, d) => sum + (d.applications - d.approved), 0);
-  }
-
-  get approvalRate(): number {
-    if (this.totalApplications === 0) return 0;
-    return (this.totalApproved / this.totalApplications * 100);
-  }
-
-  ngOnInit() {
-    this.loadSchemeOptions();
-    this.updateDistrictData();
-    // Check if Leaflet is available
+  ngOnInit(): void {
     this.leafletAvailable = typeof L !== 'undefined';
+    this.loadSchemeOptions();
+    this.analytics.load().subscribe({
+      next: data => {
+        this.rows = data.schemeDistricts.map(row => ({ scheme: row.scheme, district: row.district, total: Number(row.total), approved: Number(row.approved) }));
+        this.updateDistrictData(); this.mapLoading = false; this.addMarkers();
+      },
+      error: () => { this.errorMsg = 'Unable to load heatmap data.'; this.rows = []; this.updateDistrictData(); this.mapLoading = false; }
+    });
   }
+
+  ngAfterViewInit(): void { setTimeout(() => this.initMap(), 100); }
 
   private loadSchemeOptions(): void {
     this.schemeOptionsLoading = true;
     this.schemeService.getSchemeTypes().subscribe({
-      next: (data) => {
-        const referenceOptions = this.toSchemeOptions(data);
-        this.schemeOptions = [{ label: 'All Schemes', value: 'ALL' }, ...referenceOptions];
-        if (!this.schemeOptions.some(option => option.value === this.selectedScheme)) {
-          this.selectedScheme = 'ALL';
-          this.addMarkers();
-        }
-        this.schemeOptionsLoading = false;
-      },
-      error: (err) => {
-        console.warn('[HeatmapComponent] Failed to load CM_SCHEME reference data:', err);
-        this.schemeOptionsLoading = false;
-      }
+      next: data => { this.schemeOptions = [{ label: 'All Schemes', value: 'ALL' }, ...this.toSchemeOptions(data)]; this.schemeOptionsLoading = false; },
+      error: () => { this.schemeOptionsLoading = false; }
     });
   }
 
   private toSchemeOptions(data: ReferenceDataDto[] | null | undefined): SchemeOption[] {
     const unique = new Map<string, SchemeOption>();
-    (data ?? [])
-      .filter(item => item?.code)
-      .forEach(item => {
-        unique.set(item.code, {
-          value: item.code,
-          label: item.value || item.code,
-        });
-      });
-    return Array.from(unique.values());
+    (data ?? []).filter(item => item?.code).forEach(item => unique.set(item.code, { value: item.code, label: item.value || item.code }));
+    return [...unique.values()];
   }
 
-  updateDistrictData() {
-    this.districtData = this.allDistrictData.map(d => {
-      const schemeData = (d.schemes as Record<string, { applications: number; approved: number }>)[this.selectedScheme] ?? {
-        applications: 0,
-        approved: 0,
-      };
-      const applications = schemeData.applications;
-      const approved = schemeData.approved;
-      
-      // Determine color based on application volume
-      let color = '#16a34a'; // Low (green)
-      if (applications > 40) {
-        color = '#dc2626'; // High (red)
-      } else if (applications > 20) {
-        color = '#f59e0b'; // Medium (orange)
-      }
-
-      return {
-        name: d.name,
-        lat: d.lat,
-        lng: d.lng,
-        applications,
-        approved,
-        color,
-        approvalRate: applications > 0 ? Math.round((approved / applications) * 100) : 0
-      };
-    }).sort((a, b) => b.applications - a.applications);
-  }
-
-  ngAfterViewInit() {
-    setTimeout(() => this.initMap(), 100);
-  }
-
-  initMap() {
-    if (typeof L === 'undefined') {
-      console.error('Leaflet library not loaded');
-      this.mapLoading = false;
-      this.leafletAvailable = false;
-      return;
-    }
-    
-    if (this.map) { this.map.remove(); }
-
-    try {
-      this.map = L.map(this.mapContainer.nativeElement, {
-        center: [25.5, 91.4],
-        zoom: 8,
-      });
-
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-      }).addTo(this.map);
-
-      this.addMarkers();
-      this.mapLoading = false;
-      this.leafletAvailable = true;
-    } catch (error) {
-      console.error('Error initializing map:', error);
-      this.mapLoading = false;
-      this.leafletAvailable = false;
-    }
-  }
-
-  addMarkers() {
-    if (!this.map) return;
-    
-    // Update district data first
-    this.updateDistrictData();
-    
-    // Clear existing layers except base tile layer
-    this.map.eachLayer((layer: any) => {
-      if (layer instanceof L.CircleMarker) {
-        this.map.removeLayer(layer);
-      }
+  updateDistrictData(): void {
+    const grouped = new Map<string, { applications: number; approved: number }>();
+    this.rows.filter(row => this.selectedScheme === 'ALL' || row.scheme === this.selectedScheme).forEach(row => {
+      const value = grouped.get(row.district) ?? { applications: 0, approved: 0 };
+      value.applications += row.total; value.approved += row.approved; grouped.set(row.district, value);
     });
-    
-    // Find max applications for scaling
-    const maxApplications = Math.max(...this.districtData.map(d => d.applications), 1);
-    
-    this.districtData.forEach(d => {
-      const radius = 10 + (d.applications / maxApplications) * 25;
-      const circle = L.circleMarker([d.lat, d.lng], {
-        radius,
-        fillColor: d.color,
-        color: 'white',
-        weight: 2,
-        opacity: 1,
-        fillOpacity: 0.75,
-      }).addTo(this.map);
+    this.districtData = [...grouped.entries()].map(([name, value]) => ({
+      name, ...value,
+      approvalRate: value.applications ? Math.round(value.approved / value.applications * 100) : 0,
+      color: value.applications > 40 ? '#dc2626' : value.applications > 20 ? '#f59e0b' : '#16a34a'
+    })).sort((left, right) => right.applications - left.applications);
+  }
 
-      const scheme = this.schemeOptions.find(s => s.value === this.selectedScheme)?.label || 'All Schemes';
-      circle.bindPopup(`
-        <div style="font-family:system-ui;min-width:200px">
-          <div style="font-weight:700;font-size:1rem;margin-bottom:0.5rem;color:#1a237e">${d.name}</div>
-          <div style="font-size:0.85rem;color:#6b7280;margin-bottom:0.5rem"><b>Scheme:</b> ${scheme}</div>
-          <div style="display:grid;grid-template-columns:auto 1fr;gap:0.5rem;font-size:0.85rem">
-            <span style="color:#6b7280">Applications:</span>
-            <b style="color:#1f2937">${d.applications}</b>
-            <span style="color:#6b7280">Approved:</span>
-            <b style="color:#16a34a">${d.approved}</b>
-            <span style="color:#6b7280">Pending:</span>
-            <b style="color:#f59e0b">${d.applications - d.approved}</b>
-            <span style="color:#6b7280">Approval Rate:</span>
-            <b style="color:#2563eb">${d.approvalRate}%</b>
-          </div>
-        </div>
-      `);
+  initMap(): void {
+    if (typeof L === 'undefined') { this.mapLoading = false; this.leafletAvailable = false; return; }
+    if (this.map) this.map.remove();
+    this.map = L.map(this.mapContainer.nativeElement, { center: [25.5, 91.4], zoom: 8 });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(this.map);
+    this.leafletAvailable = true; this.addMarkers();
+  }
+
+  addMarkers(): void {
+    this.updateDistrictData();
+    if (!this.map || typeof L === 'undefined') return;
+    this.map.eachLayer((layer: any) => { if (layer instanceof L.CircleMarker) this.map.removeLayer(layer); });
+    const max = Math.max(...this.districtData.map(row => row.applications), 1);
+    this.districtData.forEach(row => {
+      const coordinates = DISTRICT_COORDINATES[row.name];
+      if (!coordinates) return;
+      const marker = L.circleMarker(coordinates, { radius: 10 + row.applications / max * 25, fillColor: row.color, color: 'white', weight: 2, fillOpacity: .75 }).addTo(this.map);
+      marker.bindPopup(`<b>${row.name}</b><br>Applications: ${row.applications}<br>Approved: ${row.approved}<br>Pending: ${row.applications - row.approved}<br>Approval rate: ${row.approvalRate}%`);
     });
   }
 }

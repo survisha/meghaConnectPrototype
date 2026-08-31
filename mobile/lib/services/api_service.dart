@@ -765,6 +765,20 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, dynamic>> getAppointmentAnalytics() async {
+    try {
+      final response = await http
+          .get(_u('/reports/appointments/analytics'), headers: await _headers())
+          .timeout(const Duration(seconds: 20));
+      if (response.statusCode == 200) {
+        return Map<String, dynamic>.from(jsonDecode(response.body) as Map);
+      }
+    } catch (error, stackTrace) {
+      _logError('getAppointmentAnalytics', error, stackTrace);
+    }
+    return const {};
+  }
+
   static Future<Map<String, dynamic>?> getAppointmentReportDetail({
     required String report,
     required int appointmentId,

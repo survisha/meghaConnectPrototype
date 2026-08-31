@@ -16,6 +16,7 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
   ];
   bool _loading = true;
   String? _error;
+  List<Map<String, dynamic>> _analyticsRows = const [];
 
   List<_DistrictHeat> get _districts {
     return _districtsInMapOrder
@@ -23,25 +24,42 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
   }
 
   List<_DistrictHeat> get _districtsInMapOrder {
-    return _allDistricts.map((district) {
-      final schemeData = district.schemes[_selectedScheme] ??
-          const _SchemeHeat(applications: 0, approved: 0);
-      final applications = schemeData.applications;
-      final approved = schemeData.approved;
+    final grouped = <String, ({int total, int approved})>{};
+    for (final row in _analyticsRows) {
+      if (_selectedScheme != 'ALL' && row['scheme'] != _selectedScheme) {
+        continue;
+      }
+      final district = (row['district'] ?? 'Unknown').toString();
+      final current = grouped[district] ?? (total: 0, approved: 0);
+      grouped[district] = (
+        total: current.total + _asInt(row['total']),
+        approved: current.approved + _asInt(row['approved']),
+      );
+    }
+    return grouped.entries.map((entry) {
+      final location = _allDistricts.cast<_DistrictSource?>().firstWhere(
+            (item) => item?.name.toLowerCase() == entry.key.toLowerCase(),
+            orElse: () => null,
+          );
+      final applications = entry.value.total;
+      final approved = entry.value.approved;
       final rate =
           applications == 0 ? 0 : ((approved / applications) * 100).round();
       return _DistrictHeat(
-        name: district.name,
+        name: entry.key,
         applications: applications,
         approved: approved,
         pending: applications - approved,
         approvalRate: rate,
         color: _heatColor(applications),
-        mapX: district.mapX,
-        mapY: district.mapY,
+        mapX: location?.mapX ?? -1,
+        mapY: location?.mapY ?? -1,
       );
     }).toList();
   }
+
+  int _asInt(dynamic value) =>
+      value is num ? value.toInt() : int.tryParse('$value') ?? 0;
 
   int get _totalApplications =>
       _districts.fold(0, (sum, row) => sum + row.applications);
@@ -63,13 +81,21 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
       _error = null;
     });
     try {
-      final values = await ApiService.getReferenceData('CM_SCHEME');
+      final results = await Future.wait([
+        ApiService.getReferenceData('CM_SCHEME'),
+        ApiService.getAppointmentAnalytics(),
+      ]);
+      final values = results[0] as List<Map<String, String>>;
+      final analytics = results[1] as Map<String, dynamic>;
       if (!mounted) return;
       setState(() {
         _schemeOptions = [
           {'code': 'ALL', 'value': 'All Schemes'},
           ...values,
         ];
+        _analyticsRows = List<Map<String, dynamic>>.from(
+          analytics['schemeDistricts'] as List? ?? const [],
+        );
         if (!_schemeOptions
             .any((option) => option['code'] == _selectedScheme)) {
           _selectedScheme = 'ALL';
@@ -558,16 +584,17 @@ class _MeghalayaDistrictMap extends StatelessWidget {
                           fit: BoxFit.contain,
                         ),
                         for (final district in districts)
-                          _MapBubble(
-                            district: district,
-                            maxApplications: maxApplications,
-                            scale: bubbleScale,
-                            mapSize: Size(
-                              mapConstraints.maxWidth,
-                              mapConstraints.maxHeight,
+                          if (district.mapX >= 0 && district.mapY >= 0)
+                            _MapBubble(
+                              district: district,
+                              maxApplications: maxApplications,
+                              scale: bubbleScale,
+                              mapSize: Size(
+                                mapConstraints.maxWidth,
+                                mapConstraints.maxHeight,
+                              ),
+                              onTap: () => onDistrictTap(district),
                             ),
-                            onTap: () => onDistrictTap(district),
-                          ),
                       ],
                     );
                   },

@@ -25,14 +25,6 @@ class _SchemeApp {
   });
 }
 
-const _schemeStats = [
-  ('CMSDF', 45, 28, 12, 5),
-  ('CMSG', 32, 18, 10, 4),
-  ('CM Care', 28, 22, 4, 2),
-  ('CM Connect', 19, 10, 7, 2),
-  ('CM Elevate', 15, 8, 5, 2),
-];
-
 const _schemeTypeColors = {
   'CMSDF': Color(0xFF1565C0),
   'CMSG': Color(0xFF0288D1),
@@ -43,15 +35,11 @@ const _schemeTypeColors = {
 };
 
 String _schemeLabel(String type) {
-  const m = {
-    'CMSDF': 'CMSDF',
-    'CMSG': 'CMSG',
-    'CM_CARE': 'CM Care',
-    'CM_CONNECT': 'CM Connect',
-    'CM_ELEVATE': 'CM Elevate',
-    'FOCUS_PLUS': 'Focus+',
-  };
-  return m[type] ?? type;
+  return type.replaceAll('_', ' ').split(' ').map((word) {
+    if (word.isEmpty) return word;
+    if (word.length <= 4) return word.toUpperCase();
+    return word[0].toUpperCase() + word.substring(1).toLowerCase();
+  }).join(' ');
 }
 
 class SchemesScreen extends StatefulWidget {
@@ -66,6 +54,8 @@ class _SchemesScreenState extends State<SchemesScreen>
   late final TabController _tabCtrl;
   String _filterScheme = '';
   List<_SchemeApp> _schemes = [];
+  List<(String, String)> _schemeOptions = const [('', 'All')];
+  List<(String, int, int, int, int)> _schemeStats = const [];
   bool _loading = true;
 
   @override
@@ -77,7 +67,14 @@ class _SchemesScreenState extends State<SchemesScreen>
 
   Future<void> _loadSchemes() async {
     setState(() => _loading = true);
-    final data = await ApiService.getSchemeApplications();
+    final results = await Future.wait([
+      ApiService.getSchemeApplications(),
+      ApiService.getReferenceData('CM_SCHEME'),
+      ApiService.getAppointmentAnalytics(),
+    ]);
+    final data = results[0] as Map<String, dynamic>;
+    final references = results[1] as List<Map<String, String>>;
+    final analytics = results[2] as Map<String, dynamic>;
     if (!mounted) return;
     final content = (data['content'] as List<dynamic>?) ?? [];
     setState(() {
@@ -96,9 +93,43 @@ class _SchemesScreenState extends State<SchemesScreen>
           hcmApprovedCost: (m['hcmApprovedCost'] as num?)?.toDouble(),
         );
       }).toList();
+      _schemeOptions = [
+        ('', 'All'),
+        ...references.map((item) => (
+              item['code'] ?? '',
+              item['value'] ?? item['code'] ?? '',
+            )),
+      ];
+      final grouped = <String, (int, int, int)>{};
+      for (final row in List<Map<String, dynamic>>.from(
+        analytics['schemeDistricts'] as List? ?? const [],
+      )) {
+        final scheme = (row['scheme'] ?? 'Unknown').toString();
+        final current = grouped[scheme] ?? (0, 0, 0);
+        grouped[scheme] = (
+          current.$1 + _asInt(row['total']),
+          current.$2 + _asInt(row['approved']),
+          current.$3 + _asInt(row['rejected']),
+        );
+      }
+      _schemeStats = grouped.entries.map((entry) {
+        final total = entry.value.$1;
+        final approved = entry.value.$2;
+        final rejected = entry.value.$3;
+        return (
+          entry.key,
+          total,
+          approved,
+          total - approved - rejected,
+          rejected
+        );
+      }).toList();
       _loading = false;
     });
   }
+
+  int _asInt(dynamic value) =>
+      value is num ? value.toInt() : int.tryParse('$value') ?? 0;
 
   @override
   void dispose() {
@@ -154,15 +185,7 @@ class _SchemesScreenState extends State<SchemesScreen>
   }
 
   Widget _buildFilterBar() {
-    final options = [
-      ('', 'All'),
-      ('CMSDF', 'CMSDF'),
-      ('CMSG', 'CMSG'),
-      ('CM_CARE', 'CM Care'),
-      ('CM_CONNECT', 'CM Connect'),
-      ('CM_ELEVATE', 'CM Elevate'),
-      ('FOCUS_PLUS', 'Focus+'),
-    ];
+    final options = _schemeOptions;
     return SizedBox(
       height: 44,
       child: ListView.separated(

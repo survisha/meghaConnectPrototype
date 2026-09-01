@@ -51,8 +51,10 @@ const _allKpis = <_Kpi>[
       [UserRole.HCM, UserRole.ADMIN, UserRole.APPROVER]),
   _Kpi('Active Scheme Apps', 0, Icons.workspace_premium_outlined,
       Color(0xFF065F46), Color(0xFFD1FAE5), _seniorStaff),
-  _Kpi('Walk-ins Today', 0, Icons.login_outlined, Color(0xFF0369A1),
+  _Kpi('Walk-in Pending', 0, Icons.pending_actions_outlined, Color(0xFF0369A1),
       Color(0xFFE0F2FE), [UserRole.DEO, UserRole.ADMIN, UserRole.APPROVER]),
+  _Kpi('Walk-in Completed', 0, Icons.task_alt_outlined, Color(0xFF15803D),
+      Color(0xFFDCFCE7), [UserRole.DEO, UserRole.ADMIN, UserRole.APPROVER]),
 ];
 
 final _allQuickActions = <_QuickAction>[
@@ -128,6 +130,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final results = await Future.wait([
       ApiService.getAppointments(page: 0, size: 1000),
       ApiService.getSchemeApplications(page: 0, size: 1000),
+      ApiService.getWalkInDashboardCounts(),
     ]);
     if (!mounted) return;
     final appointmentPage = results[0];
@@ -138,8 +141,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final schemes = List<Map<String, dynamic>>.from(
       schemePage['content'] as List? ?? const [],
     );
+    final walkIns = results[2];
     setState(() {
       _metricValues.addAll(calculateDashboardMetrics(appointments, schemes));
+      _metricValues['Walk-in Pending'] =
+          (walkIns['walkInPending'] as num?)?.toInt() ?? 0;
+      _metricValues['Walk-in Completed'] =
+          (walkIns['walkInCompleted'] as num?)?.toInt() ?? 0;
     });
   }
 

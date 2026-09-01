@@ -699,6 +699,7 @@ class ApiService {
     String? appointmentType,
     String? referredOffice,
     String? sort,
+    String? walkInDate,
   }) async {
     try {
       final headers = await _headers();
@@ -706,6 +707,7 @@ class ApiService {
         'page': page.toString(),
         'size': size.toString(),
       };
+      if ((walkInDate ?? '').isNotEmpty) params['walkInDate'] = walkInDate!;
       void addParam(String key, String? value) {
         final trimmed = value?.trim() ?? '';
         if (trimmed.isNotEmpty) params[key] = trimmed;
@@ -735,6 +737,19 @@ class ApiService {
       _logError('getAppointments', error, stackTrace);
     }
     return _listError(message: 'No internet connection. Please try again.');
+  }
+
+  static Future<Map<String, dynamic>> getWalkInDashboardCounts() async {
+    try {
+      final response = await http
+          .get(_u('/appointments/dashboard/walk-ins'),
+              headers: await _headers())
+          .timeout(const Duration(seconds: 20));
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return const {};
   }
 
   static Future<Map<String, dynamic>> getAppointmentReport({
@@ -1570,11 +1585,7 @@ class ApiService {
     int id, {
     String? remarks,
   }) async {
-    return _appointmentJsonPost(
-      '/appointments/approver/$id/reject',
-      {'reason': remarks},
-      'rejectAppointment',
-    );
+    return updateAppointmentStatus(id, 'REJECTED', remarks: remarks);
   }
 
   static Future<Map<String, dynamic>?> submitCmoReview({

@@ -33,6 +33,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -42,6 +43,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
 import java.time.format.DateTimeFormatter;
@@ -149,7 +151,22 @@ public class AppointmentService {
 
     @MonitoredOperation(value = "appointment_search", category = MonitoredOperation.Category.DATABASE)
     public Page<AppointmentDto> findAllDtosForActor(String actor, String status, String source, String appointmentType, String referredOffice, Pageable pageable) {
+        return findAllDtosForActor(actor, status, source, appointmentType, referredOffice, null, pageable);
+    }
+
+    public Page<AppointmentDto> findAllDtosForActor(String actor, String status, String source,
+                                                    String appointmentType, String referredOffice,
+                                                    LocalDate walkInDate, Pageable pageable) {
         Long departmentId = scopedDepartmentId(actor);
+        if (walkInDate != null && WALK_IN_APPOINTMENT_TYPE.equalsIgnoreCase(appointmentType)) {
+            List<Appointment.AppointmentStatus> statuses = parseStatuses(status);
+            if (statuses.isEmpty()) statuses = KNOWN_APPOINTMENT_STATUSES;
+            Pageable tokenPage = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+            Page<Appointment> result = departmentId == null
+                ? appointmentRepository.findWalkInsByDateAndStatusIn(walkInDate, statuses, tokenPage)
+                : appointmentRepository.findWalkInsByDateAndStatusInAndDepartment(walkInDate, statuses, departmentId, tokenPage);
+            return result.map(this::toDto);
+        }
         if (departmentId == null) {
             return findAllDtos(status, source, appointmentType, referredOffice, pageable);
         }
@@ -173,6 +190,12 @@ public class AppointmentService {
             return predicate;
         };
         return appointmentRepository.findAll(spec, pageable).map(this::toDto);
+    }
+
+    public long countWalkIns(Appointment.AppointmentStatus status, String actor) {
+        Long departmentId = scopedDepartmentId(actor);
+        return departmentId == null ? walkInRepository.countByAppointmentStatus(status.name())
+            : walkInRepository.countByAppointmentStatusAndDepartment(status.name(), departmentId);
     }
 
     public Page<AppointmentDto> findAllDtos(String status, Pageable pageable) {

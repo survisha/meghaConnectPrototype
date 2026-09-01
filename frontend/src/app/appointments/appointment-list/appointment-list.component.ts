@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
-import { forkJoin, of } from 'rxjs';
+import { firstValueFrom, forkJoin, of } from 'rxjs';
 import { AppointmentDocumentAiNotes, AiNotesStatus, AppointmentRemark, AppointmentService } from '../../services/appointment.service';
 import { AuthService } from '../../services/auth.service';
 import { DocumentService } from '../../services/document.service';
@@ -42,6 +42,7 @@ import { resolvePhotoUrl } from '../../shared/photo-url.util';
 
 type SortDirection = 'asc' | 'desc';
 type AppointmentSortColumn =
+  | 'token'
   | 'applicant'
   | 'designation'
   | 'constituency'
@@ -238,6 +239,15 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
+    if (this.listMode === 'walkin') {
+      const today = new Date();
+      this.filterFromDate = today;
+      this.filterToDate = today;
+      this.displayedColumns.splice(this.displayedColumns.includes('select') ? 1 : 0, 0, 'token');
+      this.sortColumn = 'token';
+      this.sortDirection = 'asc';
+      this.statusOptions = [{label:'All Statuses',value:''},{label:'Pending',value:'PENDING'},{label:'Completed',value:'COMPLETED'}];
+    }
     this.configureRoleDefaults();
     this.loadAppointmentTypes();
     this.loadDepartments();
@@ -320,7 +330,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
 
   private appointmentPageSource(serverPage: number, size: number) {
     const status = this.listMode === 'walkin'
-      ? 'PENDING,PENDING_REQUEST'
+      ? (this.filterStatus || 'PENDING,COMPLETED')
       : this.listMode === 'closed'
         ? 'CLOSED'
         : 'PENDING,PENDING_REQUEST,SCHEDULED,RESCHEDULED';
@@ -330,7 +340,8 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
       status,
       {
       appointmentType: this.listMode === 'walkin' ? 'B2 Walk-in' : this.listMode === 'appointments' ? 'APPOINTMENT' : undefined,
-      sort: 'createdAt,desc',
+      sort: this.listMode === 'walkin' ? undefined : 'createdAt,desc',
+      walkInDate: this.listMode === 'walkin' && this.filterFromDate ? this.toLocalDate(this.filterFromDate) : undefined,
     });
   }
 
@@ -388,6 +399,11 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
         this.selectedAppointmentIds.delete(id);
       }
     });
+  }
+
+  applyWalkInFilter() {
+    this.pageIndex = 0;
+    this.loadAppointments();
   }
 
   get sortedAppointments() {
@@ -448,6 +464,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
 
   private appointmentSortValue(appointment: Appointment, column: AppointmentSortColumn): string | number {
     switch (column) {
+      case 'token': return this.walkInTokenSequence(appointment);
       case 'applicant':
         return appointment.applicant?.fullName || appointment.applicantName || '';
       case 'designation':
@@ -471,6 +488,11 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
       default:
         return '';
     }
+  }
+
+  walkInTokenSequence(appointment: Appointment): number {
+    const match = (appointment.walkInTokenNumber || '').match(/-(\d+)$/);
+    return match ? Number(match[1]) : Number.MAX_SAFE_INTEGER;
   }
 
   private compareValues(left: string | number, right: string | number) {
@@ -1286,38 +1308,29 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     return this.canExportPdf && this.selectedAppointments.length > 0;
   }
 
-  exportSelectedToPdf() {
+  async exportSelectedToPdf() {
     if (!this.canExportPdf || this.exportPreparing) return;
-    const appointments = [...this.selectedAppointments];
+    const appointments = [...this.selectedAppointments].sort((a,b) => this.walkInTokenSequence(a) - this.walkInTokenSequence(b));
     if (appointments.length === 0) {
       this.snackBar.open('Please select at least one appointment to export.', 'Close', { duration: 4000, panelClass: ['error-snackbar'] });
       return;
     }
 
     this.exportPreparing = true;
-    const appointmentSource = forkJoin(appointments.map(appointment =>
-      this.appointmentService.getAppointmentById(appointment.id).pipe(catchError(() => of(appointment)))
-    ));
-
-    appointmentSource.subscribe({
-        next: refreshedAppointments => {
-          Promise.all(refreshedAppointments.map(appointment => this.loadExportPhoto(appointment).catch(() => null)))
-            .then(photoRows => {
-              this.generateAppointmentPdf(refreshedAppointments, photoRows);
-              this.auditPdfExport(refreshedAppointments);
-              this.closeExportDialog();
-              this.exportPreparing = false;
-            })
-            .catch(error => {
-              this.exportPreparing = false;
-              this.snackBar.open(apiErrorMessage(error, 'Unable to export appointments.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] });
-            });
-        },
-        error: error => {
-          this.exportPreparing = false;
-          this.snackBar.open(apiErrorMessage(error, 'Unable to export appointments.'), 'Close', { duration: 5000, panelClass: ['error-snackbar'] });
-        }
-      });
+    try {
+      const refreshedAppointments: Appointment[] = [];
+      const photoRows: Array<string|null> = [];
+      for (const appointment of appointments) {
+        const refreshed = await firstValueFrom(this.appointmentService.getAppointmentById(appointment.id));
+        refreshedAppointments.push(refreshed);
+        photoRows.push(await this.loadExportPhoto(refreshed));
+      }
+      this.generateAppointmentPdf(refreshedAppointments, photoRows);
+      this.auditPdfExport(refreshedAppointments);
+      this.closeExportDialog();
+    } catch (error) {
+      this.snackBar.open(apiErrorMessage(error, 'Unable to load all visitor details for export. Please retry.'), 'Close', { duration: 6000, panelClass: ['error-snackbar'] });
+    } finally { this.exportPreparing = false; }
   }
 
   private generateAppointmentPdf(
@@ -1399,13 +1412,8 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   }
 
   private exportTokenLastFour(appointment: Appointment) {
-    const token = (appointment.walkInTokenNumber || '').trim();
-    if (!token) return '-';
-    const digits = token.replace(/\D/g, '');
-    if (digits.length >= 4) {
-      return digits.slice(-4);
-    }
-    return token.length > 4 ? token.slice(-4) : token;
+    const sequence=this.walkInTokenSequence(appointment);
+    return sequence===Number.MAX_SAFE_INTEGER?'-':String(sequence);
   }
 
   private async loadExportPhoto(appointment: Appointment): Promise<string | null> {
@@ -1415,12 +1423,21 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     const visitorId = appointment.applicantId || appointment.applicant?.id;
     if (!visitorId) return null;
 
-    const visitor = await new Promise<any | null>(resolve => {
-      this.visitorService.getById(visitorId)
-        .pipe(catchError(() => of(null)))
-        .subscribe(value => resolve(value));
-    });
+    const visitor = await this.loadVisitorForExport(visitorId);
     return this.toPdfImageData(this.resolveVisitorPhoto(visitor));
+  }
+
+  private async loadVisitorForExport(visitorId:number):Promise<any> {
+    for (let attempt=0; attempt<3; attempt++) {
+      try { return await firstValueFrom(this.visitorService.getById(visitorId)); }
+      catch (error) {
+        const response=error as HttpErrorResponse;
+        if(response.status!==429 || attempt===2) throw error;
+        const retryAfter=Number(response.headers?.get('Retry-After'));
+        await new Promise(resolve=>setTimeout(resolve,Number.isFinite(retryAfter)&&retryAfter>0?retryAfter*1000:500*(attempt+1)));
+      }
+    }
+    throw new Error('Unable to load visitor details.');
   }
 
   private async toPdfImageData(value?: string | null): Promise<string | null> {

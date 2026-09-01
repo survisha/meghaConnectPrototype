@@ -164,7 +164,7 @@ export class AppointmentService {
       .pipe(map(res => this.normalizePage(res)));
   }
 
-  getAllAppointments(page = 0, size = 20, status?: string, options?: { source?: string; appointmentType?: 'APPOINTMENT' | 'WALKIN' | 'B2 Walk-in'; referredOffice?: string; sort?: string }): Observable<AppointmentPage> {
+  getAllAppointments(page = 0, size = 20, status?: string, options?: { source?: string; appointmentType?: 'APPOINTMENT' | 'WALKIN' | 'B2 Walk-in'; referredOffice?: string; sort?: string; walkInDate?: string }): Observable<AppointmentPage> {
     let params = new HttpParams()
       .set('page', page.toString())
       .set('size', size.toString());
@@ -174,6 +174,7 @@ export class AppointmentService {
     if (options?.source) {
       params = params.set('source', options.source);
     }
+    if (options?.walkInDate) params = params.set('walkInDate', options.walkInDate);
     if (options?.appointmentType) {
       params = params.set('appointmentType', options.appointmentType);
     }
@@ -185,6 +186,10 @@ export class AppointmentService {
     }
     return this.http.get<unknown>(this.baseUrl, { params })
       .pipe(map(res => this.normalizePage(res)));
+  }
+
+  getWalkInDashboardCounts(): Observable<{walkInPending:number;walkInCompleted:number}> {
+    return this.http.get<{walkInPending:number;walkInCompleted:number}>(`${this.baseUrl}/dashboard/walk-ins`);
   }
 
   createGuestAppointment(request: GuestAppointmentRequest): Observable<GuestAppointmentResponse> {

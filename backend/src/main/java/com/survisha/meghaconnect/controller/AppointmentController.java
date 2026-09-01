@@ -72,10 +72,18 @@ public class AppointmentController {
                                                        @RequestParam(required = false) String source,
                                                        @RequestParam(required = false) String appointmentType,
                                                        @RequestParam(required = false) String referredOffice,
+                                                       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate walkInDate,
                                                        Authentication authentication,
                                                        Pageable pageable) {
         logEndpoint("/api/v1/appointments");
-        return ResponseEntity.ok(appointmentService.findAllDtosForActor(actor(authentication), status, source, appointmentType, referredOffice, pageable));
+        return ResponseEntity.ok(appointmentService.findAllDtosForActor(actor(authentication), status, source, appointmentType, referredOffice, walkInDate, pageable));
+    }
+
+    @GetMapping("/dashboard/walk-ins")
+    @PreAuthorize("hasAnyRole('ADMIN','APPROVER','DEO','HCM','SUPER_ADMIN')")
+    public Map<String, Long> walkInDashboardCounts(Authentication authentication) {
+        return Map.of("walkInPending", appointmentService.countWalkIns(Appointment.AppointmentStatus.PENDING, actor(authentication)),
+            "walkInCompleted", appointmentService.countWalkIns(Appointment.AppointmentStatus.COMPLETED, actor(authentication)));
     }
 
     @Operation(summary = "Get appointment by ID", description = "Retrieve a specific appointment by its ID")

@@ -11,6 +11,7 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import java.util.Collection;
+import java.time.LocalDate;
 
 @Repository
 public interface AppointmentRepository extends JpaRepository<Appointment, Long>, JpaSpecificationExecutor<Appointment> {
@@ -42,6 +43,17 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long>,
     Page<Appointment> findByStatusInAndTenantDepartment_Id(List<Appointment.AppointmentStatus> statuses, Long departmentId, Pageable pageable);
 
     Optional<Appointment> findByIdAndTenantDepartment_Id(Long id, Long departmentId);
+
+    @Query("SELECT a FROM Appointment a JOIN WalkIn w ON w.appointment = a WHERE w.tokenDate = :tokenDate " +
+        "AND a.status IN :statuses ORDER BY w.tokenNumber ASC")
+    Page<Appointment> findWalkInsByDateAndStatusIn(@Param("tokenDate") LocalDate tokenDate,
+        @Param("statuses") Collection<Appointment.AppointmentStatus> statuses, Pageable pageable);
+
+    @Query("SELECT a FROM Appointment a JOIN WalkIn w ON w.appointment = a WHERE w.tokenDate = :tokenDate " +
+        "AND a.status IN :statuses AND a.tenantDepartment.id = :departmentId ORDER BY w.tokenNumber ASC")
+    Page<Appointment> findWalkInsByDateAndStatusInAndDepartment(@Param("tokenDate") LocalDate tokenDate,
+        @Param("statuses") Collection<Appointment.AppointmentStatus> statuses,
+        @Param("departmentId") Long departmentId, Pageable pageable);
 
     @Query("SELECT COUNT(a) FROM Appointment a WHERE a.applicant.id = :personId AND a.scheduledDateTime >= :sixMonthsAgo AND a.status = 'COMPLETED'")
     int countMeetingsLast6Months(@Param("personId") Long personId, @Param("sixMonthsAgo") java.time.LocalDateTime sixMonthsAgo);

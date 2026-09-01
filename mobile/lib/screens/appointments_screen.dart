@@ -246,6 +246,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     'SCHEDULED',
     // UI-only distinct value; maps to Angular's SCHEDULED backend value.
     'RESCHEDULE_FILTER',
+    'COMPLETED',
   ];
   static const _sourceOptions = ['', 'CITIZEN', 'GUEST'];
   static const _typeOptions = ['', 'A1', 'A2', 'A3', 'A4', 'B1', 'B2'];
@@ -260,6 +261,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   final List<_Appointment> _appointments = [];
   int _serverPage = 0;
   int _serverTotal = 0;
+  int _serverTotalPages = 1;
   bool _loading = true;
   bool _loadingMore = false;
   String? _loadError;
@@ -267,6 +269,11 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.walkInOnly) {
+      final now = DateTime.now();
+      _fromDate = DateTime(now.year, now.month, now.day);
+      _toDate = _fromDate;
+    }
     _scrollController.addListener(_maybeLoadMore);
     _restoreSessionOrLoad();
   }
@@ -378,7 +385,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         .toList();
 
     setState(() {
-      if (refresh) {
+      if (refresh || widget.walkInOnly) {
         _appointments
           ..clear()
           ..addAll(mapped);
@@ -395,6 +402,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
       }
       _serverPage = _asInt(response['number']) ?? page;
       _serverTotal = _asInt(response['totalElements']) ?? _appointments.length;
+      _serverTotalPages = _asInt(response['totalPages']) ?? 1;
       _loadError = response['error'] == true && _appointments.isEmpty
           ? response['message']?.toString() ??
               'Failed to load appointments. Please try again.'
@@ -426,10 +434,12 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
       page: page,
       size: _pageSize,
       status: widget.walkInOnly
-          ? 'PENDING,PENDING_REQUEST'
+          ? (_filterStatus.isEmpty ? 'PENDING,COMPLETED' : _filterStatus)
           : 'PENDING,PENDING_REQUEST,SCHEDULED,RESCHEDULED',
       appointmentType: widget.walkInOnly ? 'B2 Walk-in' : 'APPOINTMENT',
-      sort: 'createdAt,desc',
+      sort: widget.walkInOnly ? null : 'createdAt,desc',
+      walkInDate:
+          widget.walkInOnly && _fromDate != null ? _isoDate(_fromDate!) : null,
     );
   }
 
@@ -448,6 +458,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   }
 
   void _maybeLoadMore() {
+    if (widget.walkInOnly) return;
     if (_loading || _loadingMore || _appointments.length >= _serverTotal) {
       return;
     }
@@ -458,7 +469,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
 
   List<_Appointment> get _filtered {
     final q = _searchQuery.trim().toLowerCase();
-    return _appointments.where((a) {
+    final result = _appointments.where((a) {
       final matchesSearch = q.isEmpty ||
           a.applicantName.toLowerCase().contains(q) ||
           a.phone.contains(q) ||
@@ -486,7 +497,9 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
           matchesType &&
           matchesFrom &&
           matchesTo;
-    }).toList()
+    }).toList();
+    if (widget.walkInOnly) return result;
+    return result
       ..sort((a, b) {
         final left = a.createdDate?.millisecondsSinceEpoch ?? 0;
         final right = b.createdDate?.millisecondsSinceEpoch ?? 0;
@@ -507,6 +520,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     return Column(
       children: [
         _SearchAndFilters(
+          walkInMode: widget.walkInOnly,
           searchQuery: _searchQuery,
           status: _filterStatus,
           source: _filterSource,
@@ -514,19 +528,52 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
           fromDate: _fromDate,
           toDate: _toDate,
           onSearch: (value) => setState(() => _searchQuery = value),
-          onStatus: (value) => setState(() => _filterStatus = value ?? ''),
+          onStatus: (value) {
+            setState(() => _filterStatus = value ?? '');
+            if (widget.walkInOnly) _loadAppointments(refresh: true);
+          },
           onSource: (value) => setState(() => _filterSource = value ?? ''),
           onType: (value) => setState(() => _filterType = value ?? ''),
-          onDates: (from, to) => setState(() {
-            _fromDate = from;
-            _toDate = to;
-          }),
+          onDates: (from, to) {
+            setState(() {
+              _fromDate = from;
+              _toDate = widget.walkInOnly ? from : to;
+            });
+            if (widget.walkInOnly) _loadAppointments(refresh: true);
+          },
         ),
         Expanded(child: _body(role)),
+        if (widget.walkInOnly && !_loading) _walkInPagination(),
         if (canAddNew) _buildBottomActions(context),
       ],
     );
   }
+
+  Widget _walkInPagination() => Padding(
+        padding: const EdgeInsets.all(8),
+        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          TextButton(
+              onPressed: _serverPage > 0
+                  ? () => _loadWalkInPage(_serverPage - 1)
+                  : null,
+              child: const Text('Previous')),
+          Text(
+              'Page ${_serverPage + 1} of ${_serverTotalPages < 1 ? 1 : _serverTotalPages}'),
+          TextButton(
+              onPressed: _serverPage + 1 < _serverTotalPages
+                  ? () => _loadWalkInPage(_serverPage + 1)
+                  : null,
+              child: const Text('Next')),
+        ]),
+      );
+
+  Future<void> _loadWalkInPage(int page) async {
+    setState(() => _serverPage = page - 1);
+    await _loadAppointments(refresh: false);
+  }
+
+  String _isoDate(DateTime value) =>
+      '${value.year.toString().padLeft(4, '0')}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
 
   Widget _body(UserRole role) {
     if (_loading) return const Center(child: CircularProgressIndicator());
@@ -743,6 +790,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
 }
 
 class _SearchAndFilters extends StatelessWidget {
+  final bool walkInMode;
   final String searchQuery;
   final String status;
   final String source;
@@ -756,6 +804,7 @@ class _SearchAndFilters extends StatelessWidget {
   final void Function(DateTime?, DateTime?) onDates;
 
   const _SearchAndFilters({
+    required this.walkInMode,
     required this.searchQuery,
     required this.status,
     required this.source,
@@ -804,7 +853,9 @@ class _SearchAndFilters extends StatelessWidget {
                           ? 'Reschedule'
                           : _label(status),
                   value: status,
-                  values: _AppointmentsScreenState._statusOptions,
+                  values: walkInMode
+                      ? const ['', 'PENDING', 'COMPLETED']
+                      : _AppointmentsScreenState._statusOptions,
                   labelFor: (value) => value.isEmpty
                       ? 'All Statuses'
                       : value == 'RESCHEDULE_FILTER'
@@ -830,14 +881,17 @@ class _SearchAndFilters extends StatelessWidget {
                 OutlinedButton.icon(
                   onPressed: () => _pickDate(context, true),
                   icon: const Icon(Icons.event_outlined, size: 18),
-                  label: Text(_dateLabel(fromDate, 'From')),
+                  label: Text(_dateLabel(
+                      fromDate, walkInMode ? 'Walk-in Date' : 'From')),
                 ),
-                const SizedBox(width: 8),
-                OutlinedButton.icon(
-                  onPressed: () => _pickDate(context, false),
-                  icon: const Icon(Icons.event_available_outlined, size: 18),
-                  label: Text(_dateLabel(toDate, 'To')),
-                ),
+                if (!walkInMode) ...[
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    onPressed: () => _pickDate(context, false),
+                    icon: const Icon(Icons.event_available_outlined, size: 18),
+                    label: Text(_dateLabel(toDate, 'To')),
+                  )
+                ],
                 if (fromDate != null || toDate != null)
                   IconButton(
                     tooltip: 'Clear dates',
@@ -935,6 +989,12 @@ class _AppointmentCard extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (appointment.isWalkIn) ...[
+                    CircleAvatar(
+                        child: Text(
+                            '${_walkInSequence(appointment.tokenNumber)}')),
+                    const SizedBox(width: 10),
+                  ],
                   ClipOval(
                       child: SizedBox(
                           width: 46,
@@ -1199,6 +1259,12 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
                           'Appointment Source', widget.appointment.source),
                       _DetailLine('Location', widget.appointment.location),
                       _DetailLine('Status', _label(widget.appointment.status)),
+                      if (widget.appointment.isWalkIn)
+                        _DetailLine(
+                            'Walk-in ID', widget.appointment.tokenNumber),
+                      if (widget.appointment.isWalkIn)
+                        _DetailLine('Token Number',
+                            '${_walkInSequence(widget.appointment.tokenNumber)}'),
                       _DetailLine('Created At', widget.appointment.createdAt),
                       if (widget.reportMode == 'closed')
                         _DetailLine(
@@ -1845,6 +1911,10 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
       approve ? 'Approve Appointment' : 'Reject Appointment',
     );
     if (remarks == null) return;
+    if (remarks.trim().isEmpty) {
+      _showMessage('Rejection remarks are required.');
+      return;
+    }
     setState(() => _saving = true);
     final id = widget.appointment.backendId!;
     final result = approve
@@ -2426,9 +2496,7 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
   }
 
   bool _canApproveOrReject(UserRole role) =>
-      _canUseApproverActions(role) &&
-      !widget.appointment.isWalkIn &&
-      widget.appointment.status == 'PENDING';
+      _canUseApproverActions(role) && widget.appointment.status == 'PENDING';
 
   bool _canReschedule(UserRole role) =>
       _canUseApproverActions(role) &&
@@ -2742,6 +2810,11 @@ String _month(int month) {
     'Dec',
   ];
   return labels[month - 1];
+}
+
+int _walkInSequence(String token) {
+  final match = RegExp(r'-(\d+)$').firstMatch(token.trim());
+  return int.tryParse(match?.group(1) ?? '') ?? 0;
 }
 
 String _label(String value) {

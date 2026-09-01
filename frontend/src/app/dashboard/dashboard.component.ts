@@ -96,7 +96,7 @@ export class DashboardComponent implements OnInit {
 
   private loadDashboardData(): void {
     if (this.showCharts || this.hasVisibleKpi("Today's Appointments") || this.hasVisibleKpi('Pending Approvals') ||
-        this.hasVisibleKpi('Walk-ins Today') || this.hasVisibleKpi('CMO Reviews Due')) {
+        this.hasVisibleKpi('Walk-in Pending') || this.hasVisibleKpi('Walk-in Completed')) {
       this.loadAppointmentMetrics();
     }
 
@@ -119,8 +119,10 @@ export class DashboardComponent implements OnInit {
         const appointments = page.content ?? [];
         this.setKpiValue("Today's Appointments", appointments.filter(a => this.isToday(a.scheduledDateTime)).length);
         this.setKpiValue('Pending Approvals', appointments.filter(a => this.pendingApprovalStatuses.has(a.status)).length);
-        this.setKpiValue('Walk-ins Today', appointments.filter(a => Boolean(a.isWalkIn) && this.isToday(this.firstDate(a.createdAt, a.submittedAt, a.scheduledDateTime))).length);
-        this.setKpiValue('CMO Reviews Due', appointments.filter(a => a.status === 'CMO_REVIEW').length);
+        this.appointmentService.getWalkInDashboardCounts().subscribe({next: counts => {
+          this.setKpiValue('Walk-in Pending', counts.walkInPending);
+          this.setKpiValue('Walk-in Completed', counts.walkInCompleted);
+        }, error: err => this.addError(err, 'Unable to load walk-in dashboard metrics.')});
         this.updateAppointmentTypeChart(appointments);
       },
       error: err => this.addError(err, 'Unable to load appointment dashboard metrics.'),
@@ -411,10 +413,10 @@ export class DashboardComponent implements OnInit {
         roles: ['SUPER_ADMIN', 'HCM', 'ADMIN', 'APPROVER'] },
       { label: 'Active Scheme Apps', value: '-', matIcon: 'work', color: '#065f46', bg: '#d1fae5',
         roles: ['SUPER_ADMIN', 'HCM', 'ADMIN', 'APPROVER'] },
-      { label: 'Walk-ins Today', value: '-', matIcon: 'directions_walk', color: '#0369a1', bg: '#e0f2fe',
+      { label: 'Walk-in Pending', value: '-', matIcon: 'pending_actions', color: '#0369a1', bg: '#e0f2fe',
         roles: ['DEO', 'APPROVER', 'HCM'] },
-      { label: 'CMO Reviews Due', value: '-', matIcon: 'rate_review', color: '#7c3aed', bg: '#ede9fe',
-        roles: ['SUPER_ADMIN', 'APPROVER'] },
+      { label: 'Walk-in Completed', value: '-', matIcon: 'task_alt', color: '#15803d', bg: '#dcfce7',
+        roles: ['DEO', 'APPROVER', 'HCM'] },
     ];
     this.kpis = all.filter(k => !role || k.roles.includes(role));
   }

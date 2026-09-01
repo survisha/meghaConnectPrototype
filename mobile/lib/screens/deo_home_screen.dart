@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/connectivity_service.dart';
 import 'appointments_screen.dart';
-import 'grievance_screen.dart';
 import 'public_identification_screen.dart';
 import 'visitor_registration_screen.dart';
 
@@ -141,19 +140,7 @@ class DeoHomeScreen extends StatelessWidget {
               )),
             ),
             const SizedBox(height: 12),
-            _ActionCard(
-              icon: Icons.comment_outlined,
-              title: 'Grievances',
-              subtitle: 'View and manage currently available grievances.',
-              color: const Color(0xFFB45309),
-              onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => const _DeoPageScaffold(
-                  title: 'Grievances',
-                  child: GrievanceScreen(),
-                ),
-              )),
-            ),
-            const SizedBox(height: 12),
+            // Pilot 2026-09-01: Grievances action temporarily hidden.
             _ActionCard(
               icon: Icons.logout,
               title: 'Logout',

@@ -1087,6 +1087,7 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
   final _cmoRemarksCtrl = TextEditingController();
   final _picker = ImagePicker();
   Map<String, dynamic> _details = {};
+  Map<String, dynamic> _visitorProfile = {};
   List<Map<String, dynamic>> _documents = [];
   List<Map<String, dynamic>> _remarks = [];
   List<Map<String, dynamic>> _aiNotes = [];
@@ -1122,19 +1123,28 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
         ? await ApiService.getAppointmentById(id)
         : await ApiService.getAppointmentReportDetail(
             report: '${widget.reportMode}-appointments', appointmentId: id);
+    final merged = detail ?? widget.appointment.raw;
+    final applicant = _map(merged['applicant']);
+    final citizenId = _asInt(merged['applicantId'] ??
+        merged['citizenId'] ??
+        applicant['id'] ??
+        widget.appointment.citizenId);
     final results = await Future.wait([
       ApiService.getAppointmentDocuments(id),
       ApiService.getAppointmentRemarks(id),
       AiNotesCacheService.instance.getOrLoad(id).then((cached) => cached.notes),
       ApiService.getReferenceData('DEPARTMENT'),
+      citizenId == null
+          ? Future<Map<String, dynamic>?>.value(null)
+          : ApiService.getVisitorProfileById(citizenId),
     ]);
     if (!mounted) return;
-    final merged = detail ?? widget.appointment.raw;
     setState(() {
       _details = merged;
-      _documents = results[0];
-      _remarks = results[1];
-      _aiNotes = results[2];
+      _visitorProfile = results[4] as Map<String, dynamic>? ?? {};
+      _documents = results[0] as List<Map<String, dynamic>>;
+      _remarks = results[1] as List<Map<String, dynamic>>;
+      _aiNotes = results[2] as List<Map<String, dynamic>>;
       _departments = results[3] as List<Map<String, String>>;
       _departmentCode = _text(merged['departmentCode'] ?? merged['department']);
       _cmoEventType = _text(merged['eventType'], widget.appointment.type);
@@ -1377,7 +1387,18 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
         citizenId: citizenId,
         fallbackName: widget.appointment.applicantName,
         fallbackPhotoUrl: _firstText([
+          _visitorProfile['photoUrl'],
+          _visitorProfile['photoStoragePath'],
+          _visitorProfile['photoPath'],
+          _visitorProfile['livePhotoPath'],
+          _visitorProfile['livePhotoBase64'],
+          _visitorProfile['photoBase64'],
           applicant['photoUrl'],
+          applicant['photoStoragePath'],
+          applicant['photoPath'],
+          applicant['livePhotoPath'],
+          applicant['livePhotoBase64'],
+          applicant['photoBase64'],
           _details['photoUrl'],
           widget.appointment.photoUrl,
         ]));
@@ -2249,19 +2270,25 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
   Widget _photo() {
     final applicant = _map(_details['applicant']);
     final source = _firstText([
-      applicant['livePhotoBase64'],
-      applicant['photoBase64'],
-      _details['livePhotoBase64'],
-      _details['photoBase64'],
+      _visitorProfile['photoUrl'],
+      _visitorProfile['photoStoragePath'],
+      _visitorProfile['photoPath'],
       applicant['photoUrl'],
-      applicant['livePhotoPath'],
       applicant['photoStoragePath'],
       applicant['photoPath'],
       _details['photoUrl'],
       _details['livePhotoUrl'],
-      _details['livePhotoPath'],
       _details['photoStoragePath'],
       _details['photoPath'],
+      _visitorProfile['livePhotoPath'],
+      _visitorProfile['livePhotoBase64'],
+      _visitorProfile['photoBase64'],
+      applicant['livePhotoPath'],
+      applicant['livePhotoBase64'],
+      applicant['photoBase64'],
+      _details['livePhotoPath'],
+      _details['livePhotoBase64'],
+      _details['photoBase64'],
       widget.appointment.photoUrl,
     ]);
     if (source.isNotEmpty) {

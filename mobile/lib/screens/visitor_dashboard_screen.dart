@@ -101,6 +101,8 @@ Color _schemeColor(String status) {
   }
 }
 
+// Retained for quick restoration after the pilot.
+// ignore: unused_element
 Color _grievanceColor(String status) {
   switch (status) {
     case 'RESOLVED':
@@ -125,6 +127,8 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
   bool _loading = true;
   List<_MyAppointment> _appointments = [];
   List<_MyScheme> _schemes = [];
+  // Retained for quick restoration after the pilot.
+  // ignore: unused_field
   List<_MyGrievance> _grievances = [];
   Map<String, dynamic>? _visitorProfile;
   bool _kycVerifiedGraphic = false;
@@ -245,8 +249,6 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
           Icons.calendar_today_outlined, _primaryBlue, const Color(0xFFE8EAF6)),
       _SummaryCard('Scheme Applications', _schemes.length,
           Icons.workspace_premium_outlined, _green, const Color(0xFFD1FAE5)),
-      _SummaryCard('Grievances Raised', _grievances.length,
-          Icons.comment_outlined, _amber, const Color(0xFFFEF3C7)),
       const _SummaryCard('Pending Actions', 1, Icons.warning_amber_outlined,
           _red, Color(0xFFFEE2E2)),
     ];
@@ -537,31 +539,7 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
                   ),
                   const SizedBox(height: 14),
 
-                  // My Grievances
-                  _SectionCard(
-                    title: 'My Grievances',
-                    icon: Icons.comment_outlined,
-                    action: TextButton(
-                      onPressed: () => _openGrievanceScreen(openForm: true),
-                      child:
-                          const Text('+ Raise', style: TextStyle(fontSize: 12)),
-                    ),
-                    child: _grievances.isEmpty
-                        ? _empty('No grievances raised yet.')
-                        : Column(
-                            children: _grievances
-                                .map((g) => _ItemRow(
-                                      id: g.id,
-                                      title: g.subject,
-                                      subtitle: g.date,
-                                      statusLabel:
-                                          g.status.replaceAll('_', ' '),
-                                      statusColor: _grievanceColor(g.status),
-                                    ))
-                                .toList(),
-                          ),
-                  ),
-                  const SizedBox(height: 14),
+                  // Pilot 2026-09-01: My Grievances section temporarily hidden.
 
                   // Application Status Timeline
                   _SectionCard(

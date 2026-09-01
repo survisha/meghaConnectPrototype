@@ -4,6 +4,7 @@ import '../models/user.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
 import '../services/navigation_service.dart';
+import '../utils/dashboard_metrics.dart';
 
 class _Kpi {
   final String label;
@@ -38,22 +39,20 @@ const _seniorStaff = [
   UserRole.APPROVER,
 ];
 
-final _allKpis = <_Kpi>[
-  const _Kpi("Today's Appointments", 6, Icons.calendar_today_outlined,
+const _allKpis = <_Kpi>[
+  _Kpi("Today's Appointments", 0, Icons.calendar_today_outlined,
       Color(0xFF1A237E), Color(0xFFE8EAF6), _allStaff),
-  const _Kpi(
+  _Kpi(
       'Pending Approvals',
-      3,
+      0,
       Icons.pending_actions_outlined,
       Color(0xFFB45309),
       Color(0xFFFEF3C7),
       [UserRole.HCM, UserRole.ADMIN, UserRole.APPROVER]),
-  const _Kpi('Active Scheme Apps', 12, Icons.workspace_premium_outlined,
+  _Kpi('Active Scheme Apps', 0, Icons.workspace_premium_outlined,
       Color(0xFF065F46), Color(0xFFD1FAE5), _seniorStaff),
-  const _Kpi('Walk-ins Today', 4, Icons.login_outlined, Color(0xFF0369A1),
+  _Kpi('Walk-ins Today', 0, Icons.login_outlined, Color(0xFF0369A1),
       Color(0xFFE0F2FE), [UserRole.DEO, UserRole.ADMIN, UserRole.APPROVER]),
-  const _Kpi('CMO Reviews Due', 7, Icons.rate_review_outlined,
-      Color(0xFF7C3AED), Color(0xFFEDE9FE), [UserRole.APPROVER]),
 ];
 
 final _allQuickActions = <_QuickAction>[
@@ -97,6 +96,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   List<Map<String, dynamic>> _scheduleItems = [];
   List<Map<String, dynamic>> _auditItems = [];
+  final Map<String, int> _metricValues = {};
 
   @override
   void initState() {
@@ -106,6 +106,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _loadData() async {
     final role = context.read<AuthService>().user?.role;
+    await _loadMetrics();
+    if (!mounted) return;
     if (role == UserRole.HCM || role == UserRole.APPROVER) {
       return;
     }
@@ -122,11 +124,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
+  Future<void> _loadMetrics() async {
+    final results = await Future.wait([
+      ApiService.getAppointments(page: 0, size: 1000),
+      ApiService.getSchemeApplications(page: 0, size: 1000),
+    ]);
+    if (!mounted) return;
+    final appointmentPage = results[0];
+    final schemePage = results[1];
+    final appointments = List<Map<String, dynamic>>.from(
+      appointmentPage['content'] as List? ?? const [],
+    );
+    final schemes = List<Map<String, dynamic>>.from(
+      schemePage['content'] as List? ?? const [],
+    );
+    setState(() {
+      _metricValues.addAll(calculateDashboardMetrics(appointments, schemes));
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
     final role = auth.user!.role;
-    final kpis = _allKpis.where((k) => k.roles.contains(role)).toList();
+    final kpis = _allKpis
+        .where((k) => k.roles.contains(role))
+        .map((k) => _Kpi(k.label, _metricValues[k.label] ?? 0, k.icon, k.color,
+            k.bg, k.roles))
+        .toList();
     final actions =
         _allQuickActions.where((a) => a.roles.contains(role)).toList();
     final showSchedule = _seniorStaff.contains(role);

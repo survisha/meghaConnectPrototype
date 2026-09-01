@@ -221,7 +221,7 @@ export class VisitorDashboardComponent implements OnInit {
       { label: 'My Appointments', value: this.myAppointments.length, icon: 'event', color: '#1a237e', bg: '#e8eaf6' },
       { label: 'Total Visits', value: this.totalVisits, icon: 'place', color: '#065f46', bg: '#d1fae5' },
       { label: 'Active Schemes', value: this.mySchemes.length, icon: 'work', color: '#b45309', bg: '#fef3c7' },
-      { label: 'Grievances', value: this.myGrievances.length, icon: 'chat', color: '#dc2626', bg: '#fee2e2' },
+      // Pilot 2026-09-01: Grievances card temporarily hidden.
     ];
   }
 

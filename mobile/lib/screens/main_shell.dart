@@ -204,12 +204,7 @@ final _navTree = <_NavItem>[
       UserRole.PUBLIC,
     ],
   ),
-  const _NavItem(
-    label: 'Grievances',
-    icon: Icons.comment_outlined,
-    route: 'grievances',
-    roles: [..._allRoles, UserRole.PUBLIC],
-  ),
+  // Pilot 2026-09-01: Grievances navigation temporarily hidden.
   const _NavItem(
     label: 'Public Identification',
     icon: Icons.badge_outlined,

@@ -1517,12 +1517,6 @@ class _MiniAvatar extends StatelessWidget {
 }
 
 Widget _photoWidget({required String name, required String source}) {
-  if (source.startsWith('data:image/') || _looksBase64(source)) {
-    try {
-      final raw = source.contains(',') ? source.split(',').last : source;
-      return Image.memory(base64Decode(raw), fit: BoxFit.cover);
-    } catch (_) {}
-  }
   return AuthenticatedPhoto(
     source: source,
     fallback: _AvatarFallback(name),

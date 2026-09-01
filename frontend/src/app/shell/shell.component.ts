@@ -70,8 +70,7 @@ export class ShellComponent implements OnInit {
           roles: ['ADMIN','APPROVER','PUBLIC'] },
       ]
     },
-    { labelKey: 'GRIEVANCES', icon: 'chat', route: '/grievances',
-      roles: ['HCM','ADMIN','APPROVER','DEO','PUBLIC'] },
+    // Pilot 2026-09-01: Grievances navigation temporarily hidden.
     { labelKey: 'REGISTER_VISITOR', icon: 'person_add', route: '/deo/register-visitor',
       feature: 'registerVisitor' },
     { labelKey: 'PUBLIC_IDENTIFICATION', icon: 'badge', route: '/identify',

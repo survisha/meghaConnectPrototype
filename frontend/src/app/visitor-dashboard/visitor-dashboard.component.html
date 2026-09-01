@@ -41,11 +41,7 @@
         <mat-icon>work</mat-icon> Apply for Scheme
       </button>
     </a>
-    <a routerLink="/grievances">
-      <button class="btn-action btn-warn-action">
-        <mat-icon>chat</mat-icon> Raise Grievance
-      </button>
-    </a>
+    <!-- Pilot 2026-09-01: Raise Grievance navigation temporarily hidden. -->
   </div>
 
   <div class="content-grid">
@@ -232,10 +228,7 @@
             <div class="analytics-value">{{ mySchemes.length }}</div>
             <div class="analytics-label">Scheme Apps</div>
           </div>
-          <div class="analytics-stat">
-            <div class="analytics-value">{{ myGrievances.length }}</div>
-            <div class="analytics-label">Grievances</div>
-          </div>
+          <!-- Pilot 2026-09-01: Grievances metric temporarily hidden. -->
         </div>
         <div class="empty-state" style="margin-top:0.75rem">
           Detailed analytics will be available after your first visit.

@@ -453,12 +453,12 @@ public class AiDocumentIntelligenceService {
      *         topCategories, aiNote
      */
     public Map<String, Object> getDashboardInsights() {
-        List<Appointment> all = appointmentRepository.findAll();
+        List<Appointment> all = appointmentRepository.findAllProductionForDashboard();
 
         // Count this month
         java.time.LocalDateTime firstOfMonth = DateTimeUtil.nowIST()
                 .withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
-        long thisMonth = appointmentRepository.countCreatedSince(firstOfMonth);
+        long thisMonth = appointmentRepository.countProductionCreatedSince(firstOfMonth);
 
         // Count scheme types from agendaBrief (simple keyword detection)
         Map<String, Integer> schemeCounts = new LinkedHashMap<>();

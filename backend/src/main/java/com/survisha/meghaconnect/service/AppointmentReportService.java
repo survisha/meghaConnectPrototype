@@ -132,6 +132,8 @@ public class AppointmentReportService {
         Long scopedDepartment = scopedDepartment(actor);
         return (root, query, cb) -> {
             List<Predicate> p = new ArrayList<>();
+            // Whitelist business statuses in SQL so QA-only raw values are never hydrated.
+            p.add(root.get("status").in(Arrays.asList(Appointment.AppointmentStatus.values())));
             Long department = scopedDepartment != null ? scopedDepartment : filter.getDepartmentId();
             if (department != null) p.add(cb.or(cb.equal(root.get("tenantDepartment").get("id"), department), cb.equal(root.get("routedDepartment").get("id"), department)));
             if (filter.getAppointmentStatus() != null) p.add(cb.equal(root.get("status"), filter.getAppointmentStatus()));

@@ -55,6 +55,17 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long>,
     @Query("SELECT COUNT(a) FROM Appointment a WHERE a.createdAt >= :from")
     long countCreatedSince(@Param("from") java.time.LocalDateTime from);
 
+    /**
+     * Pilot-safe dashboard read. QA may retain rows whose raw status is DUMMY;
+     * exclude them in SQL before Hibernate attempts enum conversion.
+     */
+    @Query(value = "SELECT a.* FROM appointments a WHERE a.status <> 'DUMMY'", nativeQuery = true)
+    List<Appointment> findAllProductionForDashboard();
+
+    @Query(value = "SELECT COUNT(*) FROM appointments a " +
+        "WHERE a.created_at >= :from AND a.status <> 'DUMMY'", nativeQuery = true)
+    long countProductionCreatedSince(@Param("from") java.time.LocalDateTime from);
+
     @Query("SELECT a FROM Appointment a JOIN FETCH a.applicant " +
         "WHERE a.scheduledDateTime IS NOT NULL " +
         "AND a.status IN :statuses " +

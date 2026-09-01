@@ -81,8 +81,8 @@ public class AppointmentController {
 
     @GetMapping("/dashboard/walk-ins")
     @PreAuthorize("hasAnyRole('ADMIN','APPROVER','DEO','HCM','SUPER_ADMIN')")
-    public Map<String, Long> walkInDashboardCounts(Authentication authentication) {
-        return Map.of("walkInPending", appointmentService.countWalkIns(Appointment.AppointmentStatus.PENDING, actor(authentication)),
+    public Map<String, Object> walkInDashboardCounts(Authentication authentication) {
+        return Map.<String, Object>of("walkInPending", appointmentService.countWalkIns(Appointment.AppointmentStatus.PENDING, actor(authentication)),
             "walkInCompleted", appointmentService.countWalkIns(Appointment.AppointmentStatus.COMPLETED, actor(authentication)));
     }
 

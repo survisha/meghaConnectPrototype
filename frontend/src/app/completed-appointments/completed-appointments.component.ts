@@ -11,14 +11,16 @@ import { DocumentService } from '../services/document.service';
 import { ToastService } from '../shared/toast/toast.service';
 import { VisitorHistoryDialogComponent } from '../shared/visitor-history-dialog.component';
 import { AppointmentService } from '../services/appointment.service';
+import { AuthService } from '../services/auth.service';
 
 @Component({selector:'app-completed-appointments',standalone:true,imports:[CommonModule,FormsModule,MatButtonModule,MatIconModule,MatProgressSpinnerModule,MatDialogModule],templateUrl:'./completed-appointments.component.html',styleUrls:['./completed-appointments.component.scss']})
 export class CompletedAppointmentsComponent implements OnInit,OnDestroy {
   rows:CompletedAppointmentSummary[]=[]; total=0; totalPages=0; loading=false; detailLoading=false; detail:CompletedAppointmentDetail|null=null;
   photoUrls:Record<number,string>={};
   actionPanel:'FOLLOW_UP'|'CLOSE'|null=null; actionRemarks=''; actionSaving=false;
+  documentType:'SUPPORTING_DOCUMENT'|'FINAL_DOCUMENT'='SUPPORTING_DOCUMENT'; documentRemarks=''; documentFile:File|null=null; documentUploading=false;
   filters:Record<string,string|number>={applicationId:'',applicantName:'',epic:'',mobile:'',department:'',scheme:'',constituency:'',district:'',fromDate:'',toDate:'',status:'',followUpStatus:'',mla:'',agendaType:'',appointmentType:'',appointmentCategory:'',responsibleOfficer:'',page:0,size:20,sort:'completedAt,desc'};
-  constructor(public readonly reports:ExecutiveAppointmentReportService,private readonly documents:DocumentService,private readonly toast:ToastService,private readonly dialog:MatDialog,private readonly appointments:AppointmentService){}
+  constructor(public readonly reports:ExecutiveAppointmentReportService,private readonly documents:DocumentService,private readonly toast:ToastService,private readonly dialog:MatDialog,private readonly appointments:AppointmentService,public readonly auth:AuthService){}
   ngOnInit(){this.load();}
   load(){this.clearPhotos();this.loading=true;this.reports.completed(this.filters).pipe(finalize(()=>this.loading=false)).subscribe({next:p=>{this.rows=p.content||[];this.total=p.totalElements;this.totalPages=p.totalPages;this.rows.filter(r=>r.photoAvailable).forEach(r=>this.reports.photo(r.appointmentId).subscribe({next:b=>this.photoUrls[r.appointmentId]=URL.createObjectURL(b)}));},error:()=>this.toast.error('Unable to load completed appointments.')});}
   apply(){this.filters['page']=0;this.load();}
@@ -30,6 +32,10 @@ export class CompletedAppointmentsComponent implements OnInit,OnDestroy {
   openActionPanel(action:'FOLLOW_UP'|'CLOSE'){this.actionPanel=action;this.actionRemarks='';}
   cancelActionPanel(){this.actionPanel=null;this.actionRemarks='';}
   saveAction(){const d=this.detail,remarks=this.actionRemarks.trim(),action=this.actionPanel;if(!d||!action||!remarks)return;this.actionSaving=true;const done=()=>this.actionSaving=false;if(action==='CLOSE'){this.appointments.closeAppointment(d.appointment.id,remarks).pipe(finalize(done)).subscribe({next:()=>{this.toast.success('Appointment closed successfully.');this.closeDetail();this.load();},error:()=>this.toast.error('Unable to close appointment.')});}else{this.appointments.addRemark(d.appointment.id,{hcmRemarks:remarks}).pipe(finalize(done)).subscribe({next:()=>{this.toast.success('Follow-up remarks saved successfully.');this.cancelActionPanel();this.view(d.appointment.id);},error:()=>this.toast.error('Unable to save follow-up remarks.')});}}
+  get canUseWorkflowActions(){return !this.auth.hasRole('DEO');}
+  get canUploadCompletedDocuments(){return this.auth.hasRole('DEO','APPROVER','HCM','SUPER_ADMIN');}
+  selectDocument(event:Event){this.documentFile=(event.target as HTMLInputElement).files?.[0]??null;}
+  uploadDocument(){if(!this.detail||!this.documentFile||this.documentUploading)return;this.documentUploading=true;this.appointments.uploadSupportingDocument(this.detail.appointment.id,this.documentFile,this.documentType,this.documentRemarks).pipe(finalize(()=>this.documentUploading=false)).subscribe({next:()=>{this.toast.success('Document uploaded successfully.');this.documentFile=null;this.documentRemarks='';this.view(this.detail!.appointment.id);},error:()=>this.toast.error('Unable to upload document.')});}
   pdf(id:number){this.reports.completedPdf(id).subscribe({next:b=>this.download(b,`completed-appointment-${id}.pdf`),error:()=>this.toast.error('Unable to generate PDF.')});}
   excel(){this.reports.exportCompleted(this.filters).subscribe({next:b=>this.download(b,'completed-appointments.xlsx'),error:()=>this.toast.error('Unable to export Excel.')});}
   excelOne(row:any){this.reports.exportCompleted({applicationId:row.applicationId}).subscribe({next:b=>this.download(b,`completed-appointment-${row.applicationId}.xlsx`),error:()=>this.toast.error('Unable to export appointment Excel.')});}

@@ -323,9 +323,11 @@ export class AppointmentService {
     return this.http.post<void>(`${this.baseUrl}/export-audit`, payload);
   }
 
-  uploadSupportingDocument(appointmentId: number, file: File): Observable<AppointmentDocument> {
+  uploadSupportingDocument(appointmentId: number, file: File, documentType = 'SUPPORTING_DOCUMENT', remarks = ''): Observable<AppointmentDocument> {
     const formData = new FormData();
     formData.append('file', file, file.name);
+    formData.append('documentType', documentType);
+    if (remarks.trim()) formData.append('remarks', remarks.trim());
     return this.http.post<unknown>(`${this.baseUrl}/${appointmentId}/supporting-documents`, formData)
       .pipe(map(res => this.normalizeDocument(this.unwrapData(res))));
   }

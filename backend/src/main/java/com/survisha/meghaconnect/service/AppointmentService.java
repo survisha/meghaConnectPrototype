@@ -470,12 +470,34 @@ public class AppointmentService {
 
     @Transactional
     public AppointmentDocumentDto uploadSupportingDocument(Long appointmentId, MultipartFile file, String actor) {
+        return uploadSupportingDocument(appointmentId, file, "SUPPORTING_DOCUMENT", null, actor, "API");
+    }
+
+    @Transactional
+    public AppointmentDocumentDto uploadSupportingDocument(Long appointmentId, MultipartFile file,
+                                                            String requestedDocumentType, String remarks,
+                                                            String actor, String actorRole) {
         Appointment appointment = appointmentRepository.findById(appointmentId)
             .orElseThrow(() -> new AppointmentNotFoundException(appointmentId));
         if (file == null || file.isEmpty()) {
             throw new MeghaConnectException(ErrorCodeConstants.MISSING_REQUIRED_FIELD,
                 ErrorCodeConstants.format(ErrorCodeConstants.MISSING_REQUIRED_FIELD_MSG, "file"),
                 HttpStatus.BAD_REQUEST.value());
+        }
+        String documentType = validationService.requireText(requestedDocumentType, "documentType")
+            .trim().toUpperCase(Locale.ROOT);
+        if (!Set.of("SUPPORTING_DOCUMENT", "FINAL_DOCUMENT").contains(documentType)) {
+            throw new IllegalArgumentException("Unsupported appointment document type.");
+        }
+        boolean completed = Set.of(Appointment.AppointmentStatus.COMPLETED,
+            Appointment.AppointmentStatus.HCM_MET_COMPLETED).contains(appointment.getStatus());
+        String normalizedRole = actorRole == null ? "" : actorRole.replace("ROLE_", "").toUpperCase(Locale.ROOT);
+        if (completed && !Set.of("DEO", "APPROVER", "HCM", "SUPER_ADMIN").contains(normalizedRole)) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                "This role cannot upload documents to a completed appointment.");
+        }
+        if ("FINAL_DOCUMENT".equals(documentType) && !completed) {
+            throw new IllegalStateException("Final documents can only be uploaded to a completed appointment.");
         }
         try {
             FileStorageService.StoredFileMetadata storedFile =
@@ -484,7 +506,7 @@ public class AppointmentService {
             DocumentUpload document = DocumentUpload.builder()
                 .appointment(appointment)
                 .visitor(appointment.getApplicant())
-                .documentType("SUPPORTING_DOCUMENT")
+                .documentType(documentType)
                 .originalFilename(storedFile.getOriginalFileName())
                 .storedFileName(storedFile.getStoredFileName())
                 .filePath(storedFile.getEncryptedFilePath())
@@ -494,6 +516,8 @@ public class AppointmentService {
                 .mimeType(storedFile.getContentType())
                 .contentType(storedFile.getContentType())
                 .uploadedBy(actor)
+                .uploaderRole(normalizedRole)
+                .remarks(trimToNull(remarks))
                 .uploadedDate(now)
                 .createdAt(now)
                 .updatedAt(now)
@@ -509,6 +533,9 @@ public class AppointmentService {
                     Appointment.AppointmentStatus.PENDING, "DOCUMENT_UPLOADED",
                     "Supporting document uploaded: " + storedFile.getOriginalFileName(), actor, "API");
             }
+            auditLogService.log("AppointmentDocument", saved.getId(), "DOCUMENT_UPLOADED",
+                "appointmentId=" + appointment.getId() + ", documentType=" + documentType
+                    + ", uploaderRole=" + normalizedRole + ", remarksProvided=" + (trimToNull(remarks) != null), actor);
             queueAiNotes(saved, actor);
             return toDocumentDto(saved);
         } catch (IOException e) {
@@ -1202,6 +1229,8 @@ public class AppointmentService {
             .fileSize(document.getFileSizeBytes())
             .mimeType(firstNonBlank(document.getContentType(), document.getMimeType()))
             .uploadedBy(document.getUploadedBy())
+            .uploaderRole(document.getUploaderRole())
+            .remarks(document.getRemarks())
             .uploadedAt(document.getUploadedDate() != null ? document.getUploadedDate() : document.getCreatedAt())
             .isRequired(false)
             .status("UPLOADED")

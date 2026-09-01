@@ -13,7 +13,15 @@ class AccessControlService {
         UserRole.HCM
       }.contains(user.role);
     }
-    if (route == 'completed_appointments' || route == 'rejected_appointments') {
+    if (route == 'completed_appointments') {
+      return const {
+        UserRole.SUPER_ADMIN,
+        UserRole.DEO,
+        UserRole.APPROVER,
+        UserRole.HCM
+      }.contains(user.role);
+    }
+    if (route == 'rejected_appointments') {
       return const {UserRole.SUPER_ADMIN, UserRole.APPROVER, UserRole.HCM}
           .contains(user.role);
     }

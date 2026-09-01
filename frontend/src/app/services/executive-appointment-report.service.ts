@@ -22,7 +22,7 @@ export interface CompletedAppointmentDetail {
   petitionSummary?:string; approverRemarks?:string; hcmRemarks?:string; forwardedDepartment?:string;
   directions:Array<{ directionId?:string; date?:string; direction?:string; department?:string; officer?:string; dueDate?:string; followUpStatus?:string }>;
   actionItems:Array<{ id:number; directionId?:string; department?:string; officer?:string; instruction?:string; dueDate?:string; status?:string; evidenceRequired?:boolean; escalated?:boolean; completedDate?:string; completionRemarks?:string }>;
-  documents:Array<{ id:number; filename?:string; documentType?:string; contentType?:string; fileSizeBytes?:number; uploadedDate?:string; uploadedBy?:string }>;
+  documents:Array<{ id:number; filename?:string; documentType?:string; contentType?:string; fileSizeBytes?:number; uploadedDate?:string; uploadedBy?:string; uploaderRole?:string; remarks?:string }>;
   aiSummary?:string;
   statusHistory:Array<{ oldStatus?:string; newStatus?:string; action?:string; remarks?:string; performedBy?:string; performedRole?:string; timestamp?:string }>;
 }

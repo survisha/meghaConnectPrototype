@@ -24,6 +24,8 @@ public class AppointmentDocumentDto {
     private Long fileSize;
     private String mimeType;
     private String uploadedBy;
+    private String uploaderRole;
+    private String remarks;
     private LocalDateTime uploadedAt;
     private Boolean isRequired;
     private String status;

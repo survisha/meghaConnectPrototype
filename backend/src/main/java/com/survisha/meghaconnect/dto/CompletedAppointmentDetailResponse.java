@@ -46,6 +46,7 @@ public class CompletedAppointmentDetailResponse {
     public static class DocumentItem {
         private Long id; private String filename; private String documentType; private String contentType;
         private Long fileSizeBytes; private LocalDateTime uploadedDate; private String uploadedBy;
+        private String uploaderRole; private String remarks;
     }
     @Data @Builder @NoArgsConstructor @AllArgsConstructor
     public static class StatusHistoryItem {

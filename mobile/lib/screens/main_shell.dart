@@ -163,7 +163,12 @@ final _navTree = <_NavItem>[
         label: 'Completed Appointments',
         icon: Icons.task_alt_outlined,
         route: 'completed_appointments',
-        roles: [UserRole.SUPER_ADMIN, UserRole.APPROVER, UserRole.HCM],
+        roles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.DEO,
+          UserRole.APPROVER,
+          UserRole.HCM
+        ],
       ),
       _NavItem(
         label: 'Rejected Appointments',

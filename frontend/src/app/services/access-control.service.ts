@@ -67,6 +67,7 @@ export class AccessControlService {
       case 'publicIdentification':
         return this.auth.hasRole('SUPER_ADMIN', 'ADMIN', 'DEO', 'APPROVER', 'HCM');
       case 'completedAppointments':
+        return this.auth.hasRole('SUPER_ADMIN', 'DEO', 'APPROVER', 'HCM');
       case 'rejectedAppointments':
         return this.auth.hasRole('SUPER_ADMIN', 'APPROVER', 'HCM');
       case 'legacyDataImport':

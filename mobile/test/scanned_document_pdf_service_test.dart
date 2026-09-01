@@ -6,6 +6,24 @@ import 'package:image/image.dart' as img;
 import 'package:megha_connect/services/scanned_document_pdf_service.dart';
 
 void main() {
+  test('creates a readable one-page PDF', () async {
+    final directory = await Directory.systemTemp.createTemp('megha-scan-one-');
+    addTearDown(() => directory.delete(recursive: true));
+    final image = img.Image(width: 120, height: 180);
+    img.fill(image, color: img.ColorRgb8(240, 240, 240));
+    final page = File('${directory.path}${Platform.pathSeparator}page.jpg');
+    await page.writeAsBytes(img.encodeJpg(image));
+
+    final pdf = await ScannedDocumentPdfService.create([page.path],
+        outputDirectory: directory);
+    final structure =
+        latin1.decode(await pdf.readAsBytes(), allowInvalid: true);
+
+    expect(structure, startsWith('%PDF-1.4'));
+    expect(structure, contains('/Type /Pages /Count 1'));
+    expect(RegExp(r'/Subtype /Image').allMatches(structure).length, 1);
+  });
+
   test('creates one ordered PDF containing every captured page', () async {
     final directory = await Directory.systemTemp.createTemp('megha-scan-test-');
     addTearDown(() => directory.delete(recursive: true));

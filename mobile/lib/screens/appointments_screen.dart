@@ -1085,6 +1085,7 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
   final _decisionCtrl = TextEditingController();
   final _missingInfoCtrl = TextEditingController();
   final _cmoRemarksCtrl = TextEditingController();
+  final _documentRemarksCtrl = TextEditingController();
   final _picker = ImagePicker();
   Map<String, dynamic> _details = {};
   Map<String, dynamic> _visitorProfile = {};
@@ -1098,6 +1099,7 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
   bool _loading = true;
   bool _saving = false;
   bool _uploading = false;
+  String _documentType = 'SUPPORTING_DOCUMENT';
   String? _error;
   int? _expandedSection;
   int _sectionSequence = 0;
@@ -1114,6 +1116,7 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
     _decisionCtrl.dispose();
     _missingInfoCtrl.dispose();
     _cmoRemarksCtrl.dispose();
+    _documentRemarksCtrl.dispose();
     super.dispose();
   }
 
@@ -1248,7 +1251,9 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
                   if (widget.reportMode == 'rejected') _rejectionSection(),
                   _documentsSection(role),
                   if (_canViewAiNotes(role)) _aiNotesSection(role),
-                  _remarksSection(role),
+                  if (!(widget.reportMode == 'completed' &&
+                      role == UserRole.DEO))
+                    _remarksSection(role),
                   if (_actionsFor(role).isNotEmpty) _actionsSection(role),
                 ],
               ),
@@ -1418,11 +1423,40 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
           for (final doc in _documents) _documentRow(doc),
         if (_canUploadDocuments(role)) ...[
           const SizedBox(height: 12),
+          if (widget.reportMode == 'completed') ...[
+            DropdownButtonFormField<String>(
+              value: _documentType,
+              decoration: const InputDecoration(labelText: 'Document Type'),
+              items: const [
+                DropdownMenuItem(
+                    value: 'SUPPORTING_DOCUMENT',
+                    child: Text('Supporting Document')),
+                DropdownMenuItem(
+                    value: 'FINAL_DOCUMENT', child: Text('Final Document')),
+              ],
+              onChanged: _uploading
+                  ? null
+                  : (value) => setState(() => _documentType = value!),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _documentRemarksCtrl,
+              maxLength: 1000,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Document Remarks',
+                hintText: 'Notes specific to this document',
+              ),
+            ),
+          ],
           OutlinedButton.icon(
             onPressed: _uploading ? null : _pickSupportingDocument,
             icon: const Icon(Icons.upload_file),
-            label: Text(
-                _uploading ? 'Uploading...' : 'Upload Supporting Document'),
+            label: Text(_uploading
+                ? 'Uploading...'
+                : widget.reportMode == 'completed'
+                    ? 'Upload Existing PDF'
+                    : 'Upload Supporting Document'),
           ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
@@ -1468,6 +1502,10 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
                   style:
                       const TextStyle(color: Color(0xFF64748B), fontSize: 12),
                 ),
+                if (_text(doc['remarks']).isNotEmpty)
+                  Text('Remarks: ${_text(doc['remarks'])}',
+                      style: const TextStyle(
+                          color: Color(0xFF475569), fontSize: 12)),
               ],
             ),
           ),
@@ -1731,7 +1769,7 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
           onPressed: _completeAppointment));
     }
     if (widget.reportMode == 'completed' &&
-        [UserRole.DEO, UserRole.APPROVER, UserRole.HCM].contains(role)) {
+        [UserRole.APPROVER, UserRole.HCM].contains(role)) {
       actions.add(_ActionButton(
           label: 'Close',
           icon: Icons.verified_outlined,
@@ -2175,6 +2213,12 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
             widget.appointment.backendId!,
             path,
             fileName: fileName,
+            documentType: widget.reportMode == 'completed'
+                ? _documentType
+                : 'SUPPORTING_DOCUMENT',
+            remarks: widget.reportMode == 'completed'
+                ? _documentRemarksCtrl.text
+                : null,
           );
     if (!mounted) return false;
     setState(() => _uploading = false);
@@ -2187,6 +2231,12 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
           'appointmentId': widget.appointment.backendId,
           'filePath': path,
           'fileName': fileName,
+          'documentType': widget.reportMode == 'completed'
+              ? _documentType
+              : 'SUPPORTING_DOCUMENT',
+          'remarks': widget.reportMode == 'completed'
+              ? _documentRemarksCtrl.text.trim()
+              : null,
         },
       );
       if (!mounted) return false;
@@ -2195,6 +2245,7 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
       return false;
     }
     _showMessage('Document uploaded successfully.');
+    if (widget.reportMode == 'completed') _documentRemarksCtrl.clear();
     await _load();
     return true;
   }
@@ -2406,8 +2457,10 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
       [UserRole.HCM, UserRole.ADMIN, UserRole.APPROVER].contains(role);
 
   bool _canUploadDocuments(UserRole role) =>
-      widget.appointment.status == 'PENDING_REQUEST' &&
-      [UserRole.DEO, UserRole.PUBLIC].contains(role);
+      (widget.reportMode == 'completed' &&
+          [UserRole.DEO, UserRole.APPROVER].contains(role)) ||
+      (widget.appointment.status == 'PENDING_REQUEST' &&
+          [UserRole.DEO, UserRole.PUBLIC].contains(role));
 
   String _applicantAddress() {
     final applicant = _map(_details['applicant']);

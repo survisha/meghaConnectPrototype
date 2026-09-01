@@ -1617,6 +1617,8 @@ class ApiService {
     int appointmentId,
     String filePath, {
     String? fileName,
+    String documentType = 'SUPPORTING_DOCUMENT',
+    String? remarks,
   }) async {
     try {
       final request = http.MultipartRequest(
@@ -1624,6 +1626,10 @@ class ApiService {
         _u('/appointments/$appointmentId/supporting-documents'),
       );
       request.headers.addAll(await _authHeaders());
+      request.fields['documentType'] = documentType;
+      if ((remarks ?? '').trim().isNotEmpty) {
+        request.fields['remarks'] = remarks!.trim();
+      }
       request.files.add(await http.MultipartFile.fromPath(
         'file',
         filePath,

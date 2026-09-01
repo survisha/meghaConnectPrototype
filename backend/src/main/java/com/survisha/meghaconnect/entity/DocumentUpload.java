@@ -67,6 +67,12 @@ public class DocumentUpload extends BaseEntity {
     @Column(length = 100)
     private String uploadedBy;
 
+    @Column(length = 50)
+    private String uploaderRole;
+
+    @Column(length = 1000)
+    private String remarks;
+
     private LocalDateTime uploadedDate;
 
     @Column(nullable = false, updatable = false)

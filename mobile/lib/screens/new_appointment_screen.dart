@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../services/notification_service.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -13,6 +16,7 @@ import '../services/connectivity_service.dart';
 import '../services/navigation_service.dart';
 import '../services/offline_ai_notes_service.dart';
 import '../services/offline_repository.dart';
+import '../services/scanned_document_pdf_service.dart';
 import '../services/sync_service.dart';
 import '../widgets/authenticated_photo.dart';
 import 'visitor_registration_screen.dart';
@@ -38,6 +42,7 @@ class NewAppointmentScreen extends StatefulWidget {
 class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
   final _formKey = GlobalKey<FormState>();
   final _offlineRepository = OfflineRepository();
+  final _imagePicker = ImagePicker();
 
   final _searchMobileCtrl = TextEditingController();
   final _searchEpicCtrl = TextEditingController();
@@ -63,6 +68,8 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
   bool _includeSchemeDetails = false;
   bool _includeAssociates = false;
   bool _mlaMdcApproved = false;
+  bool _scanningDocument = false;
+  String? _documentStatus;
 
   String? _contextError;
   String? _referenceError;
@@ -83,6 +90,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
   List<Map<String, dynamic>> _associateResults = [];
   final List<Map<String, dynamic>> _associates = [];
   final List<_AppointmentDocument> _documents = _defaultDocuments();
+  final Set<String> _generatedDocumentPaths = {};
 
   final Map<String, List<_ReferenceOption>> _references = {};
 
@@ -162,6 +170,11 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
 
   @override
   void dispose() {
+    if (!_loading) {
+      for (final path in _generatedDocumentPaths) {
+        unawaited(_deleteIfExists(path));
+      }
+    }
     _searchMobileCtrl.dispose();
     _searchEpicCtrl.dispose();
     _searchReferenceCtrl.dispose();
@@ -390,7 +403,118 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
       allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png'],
     );
     if (result == null || result.files.isEmpty) return;
-    setState(() => document.file = result.files.first);
+    await _removeGeneratedDocument(document.file?.path);
+    setState(() {
+      document.file = result.files.first;
+      _documentStatus = null;
+    });
+  }
+
+  Future<void> _scanDocument(_AppointmentDocument document) async {
+    if (_scanningDocument) return;
+    final capturedPaths = <String>[];
+    File? generatedPdf;
+    try {
+      var captureAnother = true;
+      while (captureAnother &&
+          capturedPaths.length < ScannedDocumentPdfService.maxPages) {
+        final image = await _imagePicker.pickImage(
+          source: ImageSource.camera,
+          imageQuality: 90,
+          maxWidth: 2200,
+          maxHeight: 2200,
+          requestFullMetadata: false,
+        );
+        if (image == null) {
+          if (capturedPaths.isEmpty) return;
+          break;
+        }
+        capturedPaths.add(image.path);
+        if (!mounted) return;
+        if (capturedPaths.length >= ScannedDocumentPdfService.maxPages) break;
+        final action = await showDialog<String>(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogContext) => AlertDialog(
+            title: Text(
+              '${capturedPaths.length} page${capturedPaths.length == 1 ? '' : 's'} captured',
+            ),
+            content: Image.file(File(image.path), fit: BoxFit.contain),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, 'cancel'),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, 'retake'),
+                child: const Text('Delete / Retake'),
+              ),
+              OutlinedButton(
+                onPressed: () => Navigator.pop(dialogContext, 'next'),
+                child: const Text('Add Page'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(dialogContext, 'finish'),
+                child: const Text('Finish'),
+              ),
+            ],
+          ),
+        );
+        if (action == 'cancel') return;
+        if (action == 'retake') {
+          final removed = capturedPaths.removeLast();
+          await _deleteIfExists(removed);
+          continue;
+        }
+        captureAnother = action == 'next';
+      }
+      if (capturedPaths.isEmpty) return;
+      if (!mounted) return;
+      setState(() {
+        _scanningDocument = true;
+        _documentStatus = 'Processing document...';
+      });
+      generatedPdf = await ScannedDocumentPdfService.create(capturedPaths);
+      final size = await generatedPdf.length();
+      await _removeGeneratedDocument(document.file?.path);
+      _generatedDocumentPaths.add(generatedPdf.path);
+      if (!mounted) return;
+      setState(() {
+        document.file = PlatformFile(
+          name: generatedPdf!.uri.pathSegments.last,
+          path: generatedPdf.path,
+          size: size,
+        );
+        _documentStatus =
+            'Document ready. It will upload automatically with the appointment.';
+        _scanningDocument = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _scanningDocument = false;
+        _documentStatus =
+            'Camera permission is required to scan documents. You can enable camera permission or upload an existing PDF.';
+      });
+    } finally {
+      for (final path in capturedPaths) {
+        await _deleteIfExists(path);
+      }
+    }
+  }
+
+  Future<void> _removeGeneratedDocument(String? path) async {
+    if (path == null || !_generatedDocumentPaths.remove(path)) return;
+    await _deleteIfExists(path);
+  }
+
+  Future<void> _deleteIfExists(String path) async {
+    try {
+      final file = File(path);
+      if (await file.exists()) await file.delete();
+    } catch (_) {
+      // Best-effort cleanup of sensitive temporary captures.
+    }
   }
 
   bool _validateCurrentStep() {
@@ -455,7 +579,12 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
     final visitorId = _selectedVisitorId;
     if (visitorId == null || visitorId <= 0) return;
 
-    setState(() => _loading = true);
+    setState(() {
+      _loading = true;
+      if (_generatedDocumentPaths.isNotEmpty) {
+        _documentStatus = 'Uploading document...';
+      }
+    });
     final fields = _buildSubmitFields(visitorId);
     final documents = _visibleDocuments()
         .where((document) => document.file?.path?.isNotEmpty == true)
@@ -475,6 +604,10 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
           );
     if (!mounted) return;
     if (result != null && result['success'] != false) {
+      for (final path in _generatedDocumentPaths.toList()) {
+        await _removeGeneratedDocument(path);
+      }
+      if (!mounted) return;
       setState(() {
         _loading = false;
         _submittedAppId =
@@ -648,32 +781,36 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_submitted) return _buildSuccess(context);
-    return Form(
-      key: _formKey,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (widget.isWalkIn || widget.isPublic) _buildInfoBanner(),
-            _buildStepHeader(),
-            const SizedBox(height: 12),
-            if (_referenceError != null) ...[
-              _buildWarningBanner(_referenceError!),
-              const SizedBox(height: 12),
-            ],
-            if (_contextError != null) ...[
-              _buildErrorBanner(_contextError!),
-              const SizedBox(height: 12),
-            ],
-            _buildSection(_steps[_step], _buildCurrentStep()),
-            const SizedBox(height: 16),
-            _buildNavigation(),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
+    return Material(
+      color: const Color(0xFFF4F6FB),
+      child: _submitted
+          ? _buildSuccess(context)
+          : Form(
+              key: _formKey,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (widget.isWalkIn || widget.isPublic) _buildInfoBanner(),
+                    _buildStepHeader(),
+                    const SizedBox(height: 12),
+                    if (_referenceError != null) ...[
+                      _buildWarningBanner(_referenceError!),
+                      const SizedBox(height: 12),
+                    ],
+                    if (_contextError != null) ...[
+                      _buildErrorBanner(_contextError!),
+                      const SizedBox(height: 12),
+                    ],
+                    _buildSection(_steps[_step], _buildCurrentStep()),
+                    const SizedBox(height: 16),
+                    _buildNavigation(),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            ),
     );
   }
 
@@ -1241,6 +1378,13 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
           style: TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
         ),
         const SizedBox(height: 10),
+        if (_documentStatus != null) ...[
+          Text(
+            _documentStatus!,
+            style: const TextStyle(fontSize: 12, color: Color(0xFF1A237E)),
+          ),
+          const SizedBox(height: 10),
+        ],
         ...docs.map((document) {
           final fileName = document.file?.name;
           return Container(
@@ -1250,33 +1394,60 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
               border: Border.all(color: const Color(0xFFE5E7EB)),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Icon(Icons.attach_file, color: Color(0xFF1A237E)),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        document.required
-                            ? '${document.label} *'
-                            : document.label,
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      Text(
-                        fileName ?? 'No file selected',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 12, color: Colors.grey[700]),
-                      ),
-                    ],
+                Row(children: [
+                  const Icon(Icons.attach_file, color: Color(0xFF1A237E)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          document.required
+                              ? '${document.label} *'
+                              : document.label,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        Text(
+                          fileName ?? 'No file selected',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style:
+                              TextStyle(fontSize: 12, color: Colors.grey[700]),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                TextButton(
-                  onPressed: () => _pickDocument(document),
-                  child: Text(fileName == null ? 'Upload' : 'Change'),
-                ),
+                ]),
+                const SizedBox(height: 8),
+                Row(children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _scanningDocument
+                          ? null
+                          : () => _pickDocument(document),
+                      icon: const Icon(Icons.upload_file),
+                      label: Text(fileName == null ? 'Upload PDF' : 'Change'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _scanningDocument
+                          ? null
+                          : () => _scanDocument(document),
+                      icon: _scanningDocument
+                          ? const SizedBox.square(
+                              dimension: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.document_scanner_outlined),
+                      label: const Text('Scan Document'),
+                    ),
+                  ),
+                ]),
               ],
             ),
           );

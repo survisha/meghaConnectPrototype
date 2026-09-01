@@ -234,7 +234,7 @@ public class AppointmentController {
     }
 
     @PostMapping("/{id}/remarks")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','HCM','APPROVER','ADMIN','DEO','APPROVER_JT_SECY')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','HCM','APPROVER','ADMIN','APPROVER_JT_SECY')")
     public ResponseEntity<HcmActionDto> addRemark(@PathVariable Long id,
                                                   @RequestBody HcmActionDto body,
                                                   Authentication authentication) {
@@ -273,11 +273,13 @@ public class AppointmentController {
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','ADMIN','DEO','HCM','PUBLIC')")
     public ResponseEntity<AppointmentDocumentDto> uploadSupportingDocument(@PathVariable Long id,
                                                                            @RequestParam("file") MultipartFile file,
-                                                                           @AuthenticationPrincipal UserDetails user) {
+                                                                           @RequestParam(defaultValue = "SUPPORTING_DOCUMENT") String documentType,
+                                                                           @RequestParam(required = false) String remarks,
+                                                                           Authentication authentication) {
         logEndpoint("/api/v1/appointments/{id}/supporting-documents");
-        String actor = user != null ? user.getUsername() : "system";
         return ResponseEntity.status(HttpStatus.CREATED)
-            .body(appointmentService.uploadSupportingDocument(id, file, actor));
+            .body(appointmentService.uploadSupportingDocument(id, file, documentType, remarks,
+                actor(authentication), role(authentication)));
     }
 
     @PostMapping("/{id}/request-missing-information")
@@ -293,7 +295,7 @@ public class AppointmentController {
     }
 
     @PostMapping("/{id}/close")
-    @PreAuthorize("hasAnyRole('DEO','APPROVER','HCM')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','HCM')")
     public ResponseEntity<AppointmentDto> closeAppointment(
             @PathVariable Long id,
             @RequestBody(required = false) Map<String, String> body,

@@ -14,6 +14,7 @@ import com.survisha.meghaconnect.service.AuditLogService;
 import com.survisha.meghaconnect.service.HcmActionService;
 import com.survisha.meghaconnect.service.ScheduleEventService;
 import com.survisha.meghaconnect.service.VisitorPassService;
+import com.survisha.meghaconnect.service.WalkInTokenService;
 import com.survisha.meghaconnect.util.RequestContextUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -58,6 +59,7 @@ public class AppointmentController {
     private final HcmActionService hcmActionService;
     private final VisitorPassService visitorPassService;
     private final AuditLogService auditLogService;
+    private final WalkInTokenService walkInTokenService;
 
     @Operation(summary = "Get all appointments", description = "Retrieve paginated list of all appointments")
     @ApiResponses(value = {
@@ -84,6 +86,13 @@ public class AppointmentController {
     public Map<String, Object> walkInDashboardCounts(Authentication authentication) {
         return Map.<String, Object>of("walkInPending", appointmentService.countWalkIns(Appointment.AppointmentStatus.PENDING, actor(authentication)),
             "walkInCompleted", appointmentService.countWalkIns(Appointment.AppointmentStatus.COMPLETED, actor(authentication)));
+    }
+
+    @GetMapping("/walk-in-dates")
+    @PreAuthorize("hasAnyRole('ADMIN','APPROVER','DEO','HCM','SUPER_ADMIN')")
+    public ResponseEntity<List<LocalDate>> walkInDates() {
+        logEndpoint("/api/v1/appointments/walk-in-dates");
+        return ResponseEntity.ok(walkInTokenService.availableTokenDates());
     }
 
     @Operation(summary = "Get appointment by ID", description = "Retrieve a specific appointment by its ID")

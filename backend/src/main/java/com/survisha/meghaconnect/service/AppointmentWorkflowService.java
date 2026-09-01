@@ -175,7 +175,7 @@ public class AppointmentWorkflowService {
                                                                     String actorRole) {
         ensureCitizen(actorRole);
         Long applicantId = resolveApplicantId(requestedApplicantId, authenticatedVisitorId);
-        return appointmentRepository.findByApplicant_IdOrderByCreatedAtDesc(applicantId)
+        return appointmentRepository.findProductionByApplicantIdOrderByCreatedAtDesc(applicantId)
                 .stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());

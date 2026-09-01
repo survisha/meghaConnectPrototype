@@ -1947,6 +1947,26 @@ class ApiService {
     return {'content': [], 'totalElements': 0};
   }
 
+  static Future<List<String>> getWalkInDates() async {
+    try {
+      final resp = await http
+          .get(_u('/appointments/walk-in-dates'), headers: await _headers())
+          .timeout(const Duration(seconds: 20));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        final decoded = jsonDecode(resp.body);
+        final data = decoded is Map<String, dynamic> &&
+                decoded.containsKey('data') &&
+                decoded.containsKey('success')
+            ? decoded['data']
+            : decoded;
+        return data is List ? data.map((item) => item.toString()).toList() : [];
+      }
+    } catch (error, stackTrace) {
+      _logError('getWalkInDates', error, stackTrace);
+    }
+    return [];
+  }
+
   static Future<Map<String, dynamic>?> createGrievance(
       Map<String, dynamic> body) async {
     try {

@@ -192,6 +192,15 @@ export class AppointmentService {
     return this.http.get<{walkInPending:number;walkInCompleted:number}>(`${this.baseUrl}/dashboard/walk-ins`);
   }
 
+  getWalkInDates(): Observable<string[]> {
+    return this.http.get<unknown>(`${this.baseUrl}/walk-in-dates`).pipe(
+      map(res => {
+        const data = this.unwrapData<unknown>(res);
+        return Array.isArray(data) ? data.map(item => String(item)) : [];
+      })
+    );
+  }
+
   createGuestAppointment(request: GuestAppointmentRequest): Observable<GuestAppointmentResponse> {
     const formData = new FormData();
     formData.append('fullName', request.fullName);

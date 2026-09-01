@@ -40,8 +40,8 @@ public class PublicIdentificationService {
                 .orElseThrow(() -> new ResourceNotFoundException("Citizen not found"));
 
         List<SchemeApplication> schemeApplications = schemeApplicationRepository.findByApplicant_IdOrderByCreatedAtDesc(citizenId);
-        List<Appointment> primaryAppointments = appointmentRepository.findByApplicant_IdOrderByCreatedAtDesc(citizenId);
-        List<AssociateMapping> associateMappings = associateMappingRepository.findByPerson_IdOrderByCreatedAtDesc(citizenId);
+        List<Appointment> primaryAppointments = appointmentRepository.findProductionByApplicantIdOrderByCreatedAtDesc(citizenId);
+        List<AssociateMapping> associateMappings = associateMappingRepository.findProductionByPersonIdOrderByCreatedAtDesc(citizenId);
         List<Appointment> appointments = mergeAppointments(primaryAppointments, associateMappings);
 
         LocalDateTime lastVisitedAt = appointments.stream()

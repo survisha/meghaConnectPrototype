@@ -258,6 +258,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   String _filterType = '';
   DateTime? _fromDate;
   DateTime? _toDate;
+  List<DateTime> _walkInDates = [];
   final List<_Appointment> _appointments = [];
   int _serverPage = 0;
   int _serverTotal = 0;
@@ -270,12 +271,36 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   void initState() {
     super.initState();
     if (widget.walkInOnly) {
-      final now = DateTime.now();
-      _fromDate = DateTime(now.year, now.month, now.day);
-      _toDate = _fromDate;
+      _loadWalkInDates();
+    } else {
+      _restoreSessionOrLoad();
     }
     _scrollController.addListener(_maybeLoadMore);
-    _restoreSessionOrLoad();
+  }
+
+  Future<void> _loadWalkInDates() async {
+    setState(() {
+      _loading = true;
+      _loadError = null;
+    });
+    final dates = (await ApiService.getWalkInDates())
+        .map((value) => DateTime.tryParse(value))
+        .whereType<DateTime>()
+        .map((value) => DateTime(value.year, value.month, value.day))
+        .toList();
+    if (!mounted) return;
+    final today = DateTime.now();
+    final todayOnly = DateTime(today.year, today.month, today.day);
+    final defaultDate = dates.firstWhere(
+      (date) => _sameDate(date, todayOnly),
+      orElse: () => dates.isNotEmpty ? dates.first : todayOnly,
+    );
+    setState(() {
+      _walkInDates = dates;
+      _fromDate = dates.isEmpty ? null : defaultDate;
+      _toDate = dates.isEmpty ? null : defaultDate;
+    });
+    await _loadAppointments(refresh: true);
   }
 
   @override
@@ -487,10 +512,12 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
           ? null
           : DateTime(
               a.createdDate!.year, a.createdDate!.month, a.createdDate!.day);
-      final matchesFrom =
-          _fromDate == null || (day != null && !day.isBefore(_fromDate!));
-      final matchesTo =
-          _toDate == null || (day != null && !day.isAfter(_toDate!));
+      final matchesFrom = widget.walkInOnly ||
+          _fromDate == null ||
+          (day != null && !day.isBefore(_fromDate!));
+      final matchesTo = widget.walkInOnly ||
+          _toDate == null ||
+          (day != null && !day.isAfter(_toDate!));
       return matchesSearch &&
           matchesStatus &&
           matchesSource &&
@@ -527,6 +554,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
           type: _filterType,
           fromDate: _fromDate,
           toDate: _toDate,
+          walkInDates: _walkInDates,
           onSearch: (value) => setState(() => _searchQuery = value),
           onStatus: (value) {
             setState(() => _filterStatus = value ?? '');
@@ -568,8 +596,33 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
       );
 
   Future<void> _loadWalkInPage(int page) async {
-    setState(() => _serverPage = page - 1);
-    await _loadAppointments(refresh: false);
+    await _loadAppointmentsPage(page);
+  }
+
+  Future<void> _loadAppointmentsPage(int page) async {
+    setState(() {
+      _loading = true;
+      _loadError = null;
+    });
+    final response =
+        await _pageForRole(context.read<AuthService>().user?.role, page);
+    if (!mounted) return;
+    final rows = _rowsFromPage(response);
+    final mapped = rows.map((row) => _Appointment.fromJson(row)).toList();
+    setState(() {
+      _appointments
+        ..clear()
+        ..addAll(mapped);
+      _serverPage = _asInt(response['number']) ?? page;
+      _serverTotal = _asInt(response['totalElements']) ?? mapped.length;
+      _serverTotalPages = _asInt(response['totalPages']) ?? 1;
+      _loading = false;
+      _loadingMore = false;
+      _loadError = response['error'] == true
+          ? response['message']?.toString() ??
+              'Failed to load appointments. Please try again.'
+          : null;
+    });
   }
 
   String _isoDate(DateTime value) =>
@@ -797,6 +850,7 @@ class _SearchAndFilters extends StatelessWidget {
   final String type;
   final DateTime? fromDate;
   final DateTime? toDate;
+  final List<DateTime> walkInDates;
   final ValueChanged<String> onSearch;
   final ValueChanged<String?> onStatus;
   final ValueChanged<String?> onSource;
@@ -811,6 +865,7 @@ class _SearchAndFilters extends StatelessWidget {
     required this.type,
     required this.fromDate,
     required this.toDate,
+    this.walkInDates = const [],
     required this.onSearch,
     required this.onStatus,
     required this.onSource,
@@ -878,12 +933,25 @@ class _SearchAndFilters extends StatelessWidget {
                   labelFor: (value) => value.isEmpty ? 'All Types' : value,
                   onChanged: onType,
                 ),
-                OutlinedButton.icon(
-                  onPressed: () => _pickDate(context, true),
-                  icon: const Icon(Icons.event_outlined, size: 18),
-                  label: Text(_dateLabel(
-                      fromDate, walkInMode ? 'Walk-in Date' : 'From')),
-                ),
+                if (walkInMode)
+                  DropdownButton<DateTime>(
+                    value: fromDate,
+                    hint: const Text('Walk-in Date'),
+                    items: [
+                      for (final date in walkInDates)
+                        DropdownMenuItem<DateTime>(
+                          value: date,
+                          child: Text(_displayDate(date)),
+                        )
+                    ],
+                    onChanged: (value) => onDates(value, value),
+                  )
+                else
+                  OutlinedButton.icon(
+                    onPressed: () => _pickDate(context, true),
+                    icon: const Icon(Icons.event_outlined, size: 18),
+                    label: Text(_dateLabel(fromDate, 'From')),
+                  ),
                 if (!walkInMode) ...[
                   const SizedBox(width: 8),
                   OutlinedButton.icon(
@@ -892,7 +960,7 @@ class _SearchAndFilters extends StatelessWidget {
                     label: Text(_dateLabel(toDate, 'To')),
                   )
                 ],
-                if (fromDate != null || toDate != null)
+                if (!walkInMode && (fromDate != null || toDate != null))
                   IconButton(
                     tooltip: 'Clear dates',
                     icon: const Icon(Icons.clear),
@@ -2787,6 +2855,15 @@ String _dateLabel(DateTime? date, String fallback) {
   if (date == null) return fallback;
   return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 }
+
+String _displayDate(DateTime date) {
+  return '${date.day.toString().padLeft(2, '0')}-${_month(date.month)}-${date.year}';
+}
+
+bool _sameDate(DateTime left, DateTime right) =>
+    left.year == right.year &&
+    left.month == right.month &&
+    left.day == right.day;
 
 String _toLocalDateTime(DateTime date) {
   String two(int value) => value.toString().padLeft(2, '0');

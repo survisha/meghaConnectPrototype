@@ -282,7 +282,7 @@ public class AppointmentService {
         if (visitorId == null) {
             return List.of();
         }
-        return appointmentRepository.findByApplicant_IdOrderByCreatedAtDesc(visitorId)
+        return appointmentRepository.findProductionByApplicantIdOrderByCreatedAtDesc(visitorId)
             .stream()
             .map(this::toDto)
             .toList();

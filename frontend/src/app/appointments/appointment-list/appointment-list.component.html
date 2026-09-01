@@ -42,7 +42,7 @@
           </mat-select>
         </mat-form-field>
 
-        <mat-form-field appearance="outline" style="min-width:180px">
+        <mat-form-field appearance="outline" style="min-width:180px" *ngIf="listMode!=='walkin'">
           <mat-label>Source</mat-label>
           <mat-select [(ngModel)]="filterSource" (ngModelChange)="applyFilter()">
             <mat-option *ngFor="let opt of sourceOptions" [value]="opt.value">
@@ -60,9 +60,16 @@
           </mat-select>
         </mat-form-field>
 
-        <mat-form-field appearance="outline" style="min-width:180px">
-          <mat-label>{{listMode==='walkin'?'Walk-in Date':'From Date'}}</mat-label>
-          <input matInput [matDatepicker]="fromPicker" [(ngModel)]="filterFromDate" (dateChange)="listMode==='walkin'?applyWalkInFilter():applyFilter()">
+        <mat-form-field appearance="outline" style="min-width:180px" *ngIf="listMode==='walkin'">
+          <mat-label>Walk-in Date</mat-label>
+          <mat-select [ngModel]="filterFromDate ? toLocalDate(filterFromDate) : ''" (ngModelChange)="onWalkInDateChange($event)">
+            <mat-option *ngFor="let date of walkInDates" [value]="date">{{ date | date:'dd-MMM-yyyy' }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" style="min-width:180px" *ngIf="listMode!=='walkin'">
+          <mat-label>From Date</mat-label>
+          <input matInput [matDatepicker]="fromPicker" [(ngModel)]="filterFromDate" (dateChange)="applyFilter()">
           <mat-datepicker-toggle matSuffix [for]="fromPicker"></mat-datepicker-toggle>
           <mat-datepicker #fromPicker></mat-datepicker>
         </mat-form-field>

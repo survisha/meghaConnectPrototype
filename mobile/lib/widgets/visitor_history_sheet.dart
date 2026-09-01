@@ -137,7 +137,9 @@ class _VisitorHistorySheetState extends State<VisitorHistorySheet> {
               _first([item['applicationId'], item['appointmentId']],
                   'Appointment'),
               [
-                _date(item['appointmentDate'] ?? item['requestedAt']),
+                _date(item['dateTime'] ??
+                    item['appointmentDate'] ??
+                    item['requestedAt']),
                 _first([item['appointmentType'], item['type']]),
                 _first([item['department']]),
                 _first([item['purpose'], item['agenda']]),

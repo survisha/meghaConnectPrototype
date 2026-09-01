@@ -8,6 +8,7 @@ import com.survisha.meghaconnect.service.AuditLogService;
 import com.survisha.meghaconnect.service.HcmActionService;
 import com.survisha.meghaconnect.service.ScheduleEventService;
 import com.survisha.meghaconnect.service.VisitorPassService;
+import com.survisha.meghaconnect.service.WalkInTokenService;
 import com.survisha.meghaconnect.util.RequestContextUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,6 +37,7 @@ class WalkInDashboardResponseTest {
     @Mock private HcmActionService hcmActionService;
     @Mock private VisitorPassService visitorPassService;
     @Mock private AuditLogService auditLogService;
+    @Mock private WalkInTokenService walkInTokenService;
     @Mock private Authentication authentication;
 
     private MockMvc mockMvc;
@@ -49,7 +51,8 @@ class WalkInDashboardResponseTest {
                 scheduleEventService,
                 hcmActionService,
                 visitorPassService,
-                auditLogService);
+                auditLogService,
+                walkInTokenService);
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new RequestIdResponseAdvice())
                 .build();

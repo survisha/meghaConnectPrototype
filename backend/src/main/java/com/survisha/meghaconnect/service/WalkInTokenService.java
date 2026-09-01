@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -57,5 +58,13 @@ public class WalkInTokenService {
         }
 
         return tokenPrefix + "-" + String.format("%04d", next);
+    }
+
+    public List<LocalDate> availableTokenDates() {
+        return jdbcTemplate.query("""
+                SELECT token_date
+                FROM walkin_token_sequence
+                ORDER BY token_date DESC
+                """, (rs, rowNum) -> rs.getDate("token_date").toLocalDate());
     }
 }

@@ -163,6 +163,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   departments: Array<{ label: string; value: string }> = [];
   selectedEventId: number | null = null;
   eventTypeOptions: Array<{ label: string; value: EventType | '' }> = [{ label: 'All Types', value: '' }];
+  walkInDates: string[] = [];
   displayedColumns: string[] = ['select', 'applicant', 'designation', 'constituency', 'agenda', 'appointmentSource', 'location', 'status', 'createdAt', 'aiNotes', 'actions'];
   pageSizeOptions = [10, 25, 50];
   pageSize = 10;
@@ -240,9 +241,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     if (this.listMode === 'walkin') {
-      const today = new Date();
-      this.filterFromDate = today;
-      this.filterToDate = today;
+      this.displayedColumns = this.displayedColumns.filter(column => column !== 'appointmentSource');
       this.displayedColumns.splice(this.displayedColumns.includes('select') ? 1 : 0, 0, 'token');
       this.sortColumn = 'token';
       this.sortDirection = 'asc';
@@ -252,7 +251,11 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     this.loadAppointmentTypes();
     this.loadDepartments();
     this.loadScheduleEvents();
-    this.loadAppointments();
+    if (this.listMode === 'walkin') {
+      this.loadWalkInDates();
+    } else {
+      this.loadAppointments();
+    }
     this.loadProofCameraDevices();
     navigator.mediaDevices?.addEventListener?.('devicechange', this.handleProofCameraDeviceChange);
   }
@@ -292,6 +295,35 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     this.loading = true;
     this.serverPageIndex = 0;
     this.loadAppointmentsPage(0, false);
+  }
+
+  private loadWalkInDates() {
+    this.loading = true;
+    this.appointmentService.getWalkInDates().subscribe({
+      next: dates => {
+        this.walkInDates = dates;
+        if (dates.length === 0) {
+          this.filterFromDate = null;
+          this.filterToDate = null;
+          this.appointments = [];
+          this.applyFilter();
+          this.loading = false;
+          return;
+        }
+        const today = this.toLocalDate(new Date());
+        const selected = dates.includes(today) ? today : dates[0];
+        this.filterFromDate = selected ? this.parseLocalDate(selected) : null;
+        this.filterToDate = this.filterFromDate;
+        this.loadAppointments();
+      },
+      error: error => {
+        this.errorMsg = apiErrorMessage(error, 'Unable to load walk-in dates.');
+        this.walkInDates = [];
+        this.appointments = [];
+        this.applyFilter();
+        this.loading = false;
+      }
+    });
   }
 
   loadMoreAppointments() {
@@ -391,8 +423,8 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
         (!this.filterStatus || this.matchesStatusFilter(a.status, this.filterStatus)) &&
         (!this.filterSource || (a.appointmentSource || 'CITIZEN') === this.filterSource) &&
         (!this.filterEventType || a.eventType === this.filterEventType) &&
-        (!this.filterFromDate || (createdDate && createdDate >= this.startOfDay(this.filterFromDate))) &&
-        (!this.filterToDate || (createdDate && createdDate < this.nextDay(this.filterToDate)));
+        (this.listMode === 'walkin' || !this.filterFromDate || (createdDate && createdDate >= this.startOfDay(this.filterFromDate))) &&
+        (this.listMode === 'walkin' || !this.filterToDate || (createdDate && createdDate < this.nextDay(this.filterToDate)));
     });
     this.selectedAppointmentIds.forEach(id => {
       if (!this.filtered.some(appointment => appointment.id === id)) {
@@ -404,6 +436,12 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   applyWalkInFilter() {
     this.pageIndex = 0;
     this.loadAppointments();
+  }
+
+  onWalkInDateChange(value: string) {
+    this.filterFromDate = value ? this.parseLocalDate(value) : null;
+    this.filterToDate = this.filterFromDate;
+    this.applyWalkInFilter();
   }
 
   get sortedAppointments() {
@@ -1623,9 +1661,15 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
   }
 
-  private toLocalDate(date: Date): string {
+  toLocalDate(date: Date): string {
     const pad = (part: number) => part.toString().padStart(2, '0');
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  }
+
+  private parseLocalDate(value: string): Date | null {
+    const parts = value.split('-').map(part => Number(part));
+    if (parts.length !== 3 || parts.some(part => !Number.isFinite(part))) return null;
+    return new Date(parts[0], parts[1] - 1, parts[2]);
   }
 
   private toTimeInputValue(date: Date): string {

@@ -355,10 +355,37 @@
                   </mat-chip>
                 </td>
               </ng-container>
+
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef>Actions</th>
+                <td mat-cell *matCellDef="let m">
+                  <button *ngIf="canManagePendingHistory && m.status === 'PENDING'"
+                          mat-stroked-button color="primary"
+                          (click)="openPendingAppointment(m)">
+                    View / Select
+                  </button>
+                </td>
+              </ng-container>
               
-              <tr mat-header-row *matHeaderRowDef="meetingHistoryColumns"></tr>
-              <tr mat-row *matRowDef="let row; columns: meetingHistoryColumns;"></tr>
+              <tr mat-header-row *matHeaderRowDef="visibleMeetingHistoryColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: visibleMeetingHistoryColumns;"></tr>
             </table>
+
+            <div *ngIf="selectedPendingAppointment" class="history-card" style="margin-top:1rem">
+              <div>
+                <strong>{{ selectedPendingAppointment.applicationId || 'Pending Appointment' }}</strong>
+                <span>Status: PENDING</span>
+              </div>
+              <mat-form-field appearance="outline" style="width:100%;margin-top:0.75rem">
+                <mat-label>Remarks</mat-label>
+                <textarea matInput rows="3" [(ngModel)]="pendingAppointmentRemarks"></textarea>
+              </mat-form-field>
+              <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+                <button mat-stroked-button (click)="closePendingAppointment()" [disabled]="pendingAppointmentSaving">Close</button>
+                <button mat-stroked-button color="primary" (click)="savePendingAppointmentRemarks()" [disabled]="pendingAppointmentSaving">Save Remarks</button>
+                <button mat-flat-button color="primary" (click)="completePendingAppointment()" [disabled]="pendingAppointmentSaving">Complete</button>
+              </div>
+            </div>
 
               <div *ngIf="schemeHistory.length > latestSchemes.length || meetingHistory.length > latestMeetings.length" class="full-history-actions">
                 <button mat-stroked-button color="primary" (click)="toggleFullHistory()">
@@ -407,6 +434,9 @@
                       </span>
                     </div>
                     <mat-chip class="status-chip" [ngClass]="statusClass(m.status)">{{ statusLabel(m.status) }}</mat-chip>
+                    <button *ngIf="canManagePendingHistory && m.status === 'PENDING'"
+                            mat-stroked-button color="primary"
+                            (click)="openPendingAppointment(m)">View / Select</button>
                   </div>
                   <div *ngIf="meetingHistory.length === 0" class="empty-history">No meeting history found for this citizen.</div>
                 </div>

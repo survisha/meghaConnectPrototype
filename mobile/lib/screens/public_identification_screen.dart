@@ -9,8 +9,11 @@ import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:image/image.dart' as img;
+import 'package:provider/provider.dart';
 
 import '../services/api_service.dart';
+import '../services/auth_service.dart';
+import '../models/user.dart';
 import '../utils/photo_url_resolver.dart';
 import '../widgets/authenticated_photo.dart';
 import 'visitor_registration_screen.dart';
@@ -415,8 +418,19 @@ class _PublicIdentificationScreenState extends State<PublicIdentificationScreen>
 
   Future<void> _searchQueuedFace(_PendingFace pending) async {
     _VisitorProfile? visitorToAutoSelect;
+    Timer? slowTimer;
     try {
       _logFaceState('face search started');
+      slowTimer = Timer(const Duration(seconds: 8), () {
+        if (!mounted || pending.session != _faceSession) return;
+        setState(() {
+          final result = _faceResult(pending.trackingId);
+          if (result?.status == _FaceResultStatus.searching) {
+            result?.message =
+                'Network is slow. Still waiting for the server...';
+          }
+        });
+      });
       final response = await ApiService.searchVisitorByFace(pending.photo);
       final visitor = response['visitor'];
       if (!mounted || pending.session != _faceSession) return;
@@ -489,11 +503,27 @@ class _PublicIdentificationScreenState extends State<PublicIdentificationScreen>
         });
       }
     } finally {
+      slowTimer?.cancel();
       if (pending.session == _faceSession) {
         _activeFaceSearches = math.max(0, _activeFaceSearches - 1);
         _drainFaceQueue();
       }
     }
+  }
+
+  void _retryFaceSearch(_FaceRecognitionResult result) {
+    if (_activeFaceSearches > 0 ||
+        result.status == _FaceResultStatus.searching ||
+        result.status == _FaceResultStatus.queued) return;
+    setState(() {
+      result.status = _FaceResultStatus.queued;
+      result.message = '';
+      result.epicRecord = null;
+      result.visitor = null;
+      _faceQueue.add(
+          _PendingFace(result.trackingId, result.capturedImage, _faceSession));
+    });
+    _drainFaceQueue();
   }
 
   Future<void> _stopFaceIdentification() async {
@@ -545,7 +575,7 @@ class _PublicIdentificationScreenState extends State<PublicIdentificationScreen>
   }
 
   Future<void> _openFaceRegistration(
-      String capturedImage, Map<String, dynamic>? epicRecord) async {
+      String? capturedImage, Map<String, dynamic>? epicRecord) async {
     final navigator = Navigator.of(context);
     await _stopFaceIdentification();
     if (!mounted) return;
@@ -557,6 +587,134 @@ class _PublicIdentificationScreenState extends State<PublicIdentificationScreen>
         liveCapturedPhoto: capturedImage,
       ),
     ));
+  }
+
+  Future<void> _refreshSelectedHistory() async {
+    final selected = _selected;
+    if (selected != null) await _selectVisitor(selected);
+  }
+
+  Future<void> _openPendingAppointment(Map<String, dynamic> appointment) async {
+    final appointmentId = _asInt(appointment['appointmentId'] ??
+        appointment['id'] ??
+        appointment['backendId']);
+    if (appointmentId == null) return;
+    final remarksController = TextEditingController(
+        text: _firstText(
+            [appointment['remarks'], appointment['approverRemarks']]));
+    var saving = false;
+    var message = '';
+    var remarksSaved = false;
+    final completed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: !saving,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(_firstText(
+              [appointment['applicationId'], appointment['appointmentNumber']],
+              'Pending Appointment')),
+          content: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              TextField(
+                controller: remarksController,
+                maxLines: 4,
+                decoration: const InputDecoration(labelText: 'Remarks'),
+              ),
+              if (message.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Text(message,
+                    style: TextStyle(
+                        color: remarksSaved ? Colors.green : Colors.red)),
+              ],
+            ]),
+          ),
+          actions: [
+            TextButton(
+                onPressed: saving ? null : () => Navigator.pop(context, false),
+                child: const Text('Close')),
+            OutlinedButton(
+              onPressed: saving
+                  ? null
+                  : () async {
+                      final remarks = remarksController.text.trim();
+                      if (remarks.isEmpty) {
+                        setDialogState(() {
+                          remarksSaved = false;
+                          message = 'Enter remarks before saving.';
+                        });
+                        return;
+                      }
+                      setDialogState(() => saving = true);
+                      final saved = await ApiService.addAppointmentRemark(
+                          appointmentId,
+                          remarks: remarks);
+                      if (!dialogContext.mounted) return;
+                      setDialogState(() {
+                        saving = false;
+                        remarksSaved = saved != null;
+                        message = saved == null
+                            ? 'Unable to save remarks.'
+                            : 'Remarks saved. Appointment remains PENDING.';
+                      });
+                    },
+              child: const Text('Save Remarks'),
+            ),
+            FilledButton(
+              onPressed: saving
+                  ? null
+                  : () async {
+                      final confirmed = await showDialog<bool>(
+                            context: dialogContext,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Complete Appointment'),
+                              content: const Text(
+                                  'Complete this pending appointment?'),
+                              actions: [
+                                TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, false),
+                                    child: const Text('Cancel')),
+                                FilledButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, true),
+                                    child: const Text('Complete')),
+                              ],
+                            ),
+                          ) ??
+                          false;
+                      if (!confirmed || !dialogContext.mounted) return;
+                      setDialogState(() => saving = true);
+                      final result = await ApiService.updateAppointmentStatus(
+                          appointmentId, 'COMPLETED');
+                      if (!dialogContext.mounted) return;
+                      if (result != null) {
+                        Navigator.pop(dialogContext, true);
+                      } else {
+                        setDialogState(() {
+                          saving = false;
+                          remarksSaved = false;
+                          message = 'Unable to complete appointment.';
+                        });
+                      }
+                    },
+              child: saving
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Text('Complete'),
+            ),
+          ],
+        ),
+      ),
+    );
+    remarksController.dispose();
+    if (completed == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Appointment completed successfully.')));
+      await _refreshSelectedHistory();
+    } else if (remarksSaved && mounted) {
+      await _refreshSelectedHistory();
+    }
   }
 
   void _resetFaceSession() {
@@ -783,14 +941,17 @@ class _PublicIdentificationScreenState extends State<PublicIdentificationScreen>
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        const Row(
+        Row(
           children: [
-            Icon(Icons.person_search_outlined, color: MeghaColors.primary),
-            SizedBox(width: 8),
+            const Icon(Icons.person_search_outlined,
+                color: MeghaColors.primary),
+            const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'Public Identification',
-                style: TextStyle(
+                widget.walkInMode
+                    ? 'Walk-in Identification'
+                    : 'Public Identification',
+                style: const TextStyle(
                   color: MeghaColors.primary,
                   fontSize: 21,
                   fontWeight: FontWeight.w800,
@@ -800,10 +961,12 @@ class _PublicIdentificationScreenState extends State<PublicIdentificationScreen>
           ],
         ),
         const SizedBox(height: 6),
-        const Text(
-          'Search for a visitor by phone, EPIC, name, or district.',
-          style:
-              TextStyle(color: MeghaColors.muted, fontSize: 13, height: 1.35),
+        Text(
+          widget.walkInMode
+              ? 'Identify the citizen before creating a walk-in appointment.'
+              : 'Search for a registered MeghaConnect citizen.',
+          style: const TextStyle(
+              color: MeghaColors.muted, fontSize: 13, height: 1.35),
         ),
         const SizedBox(height: 16),
         _buildSearchCard(),
@@ -1003,6 +1166,7 @@ class _PublicIdentificationScreenState extends State<PublicIdentificationScreen>
             result: result,
             continueToWalkIn: widget.walkInMode,
             onRegister: _openFaceRegistration,
+            onRetry: () => _retryFaceSearch(result),
             selected:
                 result.visitor != null && _selected?.id == result.visitor!.id,
             onTap: result.visitor == null
@@ -1066,6 +1230,8 @@ class _PublicIdentificationScreenState extends State<PublicIdentificationScreen>
         : _lastVisited(meetings);
     final upcomingAppointment = _upcomingAppointment(meetings);
     final photoSource = _firstText([history?.photoUrl, person.photoSource]);
+    final isApprover =
+        context.read<AuthService>().user?.role == UserRole.APPROVER;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1193,7 +1359,12 @@ class _PublicIdentificationScreenState extends State<PublicIdentificationScreen>
                   emptyText: 'No meeting history found for this citizen.',
                   children: [
                     for (final item in meetings.take(3))
-                      _MeetingHistoryCard(item),
+                      _MeetingHistoryCard(item,
+                          onOpen: isApprover &&
+                                  _text(item['status']).toUpperCase() ==
+                                      'PENDING'
+                              ? () => _openPendingAppointment(item)
+                              : null),
                   ],
                 ),
                 if (schemes.length > 3 || meetings.length > 3) ...[
@@ -1215,7 +1386,12 @@ class _PublicIdentificationScreenState extends State<PublicIdentificationScreen>
                       style: TextStyle(fontWeight: FontWeight.w900)),
                   const SizedBox(height: 10),
                   for (final item in schemes) _SchemeHistoryCard(item),
-                  for (final item in meetings) _MeetingHistoryCard(item),
+                  for (final item in meetings)
+                    _MeetingHistoryCard(item,
+                        onOpen: isApprover &&
+                                _text(item['status']).toUpperCase() == 'PENDING'
+                            ? () => _openPendingAppointment(item)
+                            : null),
                 ],
               ],
             ],
@@ -1300,7 +1476,8 @@ class _FaceRecognitionResultCard extends StatelessWidget {
   final VoidCallback? onTap;
   final bool continueToWalkIn;
   final Future<void> Function(
-      String capturedImage, Map<String, dynamic>? epicRecord) onRegister;
+      String? capturedImage, Map<String, dynamic>? epicRecord) onRegister;
+  final VoidCallback onRetry;
 
   const _FaceRecognitionResultCard({
     required this.result,
@@ -1308,6 +1485,7 @@ class _FaceRecognitionResultCard extends StatelessWidget {
     required this.onTap,
     required this.continueToWalkIn,
     required this.onRegister,
+    required this.onRetry,
   });
 
   @override
@@ -1370,13 +1548,25 @@ class _FaceRecognitionResultCard extends StatelessWidget {
                     name: visitor.fullName, source: visitor.photoSource),
               ]),
             ],
-            if (result.status == _FaceResultStatus.epicMatched &&
+            if (continueToWalkIn &&
+                result.status == _FaceResultStatus.epicMatched &&
                 result.epicRecord != null) ...[
+              const SizedBox(width: 10),
+              Column(children: [
+                const Text('EPIC Photo',
+                    style: TextStyle(fontSize: 11, color: MeghaColors.muted)),
+                const SizedBox(height: 4),
+                _VisitorPhoto(
+                    name: _text(result.epicRecord!['name']),
+                    source: _text(result.epicRecord!['epicPhoto'])),
+              ]),
               const SizedBox(width: 10),
               Expanded(
                   child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                    const Text('Manual Verification Required',
+                        style: TextStyle(fontWeight: FontWeight.w800)),
                     Text(_text(result.epicRecord!['name']),
                         style: const TextStyle(fontWeight: FontWeight.w800)),
                     Text('EPIC: ${_text(result.epicRecord!['epicNumber'])}'),
@@ -1386,6 +1576,9 @@ class _FaceRecognitionResultCard extends StatelessWidget {
                         onPressed: () =>
                             onRegister(result.capturedImage, result.epicRecord),
                         child: const Text('Register Visitor')),
+                    TextButton(
+                        onPressed: () => onRegister(null, null),
+                        child: const Text('Register Manual')),
                   ])),
             ],
             const SizedBox(width: 12),
@@ -1441,6 +1634,18 @@ class _FaceRecognitionResultCard extends StatelessWidget {
                     ? 'Visitor not found in system'
                     : result.message,
                 style: const TextStyle(color: MeghaColors.muted)),
+            if (!continueToWalkIn &&
+                result.status == _FaceResultStatus.epicMatched) ...[
+              const SizedBox(height: 8),
+              const Text('Citizen Not Registered',
+                  style: TextStyle(
+                      color: Color(0xFFB91C1C), fontWeight: FontWeight.w800)),
+              ElevatedButton.icon(
+                onPressed: () => onRegister(result.capturedImage, null),
+                icon: const Icon(Icons.person_add_alt_1_outlined),
+                label: const Text('Register Citizen'),
+              ),
+            ],
             if (continueToWalkIn &&
                 result.status == _FaceResultStatus.notRegistered) ...[
               const SizedBox(height: 8),
@@ -1449,6 +1654,18 @@ class _FaceRecognitionResultCard extends StatelessWidget {
                 icon: const Icon(Icons.person_add_alt_1_outlined),
                 label: const Text('Register Visitor'),
               ),
+              TextButton(
+                onPressed: () => onRegister(null, null),
+                child: const Text('Register Manual'),
+              ),
+            ],
+            if (result.status == _FaceResultStatus.timeout ||
+                result.status == _FaceResultStatus.unavailable) ...[
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry')),
             ],
           ],
         ]),
@@ -1733,30 +1950,41 @@ class _SchemeHistoryCard extends StatelessWidget {
 
 class _MeetingHistoryCard extends StatelessWidget {
   final Map<String, dynamic> item;
-  const _MeetingHistoryCard(this.item);
+  final VoidCallback? onOpen;
+  const _MeetingHistoryCard(this.item, {this.onOpen});
 
   @override
   Widget build(BuildContext context) {
     final groupMembers = _listOfMaps(item['groupMembers']);
-    return _HistoryCard(
-      title: _text(item['purpose'], '-'),
-      subtitle: [
-        _text(item['department']),
-        _text(item['officerName']),
-      ].where((value) => value.isNotEmpty).join(' / '),
-      meta: [
-        _fmtDateTime(_appointmentDateTime(item)),
-        _text(item['role']) == 'ASSOCIATE'
-            ? 'Associate Visitor'
-            : 'Primary Visitor',
-      ].join(' / '),
-      status: _text(item['status']),
-      remarks: [
-        _text(item['remarks']),
-        if (groupMembers.isNotEmpty)
-          'Group: ${groupMembers.map((m) => _text(m['fullName'])).where((v) => v.isNotEmpty).join(', ')}',
-      ].where((value) => value.isNotEmpty).join('\n'),
-    );
+    return Column(children: [
+      _HistoryCard(
+        title: _text(item['purpose'], '-'),
+        subtitle: [
+          _text(item['department']),
+          _text(item['officerName']),
+        ].where((value) => value.isNotEmpty).join(' / '),
+        meta: [
+          _fmtDateTime(_appointmentDateTime(item)),
+          _text(item['role']) == 'ASSOCIATE'
+              ? 'Associate Visitor'
+              : 'Primary Visitor',
+        ].join(' / '),
+        status: _text(item['status']),
+        remarks: [
+          _text(item['remarks']),
+          if (groupMembers.isNotEmpty)
+            'Group: ${groupMembers.map((m) => _text(m['fullName'])).where((v) => v.isNotEmpty).join(', ')}',
+        ].where((value) => value.isNotEmpty).join('\n'),
+      ),
+      if (onOpen != null)
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton.icon(
+              onPressed: onOpen,
+              icon: const Icon(Icons.open_in_new),
+              label: const Text('View / Select')),
+        ),
+    ]);
   }
 }
 

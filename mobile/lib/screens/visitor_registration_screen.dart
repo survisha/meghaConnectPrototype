@@ -115,7 +115,11 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
       _districtCtrl.text = (prefill['district'] ?? '').toString();
       _constituencyCtrl.text = (prefill['acpcName'] ?? '').toString();
       _partNumberCtrl.text = (prefill['partNumber'] ?? '').toString();
-      _livePhotoDataUri = widget.liveCapturedPhoto;
+    }
+    final capturedPhoto = widget.liveCapturedPhoto?.trim() ?? '';
+    if (capturedPhoto.isNotEmpty) {
+      _livePhotoDataUri = capturedPhoto;
+      _photoCaptured = true;
     }
     _loadReferenceData();
   }
@@ -1481,6 +1485,20 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
                           File(_livePhotoPath!),
                           width: double.infinity,
                           fit: BoxFit.cover,
+                        ),
+                      ),
+                    )
+                  else if ((_livePhotoDataUri ?? '').isNotEmpty)
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.memory(
+                          base64Decode(_livePhotoDataUri!.split(',').last),
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const Center(
+                            child: Icon(Icons.broken_image_outlined, size: 58),
+                          ),
                         ),
                       ),
                     )

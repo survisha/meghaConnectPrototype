@@ -19,6 +19,8 @@ import { AutoFaceDetection, CameraLivenessService } from '../shared/camera-liven
 import { ToastService } from '../shared/toast/toast.service';
 import { AUTO_FACE_RESULT_EXPIRY_TICK_MS, AUTO_FACE_RESULT_TIMEOUT_MS } from '../config/public-identification.constants';
 import { LegacyPersonCandidate, LegacyPersonSearchService } from '../services/legacy-person-search.service';
+import { AppointmentService } from '../services/appointment.service';
+import { AuthService } from '../services/auth.service';
 
 // Angular Material
 import { MatInputModule } from '@angular/material/input';
@@ -96,6 +98,16 @@ export class PublicIdentificationComponent implements OnDestroy {
   lastVisited: CitizenAppointmentHistory | null = null;
   lastVisitedAtDisplay = '';
   upcomingAppointment: CitizenAppointmentHistory | null = null;
+  selectedPendingAppointment: CitizenAppointmentHistory | null = null;
+  pendingAppointmentRemarks = '';
+  pendingAppointmentSaving = false;
+
+  get canManagePendingHistory(): boolean { return this.auth.hasRole('APPROVER'); }
+  get visibleMeetingHistoryColumns(): string[] {
+    return this.canManagePendingHistory
+      ? [...this.meetingHistoryColumns, 'actions']
+      : this.meetingHistoryColumns;
+  }
 
   constructor(
     private visitorSearchService: VisitorSearchService,
@@ -103,8 +115,63 @@ export class PublicIdentificationComponent implements OnDestroy {
     private faceRecognition: FaceRecognitionService,
     private cameraLiveness: CameraLivenessService,
     private toast: ToastService,
-    private legacySearch: LegacyPersonSearchService
+    private legacySearch: LegacyPersonSearchService,
+    private appointmentService: AppointmentService,
+    private auth: AuthService
   ) {}
+
+  openPendingAppointment(appointment: CitizenAppointmentHistory): void {
+    if (!this.canManagePendingHistory || appointment.status !== 'PENDING') return;
+    this.selectedPendingAppointment = appointment;
+    this.pendingAppointmentRemarks = appointment.remarks || '';
+  }
+
+  closePendingAppointment(): void {
+    if (this.pendingAppointmentSaving) return;
+    this.selectedPendingAppointment = null;
+    this.pendingAppointmentRemarks = '';
+  }
+
+  savePendingAppointmentRemarks(): void {
+    const appointment = this.selectedPendingAppointment;
+    const remarks = this.pendingAppointmentRemarks.trim();
+    if (!appointment || !remarks || this.pendingAppointmentSaving) {
+      if (!remarks) this.toast.error('Enter remarks before saving.');
+      return;
+    }
+    this.pendingAppointmentSaving = true;
+    this.appointmentService.addRemark(appointment.appointmentId, { hcmRemarks: remarks }).subscribe({
+      next: () => {
+        this.pendingAppointmentSaving = false;
+        appointment.remarks = remarks;
+        this.toast.success('Remarks saved. Appointment remains PENDING.');
+        if (this.selected) this.loadCitizenHistory(this.selected.id);
+      },
+      error: error => {
+        this.pendingAppointmentSaving = false;
+        this.toast.error(apiErrorMessage(error, 'Unable to save remarks.'));
+      }
+    });
+  }
+
+  completePendingAppointment(): void {
+    const appointment = this.selectedPendingAppointment;
+    if (!appointment || this.pendingAppointmentSaving ||
+        !confirm('Complete this pending appointment?')) return;
+    this.pendingAppointmentSaving = true;
+    this.appointmentService.completeAppointment(appointment.appointmentId).subscribe({
+      next: () => {
+        this.pendingAppointmentSaving = false;
+        this.selectedPendingAppointment = null;
+        this.toast.success('Appointment completed successfully.');
+        if (this.selected) this.loadCitizenHistory(this.selected.id);
+      },
+      error: error => {
+        this.pendingAppointmentSaving = false;
+        this.toast.error(apiErrorMessage(error, 'Unable to complete appointment.'));
+      }
+    });
+  }
 
   ngOnDestroy(): void {
     this.stopFaceCamera(true);
@@ -395,6 +462,7 @@ export class PublicIdentificationComponent implements OnDestroy {
     this.selected = null;
     this.selectedPhotoLoadFailed = false;
     this.selectedPhotoPreviewOpen = false;
+    this.selectedPendingAppointment = null;
     this.populateHistory();
   }
 

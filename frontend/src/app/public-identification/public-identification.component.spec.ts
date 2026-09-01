@@ -33,7 +33,13 @@ describe('PublicIdentificationComponent face queue', () => {
         return response;
       }} as never,
       {} as never,
-      { error: () => undefined } as never,
+      { error: () => undefined, success: () => undefined } as never,
+      { search: () => of({ matches: [] }) } as never,
+      {
+        addRemark: () => of({}),
+        completeAppointment: () => of({}),
+      } as never,
+      { hasRole: (role: string) => role === 'APPROVER' } as never,
     );
     component.faceCameraActive = true;
   });
@@ -119,6 +125,23 @@ describe('PublicIdentificationComponent face queue', () => {
     expect(component.getStatusClass('FAILED' as never)).toBe('face-status-error');
     expect(component.getStatusClass('TIMEOUT' as never)).toBe('face-status-timeout');
     expect(component.getStatusClass('UNAVAILABLE' as never)).toBe('face-status-unavailable');
+  });
+
+  it('saves pending remarks without completing the appointment', () => {
+    const appointmentService = (component as any).appointmentService;
+    spyOn(appointmentService, 'addRemark').and.returnValue(of({}));
+    spyOn(appointmentService, 'completeAppointment').and.returnValue(of({}));
+    component.selectedPendingAppointment = {
+      appointmentId: 42,
+      status: 'PENDING',
+    } as never;
+    component.pendingAppointmentRemarks = 'Pilot follow-up';
+
+    component.savePendingAppointmentRemarks();
+
+    expect(appointmentService.addRemark).toHaveBeenCalled();
+    expect(appointmentService.completeAppointment).not.toHaveBeenCalled();
+    expect((component.selectedPendingAppointment as any)?.status).toBe('PENDING');
   });
 
   it('closes the camera without clearing results or cancelling an in-flight face search', () => {

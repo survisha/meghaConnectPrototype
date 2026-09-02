@@ -50,22 +50,22 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long>,
     Optional<Appointment> findByIdAndTenantDepartment_Id(Long id, Long departmentId);
 
     @Query(value = "SELECT a.* FROM appointments a JOIN walkins w ON w.appointment_id = a.id " +
-        "WHERE w.token_date = :tokenDate AND a.status IN (:statuses) " +
+        "WHERE w.token_date = :tokenDate AND a.status <> 'DUMMY' AND a.status IN (:statuses) " +
         "ORDER BY CAST(SUBSTRING_INDEX(w.token_number, '-', -1) AS UNSIGNED) ASC",
         countQuery = "SELECT COUNT(*) FROM appointments a JOIN walkins w ON w.appointment_id = a.id " +
-            "WHERE w.token_date = :tokenDate AND a.status IN (:statuses)",
+            "WHERE w.token_date = :tokenDate AND a.status <> 'DUMMY' AND a.status IN (:statuses)",
         nativeQuery = true)
     Page<Appointment> findWalkInsByDateAndStatusIn(@Param("tokenDate") LocalDate tokenDate,
-        @Param("statuses") Collection<Appointment.AppointmentStatus> statuses, Pageable pageable);
+        @Param("statuses") Collection<String> statuses, Pageable pageable);
 
     @Query(value = "SELECT a.* FROM appointments a JOIN walkins w ON w.appointment_id = a.id " +
-        "WHERE w.token_date = :tokenDate AND a.status IN (:statuses) AND a.department_id = :departmentId " +
+        "WHERE w.token_date = :tokenDate AND a.status <> 'DUMMY' AND a.status IN (:statuses) AND a.department_id = :departmentId " +
         "ORDER BY CAST(SUBSTRING_INDEX(w.token_number, '-', -1) AS UNSIGNED) ASC",
         countQuery = "SELECT COUNT(*) FROM appointments a JOIN walkins w ON w.appointment_id = a.id " +
-            "WHERE w.token_date = :tokenDate AND a.status IN (:statuses) AND a.department_id = :departmentId",
+            "WHERE w.token_date = :tokenDate AND a.status <> 'DUMMY' AND a.status IN (:statuses) AND a.department_id = :departmentId",
         nativeQuery = true)
     Page<Appointment> findWalkInsByDateAndStatusInAndDepartment(@Param("tokenDate") LocalDate tokenDate,
-        @Param("statuses") Collection<Appointment.AppointmentStatus> statuses,
+        @Param("statuses") Collection<String> statuses,
         @Param("departmentId") Long departmentId, Pageable pageable);
 
     @Query("SELECT COUNT(a) FROM Appointment a WHERE a.applicant.id = :personId AND a.scheduledDateTime >= :sixMonthsAgo AND a.status = 'COMPLETED'")

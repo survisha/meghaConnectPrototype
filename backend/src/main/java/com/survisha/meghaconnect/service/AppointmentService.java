@@ -161,10 +161,13 @@ public class AppointmentService {
         if (walkInDate != null && WALK_IN_APPOINTMENT_TYPE.equalsIgnoreCase(appointmentType)) {
             List<Appointment.AppointmentStatus> statuses = parseStatuses(status);
             if (statuses.isEmpty()) statuses = KNOWN_APPOINTMENT_STATUSES;
+            List<String> statusNames = statuses.stream()
+                .map(Appointment.AppointmentStatus::name)
+                .toList();
             Pageable tokenPage = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
             Page<Appointment> result = departmentId == null
-                ? appointmentRepository.findWalkInsByDateAndStatusIn(walkInDate, statuses, tokenPage)
-                : appointmentRepository.findWalkInsByDateAndStatusInAndDepartment(walkInDate, statuses, departmentId, tokenPage);
+                ? appointmentRepository.findWalkInsByDateAndStatusIn(walkInDate, statusNames, tokenPage)
+                : appointmentRepository.findWalkInsByDateAndStatusInAndDepartment(walkInDate, statusNames, departmentId, tokenPage);
             return result.map(this::toDto);
         }
         if (departmentId == null) {

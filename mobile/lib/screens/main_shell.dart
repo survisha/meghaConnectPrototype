@@ -429,15 +429,14 @@ class _MainShellState extends State<MainShell> {
     final showSubtitle = width >= 420;
     final showRole = width >= 360;
     return AppBar(
-      automaticallyImplyLeading: _currentRoute == 'dashboard',
-      leading: _currentRoute == 'dashboard'
-          ? null
-          : IconButton(
-              tooltip: 'Back to Dashboard',
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () =>
-                  context.read<NavigationService>().navigateTo('dashboard'),
-            ),
+      automaticallyImplyLeading: false,
+      leading: Builder(
+        builder: (scaffoldContext) => IconButton(
+          tooltip: 'Open navigation menu',
+          icon: const Icon(Icons.menu),
+          onPressed: () => Scaffold.of(scaffoldContext).openDrawer(),
+        ),
+      ),
       toolbarHeight: 72,
       elevation: 2,
       backgroundColor: MeghaColors.primary,
@@ -494,6 +493,13 @@ class _MainShellState extends State<MainShell> {
         ],
       ),
       actions: [
+        if (_currentRoute != 'dashboard')
+          IconButton(
+            tooltip: 'Back to Dashboard',
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () =>
+                context.read<NavigationService>().navigateTo('dashboard'),
+          ),
         const _ConnectivityBadge(),
         const MeghaLanguageSelector(dark: true, compact: true),
         if (showRole) ...[

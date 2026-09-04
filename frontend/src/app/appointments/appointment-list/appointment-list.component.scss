@@ -216,10 +216,11 @@
 .token-number-cell,
 .token-number-detail {
   flex-shrink: 0;
-  min-width: fit-content;
+  min-width: max-content;
   overflow: visible;
   text-overflow: clip;
   white-space: nowrap;
+  width: auto;
 }
 
 .ai-notes-stack {

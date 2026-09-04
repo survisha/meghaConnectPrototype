@@ -746,6 +746,20 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
     });
   }
 
+  void _viewAllAppointments() {
+    final callback = widget.onViewAppointments;
+    if (callback != null) {
+      callback();
+      return;
+    }
+
+    final navigator = Navigator.of(context);
+    context
+        .read<NavigationService>()
+        .navigateTo(widget.isWalkIn ? 'walkin_appointments' : 'appointments');
+    if (navigator.canPop()) navigator.pop();
+  }
+
   List<_AppointmentDocument> _visibleDocuments() {
     return _documents;
   }
@@ -1599,100 +1613,103 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
     final appId = _submittedAppId ??
         'MC-${DateTime.now().year}-${(DateTime.now().millisecondsSinceEpoch % 90000 + 10000).toString()}';
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: Color(0xFFD1FAE5),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.check_circle_outline,
-                  size: 72, color: Color(0xFF065F46)),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Appointment Registered!',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF065F46),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE8EAF6),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                'Application ID: $appId',
-                style: const TextStyle(
-                  fontFamily: 'monospace',
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A237E),
-                  fontSize: 16,
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFD1FAE5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.check_circle_outline,
+                      size: 72, color: Color(0xFF065F46)),
                 ),
-              ),
-            ),
-            if (_submittedToken != null && _submittedToken!.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFD1FAE5),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  'Token Number: $_submittedToken',
-                  style: const TextStyle(
+                const SizedBox(height: 24),
+                const Text(
+                  'Appointment Registered!',
+                  style: TextStyle(
+                    fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF065F46),
-                    fontSize: 16,
                   ),
                 ),
-              ),
-            ],
-            const SizedBox(height: 12),
-            Text(
-              widget.isPublic
-                  ? 'Your application has been submitted. You will be notified once it is reviewed by the CMO.'
-                  : 'The appointment has been registered in the system and is pending CMO review.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey[600], fontSize: 14),
-            ),
-            const SizedBox(height: 32),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.add),
-                    label: const Text('New Entry'),
-                    onPressed: _reset,
+                const SizedBox(height: 12),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE8EAF6),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'Application ID: $appId',
+                    style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1A237E),
+                      fontSize: 16,
+                    ),
                   ),
                 ),
-                if (!widget.isPublic) ...[
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      icon: const Icon(Icons.list_alt),
-                      label: const Text('View All'),
-                      onPressed: widget.onViewAppointments ??
-                          () => context
-                              .read<NavigationService>()
-                              .navigateTo('appointments'),
+                if (_submittedToken != null && _submittedToken!.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFD1FAE5),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      'Token Number: $_submittedToken',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF065F46),
+                        fontSize: 16,
+                      ),
                     ),
                   ),
                 ],
+                const SizedBox(height: 12),
+                Text(
+                  widget.isPublic
+                      ? 'Your application has been submitted. You will be notified once it is reviewed by the CMO.'
+                      : 'The appointment has been registered in the system and is pending CMO review.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                ),
+                const SizedBox(height: 32),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.add),
+                        label: const Text('New Entry'),
+                        onPressed: _reset,
+                      ),
+                    ),
+                    if (!widget.isPublic) ...[
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.list_alt),
+                          label: const Text('View All'),
+                          onPressed: _viewAllAppointments,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );

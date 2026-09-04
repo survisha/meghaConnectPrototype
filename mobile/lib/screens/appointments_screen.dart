@@ -1167,18 +1167,26 @@ class _AppointmentCard extends StatelessWidget {
                         style: const TextStyle(fontSize: 12),
                       ),
                     ),
-                    TextButton.icon(
-                        onPressed: onHistory,
-                        icon: const Icon(Icons.history, size: 18),
-                        label: const Text('History')),
-                    if (onDownloadPass != null)
-                      TextButton.icon(
-                        onPressed: onDownloadPass,
-                        icon: const Icon(Icons.download_outlined, size: 18),
-                        label: const Text('Download Pass'),
-                      ),
-                    TextButton(onPressed: onTap, child: const Text('View')),
                   ],
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Wrap(
+                    alignment: WrapAlignment.end,
+                    children: [
+                      TextButton.icon(
+                          onPressed: onHistory,
+                          icon: const Icon(Icons.history, size: 18),
+                          label: const Text('History')),
+                      if (onDownloadPass != null)
+                        TextButton.icon(
+                          onPressed: onDownloadPass,
+                          icon: const Icon(Icons.download_outlined, size: 18),
+                          label: const Text('Download Pass'),
+                        ),
+                      TextButton(onPressed: onTap, child: const Text('View')),
+                    ],
+                  ),
                 ),
               ] else
                 Align(
@@ -1373,7 +1381,8 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
                       _DetailLine('Department', _departmentLabel()),
                       _DetailLine(
                           'CMO Remarks', _text(_details['cmoRemarks'], '-')),
-                      _DetailLine('Approver Remarks',
+                      _DetailLine(
+                          'Approver Remarks',
                           _firstText([
                             _details['approverRemarks'],
                             widget.appointment.raw['approverRemarks'],
@@ -1389,10 +1398,12 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
                             widget.appointment.raw['cmoRemarks'],
                           ], '—'),
                         ),
-                      _DetailLine('HCM Remarks', _firstText([
-                        _details['hcmRemarks'],
-                        widget.appointment.raw['hcmRemarks'],
-                      ], '—')),
+                      _DetailLine(
+                          'HCM Remarks',
+                          _firstText([
+                            _details['hcmRemarks'],
+                            widget.appointment.raw['hcmRemarks'],
+                          ], '—')),
                     ],
                   ),
                   if (widget.reportMode == 'rejected') _rejectionSection(),

@@ -297,17 +297,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildKpiGrid(List<_Kpi> kpis) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 1.6,
-      ),
-      itemCount: kpis.length,
-      itemBuilder: (_, i) => _KpiCard(kpi: kpis[i]),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const spacing = 12.0;
+        final cardWidth = (constraints.maxWidth - spacing) / 2;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: [
+            for (final kpi in kpis)
+              SizedBox(width: cardWidth, child: _KpiCard(kpi: kpi)),
+          ],
+        );
+      },
     );
   }
 

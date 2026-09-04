@@ -5,7 +5,6 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import '../services/notification_service.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
@@ -14,10 +13,8 @@ import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/connectivity_service.dart';
 import '../services/navigation_service.dart';
-import '../services/offline_ai_notes_service.dart';
 import '../services/offline_repository.dart';
 import '../services/scanned_document_pdf_service.dart';
-import '../services/sync_service.dart';
 import '../widgets/authenticated_photo.dart';
 import 'visitor_registration_screen.dart';
 
@@ -575,6 +572,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
   }
 
   Future<void> _submit() async {
+    if (_loading) return;
     if (!_validateCurrentStep()) return;
     final visitorId = _selectedVisitorId;
     if (visitorId == null || visitorId <= 0) return;
@@ -603,68 +601,41 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
             documents: documents,
           );
     if (!mounted) return;
-    if (result != null && result['success'] != false) {
+    final serverAppointmentId =
+        result?['applicationId']?.toString() ?? result?['id']?.toString();
+    final serverWalkInToken = result?['walkInTokenNumber']?.toString() ??
+        result?['tokenNumber']?.toString() ??
+        result?['token']?.toString();
+    final hasConfirmedServerReference =
+        serverAppointmentId?.isNotEmpty == true &&
+            (!widget.isWalkIn || serverWalkInToken?.isNotEmpty == true);
+    if (result != null &&
+        result['success'] != false &&
+        hasConfirmedServerReference) {
       for (final path in _generatedDocumentPaths.toList()) {
         await _removeGeneratedDocument(path);
       }
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _submittedAppId =
-            result['applicationId'] as String? ?? result['id']?.toString();
-        _submittedToken = result['walkInTokenNumber']?.toString() ??
-            result['tokenNumber']?.toString() ??
-            result['token']?.toString();
+        _submittedAppId = serverAppointmentId;
+        _submittedToken = serverWalkInToken;
         _submitted = true;
       });
-      return;
-    }
-
-    final canSaveOffline = offline ||
-        (result?['message']?.toString().toLowerCase().contains('network') ??
-            false);
-    if (canSaveOffline) {
-      final payload = {
-        ...fields,
-        'documents': documents,
-      };
-      final saved = await _offlineRepository.saveAppointmentOffline(
-        payload,
-        visitorLocalId: _selectedVisitor?['localId']?.toString(),
-      );
-      final note = const OfflineAiNotesService().generateAppointmentNote(
-        citizenName: _selectedVisitor?['fullName']?.toString() ?? 'Citizen',
-        purpose: _agendaBriefCtrl.text,
-        department: _profileCtrl.text,
-        appointmentType: fields['agendaType'],
-        remarks: _profileCtrl.text,
-      );
-      await _offlineRepository.saveAiNoteOffline(
-        appointmentLocalId: saved.localId,
-        noteText: note,
-        payload: {
-          'appointmentLocalId': saved.localId,
-          'appointmentNumber': saved.referenceNumber,
-          'noteText': note,
-        },
-      );
-      if (!mounted) return;
-      context.read<SyncService>().syncNow();
-      setState(() {
-        _loading = false;
-        _submittedAppId = saved.referenceNumber;
-        _submittedToken = null;
-        _submitted = true;
-      });
-      AppNotificationService.info(
-          'Appointment saved offline. AI note generated offline.');
       return;
     }
 
     setState(() {
       _loading = false;
-      _contextError = result?['message']?.toString() ??
-          'Unable to submit appointment. Please try again.';
+      _contextError = offline ||
+              (result?['message']
+                      ?.toString()
+                      .toLowerCase()
+                      .contains('network') ??
+                  false)
+          ? 'Unable to create the appointment. Your internet connection appears to be slow or unavailable. Please check the network and try again.'
+          : result?['message']?.toString() ??
+              'Unable to submit appointment. Please try again.';
     });
   }
 

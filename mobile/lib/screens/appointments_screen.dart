@@ -266,6 +266,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   bool _loading = true;
   bool _loadingMore = false;
   String? _loadError;
+  int _loadGeneration = 0;
 
   @override
   void initState() {
@@ -356,12 +357,18 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   }
 
   Future<void> _loadAppointments({required bool refresh}) async {
+    final generation = ++_loadGeneration;
     if (refresh) {
       AiNotesCacheService.instance.clear();
       setState(() {
         _loading = true;
         _loadError = null;
         _serverPage = 0;
+        if (widget.walkInOnly) {
+          _appointments.clear();
+          _serverTotal = 0;
+          _serverTotalPages = 1;
+        }
       });
     } else {
       setState(() => _loadingMore = true);
@@ -371,14 +378,14 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     final role = auth.user?.role;
     final page = refresh ? 0 : _serverPage + 1;
     final response = await _pageForRole(role, page);
-    if (!mounted) return;
+    if (!mounted || generation != _loadGeneration) return;
 
     var rows = _rowsFromPage(response);
     if (response['error'] == true ||
         context.read<ConnectivityService>().isOffline) {
       final cached = await OfflineRepository().cachedAppointments();
-      if (!mounted) return;
-      if (cached.isNotEmpty && refresh) {
+      if (!mounted || generation != _loadGeneration) return;
+      if (cached.isNotEmpty && refresh && !widget.walkInOnly) {
         rows = cached.where(_matchesCurrentQueue).toList();
       }
     } else {
@@ -401,6 +408,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         notesById[id] = cached.notes;
       }));
     }
+    if (!mounted || generation != _loadGeneration) return;
 
     final mapped = rows
         .map((row) => _Appointment.fromJson(
@@ -459,7 +467,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
       page: page,
       size: _pageSize,
       status: widget.walkInOnly
-          ? (_filterStatus.isEmpty ? 'PENDING,COMPLETED' : _filterStatus)
+          ? 'PENDING'
           : 'PENDING,PENDING_REQUEST,SCHEDULED,RESCHEDULED',
       appointmentType: widget.walkInOnly ? 'B2 Walk-in' : 'APPOINTMENT',
       sort: widget.walkInOnly ? null : 'createdAt,desc',
@@ -600,13 +608,14 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   }
 
   Future<void> _loadAppointmentsPage(int page) async {
+    final generation = ++_loadGeneration;
     setState(() {
       _loading = true;
       _loadError = null;
     });
     final response =
         await _pageForRole(context.read<AuthService>().user?.role, page);
-    if (!mounted) return;
+    if (!mounted || generation != _loadGeneration) return;
     final rows = _rowsFromPage(response);
     final mapped = rows.map((row) => _Appointment.fromJson(row)).toList();
     setState(() {
@@ -901,23 +910,22 @@ class _SearchAndFilters extends StatelessWidget {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 12),
               children: [
-                _FilterMenu(
-                  label: status.isEmpty
-                      ? 'All Statuses'
-                      : status == 'RESCHEDULE_FILTER'
-                          ? 'Reschedule'
-                          : _label(status),
-                  value: status,
-                  values: walkInMode
-                      ? const ['', 'PENDING', 'COMPLETED']
-                      : _AppointmentsScreenState._statusOptions,
-                  labelFor: (value) => value.isEmpty
-                      ? 'All Statuses'
-                      : value == 'RESCHEDULE_FILTER'
-                          ? 'Reschedule'
-                          : _label(value),
-                  onChanged: onStatus,
-                ),
+                if (!walkInMode)
+                  _FilterMenu(
+                    label: status.isEmpty
+                        ? 'All Statuses'
+                        : status == 'RESCHEDULE_FILTER'
+                            ? 'Reschedule'
+                            : _label(status),
+                    value: status,
+                    values: _AppointmentsScreenState._statusOptions,
+                    labelFor: (value) => value.isEmpty
+                        ? 'All Statuses'
+                        : value == 'RESCHEDULE_FILTER'
+                            ? 'Reschedule'
+                            : _label(value),
+                    onChanged: onStatus,
+                  ),
                 _FilterMenu(
                   label: source.isEmpty ? 'All Sources' : _label(source),
                   value: source,
@@ -1366,7 +1374,10 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
                       _DetailLine(
                           'CMO Remarks', _text(_details['cmoRemarks'], '-')),
                       _DetailLine('Approver Remarks',
-                          _text(_details['approverRemarks'], '-')),
+                          _firstText([
+                            _details['approverRemarks'],
+                            widget.appointment.raw['approverRemarks'],
+                          ], '—')),
                       if (widget.appointment.status == 'PENDING_REQUEST' &&
                           [UserRole.DEO, UserRole.PUBLIC].contains(role))
                         _DetailLine(
@@ -1378,8 +1389,10 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
                             widget.appointment.raw['cmoRemarks'],
                           ], '—'),
                         ),
-                      _DetailLine('HCM / APPROVER Remarks',
-                          _text(_details['hcmRemarks'], '-')),
+                      _DetailLine('HCM Remarks', _firstText([
+                        _details['hcmRemarks'],
+                        widget.appointment.raw['hcmRemarks'],
+                      ], '—')),
                     ],
                   ),
                   if (widget.reportMode == 'rejected') _rejectionSection(),
@@ -1934,6 +1947,13 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
             departmentCode: _departmentCode,
           );
     if (!mounted) return;
+    if (!offline && result == null) {
+      setState(() {
+        _saving = false;
+        _error = 'Unable to save remarks. Please try again.';
+      });
+      return;
+    }
     if (result == null) {
       final note = const OfflineAiNotesService().generateAppointmentNote(
         citizenName: widget.appointment.applicantName,

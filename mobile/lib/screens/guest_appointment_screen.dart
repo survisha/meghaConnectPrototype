@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import '../services/notification_service.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -11,8 +10,6 @@ import 'package:provider/provider.dart';
 import '../core/config/app_config.dart';
 import '../services/api_service.dart';
 import '../services/connectivity_service.dart';
-import '../services/offline_repository.dart';
-import '../services/sync_service.dart';
 
 class GuestAppointmentScreen extends StatefulWidget {
   const GuestAppointmentScreen({super.key});
@@ -162,6 +159,7 @@ class _GuestAppointmentScreenState extends State<GuestAppointmentScreen> {
   }
 
   Future<void> _submit() async {
+    if (_submitting) return;
     setState(() => _error = null);
     if (!_formKey.currentState!.validate()) return;
     if (_guestPhoto == null) {
@@ -209,32 +207,20 @@ class _GuestAppointmentScreenState extends State<GuestAppointmentScreen> {
             supportingDocumentName: _supportingDocument?.name,
           );
     if (!mounted) return;
-    if (result['referenceId'] == null &&
-        (offline ||
-            (result['message']?.toString().toLowerCase().contains('network') ??
-                false))) {
-      final saved = await OfflineRepository().saveAppointmentOffline({
-        ...fields,
-        'livePhotoBase64': photoDataUri,
-        'supportingDocumentName': _supportingDocument?.name,
-        'appointmentSource': 'GUEST',
-      });
-      if (!mounted) return;
-      context.read<SyncService>().syncNow();
-      setState(() {
-        _submitting = false;
-        _successReference = saved.referenceNumber;
-      });
-      AppNotificationService.info('Appointment saved offline.');
-      return;
-    }
     setState(() {
       _submitting = false;
       if (result['referenceId'] != null) {
         _successReference = result['referenceId'].toString();
       } else {
-        _error = result['message']?.toString() ??
-            'Unable to submit guest appointment.';
+        _error = offline ||
+                (result['message']
+                        ?.toString()
+                        .toLowerCase()
+                        .contains('network') ??
+                    false)
+            ? 'Unable to create the appointment. Your internet connection appears to be slow or unavailable. Please check the network and try again.'
+            : result['message']?.toString() ??
+                'Unable to submit guest appointment.';
       }
     });
   }

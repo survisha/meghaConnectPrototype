@@ -1,4 +1,4 @@
-import { of, Subject, Subscription } from 'rxjs';
+import { of, Subject, Subscription, throwError } from 'rxjs';
 import { PublicIdentificationComponent } from './public-identification.component';
 import { FaceSearchResult } from '../services/face-recognition.service';
 import { AutoFaceDetection } from '../shared/camera-liveness.service';
@@ -141,6 +141,24 @@ describe('PublicIdentificationComponent face queue', () => {
 
     expect(appointmentService.addRemark).toHaveBeenCalled();
     expect(appointmentService.completeAppointment).not.toHaveBeenCalled();
+    expect((component.selectedPendingAppointment as any)?.status).toBe('PENDING');
+    expect(component.pendingAppointmentRemarks).toBe('');
+  });
+
+  it('retains pending remarks when saving fails', () => {
+    const appointmentService = (component as any).appointmentService;
+    spyOn(appointmentService, 'addRemark').and.returnValue(
+      throwError(() => new Error('Network failure')),
+    );
+    component.selectedPendingAppointment = {
+      appointmentId: 42,
+      status: 'PENDING',
+    } as never;
+    component.pendingAppointmentRemarks = 'Retry this remark';
+
+    component.savePendingAppointmentRemarks();
+
+    expect(component.pendingAppointmentRemarks).toBe('Retry this remark');
     expect((component.selectedPendingAppointment as any)?.status).toBe('PENDING');
   });
 

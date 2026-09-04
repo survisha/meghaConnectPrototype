@@ -212,6 +212,16 @@
   }
 }
 
+.appointments-table .mat-column-token,
+.token-number-cell,
+.token-number-detail {
+  flex-shrink: 0;
+  min-width: fit-content;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
 .ai-notes-stack {
   display: grid;
   gap: 0.35rem;

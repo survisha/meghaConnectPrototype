@@ -144,6 +144,7 @@ export class PublicIdentificationComponent implements OnDestroy {
       next: () => {
         this.pendingAppointmentSaving = false;
         appointment.remarks = remarks;
+        this.pendingAppointmentRemarks = '';
         this.toast.success('Remarks saved. Appointment remains PENDING.');
         if (this.selected) this.loadCitizenHistory(this.selected.id);
       },

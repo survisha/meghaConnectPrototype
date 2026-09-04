@@ -245,7 +245,6 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
       this.displayedColumns.splice(this.displayedColumns.includes('select') ? 1 : 0, 0, 'token');
       this.sortColumn = 'token';
       this.sortDirection = 'asc';
-      this.statusOptions = [{label:'All Statuses',value:''},{label:'Pending',value:'PENDING'},{label:'Completed',value:'COMPLETED'}];
     }
     this.configureRoleDefaults();
     this.loadAppointmentTypes();
@@ -362,7 +361,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
 
   private appointmentPageSource(serverPage: number, size: number) {
     const status = this.listMode === 'walkin'
-      ? (this.filterStatus || 'PENDING,COMPLETED')
+      ? 'PENDING'
       : this.listMode === 'closed'
         ? 'CLOSED'
         : 'PENDING,PENDING_REQUEST,SCHEDULED,RESCHEDULED';

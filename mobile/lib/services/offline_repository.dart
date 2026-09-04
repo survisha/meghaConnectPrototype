@@ -166,51 +166,6 @@ class OfflineRepository {
         localId: id, referenceNumber: id, payload: payload);
   }
 
-  Future<OfflineSaveResult> saveAppointmentOffline(
-    Map<String, dynamic> payload, {
-    String? visitorLocalId,
-    bool queue = true,
-  }) async {
-    final db = await _db;
-    final id = _uuid.v4();
-    final reference = 'LOCAL-APT-${DateTime.now().millisecondsSinceEpoch}';
-    final enriched = {
-      ...payload,
-      'localId': id,
-      'visitorLocalId': visitorLocalId,
-      'localAppointmentNumber': reference,
-      'syncStatus': SyncState.pending,
-      'createdOffline': true,
-    };
-    await db.insert(
-      'appointments',
-      {
-        'localId': id,
-        'visitorLocalId': visitorLocalId,
-        'payloadJson': jsonEncode(enriched),
-        'syncStatus': SyncState.pending,
-        'createdOffline': 1,
-        'lastModifiedAt': _now(),
-        'retryCount': 0,
-        'localAppointmentNumber': reference,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-    if (queue) {
-      await enqueue(
-        entityType: SyncEntityType.appointment,
-        localEntityId: id,
-        action: 'CREATE',
-        payload: enriched,
-      );
-    }
-    return OfflineSaveResult(
-      localId: id,
-      referenceNumber: reference,
-      payload: enriched,
-    );
-  }
-
   Future<OfflineSaveResult> saveAiNoteOffline({
     String? appointmentLocalId,
     required String noteText,

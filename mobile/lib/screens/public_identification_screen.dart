@@ -655,6 +655,7 @@ class _PublicIdentificationScreenState extends State<PublicIdentificationScreen>
                         message = saved == null
                             ? 'Unable to save remarks.'
                             : 'Remarks saved. Appointment remains PENDING.';
+                        if (saved != null) remarksController.clear();
                       });
                     },
               child: const Text('Save Remarks'),

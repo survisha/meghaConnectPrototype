@@ -548,6 +548,9 @@
           </mat-chip>
         </div>
       </div>
+      <button *ngIf="canAddGroupCitizen()" mat-stroked-button color="primary" type="button" (click)="openAddGroupCitizen()">
+        <mat-icon>group_add</mat-icon> Add New Citizen
+      </button>
     </section>
 
     <section class="detail-section" *ngIf="selectedAppointment.appointmentSource === 'GUEST'">
@@ -911,6 +914,24 @@
 
     <button mat-stroked-button (click)="closeViewDetails()">Close</button>
   </mat-dialog-actions>
+</ng-template>
+
+<ng-template #groupCitizenDialog>
+  <h2 mat-dialog-title>Add New Citizen</h2>
+  <mat-dialog-content>
+    <mat-form-field appearance="outline" style="width:100%">
+      <mat-label>Search by name, mobile or EPIC</mat-label>
+      <input matInput [(ngModel)]="groupCitizenQuery" (keyup.enter)="searchGroupCitizens()">
+    </mat-form-field>
+    <button mat-stroked-button color="primary" (click)="searchGroupCitizens()" [disabled]="groupCitizenSearching">{{ groupCitizenSearching ? 'Searching...' : 'Search' }}</button>
+    <p *ngIf="groupCitizenSearched && !groupCitizenSearching && groupCitizenResults.length === 0">Citizen not found.</p>
+    <button *ngIf="groupCitizenSearched && !groupCitizenSearching && groupCitizenResults.length === 0" mat-flat-button color="primary" (click)="registerGroupCitizen()">Register New Citizen</button>
+    <div *ngFor="let citizen of groupCitizenResults" style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 0">
+      <span><strong>{{ citizen.fullName }}</strong><br>{{ citizen.mobileNumber || citizen.epicReference }}</span>
+      <button mat-stroked-button color="primary" (click)="addGroupCitizen(citizen.citizenId)">Add</button>
+    </div>
+  </mat-dialog-content>
+  <mat-dialog-actions align="end"><button mat-button mat-dialog-close>Cancel</button></mat-dialog-actions>
 </ng-template>
 
 <ng-template #appointmentRemarksDialog>

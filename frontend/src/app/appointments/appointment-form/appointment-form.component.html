@@ -315,6 +315,10 @@
             </div>
 
             <div *ngIf="associateSearchError" class="associate-error">{{ associateSearchError }}</div>
+            <button *ngIf="associateSearchAttempted && !associateSearching && associateSearchResults.length === 0"
+              mat-flat-button color="primary" type="button" (click)="registerAssociateInline()">
+              <mat-icon>person_add</mat-icon> Register New Visitor
+            </button>
             <div *ngIf="associateValidationError" class="associate-error">{{ associateValidationError }}</div>
 
             <div *ngIf="associateSearchResults.length > 0" class="associate-results">

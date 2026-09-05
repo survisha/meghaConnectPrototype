@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 
 import '../models/user.dart';
 import '../services/api_service.dart';
+import 'visitor_registration_screen.dart';
 import '../widgets/authenticated_photo.dart';
 import '../widgets/visitor_history_sheet.dart';
 import '../widgets/voice_remark_field.dart';
@@ -1304,6 +1305,28 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
     });
   }
 
+  bool get _canAddGroupCitizen {
+    final associates = _details['associates'];
+    final status = _text(_details['status'], widget.appointment.status).toUpperCase();
+    return associates is List && associates.isNotEmpty &&
+        !const {'COMPLETED', 'CANCELLED', 'REJECTED', 'CLOSED'}.contains(status);
+  }
+
+  Future<void> _addGroupCitizen() async {
+    final visitor = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (_) => const _AddGroupCitizenDialog(),
+    );
+    if (!mounted || visitor == null) return;
+    final citizenId = _asInt(visitor['id'] ?? visitor['citizenId'] ?? visitor['visitorId']);
+    if (citizenId == null) return;
+    setState(() { _saving = true; _error = null; });
+    final result = await ApiService.addAppointmentAssociate(widget.appointment.backendId!, citizenId);
+    if (!mounted) return;
+    setState(() { _saving = false; _error = result['success'] == true ? null : _text(result['message']); });
+    if (result['success'] == true) await _load();
+  }
+
   @override
   Widget build(BuildContext context) {
     _sectionSequence = 0;
@@ -1358,6 +1381,15 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
                                 ? widget.appointment.createdAt
                                 : _displayDate(widget.appointment.createdDate!)),
                       _DetailLine('Created At', widget.appointment.createdAt),
+                      if (_canAddGroupCitizen)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: OutlinedButton.icon(
+                            onPressed: _saving ? null : _addGroupCitizen,
+                            icon: const Icon(Icons.group_add_outlined),
+                            label: const Text('Add New Citizen'),
+                          ),
+                        ),
                       if (widget.reportMode == 'closed')
                         _DetailLine(
                             'Completed Date',
@@ -2898,6 +2930,77 @@ String _fmtDateTime(String? raw) {
 String _dateLabel(DateTime? date, String fallback) {
   if (date == null) return fallback;
   return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+}
+
+class _AddGroupCitizenDialog extends StatefulWidget {
+  const _AddGroupCitizenDialog();
+
+  @override
+  State<_AddGroupCitizenDialog> createState() => _AddGroupCitizenDialogState();
+}
+
+class _AddGroupCitizenDialogState extends State<_AddGroupCitizenDialog> {
+  final _query = TextEditingController();
+  List<Map<String, dynamic>> _results = [];
+  bool _searching = false;
+  bool _searched = false;
+
+  @override
+  void dispose() { _query.dispose(); super.dispose(); }
+
+  Future<void> _search() async {
+    final value = _query.text.trim();
+    if (value.length < 3) return;
+    setState(() { _searching = true; _searched = true; _results = []; });
+    final rows = RegExp(r'^\d{3,}$').hasMatch(value)
+        ? await ApiService.searchVisitors(mobile: value)
+        : await ApiService.searchPersonsByName(value);
+    if (!mounted) return;
+    setState(() {
+      _searching = false;
+      _results = rows.whereType<Map>().map((row) => Map<String, dynamic>.from(row)).toList();
+    });
+  }
+
+  Future<void> _register() async {
+    final visitor = await Navigator.of(context).push<Map<String, dynamic>>(
+      MaterialPageRoute(builder: (_) => const VisitorRegistrationScreen(returnVisitorAfterSubmit: true)),
+    );
+    if (mounted && visitor != null) Navigator.of(context).pop(visitor);
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Add New Citizen'),
+    content: SizedBox(
+      width: 520,
+      child: SingleChildScrollView(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(
+            controller: _query,
+            decoration: const InputDecoration(labelText: 'Search by name or mobile', prefixIcon: Icon(Icons.search)),
+            onSubmitted: (_) => _search(),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(width: double.infinity, child: OutlinedButton(onPressed: _searching ? null : _search, child: Text(_searching ? 'Searching...' : 'Search'))),
+          if (_searched && !_searching && _results.isEmpty) ...[
+            const SizedBox(height: 12),
+            const Text('Citizen not found'),
+            const SizedBox(height: 8),
+            FilledButton.icon(onPressed: _register, icon: const Icon(Icons.person_add_alt_1), label: const Text('Register New Citizen')),
+          ],
+          for (final visitor in _results)
+            ListTile(
+              title: Text(_text(visitor['fullName'] ?? visitor['name'], 'Citizen')),
+              subtitle: Text(_text(visitor['phoneNumber'] ?? visitor['mobileNumber'])),
+              trailing: const Icon(Icons.add),
+              onTap: () => Navigator.of(context).pop(visitor),
+            ),
+        ]),
+      ),
+    ),
+    actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel'))],
+  );
 }
 
 String _displayDate(DateTime date) {

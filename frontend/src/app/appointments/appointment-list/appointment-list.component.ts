@@ -38,6 +38,8 @@ import { CameraCaptureService, CameraDeviceOption, CameraFacingMode } from '../.
 import { appointmentRemarkExportFields } from '../appointment-pdf-export.util';
 import { AuthenticatedPhotoComponent } from '../../shared/authenticated-photo.component';
 import { VisitorHistoryDialogComponent } from '../../shared/visitor-history-dialog.component';
+import { AssociateCitizen, VisitorSearchService } from '../../services/visitor-search.service';
+import { VisitorRegisterComponent } from '../../visitor-register/visitor-register.component';
 import { resolvePhotoUrl } from '../../shared/photo-url.util';
 
 type SortDirection = 'asc' | 'desc';
@@ -101,6 +103,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   @ViewChild('appointmentExportDialog') appointmentExportDialog!: TemplateRef<unknown>;
   @ViewChild('aiNotesDialog') aiNotesDialog!: TemplateRef<unknown>;
   @ViewChild('cmoMissingInfoDialog') cmoMissingInfoDialog!: TemplateRef<unknown>;
+  @ViewChild('groupCitizenDialog') groupCitizenDialog!: TemplateRef<unknown>;
 
   appointments: Appointment[] = [];
   filtered: Appointment[] = [];
@@ -144,6 +147,10 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
   actionUpdating = false;
   cmoActionUpdating = false;
   errorMsg = '';
+  groupCitizenQuery = '';
+  groupCitizenResults: AssociateCitizen[] = [];
+  groupCitizenSearching = false;
+  groupCitizenSearched = false;
   remarksText = '';
   approverRemarksText = '';
   approverDepartmentCode = '';
@@ -237,6 +244,7 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
     private sanitizer: DomSanitizer,
     private snackBar: ToastService,
     private cameraCapture: CameraCaptureService
+    ,private visitorSearchService: VisitorSearchService
   ) {}
 
   ngOnInit() {
@@ -1710,6 +1718,49 @@ export class AppointmentListComponent implements OnInit, OnDestroy {
 
   associateCount(appointment: Appointment | null = this.selectedAppointment) {
     return appointment?.associates?.length || 0;
+  }
+
+  canAddGroupCitizen() {
+    const status = (this.selectedAppointment?.status || '').toUpperCase();
+    return this.associateCount() > 0 && !['COMPLETED', 'CANCELLED', 'REJECTED', 'CLOSED'].includes(status);
+  }
+
+  openAddGroupCitizen() {
+    this.groupCitizenQuery = '';
+    this.groupCitizenResults = [];
+    this.groupCitizenSearched = false;
+    this.dialog.open(this.groupCitizenDialog, { width: '620px', maxWidth: '96vw' });
+  }
+
+  searchGroupCitizens() {
+    const query = this.groupCitizenQuery.trim();
+    if (query.length < 2) return;
+    this.groupCitizenSearching = true;
+    this.groupCitizenSearched = true;
+    this.visitorSearchService.searchAssociateCitizens(query).pipe(finalize(() => this.groupCitizenSearching = false)).subscribe({
+      next: rows => this.groupCitizenResults = rows || [],
+      error: error => this.snackBar.open(apiErrorMessage(error, 'Unable to search citizens.'), 'Close')
+    });
+  }
+
+  registerGroupCitizen() {
+    const ref = this.dialog.open(VisitorRegisterComponent, { width: 'min(960px, 96vw)', maxWidth: '96vw', maxHeight: '94vh', disableClose: true });
+    ref.afterClosed().subscribe((result?: { visitorId?: number }) => {
+      if (result?.visitorId) this.addGroupCitizen(result.visitorId);
+    });
+  }
+
+  addGroupCitizen(citizenId: number) {
+    const appointmentId = this.selectedAppointment?.id;
+    if (!appointmentId) return;
+    this.appointmentService.addAssociateVisitor(appointmentId, citizenId).subscribe({
+      next: () => this.appointmentService.getAppointmentById(appointmentId).subscribe(updated => {
+        this.selectedAppointment = updated;
+        this.dialog.closeAll();
+        this.openViewDetails(updated);
+      }),
+      error: error => this.snackBar.open(apiErrorMessage(error, 'Unable to add citizen to this appointment.'), 'Close')
+    });
   }
 
   associateKycLabel(status?: string) {

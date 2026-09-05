@@ -14,6 +14,8 @@ import { environment } from '../../../environments/environment';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { VisitorRegisterComponent } from '../../visitor-register/visitor-register.component';
 import { AiDocumentService, AiExtractedFields, AiDocumentAnalysisResponse, DuplicateCheckResponse } from '../../services/ai-document.service';
 import { SchemeService } from '../../services/scheme.service';
 import { VisitorService } from '../../services/visitor.service';
@@ -49,7 +51,8 @@ interface DocumentUpload {
     MatCheckboxModule,
     MatIconModule,
     MatProgressSpinnerModule,
-    MatTooltipModule
+    MatTooltipModule,
+    MatDialogModule
   ],
   templateUrl: './appointment-form.component.html',
   styleUrls: ['./appointment-form.component.scss'],
@@ -98,6 +101,7 @@ export class AppointmentFormComponent implements OnInit, OnDestroy {
   associateSearchResults: AssociateCitizen[] = [];
   associateSearching = false;
   associateSearchError = '';
+  associateSearchAttempted = false;
   associateValidationError = '';
   readonly maxAssociates = 10;
 
@@ -200,6 +204,7 @@ export class AppointmentFormComponent implements OnInit, OnDestroy {
     this.associateSearchError = '';
     this.associateValidationError = '';
     this.associateSearchResults = [];
+    this.associateSearchAttempted = true;
     if (query.length < 2) {
       this.associateSearchError = 'Enter mobile number, EPIC, or at least 2 letters of the citizen name.';
       return;
@@ -210,13 +215,38 @@ export class AppointmentFormComponent implements OnInit, OnDestroy {
         this.associateSearching = false;
         this.associateSearchResults = results || [];
         if (this.associateSearchResults.length === 0) {
-          this.associateSearchError = 'Citizen must register in the portal before being added as an associate visitor.';
+          this.associateSearchError = 'Visitor not found.';
         }
       },
       error: err => {
         this.associateSearching = false;
         this.associateSearchError = apiErrorMessage(err, 'Unable to search registered citizens.');
       }
+    });
+  }
+
+  registerAssociateInline() {
+    const ref = this.dialog.open(VisitorRegisterComponent, {
+      width: 'min(960px, 96vw)', maxWidth: '96vw', maxHeight: '94vh', disableClose: true
+    });
+    ref.afterClosed().subscribe((result?: { visitorId?: number }) => {
+      if (!result?.visitorId) return;
+      this.visitorSearchService.getById(result.visitorId).subscribe({
+        next: visitor => {
+          if (!visitor?.id) return;
+          this.addAssociate({
+            id: visitor.id, citizenId: visitor.id, fullName: visitor.fullName || '',
+            mobileNumber: visitor.phoneNumber, epicReference: visitor.epicNumber,
+            addressSummary: visitor.fullAddress || visitor.address,
+            photoUrl: visitor.photoUrl || visitor.photoStoragePath,
+            kycStatus: visitor.kycStatus, status: 'ACTIVE'
+          });
+          this.associateSearchQuery = '';
+          this.associateSearchAttempted = false;
+          this.associateSearchError = '';
+        },
+        error: err => this.associateValidationError = apiErrorMessage(err, 'Visitor registered but could not be loaded.')
+      });
     });
   }
 
@@ -498,7 +528,8 @@ export class AppointmentFormComponent implements OnInit, OnDestroy {
     private auth: AuthService,
     private route: ActivatedRoute,
     private referenceDataService: ReferenceDataService,
-    private cameraCapture: CameraCaptureService
+    private cameraCapture: CameraCaptureService,
+    private dialog: MatDialog
   ) {}
 
   ngOnDestroy(): void {

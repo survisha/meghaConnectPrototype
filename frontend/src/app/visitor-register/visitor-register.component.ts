@@ -1,4 +1,5 @@
-import { Component, OnDestroy, ChangeDetectorRef, OnInit, ElementRef, ViewChild } from '@angular/core';
+import { Component, OnDestroy, ChangeDetectorRef, OnInit, ElementRef, ViewChild, Optional } from '@angular/core';
+import { MatDialogRef } from '@angular/material/dialog';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -313,7 +314,8 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
     private referenceDataService: ReferenceDataService,
     private formExtractionService: VisitorFormExtractionService,
     private toast: ToastService,
-    private access: AccessControlService
+    private access: AccessControlService,
+    @Optional() private dialogRef: MatDialogRef<VisitorRegisterComponent>
   ) {
     // Detect DEO mode from route snapshot URL segments
     this.isDeoMode = this.route.snapshot.url.some(segment => segment.path === 'deo');
@@ -1620,6 +1622,10 @@ export class VisitorRegisterComponent implements OnInit, OnDestroy {
           this.submitted = true;
           this.currentStep = 'kyc-complete';
           this.successMsg = res.message || this.t('REGISTRATION_SUCCESS');
+          if (this.dialogRef && res.visitorId) {
+            this.dialogRef.close({ visitorId: res.visitorId });
+            return;
+          }
           if (this.isDeoMode && this.auth.hasRole('DEO') && res.visitorId) {
             this.router.navigate(['/appointments/new'], {
               queryParams: { visitorId: res.visitorId, source: 'walkin', walkin: 'true' }

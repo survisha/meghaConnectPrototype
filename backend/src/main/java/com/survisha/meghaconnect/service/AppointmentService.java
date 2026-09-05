@@ -1691,6 +1691,43 @@ public class AppointmentService {
                 "Appointment created with " + associateCitizens.size() + " associate visitor(s).", actor);
     }
 
+    @Transactional
+    public void addAssociateToExistingGroup(Long appointmentId, Long citizenId, String actor) {
+        Appointment appointment = appointmentRepository.findByIdForUpdate(appointmentId)
+                .orElseThrow(() -> new AppointmentNotFoundException(appointmentId));
+        List<AssociateMapping> existing = associateMappingRepository.findByAppointment_Id(appointmentId);
+        if (existing.isEmpty()) {
+            throw new MeghaConnectException(ErrorCodeConstants.INVALID_FIELD_VALUE,
+                    "Citizens can only be added to an existing group appointment.", HttpStatus.BAD_REQUEST.value());
+        }
+        String status = appointment.getStatus() == null ? "" : appointment.getStatus().name();
+        if (List.of("COMPLETED", "CANCELLED", "REJECTED", "CLOSED").contains(status)) {
+            throw new MeghaConnectException(ErrorCodeConstants.INVALID_FIELD_VALUE,
+                    "Citizens cannot be added to an appointment in " + status + " status.", HttpStatus.CONFLICT.value());
+        }
+        if (existing.size() >= 10) {
+            throw new MeghaConnectException(ErrorCodeConstants.INVALID_FIELD_VALUE,
+                    "Maximum 10 associate visitors are allowed.", HttpStatus.BAD_REQUEST.value());
+        }
+        if (appointment.getApplicant() != null && appointment.getApplicant().getId().equals(citizenId)) {
+            throw new MeghaConnectException(ErrorCodeConstants.DUPLICATE_ENTRY,
+                    "Primary citizen cannot be added as an associate.", HttpStatus.CONFLICT.value());
+        }
+        if (associateMappingRepository.existsByAppointment_IdAndPerson_Id(appointmentId, citizenId)) {
+            throw new MeghaConnectException(ErrorCodeConstants.DUPLICATE_ENTRY,
+                    "This citizen is already part of the group appointment.", HttpStatus.CONFLICT.value());
+        }
+        Visitor citizen = visitorRepository.findById(citizenId)
+                .orElseThrow(() -> new MeghaConnectException(ErrorCodeConstants.CONTENT_NOT_FOUND,
+                        "Registered citizen not found.", HttpStatus.NOT_FOUND.value()));
+        associateMappingRepository.save(AssociateMapping.builder()
+                .appointment(appointment).person(citizen).associateName(citizen.getFullName())
+                .associatePhone(citizen.getPhoneNumber()).associateEpic(citizen.getEpicNumber())
+                .associateDesignation(citizen.getDesignation()).associateAddress(citizen.getAddress()).build());
+        auditLogService.log("Appointment", appointmentId, "CITIZEN_ADDED_TO_GROUP",
+                "Citizen " + citizenId + " added to group appointment", actor);
+    }
+
     private String toAssociatesJson(List<AssociateVisitorDto> associates) {
         if (associates == null || associates.isEmpty()) {
             return null;

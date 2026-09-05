@@ -373,6 +373,18 @@ public class AppointmentController {
         return ResponseEntity.ok(appointmentService.toDto(appointmentService.updateStatus(id, body, actor(authentication), role(authentication))));
     }
 
+    @PostMapping("/{id}/associate-visitors")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','APPROVER','DEO','HCM')")
+    public ResponseEntity<Map<String, Object>> addAssociateVisitor(
+            @PathVariable Long id, @RequestBody Map<String, Long> body, Authentication authentication) {
+        Long citizenId = body == null ? null : body.get("citizenId");
+        if (citizenId == null) {
+            throw new IllegalArgumentException("citizenId is required");
+        }
+        appointmentService.addAssociateToExistingGroup(id, citizenId, actor(authentication));
+        return ResponseEntity.ok(Map.of("success", true, "appointmentId", id, "citizenId", citizenId));
+    }
+
     @PutMapping("/{id}/status")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPROVER','HCM','ADMIN')")
     public ResponseEntity<AppointmentDto> putStatus(

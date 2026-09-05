@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 
 import '../core/config/app_config.dart';
 import '../services/api_service.dart';
+import 'visitor_registration_screen.dart';
 import '../services/auth_service.dart';
 import '../services/connectivity_service.dart';
 import '../services/navigation_service.dart';
@@ -384,6 +385,33 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
       if (_associateResults.isEmpty) {
         _contextError = 'No matching associate visitor found.';
       }
+    });
+  }
+
+  Future<void> _registerAssociate() async {
+    final visitor = await Navigator.of(context).push<Map<String, dynamic>>(
+      MaterialPageRoute(
+        builder: (_) => const VisitorRegistrationScreen(
+          returnVisitorAfterSubmit: true,
+        ),
+      ),
+    );
+    if (!mounted || visitor == null) return;
+    final id = visitor['id'] ?? visitor['visitorId'] ?? visitor['citizenId'];
+    if (id == null) {
+      setState(() => _contextError = 'Registration succeeded, but the citizen ID was not returned.');
+      return;
+    }
+    final normalized = <String, dynamic>{...visitor, 'id': id};
+    if (_associates.any((row) => row['id']?.toString() == id.toString())) {
+      setState(() => _contextError = 'This citizen is already an associate.');
+      return;
+    }
+    setState(() {
+      _associates.add(normalized);
+      _associateResults = [];
+      _associateSearchCtrl.clear();
+      _contextError = null;
     });
   }
 
@@ -1319,6 +1347,18 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
             onPressed: _searchingAssociates ? null : _searchAssociates,
           ),
           const SizedBox(height: 12),
+          if (!_searchingAssociates &&
+              _associateResults.isEmpty &&
+              _associateSearchCtrl.text.trim().length >= 3) ...[
+            const Text('Visitor not found'),
+            const SizedBox(height: 8),
+            FilledButton.icon(
+              onPressed: _registerAssociate,
+              icon: const Icon(Icons.person_add_alt_1_outlined),
+              label: const Text('Register New Visitor'),
+            ),
+            const SizedBox(height: 12),
+          ],
           ..._associateResults.map((visitor) {
             final id = visitor['id']?.toString();
             final added = id != null &&

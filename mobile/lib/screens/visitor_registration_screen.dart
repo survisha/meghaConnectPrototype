@@ -22,12 +22,14 @@ class VisitorRegistrationScreen extends StatefulWidget {
   final bool openAppointmentAfterSubmit;
   final Map<String, dynamic>? epicFacePrefill;
   final String? liveCapturedPhoto;
+  final bool returnVisitorAfterSubmit;
 
   const VisitorRegistrationScreen({
     super.key,
     this.openAppointmentAfterSubmit = false,
     this.epicFacePrefill,
     this.liveCapturedPhoto,
+    this.returnVisitorAfterSubmit = false,
   });
 
   @override
@@ -754,6 +756,12 @@ class _VisitorRegistrationScreenState extends State<VisitorRegistrationScreen> {
     if (!mounted) return;
 
     if (result['success'] == true) {
+      if (widget.returnVisitorAfterSubmit) {
+        final visitor = _extractRegisteredVisitor(result, payload);
+        setState(() => _loading = false);
+        Navigator.of(context).pop(visitor);
+        return;
+      }
       if (widget.openAppointmentAfterSubmit) {
         final visitor = _extractRegisteredVisitor(result, payload);
         setState(() => _loading = false);

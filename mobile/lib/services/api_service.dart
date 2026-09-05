@@ -748,6 +748,24 @@ class ApiService {
   }
 
   // Appointments
+  static Future<Map<String, dynamic>> addAppointmentAssociate(
+      int appointmentId, int citizenId) async {
+    try {
+      final resp = await http.post(
+        _u('/appointments/$appointmentId/associate-visitors'),
+        headers: await _headers(),
+        body: jsonEncode({'citizenId': citizenId}),
+      ).timeout(const Duration(seconds: 20));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+      return {'success': false, 'message': _messageFromResponse(resp, 'Unable to add citizen.')};
+    } catch (error, stackTrace) {
+      _logError('addAppointmentAssociate', error, stackTrace);
+      return {'success': false, 'message': 'Network error. Please try again.'};
+    }
+  }
+
   static Future<Map<String, dynamic>> getAppointments({
     int page = 0,
     int size = 50,

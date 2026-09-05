@@ -30,7 +30,7 @@ public class VoiceRemarkResponse {
                 .originalTranscript(complete ? value.getOriginalTranscript() : null)
                 .detectedLanguage(value.getDetectedLanguage()).needsReview(value.isNeedsReview())
                 .transcriptionAttempts(value.getTranscriptionAttempts()).recordedAt(value.getRecordedAt())
-                .message(complete ? "Transcription is ready for review." : "Audio saved successfully. Transcription is being processed.")
+                .message(complete ? "Transcription is ready for review." : "Voice saved successfully. Transcription is being processed.")
                 .build();
     }
 }

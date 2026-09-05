@@ -271,11 +271,14 @@ speech:
   service-url: ${SPEECH_SERVICE_URL:http://speech-service:8000}
   model: ${SPEECH_MODEL:large-v3}
   max-concurrent-transcriptions: ${SPEECH_MAX_CONCURRENCY:1}
+  processing-stale-seconds: ${SPEECH_PROCESSING_STALE_SECONDS:300}
   worker-interval-ms: ${SPEECH_WORKER_INTERVAL_MS:30000}
   connect-timeout-seconds: ${SPEECH_CONNECT_TIMEOUT_SECONDS:3}
   read-timeout-seconds: ${SPEECH_READ_TIMEOUT_SECONDS:90}
   queue:
     batch-size: ${SPEECH_QUEUE_BATCH_SIZE:4}
+  executor:
+    queue-capacity: ${SPEECH_EXECUTOR_QUEUE_CAPACITY:100}
   retry:
     max-attempts: ${SPEECH_RETRY_MAX_ATTEMPTS:3}
     delay-seconds: ${SPEECH_RETRY_DELAY_SECONDS:60}

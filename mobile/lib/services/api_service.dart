@@ -86,6 +86,63 @@ class ApiService {
     return headers;
   }
 
+  static Future<Map<String, dynamic>> uploadVoiceRemark({
+    required String audioPath,
+    required String referenceType,
+    required String referenceId,
+    required String requestId,
+    required int durationMs,
+  }) async {
+    try {
+      final request = http.MultipartRequest('POST', _u('/voice-remarks'));
+      request.headers.addAll(await _authHeaders());
+      request.fields.addAll({
+        'referenceType': referenceType,
+        'referenceId': referenceId,
+        'requestId': requestId,
+        'durationMs': durationMs.toString(),
+      });
+      request.files.add(await http.MultipartFile.fromPath('audio', audioPath));
+      final streamed = await request.send().timeout(const Duration(seconds: 30));
+      final response = await http.Response.fromStream(streamed);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return Map<String, dynamic>.from(jsonDecode(response.body) as Map);
+      }
+      return {'audioStored': false, 'message': _messageFromResponse(response, 'Voice upload failed. The recording was kept on this device for retry.')};
+    } catch (error, stackTrace) {
+      _logError('uploadVoiceRemark', error, stackTrace);
+      return const {'audioStored': false, 'message': 'Voice upload failed. The recording was kept on this device for retry.'};
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getVoiceRemark(int id) async {
+    try {
+      final response = await http.get(_u('/voice-remarks/$id'), headers: await _authHeaders()).timeout(const Duration(seconds: 15));
+      if (response.statusCode == 200) return Map<String, dynamic>.from(jsonDecode(response.body) as Map);
+    } catch (error, stackTrace) { _logError('getVoiceRemark', error, stackTrace); }
+    return null;
+  }
+
+  static Future<List<Map<String, dynamic>>> getVoiceRemarks({required String referenceType, required String referenceId}) async {
+    try {
+      final uri = _u('/voice-remarks').replace(queryParameters: {'referenceType': referenceType, 'referenceId': referenceId});
+      final response = await http.get(uri, headers: await _authHeaders()).timeout(const Duration(seconds: 15));
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is List) return decoded.whereType<Map>().map((v) => Map<String, dynamic>.from(v)).toList();
+      }
+    } catch (error, stackTrace) { _logError('getVoiceRemarks', error, stackTrace); }
+    return const [];
+  }
+
+  static Future<List<int>?> downloadVoiceRemark(int id) async {
+    try {
+      final response = await http.get(_u('/voice-remarks/$id/audio'), headers: await _authHeaders()).timeout(const Duration(seconds: 30));
+      if (response.statusCode == 200) return response.bodyBytes;
+    } catch (error, stackTrace) { _logError('downloadVoiceRemark', error, stackTrace); }
+    return null;
+  }
+
   /// Headers for authenticated media widgets (for example stored visitor photos).
   static Future<Map<String, String>> authenticatedMediaHeaders() =>
       _authHeaders();

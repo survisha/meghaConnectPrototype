@@ -7,6 +7,7 @@ import '../services/api_service.dart';
 import '../services/connectivity_service.dart';
 import '../services/offline_repository.dart';
 import '../services/sync_service.dart';
+import '../widgets/voice_remark_field.dart';
 
 class _ApproverAppointment {
   final int backendId;
@@ -674,15 +675,13 @@ class _ApproverDetailSheetState extends State<_ApproverDetailSheet> {
               ),
             ),
             const SizedBox(height: 8),
-            TextField(
+            VoiceRemarkField(
               controller: _remarksCtrl,
+              referenceType: 'APPROVAL_ACTION',
+              referenceId: appt.backendId.toString(),
+              label: 'Approval Remarks / Direction',
               maxLines: 3,
-              decoration: const InputDecoration(
-                hintText: 'Enter routing direction or rejection reason...',
-                border: OutlineInputBorder(),
-                contentPadding:
-                    EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              ),
+              hint: 'Enter routing direction or rejection reason...',
             ),
             const SizedBox(height: 16),
             Row(

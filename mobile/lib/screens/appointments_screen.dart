@@ -12,6 +12,7 @@ import '../models/user.dart';
 import '../services/api_service.dart';
 import '../widgets/authenticated_photo.dart';
 import '../widgets/visitor_history_sheet.dart';
+import '../widgets/voice_remark_field.dart';
 import '../services/auth_service.dart';
 import '../services/ai_notes_cache_service.dart';
 import '../services/connectivity_service.dart';
@@ -1836,14 +1837,13 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
             onChanged: (value) => setState(() => _departmentCode = value),
           ),
           const SizedBox(height: 8),
-          TextField(
+          VoiceRemarkField(
             controller: _remarksCtrl,
+            referenceType: role == UserRole.HCM ? 'HCM_ACTION' : 'APPROVAL_ACTION',
+            referenceId: (widget.appointment.backendId ?? widget.appointment.applicationId).toString(),
+            label: 'Add Remarks / Notes',
             minLines: 3,
             maxLines: 5,
-            decoration: const InputDecoration(
-              labelText: 'Add Remarks / Notes',
-              alignLabelWithHint: true,
-            ),
           ),
           const SizedBox(height: 10),
           ElevatedButton.icon(
@@ -2542,19 +2542,25 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
 
   Future<String?> _remarksDialog(String title) {
     final controller = TextEditingController();
+    final role = context.read<AuthService>().user?.role;
+    final voiceAllowed = role == UserRole.APPROVER || role == UserRole.HCM;
     return showDialog<String>(
       context: context,
       builder: (_) => AlertDialog(
         title: Text(title),
-        content: TextField(
-          controller: controller,
-          minLines: 3,
-          maxLines: 5,
-          decoration: const InputDecoration(
-            labelText: 'Remarks / Notes',
-            alignLabelWithHint: true,
-          ),
-        ),
+        content: voiceAllowed
+            ? VoiceRemarkField(
+                controller: controller,
+                referenceType: role == UserRole.HCM ? 'HCM_ACTION' : 'APPROVAL_ACTION',
+                referenceId: (widget.appointment.backendId ?? widget.appointment.applicationId).toString(),
+                label: 'Remarks / Notes',
+              )
+            : TextField(
+                controller: controller,
+                minLines: 3,
+                maxLines: 5,
+                decoration: const InputDecoration(labelText: 'Remarks / Notes', alignLabelWithHint: true),
+              ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),

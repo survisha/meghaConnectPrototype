@@ -259,3 +259,23 @@ legacy:
     max-columns: ${LEGACY_IMPORT_MAX_COLUMNS:300}
     max-rows-per-sheet: ${LEGACY_IMPORT_MAX_ROWS_PER_SHEET:1000000}
     batch-size: ${LEGACY_IMPORT_BATCH_SIZE:500}
+
+# Voice remarks: original audio is retained; local speech processing is asynchronous.
+voice:
+  storage-path: ${VOICE_STORAGE_PATH:/opt/meghaconnect/prod/uploads/voice-remarks}
+  max-file-size-mb: ${VOICE_MAX_FILE_SIZE_MB:12}
+  max-duration-ms: ${VOICE_MAX_DURATION_MS:60000}
+  retention-enabled: false
+speech:
+  enabled: ${SPEECH_ENABLED:false}
+  service-url: ${SPEECH_SERVICE_URL:http://speech-service:8000}
+  model: ${SPEECH_MODEL:large-v3}
+  max-concurrent-transcriptions: ${SPEECH_MAX_CONCURRENCY:1}
+  worker-interval-ms: ${SPEECH_WORKER_INTERVAL_MS:30000}
+  connect-timeout-seconds: ${SPEECH_CONNECT_TIMEOUT_SECONDS:3}
+  read-timeout-seconds: ${SPEECH_READ_TIMEOUT_SECONDS:90}
+  queue:
+    batch-size: ${SPEECH_QUEUE_BATCH_SIZE:4}
+  retry:
+    max-attempts: ${SPEECH_RETRY_MAX_ATTEMPTS:3}
+    delay-seconds: ${SPEECH_RETRY_DELAY_SECONDS:60}

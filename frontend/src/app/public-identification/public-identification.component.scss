@@ -458,6 +458,10 @@ mat-chip.status-chip {
   &.selected { background: var(--mat-sys-secondary-container, #eff6ff); border-left-color: var(--mat-sys-primary, #1a237e); }
 }
 
+.auto-face-result.has-match-photo {
+  grid-template-columns: 72px 72px minmax(0, 1fr);
+}
+
 .auto-face-result img {
   width: 72px;
   height: 72px;
@@ -481,7 +485,7 @@ mat-chip.status-chip {
   justify-content: space-between;
   gap: 0.5rem;
 
-  strong { overflow-wrap: anywhere; }
+  strong { overflow-wrap: break-word; word-break: normal; }
 }
 
 .face-status-badge {
@@ -524,6 +528,7 @@ mat-chip.status-chip {
 
 @media (max-width: 600px) {
   .auto-face-result { grid-template-columns: 56px minmax(0, 1fr); padding: 0.75rem; }
+  .auto-face-result.has-match-photo { grid-template-columns: 56px 56px minmax(0, 1fr); }
   .auto-face-result img { width: 56px; height: 56px; }
   .profile-grid, .visit-split-grid { grid-template-columns: 1fr; }
 }

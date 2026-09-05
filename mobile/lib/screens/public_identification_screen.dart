@@ -225,7 +225,7 @@ class _PublicIdentificationScreenState extends State<PublicIdentificationScreen>
       }
       _availableFaceCameras = cameras;
       final selected = cameras.firstWhere(
-        (camera) => camera.lensDirection == CameraLensDirection.front,
+        (camera) => camera.lensDirection == CameraLensDirection.back,
         orElse: () => cameras.first,
       );
       await _openFaceCamera(selected);
@@ -1606,7 +1606,13 @@ class _FaceRecognitionResultCard extends StatelessWidget {
                               ? Colors.green
                               : MeghaColors.muted),
                     const SizedBox(width: 6),
-                    Expanded(child: Text(title)),
+                    Expanded(
+                      child: Text(
+                        title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ]),
                 ])),
           ]),

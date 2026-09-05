@@ -168,6 +168,21 @@ public class FaceRecognitionServiceImpl implements FaceRecognitionService {
         return FaceResponses.MatchedVisitor.builder().id(v.getId()).fullName(v.getFullName())
                 .phoneNumber(v.getPhoneNumber()).epicNumber(v.getEpicNumber()).designation(v.getDesignation())
                 .address(v.getAddress()).district(v.getDistrict()).constituency(v.getConstituency())
-                .kycStatus(v.getKycStatus()).build();
+                .kycStatus(v.getKycStatus())
+                .photoUrl(toUploadUrl(firstNonBlank(v.getPhotoStoragePath(), v.getPhotoPath(), v.getLivePhotoPath())))
+                .build();
+    }
+
+    private String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) return value;
+        }
+        return null;
+    }
+
+    private String toUploadUrl(String path) {
+        if (path == null || path.isBlank() || path.startsWith("http://") || path.startsWith("https://")
+                || path.startsWith("/uploads/")) return path;
+        return "/uploads/" + path.replace('\\', '/').replaceFirst("^/+", "");
     }
 }

@@ -98,11 +98,11 @@
         </div>
         <div *ngIf="faceDetections.length" class="auto-face-results" aria-live="polite">
           <button *ngFor="let face of faceDetections; trackBy: trackFaceResult"
-            type="button" class="auto-face-result" [class.selected]="face.selected"
+            type="button" class="auto-face-result" [class.selected]="face.selected" [class.has-match-photo]="!!face.visitor"
             [ngClass]="getStatusClass(face.status)" [@faceResultLifecycle]
             (click)="selectFaceResult(face)">
             <img [src]="face.capturedImage" [alt]="face.trackingId + ' captured face'" />
-            <app-authenticated-photo *ngIf="face.visitor" [source]="face.visitor.photoUrl || face.visitor.photoBase64 || face.visitor.livePhotoBase64" [name]="face.visitor.fullName" alt="Matched visitor photo"></app-authenticated-photo>
+            <app-authenticated-photo *ngIf="face.visitor" [source]="getVisitorPhotoUrl(face.visitor)" [name]="face.visitor.fullName" alt="Matched visitor photo"></app-authenticated-photo>
             <span class="auto-face-result-content">
               <span class="face-result-heading">
                 <strong>{{ face.visitor?.fullName || face.trackingId }}</strong>

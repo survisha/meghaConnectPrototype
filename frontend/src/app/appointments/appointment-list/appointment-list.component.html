@@ -115,7 +115,7 @@
 
           <ng-container matColumnDef="token">
             <th mat-header-cell *matHeaderCellDef>Token Number</th>
-            <td mat-cell *matCellDef="let appt" class="token-number-cell"><strong>{{walkInTokenSequence(appt)}}</strong></td>
+            <td mat-cell *matCellDef="let appt" class="token-number-cell"><strong>{{ appt.walkInTokenNumber ? walkInTokenSequence(appt) : '—' }}</strong></td>
           </ng-container>
 
           <ng-container matColumnDef="select">
@@ -437,7 +437,7 @@
     <div>
       <span class="eyebrow">Appointment Details</span>
       <h2>{{ selectedAppointment.applicationId }}</h2>
-      <small *ngIf="selectedAppointment.walkInTokenNumber" class="token-number-detail">Walk-in ID: {{selectedAppointment.walkInTokenNumber}} · Token Number: {{walkInTokenSequence(selectedAppointment)}}</small>
+      <small *ngIf="selectedAppointment.walkInTokenNumber" class="token-number-detail">Walk-in ID: {{selectedAppointment.walkInTokenNumber}} · Token Number: {{walkInTokenSequence(selectedAppointment)}} · Date: {{ (selectedAppointment.submittedAt || selectedAppointment.createdAt || selectedAppointment.updatedAt) | date:'mediumDate' }}</small>
     </div>
     <button mat-icon-button aria-label="Close" (click)="closeViewDetails()">
       <mat-icon>close</mat-icon>
@@ -484,7 +484,7 @@
     </div>
 
     <div class="details-grid">
-      <div *ngIf="selectedAppointment.walkInTokenNumber"><span class="field-label">Walk-in ID</span><strong class="token-number-detail">{{selectedAppointment.walkInTokenNumber}}</strong><span class="token-number-detail">Token Number: {{walkInTokenSequence(selectedAppointment)}}</span></div>
+      <div *ngIf="selectedAppointment.walkInTokenNumber"><span class="field-label">Walk-in ID</span><strong class="token-number-detail">{{selectedAppointment.walkInTokenNumber}}</strong><span class="token-number-detail">Token Number: {{walkInTokenSequence(selectedAppointment)}}</span><span>Date: {{ (selectedAppointment.submittedAt || selectedAppointment.createdAt || selectedAppointment.updatedAt) | date:'mediumDate' }}</span></div>
       <div *ngIf="selectedAppointment.appointmentSource === 'GUEST'">
         <span class="field-label">Guest Reference</span>
         <strong>{{ selectedAppointment.guestReferenceId || selectedAppointment.applicationId }}</strong>

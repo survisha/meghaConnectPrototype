@@ -184,7 +184,7 @@ export class PublicIdentificationComponent implements OnDestroy {
     this.errorMessage = '';
     this.resetFaceSession();
     try {
-      this.faceCameraStream = await this.cameraCapture.open('user');
+      this.faceCameraStream = await this.cameraCapture.open('environment');
       this.faceCameraActive = true;
       setTimeout(() => {
         const video = document.getElementById('publicFaceVideo') as HTMLVideoElement | null;
@@ -799,7 +799,7 @@ export class PublicIdentificationComponent implements OnDestroy {
     return ['COMPLETED', 'VISITED', 'CLOSED', 'EXITED', 'RESOLVED'].includes(normalized);
   }
 
-  private getVisitorPhotoUrl(visitor?: Visitor | null): string {
+  getVisitorPhotoUrl(visitor?: Visitor | null): string {
     if (!visitor) {
       return '';
     }

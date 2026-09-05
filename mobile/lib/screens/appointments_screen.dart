@@ -144,7 +144,8 @@ class _Appointment {
       aiNotesPreview: _text(completedNote['aiSummary']),
       raw: raw,
       isWalkIn: raw['isWalkIn'] == true ||
-          _firstText([raw['appointmentType']]).toUpperCase().contains('WALK'),
+          _firstText([raw['appointmentType']]).toUpperCase().contains('WALK') ||
+          _firstText([raw['walkInTokenNumber'], raw['tokenNumber']]).isNotEmpty,
     );
   }
 
@@ -1350,6 +1351,12 @@ class _AppointmentDetailsPageState extends State<_AppointmentDetailsPage> {
                       if (widget.appointment.isWalkIn)
                         _DetailLine('Token Number',
                             '${_walkInSequence(widget.appointment.tokenNumber)}'),
+                      if (widget.appointment.isWalkIn)
+                        _DetailLine(
+                            'Date',
+                            widget.appointment.createdDate == null
+                                ? widget.appointment.createdAt
+                                : _displayDate(widget.appointment.createdDate!)),
                       _DetailLine('Created At', widget.appointment.createdAt),
                       if (widget.reportMode == 'closed')
                         _DetailLine(

@@ -30,8 +30,9 @@ public class AppointmentDocumentAiNotesService {
     private final AppointmentDocumentAiNotesRepository aiNotesRepository;
     private final AppointmentRepository appointmentRepository;
     private final DocumentUploadRepository documentUploadRepository;
-    private final DocumentTextExtractionService textExtractionService;
+    private final AiNotesDocumentProcessor documentProcessor;
     private final OllamaAiNotesService ollamaAiNotesService;
+    private final DocumentVisionSummaryProvider visionSummaryProvider;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional(readOnly = true)
@@ -93,14 +94,20 @@ public class AppointmentDocumentAiNotesService {
         try {
             DocumentUpload document = documentUploadRepository.findById(documentId.get())
                     .orElseThrow(() -> new ResourceNotFoundException("Document not found: " + documentId.get()));
-            String documentText = textExtractionService.extractText(document);
-            if (documentText == null || documentText.isBlank()) {
-                completePartial(noteId, partialNotesForUnreadableDocument());
-                return;
+            AiNotesDocumentProcessor.ProcessedDocument processed = documentProcessor.process(document);
+            if (processed.vision()) {
+                DocumentVisionSummaryProvider.VisionSummary result = visionSummaryProvider.summarize(processed.images());
+                ParsedAiNotes providerNotes = new ParsedAiNotes(result.aiSummary(), result.importantDetails(), result.missingInfo(), result.riskFlags());
+                boolean meaningless = isMeaningless(providerNotes);
+                ParsedAiNotes parsed = normalize(providerNotes);
+                complete(noteId, result.rawResponse(), parsed, result.modelName(), meaningless ? AiNoteStatus.PARTIAL_SUCCESS : qualityStatus(parsed));
+            } else {
+                String rawResponse = ollamaAiNotesService.generateNotes(processed.text());
+                ParsedAiNotes providerNotes = parseAiNotes(rawResponse);
+                boolean meaningless = isMeaningless(providerNotes);
+                ParsedAiNotes parsed = normalize(providerNotes);
+                complete(noteId, rawResponse, parsed, ollamaAiNotesService.getModelName(), meaningless ? AiNoteStatus.PARTIAL_SUCCESS : qualityStatus(parsed));
             }
-            String rawResponse = ollamaAiNotesService.generateNotes(documentText);
-            ParsedAiNotes parsed = parseAiNotes(rawResponse);
-            complete(noteId, rawResponse, parsed);
         } catch (Exception e) {
             fail(noteId, e);
         }
@@ -123,16 +130,16 @@ public class AppointmentDocumentAiNotesService {
     }
 
     @Transactional
-    protected void complete(Long noteId, String rawResponse, ParsedAiNotes parsed) {
+    protected void complete(Long noteId, String rawResponse, ParsedAiNotes parsed, String modelName, AiNoteStatus status) {
         aiNotesRepository.findById(noteId).ifPresent(notes -> {
             notes.setAiSummary(parsed.summary());
             notes.setImportantDetails(parsed.importantDetails());
             notes.setMissingInfo(parsed.missingInfo());
             notes.setRiskFlags(parsed.riskFlags());
             notes.setRawAiResponse(rawResponse);
-            notes.setStatus(AiNoteStatus.COMPLETED);
+            notes.setStatus(status);
             notes.setErrorMessage(null);
-            notes.setModelName(ollamaAiNotesService.getModelName());
+            notes.setModelName(modelName);
             aiNotesRepository.save(notes);
             log.info("Completed AI notes requestId={} appointmentId={} documentId={} status={}",
                     RequestContextUtil.getRequestId(),
@@ -270,7 +277,24 @@ public class AppointmentDocumentAiNotesService {
     }
 
     private String defaultIfBlank(String value) {
-        return value == null || value.isBlank() ? "Not found" : value.trim();
+        return value == null ? "" : value.trim();
+    }
+
+    private ParsedAiNotes normalize(ParsedAiNotes value) {
+        if (!isMeaningless(value)) return value;
+        return new ParsedAiNotes("Unable to determine meaningful content from the uploaded image or document.",
+                "No reliable details could be identified.", "Readable content could not be extracted.",
+                "Image quality or content requires manual verification.");
+    }
+
+    private AiNoteStatus qualityStatus(ParsedAiNotes value) {
+        String flags=(value.riskFlags()+" "+value.missingInfo()).toLowerCase();
+        return flags.matches(".*(blur|unreadable|cut.off|low quality|manual verification|unclear).*" ) ? AiNoteStatus.PARTIAL_SUCCESS : AiNoteStatus.COMPLETED;
+    }
+
+    private boolean isMeaningless(ParsedAiNotes value) {
+        return List.of(value.summary(),value.importantDetails(),value.missingInfo(),value.riskFlags()).stream()
+                .allMatch(v->v==null||v.isBlank()||v.trim().equalsIgnoreCase("not found")||v.trim().equalsIgnoreCase("none"));
     }
 
     private String firstNonBlank(String... values) {

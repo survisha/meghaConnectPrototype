@@ -101,6 +101,14 @@ meghaconnect:
 ai:
   provider: ${AI_PROVIDER:ollama}
   timeout-seconds: ${AI_TIMEOUT_SECONDS:60}
+  notes:
+    vision-model: ${AI_NOTES_VISION_MODEL:${OLLAMA_VISION_MODEL:qwen2.5vl:3b}}
+    max-pdf-pages: ${AI_NOTES_MAX_PDF_PAGES:5}
+    max-image-bytes: ${AI_NOTES_MAX_IMAGE_BYTES:5242880}
+    render-dpi: ${AI_NOTES_RENDER_DPI:150}
+    max-longest-side: ${AI_NOTES_MAX_LONGEST_SIDE:1600}
+    jpeg-quality: ${AI_NOTES_JPEG_QUALITY:0.82}
+    min-meaningful-text-chars: ${AI_NOTES_MIN_MEANINGFUL_TEXT_CHARS:80}
   ollama:
     enabled: ${OLLAMA_ENABLED:true}
     base-url: ${OLLAMA_BASE_URL:http://127.0.0.1:11434}

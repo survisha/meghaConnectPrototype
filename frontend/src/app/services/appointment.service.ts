@@ -333,11 +333,6 @@ export class AppointmentService {
     return this.http.post<{ success: boolean }>(`${this.baseUrl}/${appointmentId}/associate-visitors`, { citizenId });
   }
 
-  getAppointmentById(appointmentId: number): Observable<Appointment> {
-    return this.http.get<unknown>(`${this.baseUrl}/${appointmentId}`)
-      .pipe(map(res => this.normalizeAppointment(this.unwrapData(res))));
-  }
-
   updateRemark(appointmentId: number, remarkId: number, payload: { hcmRemarks: string; decision?: string; departmentCode?: string }): Observable<AppointmentRemark> {
     return this.http.put<AppointmentRemark>(`${this.baseUrl}/${appointmentId}/remarks/${remarkId}`, payload);
   }
